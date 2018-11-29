@@ -8,10 +8,10 @@ import scala.util.{Failure, Success, Try}
 class LSMStore
 
 case class SDKState(store: LSMStore, override val version: VersionTag, sidechainState: SidechainState) extends
-    BoxMinimalState[ProofOfKnowledgeProposition[Secret],
-                    Box[ProofOfKnowledgeProposition[Secret]],
-                    BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]],
-                    Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]],
+    BoxMinimalState[Proposition,
+                    Box[Proposition],
+                    BoxTransaction[Proposition, Box[Proposition]],
+                    SidechainBlock,
                     SDKState]{
 
   //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
@@ -22,22 +22,22 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
 
 
   // Note: emit tx.semanticValidity for each tx
-  override def semanticValidity(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]): Try[Unit] = ???
+  override def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // get closed box from State storage
-  override def closedBox(boxId: Array[Byte]): Option[Box[ProofOfKnowledgeProposition[Secret]]] = ???
+  override def closedBox(boxId: Array[Byte]): Option[Box[Proposition]] = ???
 
   // get boxes for given proposition from state storage
-  override def boxesOf(proposition: ProofOfKnowledgeProposition[Secret]): Seq[Box[ProofOfKnowledgeProposition[Secret]]] = ???
+  override def boxesOf(proposition: Proposition): Seq[Box[Proposition]] = ???
 
   // Note: aggregate New boxes and spent boxes for Block
-  override def changes(mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]])
-  : Try[BoxStateChanges[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]] = {
+  override def changes(mod: SidechainBlock)
+  : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
     SDKState.changes(mod)
   }
 
   // Validate block itself, then validate transactions through validateAgainstModifier(tx, mod)
-  override def validate(mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): Try[Unit] = ???
+  override def validate(mod: SidechainBlock): Try[Unit] = ???
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
@@ -47,11 +47,11 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   // 3) if it's a Sidechain custom Transaction (not known) -> emit sidechainState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
 
-  override def validate(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]): Try[Unit] = ???
+  override def validate(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // NOTE: mod is only for internal usage: e.g. for Backward and Forward transactions.
-  def validateAgainstModifier(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]],
-               mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): Try[Unit] = {
+  def validateAgainstModifier(tx: BoxTransaction[Proposition, Box[Proposition]],
+               mod: SidechainBlock): Try[Unit] = {
     tx match {
       case t: ForwardTransaction => validateForwardTx(t, mod)
       case t: BackwardTransaction => validateBackwardTx(t)
@@ -64,9 +64,10 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   }
 
   def validateForwardTx(tx: ForwardTransaction,
-                        mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]
+                        mod: SidechainBlock
                        ): Try[Unit] = Try {
-    // to do check FT against current Block
+    // 1) check that forward transaction contains all sidechain related FT
+    // 2) check that transaction is valid
   }
 
   def validateBackwardTx(tx: BackwardTransaction): Try[Unit] = Try {
@@ -74,7 +75,7 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
     // no new boxes must be created
   }
 
-  override def applyModifier(mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): Try[SDKState] = {
+  override def applyModifier(mod: SidechainBlock): Try[SDKState] = {
     validate(mod) flatMap { _ =>
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id)) // check applyChanges implementation
@@ -88,7 +89,7 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback sidechainState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]], newVersion: VersionTag): Try[SDKState] = ???
+  override def applyChanges(changes: BoxStateChanges[Proposition, Box[Proposition]], newVersion: VersionTag): Try[SDKState] = ???
 
   override def maxRollbackDepth: Int = ??? //store.keepVersions
 
@@ -98,27 +99,27 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
 
 
 object SDKState {
-  def semanticValidity(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]): Try[Unit] = ???
+  def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
-  def changes(mod: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]])
-    : Try[BoxStateChanges[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]] = {
+  def changes(mod: SidechainBlock)
+    : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
 
-    val transactions: Seq[BoxTransaction[ProofOfKnowledgeProposition[Secret]]] = Seq()
+    val transactions: Seq[BoxTransaction[Proposition]] = Seq()
 
     Try {
-      val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[ProofOfKnowledgeProposition[Secret]]], 0L)
+      val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
 
       // calculate list of ID of unlokers' boxes -> toRemove
       // calculate list of new boxes -> toAppend
       // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
 
       @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
-      val ops: Seq[BoxStateChangeOperation[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]] =
-        initial._1.map(id => Removal[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]](id)) ++
-          initial._2.map(b => Insertion[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]](b))
-      BoxStateChanges[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]](ops)
+      val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
+        initial._1.map(id => Removal[Proposition, Box[Proposition]](id)) ++
+          initial._2.map(b => Insertion[Proposition, Box[Proposition]](b))
+      BoxStateChanges[Proposition, Box[Proposition]](ops)
 
       // Q: Do we need to call some static method of SidechainState?
       // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
