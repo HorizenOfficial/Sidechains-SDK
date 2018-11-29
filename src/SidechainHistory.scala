@@ -8,15 +8,15 @@ import scala.util.Try
 // TO DO: implement it like in HybridHistory
 // TO DO: think about additional methods (consensus related?)
 
-class SDKHistory extends scorex.core.consensus.History[
+class SidechainHistory extends scorex.core.consensus.History[
       Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]],
       SyncInfo,
-      SDKHistory] {
-  override def append(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): Try[(SDKHistory, History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]])] = ???
+      SidechainHistory] {
+  override def append(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): Try[(SidechainHistory, History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]])] = ???
 
-  override def reportModifierIsValid(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): SDKHistory = ???
+  override def reportModifierIsValid(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): SidechainHistory = ???
 
-  override def reportModifierIsInvalid(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]], progressInfo: History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]]): (SDKHistory, History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]]) = ???
+  override def reportModifierIsInvalid(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]], progressInfo: History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]]): (SidechainHistory, History.ProgressInfo[Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]]) = ???
 
   override def isEmpty: Boolean = ???
 

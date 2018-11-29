@@ -3,7 +3,7 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
-case class SDKBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]])
+case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]])
     extends Serializer[Box[_ <: Proposition]] {
 
   val coreBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]] =
@@ -11,10 +11,10 @@ case class SDKBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeI
 
   val customBoxId = ModifierTypeId @@ 0xFF // TODO: think about proper value
 
-  // TO DO: do like in SDKTransactionsCompanion
+  // TO DO: do like in SidechainTransactionsCompanion
   override def toBytes(obj: Box[_ <: Proposition]): Array[Byte] = ???
 
-  // TO DO: do like in SDKTransactionsCompanion
+  // TO DO: do like in SidechainTransactionsCompanion
   override def parseBytes(bytes: Array[Byte]): Try[Box[_ <: Proposition]] = ???
 }
 

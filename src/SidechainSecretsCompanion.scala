@@ -3,7 +3,7 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
-case class SDKSecretsCompanion(customSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]])
+case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]])
   extends Serializer[Secret] {
 
   val coreSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]] =
@@ -11,7 +11,7 @@ case class SDKSecretsCompanion(customSecretSerializers: Map[scorex.core.Modifier
 
   val customSecretId = ModifierTypeId @@ 0xFF // TODO: think about proper value
 
-  // TO DO: do like in SDKTransactionsCompanion
+  // TO DO: do like in SidechainTransactionsCompanion
   override def toBytes(obj: Secret): Array[Byte] = ???
 
   override def parseBytes(bytes: Array[Byte]): Try[Secret] = ???

@@ -1,10 +1,10 @@
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.core.utils.ScorexLogging
 
-case class SDKSettings(scorexSettings: ScorexSettings);
+case class SidechainSettings(scorexSettings: ScorexSettings);
 
 
-object SDKSettings extends ScorexLogging with SettingsReaders {
+object SidechainSettings extends ScorexLogging with SettingsReaders {
   /*def read(userConfigPath: Option[String]): SDKSettings = {
     fromConfig(readConfigFromPath(userConfigPath, "scorex"))
   }
