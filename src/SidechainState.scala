@@ -7,17 +7,17 @@ import scala.util.{Failure, Success, Try}
 
 class LSMStore
 
-case class SDKState(store: LSMStore, override val version: VersionTag, sidechainState: SidechainState) extends
+case class SidechainState(store: LSMStore, override val version: VersionTag, applicationState: ApplicationState) extends
     BoxMinimalState[Proposition,
                     Box[Proposition],
                     BoxTransaction[Proposition, Box[Proposition]],
                     SidechainBlock,
-                    SDKState]{
+                    SidechainState]{
 
   //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
   //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")
 
-  override type NVCT = SDKState
+  override type NVCT = SidechainState
   //type HPMOD = HybridBlock
 
 
@@ -33,7 +33,7 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   // Note: aggregate New boxes and spent boxes for Block
   override def changes(mod: SidechainBlock)
   : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
-    SDKState.changes(mod)
+    SidechainState.changes(mod)
   }
 
   // Validate block itself, then validate transactions through validateAgainstModifier(tx, mod)
@@ -44,7 +44,7 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   // TO DO: (almost the same as in NodeViewHolder)
   // 1) check if all unlocker are related to EXISTING CLOSED boxes (B) and able to open them
   // 2) check if for each B, that is instance of CoinBox interface, that total sum is equal to new CoinBox'es sum minus tx.fee
-  // 3) if it's a Sidechain custom Transaction (not known) -> emit sidechainState.validate(tx)
+  // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
 
   override def validate(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
@@ -75,7 +75,7 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
     // no new boxes must be created
   }
 
-  override def applyModifier(mod: SidechainBlock): Try[SDKState] = {
+  override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod) flatMap { _ =>
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id)) // check applyChanges implementation
@@ -85,20 +85,20 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
 
   // apply global changes and deleagate SDK unknown part to Sidechain.applyChanges(...)
   // 1) get boxes ids to remove, and boxes to append from "changes"
-  // 2) call sidechainState.applyChanges(changes):
+  // 2) call applicationState.applyChanges(changes):
   //    if ok -> return updated SDKState -> update SDKState store
-  //    if fail -> rollback sidechainState
+  //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[Proposition, Box[Proposition]], newVersion: VersionTag): Try[SDKState] = ???
+  override def applyChanges(changes: BoxStateChanges[Proposition, Box[Proposition]], newVersion: VersionTag): Try[SidechainState] = ???
 
   override def maxRollbackDepth: Int = ??? //store.keepVersions
 
-  override def rollbackTo(version: VersionTag): Try[SDKState] = ???
+  override def rollbackTo(version: VersionTag): Try[SidechainState] = ???
 
 }
 
 
-object SDKState {
+object SidechainState {
   def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
@@ -121,9 +121,9 @@ object SDKState {
           initial._2.map(b => Insertion[Proposition, Box[Proposition]](b))
       BoxStateChanges[Proposition, Box[Proposition]](ops)
 
-      // Q: Do we need to call some static method of SidechainState?
+      // Q: Do we need to call some static method of ApplicationState?
       // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
-      // Note: we need to implement a lot of limitation for changes from SidechainState (only deletion, only non coin realted boxes, etc.)
+      // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
     }
   }
 }

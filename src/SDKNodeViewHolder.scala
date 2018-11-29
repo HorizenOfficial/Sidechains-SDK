@@ -9,7 +9,7 @@ class SDKNodeViewHolder(sdkSettings: SDKSettings,
   extends scorex.core.NodeViewHolder[Transaction, Block[Transaction]] {
   override type SI = scorex.core.consensus.SyncInfo
   override type HIS = SDKHistory
-  override type MS = SDKState
+  override type MS = SidechainState
   override type VL = SDKWallet
   override type MP = MemoryPool
 
