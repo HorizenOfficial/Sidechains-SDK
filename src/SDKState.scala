@@ -45,6 +45,8 @@ case class SDKState(store: LSMStore, override val version: VersionTag, sidechain
   // 1) check if all unlocker are related to EXISTING CLOSED boxes (B) and able to open them
   // 2) check if for each B, that is instance of CoinBox interface, that total sum is equal to new CoinBox'es sum minus tx.fee
   // 3) if it's a Sidechain custom Transaction (not known) -> emit sidechainState.validate(tx)
+  // TO DO: put validateAgainstModifier logic inside validate(mod)
+
   override def validate(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]): Try[Unit] = ???
 
   // NOTE: mod is only for internal usage: e.g. for Backward and Forward transactions.

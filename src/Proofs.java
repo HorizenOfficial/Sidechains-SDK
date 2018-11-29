@@ -26,7 +26,6 @@ interface ProofOfKnowledge<S extends Secret, P extends ProofOfKnowledgePropositi
 
 }
 
-
 interface ProofSerializer<P extends Proof> extends Serializer<P>
 {
     @Override
@@ -34,4 +33,26 @@ interface ProofSerializer<P extends Proof> extends Serializer<P>
 
     @Override
     Try<P> parseBytes(byte[] bytes);
+}
+
+final class ProofOfCoinBurn implements Proof<ProofOfCoinBurnProposition>
+{
+
+    @Override
+    public boolean isValid(ProofOfCoinBurnProposition proposition, byte[] merkleRoot) {
+        // Get hash of proposition._mainchainForwardTransfer
+        // calculate the merkle root for hash and proposition._merklePath
+        // compare calculated root with provided
+        return false;
+    }
+
+    @Override
+    public byte[] bytes() {
+        return new byte[0];
+    }
+
+    @Override
+    public ProofSerializer serializer() {
+        return null;
+    }
 }

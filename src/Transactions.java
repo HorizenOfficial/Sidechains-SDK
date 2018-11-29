@@ -2,12 +2,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import scala.util.Try;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.Serializer;
-import scorex.core.utils.ScorexEncoder;
 
 
 /**
@@ -158,7 +156,7 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
 }
 
 
-final class ForwardTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
+final class ForwardTransaction extends BoxTransaction<Proposition, Box<Proposition>>
 {
 
     @Override
@@ -166,14 +164,15 @@ final class ForwardTransaction extends NoncedBoxTransaction<PublicKey25519Propos
         return new ForwardTransactionSerializer();
     }
 
-    // nothing to spent
     @Override
-    public ArrayList<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
-        return new ArrayList<BoxUnlocker<PublicKey25519Proposition>>();
+    public ArrayList<BoxUnlocker<Proposition>> unlockers() {
+        // create array and put BoxUnlocker<ProofOfCoinBurnProposition> inside
+        return null;
     }
 
     @Override
-    public ArrayList<RegularBox> newBoxes() {
+    public ArrayList<Box<Proposition>> newBoxes() {
+        // return list of RegularBoxes
         return null;
     }
 
@@ -195,13 +194,12 @@ final class ForwardTransaction extends NoncedBoxTransaction<PublicKey25519Propos
 
 class ForwardTransactionSerializer implements TransactionSerializer<ForwardTransaction>
 {
-    private ListSerializer<RegularBox> _boxSerializer;
+    private ListSerializer<Box<Proposition>> _boxSerializer;
 
     ForwardTransactionSerializer() {
-        HashMap<Integer, Serializer<RegularBox>> supportedBoxSerializers = new HashMap<Integer, Serializer<RegularBox>>();
-        supportedBoxSerializers.put(1, new RegularBoxSerializer());
-
-        _boxSerializer  = new ListSerializer<RegularBox>(supportedBoxSerializers);
+        HashMap<Integer, Serializer<Box>> supportedBoxSerializers = new HashMap<Integer, Serializer<Box>>();
+        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
+        //_boxSerializer  = new ListSerializer<Box<Proposition>>(supportedBoxSerializers);
     }
 
     @Override
@@ -211,7 +209,7 @@ class ForwardTransactionSerializer implements TransactionSerializer<ForwardTrans
 
     @Override
     public Try<ForwardTransaction> parseBytes(byte[] bytes) {
-        ArrayList<RegularBox> boxes = _boxSerializer.parseBytes(bytes).get();
+        ArrayList<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
 
         // create RegualrTransaction and init with Boxes
         return null;

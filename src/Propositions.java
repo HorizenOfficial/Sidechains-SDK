@@ -83,3 +83,27 @@ class PublicKey25519PropositionSerializer<PKP extends PublicKey25519Proposition>
         return null;
     }
 }
+
+
+final class ProofOfCoinBurnProposition extends ScorexEncodingImpl implements Proposition
+{
+    MainchainTransaction _mainchainForwardTransfer;
+    MainchainTrMerklePath _merklePath;
+
+    public ProofOfCoinBurnProposition(MainchainTransaction mainchainForwardTransfer,
+                                      MainchainTrMerklePath merklePath) {
+        _mainchainForwardTransfer = mainchainForwardTransfer;
+        _merklePath = merklePath;
+    }
+
+
+    @Override
+    public byte[] bytes() {
+        return new byte[0];
+    }
+
+    @Override
+    public PropositionSerializer serializer() {
+        return null;
+    }
+}
