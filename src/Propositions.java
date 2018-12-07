@@ -1,5 +1,6 @@
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
+import scorex.core.settings.ScorexSettings;
 
 import java.security.PublicKey;
 
@@ -87,12 +88,35 @@ class PublicKey25519PropositionSerializer<PKP extends PublicKey25519Proposition>
 
 final class ProofOfCoinBurnProposition extends ScorexEncodingImpl implements Proposition
 {
-    MainchainTransaction _mainchainForwardTransfer;
+    MainchainTransaction _mainchainCoinBurnTransfer;
     MainchainTrMerklePath _merklePath;
 
-    public ProofOfCoinBurnProposition(MainchainTransaction mainchainForwardTransfer,
+    public ProofOfCoinBurnProposition(MainchainTransaction mainchainCoinBurnTransfer,
                                       MainchainTrMerklePath merklePath) {
-        _mainchainForwardTransfer = mainchainForwardTransfer;
+        _mainchainCoinBurnTransfer = mainchainCoinBurnTransfer;
+        _merklePath = merklePath;
+    }
+
+
+    @Override
+    public byte[] bytes() {
+        return new byte[0];
+    }
+
+    @Override
+    public PropositionSerializer serializer() {
+        return null;
+    }
+}
+
+final class ProofOfBeingIncludedIntoCertificateProposition extends ScorexEncodingImpl implements Proposition
+{
+    MainchainTransaction _mainchainCertifierLockTransfer;
+    MainchainTrMerklePath _merklePath;
+
+    public ProofOfBeingIncludedIntoCertificateProposition(MainchainTransaction mainchainCertifierLockTransfer,
+                                      MainchainTrMerklePath merklePath) {
+        _mainchainCertifierLockTransfer = mainchainCertifierLockTransfer;
         _merklePath = merklePath;
     }
 

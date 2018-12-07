@@ -156,23 +156,23 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
 }
 
 
-final class ForwardTransaction extends BoxTransaction<Proposition, Box<Proposition>>
+final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
 {
 
     @Override
-    public ForwardTransactionSerializer serializer() {
-        return new ForwardTransactionSerializer();
+    public MC2SCAggregatedTransactionSerializer serializer() {
+        return new MC2SCAggregatedTransactionSerializer();
     }
 
     @Override
     public ArrayList<BoxUnlocker<Proposition>> unlockers() {
-        // create array and put BoxUnlocker<ProofOfCoinBurnProposition> inside
+        // create array and put BoxUnlocker<ProofOfCoinBurnProposition> and/or BoxUnlocker<ProofOfBeingIncludedIntoCertificateProposition> inside
         return null;
     }
 
     @Override
     public ArrayList<Box<Proposition>> newBoxes() {
-        // return list of RegularBoxes
+        // return list of RegularBoxes for MC2SC coins and CertifierRightBoxes for Certifier locks
         return null;
     }
 
@@ -192,23 +192,23 @@ final class ForwardTransaction extends BoxTransaction<Proposition, Box<Propositi
     }
 }
 
-class ForwardTransactionSerializer implements TransactionSerializer<ForwardTransaction>
+class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
 {
     private ListSerializer<Box<Proposition>> _boxSerializer;
 
-    ForwardTransactionSerializer() {
+    MC2SCAggregatedTransactionSerializer() {
         HashMap<Integer, Serializer<Box>> supportedBoxSerializers = new HashMap<Integer, Serializer<Box>>();
         //supportedBoxSerializers.put(1, new RegularBoxSerializer());
         //_boxSerializer  = new ListSerializer<Box<Proposition>>(supportedBoxSerializers);
     }
 
     @Override
-    public byte[] toBytes(ForwardTransaction obj) {
+    public byte[] toBytes(MC2SCAggregatedTransaction obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<ForwardTransaction> parseBytes(byte[] bytes) {
+    public Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
         ArrayList<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
 
         // create RegualrTransaction and init with Boxes
@@ -217,20 +217,20 @@ class ForwardTransactionSerializer implements TransactionSerializer<ForwardTrans
 }
 
 
-final class BackwardTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
+final class WithdrawalRequestTransaction extends NoncedBoxTransaction<Proposition, NoncedBox<Proposition>>
 {
     @Override
-    public BackwardTransactionSerializer serializer() {
-        return new BackwardTransactionSerializer();
+    public WithdrawalRequestTransactionSerializer serializer() {
+        return new WithdrawalRequestTransactionSerializer();
     }
 
     @Override
-    public ArrayList<BoxUnlocker<PublicKey25519Proposition>> unlockers() { return null; }
+    public ArrayList<BoxUnlocker<Proposition>> unlockers() { return null; }
 
     // nothing to create
     @Override
-    public ArrayList<RegularBox> newBoxes() {
-        return new ArrayList<RegularBox>();
+    public ArrayList<NoncedBox<Proposition>> newBoxes() {
+        return new ArrayList<NoncedBox<Proposition>>();
     }
 
     @Override
@@ -249,30 +249,89 @@ final class BackwardTransaction extends NoncedBoxTransaction<PublicKey25519Propo
     }
 }
 
-class BackwardTransactionSerializer implements TransactionSerializer<BackwardTransaction>
+
+class WithdrawalRequestTransactionSerializer implements TransactionSerializer<WithdrawalRequestTransaction>
 {
-    private ListSerializer<RegularBox> _boxSerializer;
+    private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
-    BackwardTransactionSerializer() {
-        HashMap<Integer, Serializer<RegularBox>> supportedBoxSerializers = new HashMap<Integer, Serializer<RegularBox>>();
-        supportedBoxSerializers.put(1, new RegularBoxSerializer());
+    WithdrawalRequestTransactionSerializer() {
+        HashMap<Integer, Serializer<NoncedBox<Proposition>>> supportedBoxSerializers = new HashMap<Integer, Serializer<NoncedBox<Proposition>>>();
+        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
+        // TO DO: update supported serializers list
 
-        _boxSerializer  = new ListSerializer<RegularBox>(supportedBoxSerializers);
+        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxSerializers);
     }
 
     @Override
-    public byte[] toBytes(BackwardTransaction obj) {
+    public byte[] toBytes(WithdrawalRequestTransaction obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<BackwardTransaction> parseBytes(byte[] bytes) {
-        ArrayList<RegularBox> boxes = _boxSerializer.parseBytes(bytes).get();
-
-        // create RegualrTransaction and init with Boxes
+    public Try<WithdrawalRequestTransaction> parseBytes(byte[] bytes) {
+        ArrayList<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
         return null;
     }
 }
+
+
+final class CertifierUnlockRequestTransaction extends NoncedBoxTransaction<Proposition, NoncedBox<Proposition>>
+{
+    @Override
+    public CertifierUnlockRequestTransactionSerializer serializer() {
+        return new CertifierUnlockRequestTransactionSerializer();
+    }
+
+    @Override
+    public ArrayList<BoxUnlocker<Proposition>> unlockers() { return null; }
+
+    // nothing to create
+    @Override
+    public ArrayList<NoncedBox<Proposition>> newBoxes() {
+        return new ArrayList<NoncedBox<Proposition>>();
+    }
+
+    @Override
+    public long fee() {
+        return 0;
+    }
+
+    @Override
+    public long timestamp() {
+        return 0;
+    }
+
+    @Override
+    public scorex.core.ModifierTypeId transactionTypeId() {
+        return null; // scorex.core.ModifierTypeId @@ 3.toByte
+    }
+}
+
+
+class CertifierUnlockRequestTransactionSerializer implements TransactionSerializer<CertifierUnlockRequestTransaction>
+{
+    private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
+
+    CertifierUnlockRequestTransactionSerializer() {
+        HashMap<Integer, Serializer<NoncedBox<Proposition>>> supportedBoxSerializers = new HashMap<Integer, Serializer<NoncedBox<Proposition>>>();
+        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
+        // TO DO: update supported serializers list
+
+        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxSerializers);
+    }
+
+    @Override
+    public byte[] toBytes(CertifierUnlockRequestTransaction obj) {
+        return _boxSerializer.toBytes(obj.newBoxes());
+    }
+
+    @Override
+    public Try<CertifierUnlockRequestTransaction> parseBytes(byte[] bytes) {
+        ArrayList<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
+        return null;
+    }
+}
+
 
 
 class ListSerializer<T extends BytesSerializable> implements Serializer<ArrayList<T>> {

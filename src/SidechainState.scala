@@ -53,7 +53,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   def validateAgainstModifier(tx: BoxTransaction[Proposition, Box[Proposition]],
                mod: SidechainBlock): Try[Unit] = {
     tx match {
-      case t: ForwardTransaction => validateForwardTx(t, mod)
+      case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
       case t: BackwardTransaction => validateBackwardTx(t)
       // other SDK known objects with specific validation processing
       // ...
@@ -63,10 +63,10 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
     }
   }
 
-  def validateForwardTx(tx: ForwardTransaction,
+  def validateMC2SCAggregatedTx(tx: MC2SCAggregatedTransaction,
                         mod: SidechainBlock
                        ): Try[Unit] = Try {
-    // 1) check that forward transaction contains all sidechain related FT
+    // 1) check that MC2SCAggregatedTransaction (forward transaction) contains all sidechain related FT
     // 2) check that transaction is valid
   }
 

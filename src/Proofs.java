@@ -37,10 +37,31 @@ interface ProofSerializer<P extends Proof> extends Serializer<P>
 
 final class ProofOfCoinBurn implements Proof<ProofOfCoinBurnProposition>
 {
-
     @Override
     public boolean isValid(ProofOfCoinBurnProposition proposition, byte[] merkleRoot) {
-        // Get hash of proposition._mainchainForwardTransfer
+        // Get hash of proposition._mainchainCoinBurnTransfer
+        // calculate the merkle root for hash and proposition._merklePath
+        // compare calculated root with provided
+        return false;
+    }
+
+    @Override
+    public byte[] bytes() {
+        return new byte[0];
+    }
+
+    @Override
+    public ProofSerializer serializer() {
+        return null;
+    }
+}
+
+
+final class ProofOfBeingIncludedIntoCertificate implements Proof<ProofOfBeingIncludedIntoCertificateProposition>
+{
+    @Override
+    public boolean isValid(ProofOfBeingIncludedIntoCertificateProposition proposition, byte[] merkleRoot) {
+        // Get hash of proposition._mainchainCertifierLockTransfer
         // calculate the merkle root for hash and proposition._merklePath
         // compare calculated root with provided
         return false;
