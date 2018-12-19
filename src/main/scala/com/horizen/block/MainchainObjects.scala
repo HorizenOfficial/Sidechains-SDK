@@ -1,3 +1,5 @@
+package com.horizen.block
+
 
 /**
   * Basic trait for all Mainchain objects

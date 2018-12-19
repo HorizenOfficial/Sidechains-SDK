@@ -1,3 +1,5 @@
+package com.horizen
+
 trait SecretCompanionWrapper[S <: scorex.core.transaction.state.Secret,
     PKP <: scorex.core.transaction.box.proposition.Proposition,
     PRP <: scorex.core.transaction.proof.Proof[PKP] ]

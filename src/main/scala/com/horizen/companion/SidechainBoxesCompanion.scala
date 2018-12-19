@@ -1,3 +1,7 @@
+package com.horizen.companion
+
+import com.horizen.box.{Box, BoxSerializer, RegularBox, RegularBoxSerializer}
+import com.horizen.proposition.Proposition
 import scorex.core.ModifierTypeId
 import scorex.core.serialization.Serializer
 

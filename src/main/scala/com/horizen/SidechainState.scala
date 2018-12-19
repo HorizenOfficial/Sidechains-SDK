@@ -1,3 +1,10 @@
+package com.horizen
+
+import com.horizen.block.SidechainBlock
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
+import com.horizen.state.ApplicationState
+import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
 import scorex.core.{VersionTag, idToVersion}
 import scorex.mid.state.BoxMinimalState
 import scorex.core.block.Block
@@ -54,7 +61,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
                mod: SidechainBlock): Try[Unit] = {
     tx match {
       case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
-      case t: BackwardTransaction => validateBackwardTx(t)
+      case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
       // other SDK known objects with specific validation processing
       // ...
       case _ => Try { // RegularTransactions and custom sidechain transactions
@@ -70,7 +77,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
     // 2) check that transaction is valid
   }
 
-  def validateBackwardTx(tx: BackwardTransaction): Try[Unit] = Try {
+  def validateWithdrawalRequestTx(tx: WithdrawalRequestTransaction): Try[Unit] = Try {
     // validate unlockers to be sure that we can spent proper boxes.
     // no new boxes must be created
   }

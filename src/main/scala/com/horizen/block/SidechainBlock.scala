@@ -1,3 +1,9 @@
+package com.horizen.block
+
+import com.horizen.ScorexEncodingImpl
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
+import com.horizen.transaction.BoxTransaction
 import scorex.core.{ModifierId, ModifierTypeId, PersistentNodeViewModifier}
 import scorex.core.block.Block
 import scorex.core.block.Block.{Timestamp, Version}
@@ -32,7 +38,7 @@ class SidechainBlock extends Block[BoxTransaction[Proposition, Box[Proposition]]
   // Fraud notification part
 }
 
-object SidechainBlock extends ScorexEncoding {
+object SidechainBlock extends ScorexEncodingImpl {
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 4.toByte
 
   //...

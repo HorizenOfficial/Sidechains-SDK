@@ -1,3 +1,7 @@
+package com.horizen.state;
+
+import scorex.core.transaction.BoxTransaction;
+
 // TO DO: provide access to HistoryReader
 public interface ApplicationState {
     public boolean validate(BoxTransaction tx); // or (tx, block)
@@ -13,7 +17,4 @@ public interface ApplicationState {
 }
 
 
-// TO DO: provide abstract class with OutOfBox persistence.
-abstract class PersistentApplicationState implements ApplicationState {
 
-}

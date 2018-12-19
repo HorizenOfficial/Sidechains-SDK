@@ -1,3 +1,9 @@
+package com.horizen
+
+import com.horizen.box.Box
+import com.horizen.proposition.ProofOfKnowledgeProposition
+import com.horizen.secret.Secret
+import com.horizen.transaction.BoxTransaction
 import scorex.core.ModifierId
 import scorex.core.transaction.MempoolReader
 

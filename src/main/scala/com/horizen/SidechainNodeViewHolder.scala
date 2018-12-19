@@ -1,3 +1,7 @@
+package com.horizen
+
+import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.block.Block
 import scorex.core.serialization.Serializer
