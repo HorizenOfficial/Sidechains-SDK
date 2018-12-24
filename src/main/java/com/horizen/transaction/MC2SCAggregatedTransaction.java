@@ -3,7 +3,6 @@ package com.horizen.transaction;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import io.circe.Json;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 

@@ -6,9 +6,8 @@ import com.horizen.proposition.Proposition;
 
 public interface BoxUnlocker<P extends Proposition> extends scorex.core.transaction.box.BoxUnlocker
 {
-    // TO Do: replace with Score ADKey
     @Override
-    Object closedBoxId();
+    byte[] closedBoxId();
 
     @Override
     Proof<P> boxKey();

@@ -19,7 +19,7 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
                   Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]],
                   SidechainWallet] {
 
-  override type NVCT = this.type
+  override type NVCT = SidechainWallet
 
   // 1) check for existence
   // 2) try to store in SecretStoreusing SidechainSecretsCompanion

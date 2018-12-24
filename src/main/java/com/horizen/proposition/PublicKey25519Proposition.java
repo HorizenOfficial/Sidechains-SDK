@@ -3,13 +3,13 @@ package com.horizen.proposition;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.ScorexEncodingImpl;
+import com.horizen.ScorexEncoding;
 
 // To Do: replace with proper PublicKey from Scorex
 import java.security.PublicKey;
 
 // TO DO: check usage of ScorexEncodingImpl and Scorex core Encoders
-public class PublicKey25519Proposition<PK extends PrivateKey25519> extends ScorexEncodingImpl implements ProofOfKnowledgeProposition<PK>
+public class PublicKey25519Proposition<PK extends PrivateKey25519> extends ScorexEncoding implements ProofOfKnowledgeProposition<PK>
 {
     // to do: change to scorex.crypto.PublicKey
     PublicKey _pubKeyBytes;

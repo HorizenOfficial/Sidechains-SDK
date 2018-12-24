@@ -1,6 +1,5 @@
 package com.horizen.box;
 
-import com.horizen.NoncedBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Try;
 
@@ -31,7 +30,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     public long nonce() { return _nonce; }
 
     @Override
-    public Object id() { // actually return ADKey
+    public byte[] id() { // actually return ADKey
         return null;
     }
 

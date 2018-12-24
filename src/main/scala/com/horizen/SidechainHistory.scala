@@ -40,5 +40,5 @@ class SidechainHistory extends scorex.core.consensus.History[
 
   override def compare(other: SyncInfo): History.HistoryComparisonResult = ???
 
-  override type NVCT = this.type
+  override type NVCT = SidechainHistory
 }

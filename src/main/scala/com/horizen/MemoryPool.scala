@@ -4,21 +4,23 @@ import com.horizen.box.Box
 import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.transaction.BoxTransaction
-import scorex.core.ModifierId
+import scorex.util.ModifierId
 import scorex.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Try
 
-case class MemoryPool(unconfirmed: TrieMap[ModifierId, BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]])
+case class MemoryPool(unconfirmed: TrieMap[String, BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]])
   extends scorex.core.transaction.MemoryPool[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]], MemoryPool]
 {
-  override type NVCT <: MemoryPool
+  override type NVCT = MemoryPool
 
   // Getters:
   override def getById(id: ModifierId): Option[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]] = {
     unconfirmed.get(id)
   }
+
+  override def modifierById(modifierId: ModifierId): Option[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]] = ???
 
   override def contains(id: ModifierId): Boolean = {
     unconfirmed.contains(id)

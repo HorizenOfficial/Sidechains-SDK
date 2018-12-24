@@ -10,10 +10,10 @@ import scala.util.Try
 case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]])
     extends Serializer[Box[_ <: Proposition]] {
 
-  val coreBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(new RegularBox(/*args*/).boxTypeId() -> new RegularBoxSerializer())
+  val coreBoxSerializers: Map[scorex.core.ModifierTypeId, _ <: BoxSerializer[_]] =
+    Map(new RegularBox(null, 0, 0).boxTypeId() -> new RegularBoxSerializer())
 
-  val customBoxId = ModifierTypeId @@ 0xFF // TODO: think about proper value
+  val customBoxId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
 
   // TO DO: do like in SidechainTransactionsCompanion
   override def toBytes(obj: Box[_ <: Proposition]): Array[Byte] = ???

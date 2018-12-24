@@ -1,10 +1,10 @@
 package com.horizen.proposition;
 
-import com.horizen.ScorexEncodingImpl;
+import com.horizen.ScorexEncoding;
 import com.horizen.block.MainchainTrMerklePath;
 import com.horizen.block.MainchainTransaction;
 
-public final class ProofOfCoinBurnProposition extends ScorexEncodingImpl implements Proposition
+public final class ProofOfCoinBurnProposition extends ScorexEncoding implements Proposition
 {
     MainchainTransaction _mainchainCoinBurnTransfer;
     MainchainTrMerklePath _merklePath;

@@ -89,6 +89,13 @@
             <version>2.5.19</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.iheart/ficus -->
+        <dependency>
+            <groupId>com.iheart</groupId>
+            <artifactId>ficus_2.12</artifactId>
+            <version>1.4.2</version>
+        </dependency>
+
     </dependencies>
 
     <build>

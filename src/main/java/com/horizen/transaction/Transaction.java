@@ -3,13 +3,14 @@ package com.horizen.transaction;
 public abstract class Transaction extends scorex.core.transaction.Transaction
 {
     @Override
-    public final scorex.core.ModifierTypeId modifierTypeId() {
-        return (scorex.core.ModifierTypeId)super.modifierTypeId();
+    // TO DO: think more about supertagged lib representation in java
+    public final byte modifierTypeId() {
+        return super.modifierTypeId();
     }
 
     @Override
-    public final scorex.core.ModifierId id() {
-        return (scorex.core.ModifierId)super.id();
+    public final String id() {
+        return super.id();
     }
 
     @Override

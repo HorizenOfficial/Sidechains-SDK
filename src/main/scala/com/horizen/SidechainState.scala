@@ -6,8 +6,6 @@ import com.horizen.proposition.Proposition
 import com.horizen.state.ApplicationState
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
 import scorex.core.{VersionTag, idToVersion}
-import scorex.mid.state.BoxMinimalState
-import scorex.core.block.Block
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 
 import scala.util.{Failure, Success, Try}
@@ -25,7 +23,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")
 
   override type NVCT = SidechainState
-  //type HPMOD = HybridBlock
+  //type HPMOD = SidechainBlock
 
 
   // Note: emit tx.semanticValidity for each tx
@@ -61,7 +59,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
                mod: SidechainBlock): Try[Unit] = {
     tx match {
       case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
-      case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
+      //case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
       // other SDK known objects with specific validation processing
       // ...
       case _ => Try { // RegularTransactions and custom sidechain transactions
@@ -113,7 +111,7 @@ object SidechainState {
   def changes(mod: SidechainBlock)
     : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
 
-    val transactions: Seq[BoxTransaction[Proposition]] = Seq()
+    val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = Seq()
 
     Try {
       val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
@@ -124,7 +122,7 @@ object SidechainState {
 
       @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
       val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
-        initial._1.map(id => Removal[Proposition, Box[Proposition]](id)) ++
+        initial._1.map(id => Removal[Proposition, Box[Proposition]](scorex.crypto.authds.ADKey(id))) ++
           initial._2.map(b => Insertion[Proposition, Box[Proposition]](b))
       BoxStateChanges[Proposition, Box[Proposition]](ops)
 

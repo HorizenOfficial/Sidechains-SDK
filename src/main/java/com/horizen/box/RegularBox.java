@@ -6,7 +6,7 @@ import scala.util.Try;
 // Example of SDK known Transaction type
 public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Proposition> implements CoinsBox<PublicKey25519Proposition>
 {
-    RegularBox(PublicKey25519Proposition proposition,
+    public RegularBox(PublicKey25519Proposition proposition,
                int nonce,
                int value)
     {

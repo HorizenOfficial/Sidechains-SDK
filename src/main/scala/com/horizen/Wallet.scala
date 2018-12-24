@@ -34,7 +34,7 @@ class WalletBoxSerializer[P <: Proposition, B <: Box[P]](boxDeserializer: Serial
   }*/
 }
 
-trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.block.Block[TX], W <: Wallet[P, TX, PMOD, W]]
+trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.block.Block[TX], W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 

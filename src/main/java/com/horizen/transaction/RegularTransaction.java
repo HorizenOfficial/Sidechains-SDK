@@ -2,6 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.RegularBox;
+import com.horizen.box.RegularBoxSerializer;
 import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;

@@ -1,6 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.NoncedBox;
+import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import scala.util.Try;

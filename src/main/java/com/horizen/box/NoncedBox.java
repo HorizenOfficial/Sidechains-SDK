@@ -1,4 +1,4 @@
-package com.horizen;
+package com.horizen.box;
 
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;

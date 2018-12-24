@@ -27,9 +27,8 @@ public interface Box<P extends Proposition> extends scorex.core.transaction.box.
     @Override
     P proposition();
 
-    // TO DO: change id to ADKey
     @Override
-    Object id();
+    byte[] id();
 
     @Override
     byte[] bytes();

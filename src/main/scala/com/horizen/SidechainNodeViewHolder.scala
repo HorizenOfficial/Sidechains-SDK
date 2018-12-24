@@ -8,14 +8,14 @@ import scorex.core.serialization.Serializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 
-class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
+abstract class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
   extends scorex.core.NodeViewHolder[Transaction, Block[Transaction]] {
   override type SI = scorex.core.consensus.SyncInfo
-  override type HIS = SidechainHistory
+  /*override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet
-  override type MP = MemoryPool
+  override type MP = MemoryPool*/
 
   override val scorexSettings: ScorexSettings = sdkSettings.scorexSettings;
 
@@ -23,12 +23,12 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = ???
 
-  // TO DO: put here map of custom sidechain transactions
-  val customTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] = ???
+  // TO DO: Put it into NodeViewSynchronizerRef::modifierSerializers. Also put here map of custom sidechain transactions
+  /*val customTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] = ???
 
-  override val modifierSerializers: Map[ModifierTypeId, Serializer[_ <: NodeViewModifier]] =
+  override val modifierSerializers: Map[Byte, Serializer[_ <: NodeViewModifier]] =
     Map(new RegularTransaction().modifierTypeId() -> new SidechainTransactionsCompanion(customTransactionSerializers))
-
+  */
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {

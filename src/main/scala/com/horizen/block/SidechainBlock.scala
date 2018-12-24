@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.ScorexEncodingImpl
+import com.horizen.ScorexEncoding
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
@@ -11,7 +11,7 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
-class SidechainBlock extends Block[BoxTransaction[Proposition, Box[Proposition]]]{
+class SidechainBlock extends PersistentNodeViewModifier with Block[BoxTransaction[Proposition, Box[Proposition]]]{
 
   override type M = SidechainBlock
 
@@ -38,7 +38,7 @@ class SidechainBlock extends Block[BoxTransaction[Proposition, Box[Proposition]]
   // Fraud notification part
 }
 
-object SidechainBlock extends ScorexEncodingImpl {
+object SidechainBlock extends ScorexEncoding {
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 4.toByte
 
   //...

@@ -10,9 +10,9 @@ case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.Mo
   extends Serializer[Secret] {
 
   val coreSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]] =
-    Map(new PrivateKey25519(/*args*/).secretTypeId() -> new PrivateKey25519Serializer[PrivateKey25519]())
+    Map(new PrivateKey25519(null, null).secretTypeId() -> new PrivateKey25519Serializer[PrivateKey25519]())
 
-  val customSecretId = ModifierTypeId @@ 0xFF // TODO: think about proper value
+  val customSecretId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
 
   // TO DO: do like in SidechainTransactionsCompanion
   override def toBytes(obj: Secret): Array[Byte] = ???
