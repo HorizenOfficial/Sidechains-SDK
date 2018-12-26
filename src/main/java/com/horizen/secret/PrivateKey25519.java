@@ -48,8 +48,8 @@ public class PrivateKey25519 implements Secret
     }
 
     @Override
-    public scorex.core.ModifierTypeId secretTypeId() {
-        return null; // scorex.core.ModifierTypeId @@ 3.toByte
+    public byte secretTypeId() {
+        return 3; // scorex.core.ModifierTypeId @@ 3.toByte
     }
 }
 

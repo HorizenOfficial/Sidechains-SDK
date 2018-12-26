@@ -36,5 +36,6 @@ public interface Box<P extends Proposition> extends scorex.core.transaction.box.
     @Override
     BoxSerializer serializer();
 
-    scorex.core.ModifierTypeId boxTypeId();
+    // TO DO: maybe change to scorex.core.ModifierTypeId
+    byte boxTypeId();
 }

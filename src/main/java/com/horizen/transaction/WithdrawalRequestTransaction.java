@@ -36,8 +36,8 @@ public final class WithdrawalRequestTransaction extends NoncedBoxTransaction<Pro
     }
 
     @Override
-    public scorex.core.ModifierTypeId transactionTypeId() {
-        return null; // scorex.core.ModifierTypeId @@ 3.toByte
+    public byte transactionTypeId() {
+        return 4; // scorex.core.ModifierTypeId @@ 4.toByte
     }
 }
 

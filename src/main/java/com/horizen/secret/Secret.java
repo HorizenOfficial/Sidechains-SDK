@@ -26,7 +26,8 @@ public interface Secret extends scorex.core.transaction.state.Secret
     @Override
     SecretSerializer serializer();
 
-    scorex.core.ModifierTypeId secretTypeId();
+    // TO DO: uncomment and fix compiler error with acces to scla package object in java interface
+    byte secretTypeId();
 }
 
 
@@ -47,7 +48,7 @@ interface SecretCompanion<S extends Secret> extends scorex.core.transaction.stat
 
     // TO DO: change Objects to proper types
     @Override
-    boolean verify(byte[] message, Object publicImage, Object proof);
+    boolean verify(byte[] message, Object publicImage, scorex.core.transaction.box.proposition.ProofOfKnowledgeProposition<scorex.core.transaction.state.Secret> proof);
 
     // TO DO: change Objects to proper types
     @Override

@@ -9,7 +9,7 @@ import scala.util.Try
 case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]])
   extends Serializer[Secret] {
 
-  val coreSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]] =
+  val coreSecretSerializers: Map[scorex.core.ModifierTypeId.Raw , SecretSerializer[_ <: Secret]] =
     Map(new PrivateKey25519(null, null).secretTypeId() -> new PrivateKey25519Serializer[PrivateKey25519]())
 
   val customSecretId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value

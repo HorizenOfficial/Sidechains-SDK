@@ -7,10 +7,10 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
-case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId, BoxSerializer[_ <: Box[_ <: Proposition]]])
+case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId.Raw, BoxSerializer[_ <: Box[_ <: Proposition]]])
     extends Serializer[Box[_ <: Proposition]] {
 
-  val coreBoxSerializers: Map[scorex.core.ModifierTypeId, _ <: BoxSerializer[_]] =
+  val coreBoxSerializers: Map[scorex.core.ModifierTypeId.Raw, _ <: BoxSerializer[_]] =
     Map(new RegularBox(null, 0, 0).boxTypeId() -> new RegularBoxSerializer())
 
   val customBoxId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value

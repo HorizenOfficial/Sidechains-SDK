@@ -22,7 +22,8 @@ public abstract class Transaction extends scorex.core.transaction.Transaction
     public abstract byte[] messageToSign();
 
     @Override
-    public abstract TransactionSerializer serializer();
+    public TransactionSerializer serializer() { return null; };
 
-    public abstract scorex.core.ModifierTypeId transactionTypeId();
+    // TO DO: maybe we need to return scorex.core.ModifierTypeId
+    public abstract byte transactionTypeId();
 }

@@ -11,7 +11,7 @@ public class BallotBox extends PublicKey25519NoncedBox<PublicKey25519Proposition
     }
 
     @Override
-    public scorex.core.ModifierTypeId boxTypeId() {
-        return null; // // scorex.core.ModifierTypeId @@ 1.toByte
+    public byte boxTypeId() {
+        return 1; // // scorex.core.ModifierTypeId @@ 1.toByte
     }
 }
