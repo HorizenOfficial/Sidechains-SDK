@@ -5,7 +5,7 @@
     <version>0.1-SNAPSHOT</version>
     <inceptionYear>2018</inceptionYear>
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>    
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <scala.version>2.12.8</scala.version>
@@ -108,20 +108,12 @@
         -->
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
-                <configuration>
-                    <includes>
-                        <include>${project.basedir}/src/main/resources/*.jar</include>
-                    </includes>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.scala-tools</groupId>
                 <artifactId>maven-scala-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>compile-scala-sources</id>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>compile</goal>
                             <goal>testCompile</goal>
@@ -130,9 +122,21 @@
                 </executions>
                 <configuration>
                     <scalaVersion>${scala.version}</scalaVersion>
+                    <!--
                     <args>
                         <arg>-Ylog-classpath</arg>
                     </args>
+                    -->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+                <configuration>
+                    <!--
+                    <verbose>true</verbose>
+                    -->
                 </configuration>
             </plugin>
         </plugins>
