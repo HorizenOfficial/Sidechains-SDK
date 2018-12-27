@@ -17,12 +17,3 @@ public interface Proposition extends scorex.core.transaction.box.proposition.Pro
     @Override
     PropositionSerializer serializer();
 }
-
-interface PropositionSerializer<P extends Proposition> extends Serializer<P>
-{
-    @Override
-    byte[] toBytes(P obj);
-
-    @Override
-    Try<P> parseBytes(byte[] bytes);
-}

@@ -5,7 +5,10 @@
     <version>0.1-SNAPSHOT</version>
     <inceptionYear>2018</inceptionYear>
     <properties>
-        <scala.version>2.12.6</scala.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>    
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <scala.version>2.12.8</scala.version>
     </properties>
 
     <repositories>
@@ -130,23 +133,6 @@
                     <args>
                         <arg>-Ylog-classpath</arg>
                     </args>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-eclipse-plugin</artifactId>
-                <configuration>
-                    <downloadSources>true</downloadSources>
-                    <buildcommands>
-                        <buildcommand>ch.epfl.lamp.sdt.core.scalabuilder</buildcommand>
-                    </buildcommands>
-                    <additionalProjectnatures>
-                        <projectnature>ch.epfl.lamp.sdt.core.scalanature</projectnature>
-                    </additionalProjectnatures>
-                    <classpathContainers>
-                        <classpathContainer>org.eclipse.jdt.launching.JRE_CONTAINER</classpathContainer>
-                        <classpathContainer>ch.epfl.lamp.sdt.launching.SCALA_CONTAINER</classpathContainer>
-                    </classpathContainers>
                 </configuration>
             </plugin>
         </plugins>

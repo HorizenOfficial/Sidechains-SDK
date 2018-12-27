@@ -15,21 +15,11 @@ trait ProofOfKnowledge[S <: Secret, P <: ProofOfKnowledgeProposition[S]] extends
 
 public interface Proof<P extends Proposition> extends scorex.core.transaction.proof.Proof<P>
 {
-    @Override
     boolean isValid(P proposition, byte[] message);
 
-    @Override
     byte[] bytes();
 
     @Override
     ProofSerializer serializer();
 }
 
-interface ProofSerializer<P extends Proof> extends Serializer<P>
-{
-    @Override
-    byte[] toBytes(P obj);
-
-    @Override
-    Try<P> parseBytes(byte[] bytes);
-}
