@@ -19,7 +19,7 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
     }
 
     @Override
-    public scorex.core.ModifierTypeId boxTypeId() {
-        return null; // scorex.core.ModifierTypeId @@ 3.toByte
+    public byte boxTypeId() {
+        return 3; // scorex.core.ModifierTypeId @@ 3.toByte
     }
 }

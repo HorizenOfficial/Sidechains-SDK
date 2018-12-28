@@ -8,7 +8,7 @@ import scorex.core.serialization.Serializer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-class WithdrawalRequestTransactionSerializer implements TransactionSerializer<WithdrawalRequestTransaction>
+class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
@@ -21,12 +21,12 @@ class WithdrawalRequestTransactionSerializer implements TransactionSerializer<Wi
     }
 
     @Override
-    public byte[] toBytes(WithdrawalRequestTransaction obj) {
+    public byte[] toBytes(T obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<WithdrawalRequestTransaction> parseBytes(byte[] bytes) {
+    public Try<T> parseBytes(byte[] bytes) {
         ArrayList<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
         return null;
     }

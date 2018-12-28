@@ -13,7 +13,7 @@ public interface ApplicationState {
 
     public ApplicationState applyChanges(/*changes*/); // return Try[...]
 
-    public ApplicationState rollbackTo(scorex.core.VersionTag version); // return Try[...]
+    public ApplicationState rollbackTo(String version); // return Try[...]
 }
 
 

@@ -8,7 +8,7 @@ import scorex.core.serialization.Serializer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-class CertifierUnlockRequestTransactionSerializer implements TransactionSerializer<CertifierUnlockRequestTransaction>
+class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
@@ -21,12 +21,12 @@ class CertifierUnlockRequestTransactionSerializer implements TransactionSerializ
     }
 
     @Override
-    public byte[] toBytes(CertifierUnlockRequestTransaction obj) {
+    public byte[] toBytes(T obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<CertifierUnlockRequestTransaction> parseBytes(byte[] bytes) {
+    public Try<T> parseBytes(byte[] bytes) {
         ArrayList<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
         return null;
     }

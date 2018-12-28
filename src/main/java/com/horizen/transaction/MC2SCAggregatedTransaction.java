@@ -40,8 +40,8 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     }
 
     @Override
-    public scorex.core.ModifierTypeId transactionTypeId() {
-        return null; // scorex.core.ModifierTypeId @@ 2.toByte
+    public byte transactionTypeId() {
+        return 2; // scorex.core.ModifierTypeId @@ 2.toByte
     }
 
 }

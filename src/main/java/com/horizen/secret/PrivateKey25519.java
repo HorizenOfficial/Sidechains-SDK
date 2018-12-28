@@ -27,10 +27,6 @@ public class PrivateKey25519 implements Secret
         return new PrivateKey25519Companion();
     }
 
-    @Override
-    public PrivateKey25519 instance() {
-        return this;
-    }
 
     @Override
     public PublicKey25519Proposition publicImage() {
@@ -48,7 +44,7 @@ public class PrivateKey25519 implements Secret
     }
 
     @Override
-    public scorex.core.ModifierTypeId secretTypeId() {
-        return null; // scorex.core.ModifierTypeId @@ 3.toByte
+    public byte secretTypeId() {
+        return 3; // scorex.core.ModifierTypeId @@ 3.toByte
     }
 }

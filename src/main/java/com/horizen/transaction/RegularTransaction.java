@@ -39,7 +39,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     }
 
     @Override
-    public scorex.core.ModifierTypeId transactionTypeId() {
-        return null;// scorex.core.ModifierTypeId @@ 1.toByte();
+    public byte transactionTypeId() {
+        return 1;// scorex.core.ModifierTypeId @@ 1.toByte();
     }
 }

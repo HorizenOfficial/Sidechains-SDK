@@ -1,5 +1,6 @@
 package com.horizen.transaction;
 
+
 public abstract class Transaction extends scorex.core.transaction.Transaction
 {
     @Override
@@ -24,5 +25,6 @@ public abstract class Transaction extends scorex.core.transaction.Transaction
     @Override
     public abstract TransactionSerializer serializer();
 
-    public abstract scorex.core.ModifierTypeId transactionTypeId();
+    // TO DO: maybe we need to return scorex.core.ModifierTypeId
+    public abstract byte transactionTypeId();
 }

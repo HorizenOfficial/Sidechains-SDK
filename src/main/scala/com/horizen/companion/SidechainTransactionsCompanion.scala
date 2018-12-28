@@ -9,7 +9,7 @@ import scala.util.{Failure, Try}
 // import com.google.common.primitives.Bytes;
 
 
-case class SidechainTransactionsCompanion(customTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]])
+case class SidechainTransactionsCompanion(customTransactionSerializers: Map[scorex.core.ModifierTypeId.Raw, TransactionSerializer[_ <: Transaction]])
     extends Serializer[Transaction] {
 
   val coreTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] =
