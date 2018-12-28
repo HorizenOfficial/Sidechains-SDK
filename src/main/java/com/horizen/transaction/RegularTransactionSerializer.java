@@ -8,7 +8,7 @@ import scorex.core.serialization.Serializer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
+class RegularTransactionSerializer<T extends RegularTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<RegularBox> _boxSerializer;
     // todo: keep another serializers for inputs and signatures(secrets)
@@ -21,12 +21,12 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
     }
 
     @Override
-    public byte[] toBytes(RegularTransaction obj) {
+    public byte[] toBytes(T obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<RegularTransaction> parseBytes(byte[] bytes) {
+    public Try<T> parseBytes(byte[] bytes) {
         ArrayList<RegularBox> boxes = _boxSerializer.parseBytes(bytes).get();
 
         // create RegualrTransaction and init with Boxes

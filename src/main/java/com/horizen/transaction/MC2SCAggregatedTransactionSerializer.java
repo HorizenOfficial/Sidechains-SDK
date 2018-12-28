@@ -8,7 +8,7 @@ import scorex.core.serialization.Serializer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
+class MC2SCAggregatedTransactionSerializer<T extends MC2SCAggregatedTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<Box<Proposition>> _boxSerializer;
 
@@ -19,12 +19,12 @@ class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2S
     }
 
     @Override
-    public byte[] toBytes(MC2SCAggregatedTransaction obj) {
+    public byte[] toBytes(T obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
     }
 
     @Override
-    public Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
+    public Try<T> parseBytes(byte[] bytes) {
         ArrayList<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
 
         // create RegualrTransaction and init with Boxes
