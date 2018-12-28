@@ -27,10 +27,6 @@ public class PrivateKey25519 implements Secret
         return new PrivateKey25519Companion();
     }
 
-    @Override
-    public PrivateKey25519 instance() {
-        return this;
-    }
 
     @Override
     public PublicKey25519Proposition publicImage() {
