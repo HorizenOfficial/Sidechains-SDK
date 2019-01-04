@@ -8,7 +8,7 @@ import scorex.util.encode.BytesEncoder;
 
 public class ScorexEncoding //implements scorex.util.ScorexEncoding
 {
-    public final BytesEncoder encoder() {
+    public static final BytesEncoder encoder() {
         return scorex.util.encode.Base16$.MODULE$;
     }
 
