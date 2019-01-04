@@ -1,17 +1,25 @@
 package com.horizen.proposition;
 
+import scala.util.Failure;
+import scala.util.Success;
 import scala.util.Try;
 
-class PublicKey25519PropositionSerializer<PKP extends PublicKey25519Proposition> implements PropositionSerializer<PKP>
+class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
 {
 
     @Override
-    public byte[] toBytes(PKP obj) {
-        return new byte[0];
+    public byte[] toBytes(PublicKey25519Proposition obj) {
+        return obj.pubKeyBytes();
     }
 
     @Override
-    public Try<PKP> parseBytes(byte[] bytes) {
-        return null;
+    public Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
+        try {
+            PublicKey25519Proposition proposition = new PublicKey25519Proposition(bytes);
+            return new Success<PublicKey25519Proposition>(proposition);
+        }
+        catch (Exception e) {
+            return new Failure(e);
+        }
     }
 }
