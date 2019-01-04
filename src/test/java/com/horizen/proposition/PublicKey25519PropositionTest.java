@@ -18,8 +18,6 @@ public class PublicKey25519PropositionTest {
     byte[] messageToSign;
     byte[] signature;
 
-    byte[] brokenPublicKey;
-    byte[] brokenSignature;
 
     @Before
     public void beforeEachTest() {
@@ -63,7 +61,7 @@ public class PublicKey25519PropositionTest {
         PublicKey25519Proposition prop3 = new PublicKey25519Proposition(keyPair._2());
 
         assertEquals("Propositions hash codes expected to be different", false, prop1.hashCode() == prop3.hashCode());
-        assertEquals("Propositions expected to be different", false, prop1 == prop3);
+        assertEquals("Propositions expected to be different", false, prop1.equals(prop3));
     }
 
     @Test
