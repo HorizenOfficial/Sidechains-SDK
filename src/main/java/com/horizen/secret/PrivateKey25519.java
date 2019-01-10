@@ -4,18 +4,15 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proof.ProofOfKnowledge;
 
 import scala.Tuple2;
-import scorex.core.transaction.box.Box;
 
-import java.security.PrivateKey;
-import java.security.PublicKey;
 
 public class PrivateKey25519 implements Secret
 {
     // TO DO: change to scorex.crypto.{PublicKey,PrivateKey}
-    PrivateKey _privateKeyBytes;
-    PublicKey _publicKeyBytes;
+    byte[] _privateKeyBytes;
+    byte[] _publicKeyBytes;
 
-    public PrivateKey25519(PrivateKey privateKeyBytes, PublicKey publicKeyBytes)
+    public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
         // TO DO: require check
         _privateKeyBytes = privateKeyBytes;
