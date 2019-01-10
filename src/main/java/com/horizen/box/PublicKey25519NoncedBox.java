@@ -1,15 +1,20 @@
 package com.horizen.box;
 
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Longs;
+import com.horizen.ScorexEncoding;
 import com.horizen.proposition.PublicKey25519Proposition;
-import scala.util.Try;
+import scorex.crypto.hash.Blake2b256;
 
-public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposition> implements NoncedBox<PKP>
+import java.util.Arrays;
+
+public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposition> extends ScorexEncoding implements NoncedBox<PKP>
 {
-    PKP _proposition;
-    long _nonce;
-    long _value;
+    private PKP _proposition;
+    private long _nonce;
+    private long _value;
 
-    PublicKey25519NoncedBox(PKP proposition,
+    public PublicKey25519NoncedBox(PKP proposition,
                             long nonce,
                             long value)
     {
@@ -18,24 +23,51 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
         this._value = value;
     }
 
-    public long value() {
+    @Override
+    public final long value() {
         return _value;
     }
 
-    public PKP proposition() { return _proposition; }
+    @Override
+    public final PKP proposition() { return _proposition; }
 
-    public long nonce() { return _nonce; }
+    @Override
+    public final long nonce() { return _nonce; }
 
-    public byte[] id() { // actually return ADKey
-        return null;
+    @Override
+    public byte[] id() {
+        return PublicKey25519NoncedBox.idFromBox(_proposition, _nonce);
     }
 
-    public byte[] bytes() {
+    @Override
+    public final byte[] bytes() {
         return serializer().toBytes(this);
     }
 
-    public PublicKey25519NoncedBoxSerializer serializer() {
-        return new PublicKey25519NoncedBoxSerializer();
+    @Override
+    public int hashCode() {
+        return _proposition.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+        if (!(obj instanceof PublicKey25519NoncedBox))
+            return false;
+        if (obj == this)
+            return true;
+        return Arrays.equals(id(), ((PublicKey25519NoncedBox) obj).id())
+                && value() == ((PublicKey25519NoncedBox) obj).value();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("PublicKey25519NoncedBox(id: %s, proposition: %s, nonce: %d, value: %d)", encoder().encode(id()), _proposition, _nonce, _value);
+    }
+
+    public static <PKP extends PublicKey25519Proposition> byte[] idFromBox(PKP proposition, long nonce) {
+        return Blake2b256.hash(Bytes.concat(proposition.pubKeyBytes(), Longs.toByteArray(nonce)));
     }
 }
 
