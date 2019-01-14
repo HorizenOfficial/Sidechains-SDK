@@ -10,7 +10,7 @@ case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.Mo
   extends Serializer[Secret] {
 
   val coreSecretSerializers: Map[scorex.core.ModifierTypeId.Raw , SecretSerializer[_ <: Secret]] =
-    Map(new PrivateKey25519(null, null).secretTypeId() -> new PrivateKey25519Serializer[PrivateKey25519]())
+    Map(new PrivateKey25519(null, null).secretTypeId() -> new PrivateKey25519Serializer())
 
   val customSecretId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
 
