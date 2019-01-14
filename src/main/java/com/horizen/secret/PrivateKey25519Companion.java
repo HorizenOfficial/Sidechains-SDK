@@ -7,7 +7,7 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import scala.Tuple2;
 
-class PrivateKey25519Companion<S extends PrivateKey25519, P extends PublicKey25519Proposition<S>, PR extends ProofOfKnowledge<S,P>, B extends PublicKey25519NoncedBox<P>> implements SecretCompanion<S, P, PR, B>
+public class PrivateKey25519Companion<S extends PrivateKey25519, P extends PublicKey25519Proposition<S>, PR extends ProofOfKnowledge<S,P>, B extends PublicKey25519NoncedBox<P>> implements SecretCompanion<S, P, PR, B>
 {
 
     @Override
