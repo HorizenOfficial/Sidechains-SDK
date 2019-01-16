@@ -8,14 +8,14 @@ import com.horizen.box.RegularBoxSerializer;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
-import com.horizen.secret.PrivateKey25519;
+import com.horizen.proposition.Signature25519;
+import com.horizen.proposition.Signature25519Serializer;
 import javafx.util.Pair;
 import scala.util.Success;
 import scala.util.Failure;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,8 +25,7 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
 {
     private ListSerializer<RegularBox> _boxSerializer;
     private ListSerializer<PublicKey25519Proposition> _propositionSerializer;
-    // TO DO: change to Signature25519
-    private ListSerializer<ProofOfKnowledge> _signaturesSerializer;
+    private ListSerializer<Signature25519> _signaturesSerializer;
 
 
     RegularTransactionSerializer() {
@@ -38,8 +37,8 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
         supportedPropositionSerializers.put(1, PublicKey25519PropositionSerializer.getSerializer());
         _propositionSerializer = new ListSerializer<>(supportedPropositionSerializers);
 
-        HashMap<Integer, Serializer<ProofOfKnowledge>> supportedProofSerializers = new HashMap<>();
-        //supportedProofSerializers.put(1, new Signature25519Serializer());
+        HashMap<Integer, Serializer<Signature25519>> supportedProofSerializers = new HashMap<>();
+        supportedProofSerializers.put(1, Signature25519Serializer.getSerializer());
         _signaturesSerializer = new ListSerializer<>(supportedProofSerializers);
     }
 
@@ -96,7 +95,7 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
             }
 
             batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            ArrayList<ProofOfKnowledge> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            ArrayList<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {

@@ -6,8 +6,8 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.RegularBox;
 import com.horizen.proof.Proof;
-import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.Signature25519;
 import com.horizen.secret.PrivateKey25519;
 import scorex.crypto.hash.Blake2b256;
 import javafx.util.Pair;
@@ -19,15 +19,14 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 {
     private ArrayList<RegularBox> _inputs;
     private ArrayList<Pair<PublicKey25519Proposition, Long>> _outputs;
-    // TO DO: change type to Signature25519 later.
-    private ArrayList<ProofOfKnowledge> _signatures;
+    private ArrayList<Signature25519> _signatures;
     private long _fee;
     private long _timestamp;
     private byte[] _hashWithoutNonce;
 
     public RegularTransaction(ArrayList<RegularBox> inputs,
                                ArrayList<Pair<PublicKey25519Proposition, Long>> outputs,
-                               ArrayList<ProofOfKnowledge> signatures,
+                               ArrayList<Signature25519> signatures,
                                long fee,
                                long timestamp) {
         if(inputs.size() != signatures.size())
@@ -98,8 +97,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     public ArrayList<Pair<PublicKey25519Proposition, Long>> outputs() {
         return _outputs;
     }
-    // TO DO: change type to Signature25519 later.
-    public ArrayList<ProofOfKnowledge> _signatures() {
+
+    public ArrayList<Signature25519> _signatures() {
         return _signatures;
     }
 
@@ -124,7 +123,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
                                                        long fee,
                                                        long timestamp) {
         ArrayList<RegularBox> inputs = new ArrayList<>();
-        ArrayList<ProofOfKnowledge> fakeSignatures = new ArrayList<>();
+        ArrayList<Signature25519> fakeSignatures = new ArrayList<>();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
             inputs.add(item.getKey());
             fakeSignatures.add(null); // TO DO: replace with real Signature25519
@@ -139,7 +138,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         }
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
-        ArrayList<ProofOfKnowledge> signatures = new ArrayList<>();
+        ArrayList<Signature25519> signatures = new ArrayList<>();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
             signatures.add(item.getValue().sign(messageToSign));
         }
