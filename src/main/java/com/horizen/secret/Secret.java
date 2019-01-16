@@ -1,23 +1,39 @@
 package com.horizen.secret;
 
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proof.ProofOfKnowledge;
-
 import scala.Tuple2;
 
+import scorex.crypto.signatures.Curve25519;
+//import scorex.crypto.signatures.PrivateKey;
+//import scorex.crypto.signatures.PublicKey;
 
-public interface Secret extends scorex.core.serialization.BytesSerializable
+import com.horizen.box.Box;
+import com.horizen.proof.ProofOfKnowledge;
+import com.horizen.proposition.Proposition;
+import com.horizen.proposition.ProofOfKnowledgeProposition;
+
+public interface Secret<S extends Secret,
+        PKP extends ProofOfKnowledgeProposition<S>,
+        PK extends ProofOfKnowledge<S, PKP>> extends scorex.core.serialization.BytesSerializable
 {
-    SecretCompanion companion();
 
-    ProofOfKnowledgeProposition<Secret> publicImage();
+    // TO DO: uncomment and fix compiler error with access to scala package object in java interface
+    byte secretTypeId();
 
+    //Serializer
     @Override
     byte[] bytes();
 
     @Override
     SecretSerializer serializer();
 
-    // TO DO: uncomment and fix compiler error with access to scala package object in java interface
-    byte secretTypeId();
+    //Secret
+    PKP publicImage();
+
+    //Companion
+//    boolean owns(S secret, Box<PKP> box);
+    boolean owns(Box<PKP> box);
+
+    // TO DO: check ProofOfKnowledge usage
+//    PK sign(S secret, byte[] message);
+    PK sign(byte[] message);
 }

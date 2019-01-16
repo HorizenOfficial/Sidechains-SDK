@@ -9,7 +9,6 @@ import com.horizen.proof.Proof;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Companion;
 import scorex.crypto.hash.Blake2b256;
 import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
@@ -141,9 +140,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         ArrayList<ProofOfKnowledge> signatures = new ArrayList<>();
-        PrivateKey25519Companion companion = new PrivateKey25519Companion(); // TO DO: remove later.
         for(Pair<RegularBox, PrivateKey25519> item : from) {
-            signatures.add(companion.sign(item.getValue(), messageToSign));
+            signatures.add(item.getValue().sign(messageToSign));
         }
 
         try {

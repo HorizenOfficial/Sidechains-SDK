@@ -35,7 +35,7 @@ class RegularTransactionSerializer implements TransactionSerializer<RegularTrans
         _boxSerializer  = new ListSerializer<>(supportedBoxSerializers);
 
         HashMap<Integer, Serializer<PublicKey25519Proposition>> supportedPropositionSerializers = new HashMap<>();
-        supportedPropositionSerializers.put(1, new PublicKey25519PropositionSerializer());
+        supportedPropositionSerializers.put(1, PublicKey25519PropositionSerializer.getSerializer());
         _propositionSerializer = new ListSerializer<>(supportedPropositionSerializers);
 
         HashMap<Integer, Serializer<ProofOfKnowledge>> supportedProofSerializers = new HashMap<>();

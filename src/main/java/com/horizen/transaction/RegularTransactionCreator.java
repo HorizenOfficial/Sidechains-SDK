@@ -1,6 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.SidechainWallet;
+//import com.horizen.SidechainWallet;
 import com.horizen.WalletBox;
 import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
@@ -18,7 +18,7 @@ import scala.collection.JavaConverters.*;
 
 public class RegularTransactionCreator {
     // TO DO: replace SidechainWallet with its Java wrapper
-    public static RegularTransaction create(SidechainWallet wallet, ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
+    public static RegularTransaction create(/*SidechainWallet wallet, */ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
         // TO DO:
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
@@ -42,7 +42,7 @@ public class RegularTransactionCreator {
         ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
         long current_amount = 0;
         for(RegularBox box : boxes) {
-            from.add(new Pair<>(box, (PrivateKey25519)wallet.secret(box.proposition()).get())); // TO DO: get from java wallet wrapper, check type and for null, etc
+            from.add(new Pair<>(box, null));//(PrivateKey25519)wallet.secret(box.proposition()).get())); // TO DO: get from java wallet wrapper, check type and for null, etc
             current_amount += box.value();
             if(current_amount >= to_amount)
                 break;
