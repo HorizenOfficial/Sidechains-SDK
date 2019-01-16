@@ -39,4 +39,9 @@ public final class CertifierUnlockRequestTransaction extends NoncedBoxTransactio
     public byte transactionTypeId() {
         return 5; // scorex.core.ModifierTypeId @@ 5.toByte
     }
+
+    @Override
+    public byte[] bytes() {
+        return null;
+    }
 }

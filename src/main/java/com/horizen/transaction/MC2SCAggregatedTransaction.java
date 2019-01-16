@@ -44,4 +44,9 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         return 2; // scorex.core.ModifierTypeId @@ 2.toByte
     }
 
+    @Override
+    public byte[] bytes() {
+        return null;
+    }
+
 }

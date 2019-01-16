@@ -15,9 +15,7 @@ public abstract class Transaction extends scorex.core.transaction.Transaction
     }
 
     @Override
-    public final byte[] bytes() {
-        return serializer().toBytes(this);
-    }
+    public abstract byte[] bytes();
 
     @Override
     public abstract byte[] messageToSign();
