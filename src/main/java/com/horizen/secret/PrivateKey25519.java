@@ -1,23 +1,31 @@
 package com.horizen.secret;
 
+import com.google.common.primitives.Bytes;
 import com.horizen.box.Box;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proof.ProofOfKnowledge;
 
+import com.horizen.proposition.Signature25519;
 import scala.Tuple2;
+import scala.util.Failure;
+import scala.util.Success;
+import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 
-public class PrivateKey25519 implements Secret
+public class PrivateKey25519
+        implements Secret<PrivateKey25519,
+                          PublicKey25519Proposition,
+        Signature25519>
 {
     // TO DO: change to scorex.crypto.{PublicKey,PrivateKey}
-    static int _keyLength = Curve25519.KeyLength();
-    byte[] _privateKeyBytes;
-    byte[] _publicKeyBytes;
+    private static int _keyLength = Curve25519.KeyLength();
+    private byte[] _privateKeyBytes;
+    private byte[] _publicKeyBytes;
 
     public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
@@ -38,62 +46,53 @@ public class PrivateKey25519 implements Secret
     }
 
     @Override
-    public int keyLength() {
-        return _keyLength;
-    }
-
-    @Override
-    public byte[] publicKeyBytes() {
-        return Arrays.copyOf(_publicKeyBytes, _keyLength);
-    }
-
-    @Override
-    public byte[] privateKeyBytes() {
-        return Arrays.copyOf(_privateKeyBytes, _keyLength);
-    }
-
-    @Override
     public byte[] bytes() {
-        return serializer().toBytes(this);
+        return Bytes.concat(_privateKeyBytes, _publicKeyBytes);
     }
 
     @Override
     public SecretSerializer serializer() {
-        return new PrivateKey25519Serializer();
+        return PrivateKey25519Serializer.getSerializer();
     }
 
     @Override
-    public <PK extends Secret> ProofOfKnowledgeProposition<PK> publicImage() {
-        PublicKey25519Proposition p = new PublicKey25519Proposition<PrivateKey25519>(_publicKeyBytes);
-        return p;
+    public PublicKey25519Proposition publicImage() {
+        return new PublicKey25519Proposition(_publicKeyBytes);
     }
 
     @Override
-    public boolean owns(Secret secret, Box<ProofOfKnowledgeProposition<Secret>> box) {
-        if (box.proposition() instanceof PublicKey25519Proposition &&
-                java.util.Arrays.equals(secret.publicKeyBytes(), ((PublicKey25519Proposition) box.proposition()).pubKeyBytes()))
+    public boolean owns(Box<PublicKey25519Proposition> box) {
+        if (box.proposition() != null &&
+                java.util.Arrays.equals(_publicKeyBytes, box.proposition().pubKeyBytes()))
             return true;
         return false;
     }
 
     @Override
-    public ProofOfKnowledge<Secret, ProofOfKnowledgeProposition<Secret>> sign(Secret secret, byte[] message) {
-        ProofOfKnowledge signature = new Signature25519(Curve25519.sign(secret.privateKeyBytes(), message));
-        return signature;
+    public Signature25519 sign(byte[] message) {
+        return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
     }
 
-
-    //TODO: check types
-    @Override
-    public boolean verify(byte[] message, ProofOfKnowledgeProposition<Secret> publicImage,
+    public static boolean verify(byte[] message, ProofOfKnowledgeProposition<Secret> publicImage,
                           ProofOfKnowledge<Secret, ProofOfKnowledgeProposition<Secret>> proof) {
         return Curve25519.verify(proof.bytes(), message, publicImage.bytes());
     }
 
-    public static Tuple2<Secret, ProofOfKnowledgeProposition<Secret>> generateKeys(byte[] randomSeed) {
+    public static Tuple2<PrivateKey25519, PublicKey25519Proposition> generateKeys(byte[] randomSeed) {
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(randomSeed);
         PrivateKey25519 secret = new PrivateKey25519(keyPair._1, keyPair._2);
-        return new Tuple2<Secret, ProofOfKnowledgeProposition<Secret>>(secret, secret.publicImage());
+        return new Tuple2<PrivateKey25519, PublicKey25519Proposition>(secret, secret.publicImage());
+    }
+
+    public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
+        try {
+            byte[] privateKeyBytes = Arrays.copyOf(bytes, _keyLength);
+            byte[] publicKeyBytes = Arrays.copyOfRange(bytes, _keyLength, 2 * _keyLength);
+            PrivateKey25519 secret = new PrivateKey25519(privateKeyBytes, publicKeyBytes);
+            return new Success<PrivateKey25519>(secret);
+        } catch (Exception e) {
+            return new Failure(e);
+        }
     }
 
     @Override

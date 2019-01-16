@@ -12,6 +12,7 @@ import static org.junit.Assert.*;
 
 public class Signature25519Test {
 
+/*
     byte[] testMessage = "Test string message to sign/verify.".getBytes();
 
     PrivateKey25519 key;
@@ -34,4 +35,5 @@ public class Signature25519Test {
     public void isValid() {
         assertTrue("Signature is invalid.", pr.isValid(prp, testMessage));
     }
+*/
 }

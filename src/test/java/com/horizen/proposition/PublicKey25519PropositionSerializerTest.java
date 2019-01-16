@@ -8,6 +8,8 @@ import scorex.crypto.signatures.Curve25519;
 import static org.junit.Assert.*;
 
 public class PublicKey25519PropositionSerializerTest {
+
+/*
     PublicKey25519Proposition proposition;
 
     @Before
@@ -28,5 +30,5 @@ public class PublicKey25519PropositionSerializerTest {
         assertEquals("Failure during parsing expected", true, failureExpected);
 
     }
-
+*/
 }

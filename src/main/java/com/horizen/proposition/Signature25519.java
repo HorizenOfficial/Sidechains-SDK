@@ -1,22 +1,21 @@
-package com.horizen.secret;
+package com.horizen.proposition;
 
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
-import com.horizen.proposition.PublicKey25519Proposition;
 
+import com.horizen.secret.PrivateKey25519;
+import scala.util.Failure;
+import scala.util.Success;
+import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition<PrivateKey25519>> {
+public class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
     static int _signatureLength = Curve25519.SignatureLength();
     byte[] _signatureBytes;
-
-    public byte[] signatureBytes() {
-        return Arrays.copyOf(_signatureBytes, _signatureLength);
-    }
 
     public Signature25519 (byte[] signatureBytes) {
         if(signatureBytes.length != _signatureLength)
@@ -33,13 +32,21 @@ public class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicK
 
     @Override
     public byte[] bytes() {
-        return serializer().toBytes(this);
+        return Arrays.copyOf(_signatureBytes, _signatureLength);
     }
 
     @Override
     public ProofSerializer serializer() {
-        ProofSerializer serializer = new Signature25519Serializer();
-        return serializer;
+        return Signature25519Serializer.getSerializer();
+    }
+
+    public static Try<Signature25519> parseBytes(byte[] bytes) {
+        try {
+            Signature25519 signature = new Signature25519(bytes);
+            return new Success<Signature25519>(signature);
+        } catch (Exception e) {
+            return new Failure(e);
+        }
     }
 
     @Override

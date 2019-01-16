@@ -9,6 +9,7 @@ import static org.junit.Assert.*;
 
 public class Signature25519SerializerTest {
 
+/*
     @Test
     public void toBytes() {
         byte[] signatureBytes = new byte[64];
@@ -22,4 +23,5 @@ public class Signature25519SerializerTest {
 
         assertEquals("Signatures are not the same.", signature, t.get());
     }
+*/
 }

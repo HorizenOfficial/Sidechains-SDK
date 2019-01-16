@@ -6,6 +6,7 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
+/*
 case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]])
   extends Serializer[Secret] {
 
@@ -19,4 +20,5 @@ case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.Mo
 
   override def parseBytes(bytes: Array[Byte]): Try[Secret] = ???
 }
+*/
 

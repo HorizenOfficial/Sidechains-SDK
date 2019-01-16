@@ -14,6 +14,7 @@ import static org.junit.Assert.*;
 
 public class PrivateKey25519Test {
 
+/*
     byte[] testMessage = "Test string message to sign/verify.".getBytes();
 
     PrivateKey25519 key;
@@ -71,4 +72,5 @@ public class PrivateKey25519Test {
         pr = key.sign(key, testMessage);
         assertTrue("Verification of the sign filed.", key.verify(testMessage, prp, pr));
     }
+*/
 }

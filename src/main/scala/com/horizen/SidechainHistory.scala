@@ -14,6 +14,7 @@ import scala.util.Try
 // TO DO: implement it like in HybridHistory
 // TO DO: think about additional methods (consensus related?)
 
+/*
 class SidechainHistory extends scorex.core.consensus.History[
       Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]],
       SyncInfo,
@@ -42,3 +43,4 @@ class SidechainHistory extends scorex.core.consensus.History[
 
   override type NVCT = SidechainHistory
 }
+*/

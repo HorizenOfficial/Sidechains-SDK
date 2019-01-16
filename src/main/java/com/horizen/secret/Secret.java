@@ -11,17 +11,13 @@ import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 
-public interface Secret extends scorex.core.serialization.BytesSerializable
+public interface Secret<S extends Secret,
+        PKP extends ProofOfKnowledgeProposition<S>,
+        PK extends ProofOfKnowledge<S, PKP>> extends scorex.core.serialization.BytesSerializable
 {
 
     // TO DO: uncomment and fix compiler error with access to scala package object in java interface
     byte secretTypeId();
-
-    int keyLength();
-
-    byte[] publicKeyBytes();
-
-    byte[] privateKeyBytes();
 
     //Serializer
     @Override
@@ -31,19 +27,13 @@ public interface Secret extends scorex.core.serialization.BytesSerializable
     SecretSerializer serializer();
 
     //Secret
-    <PK extends Secret> ProofOfKnowledgeProposition<PK> publicImage();
+    PKP publicImage();
 
     //Companion
-    boolean owns(Secret secret, Box<ProofOfKnowledgeProposition<Secret>> box);
+//    boolean owns(S secret, Box<PKP> box);
+    boolean owns(Box<PKP> box);
 
     // TO DO: check ProofOfKnowledge usage
-    ProofOfKnowledge<Secret,ProofOfKnowledgeProposition<Secret>> sign(Secret secret, byte[] message);
-
-    boolean verify(byte[] message, ProofOfKnowledgeProposition<Secret> publicImage,
-                   ProofOfKnowledge<Secret,ProofOfKnowledgeProposition<Secret>> proof);
-
-    //static
-    static Tuple2<Secret, ProofOfKnowledgeProposition<Secret>> generateKeys(byte[] randomSeed) {
-        return new Tuple2(null, null);
-    }
+//    PK sign(S secret, byte[] message);
+    PK sign(byte[] message);
 }
