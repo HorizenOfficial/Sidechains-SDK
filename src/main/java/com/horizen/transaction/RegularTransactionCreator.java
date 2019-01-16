@@ -18,12 +18,12 @@ import scala.collection.JavaConverters.*;
 
 public class RegularTransactionCreator {
     // TO DO: replace SidechainWallet with its Java wrapper
-    public static RegularTransaction create(SidechainWallet wallet, ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition charge, long fee, ArrayList<byte[]> boxIdsToExclude) {
+    public static RegularTransaction create(SidechainWallet wallet, ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
         // TO DO:
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
         // 2. get from wallet proper number of closed RegularBox, which ids is not in boxIdsToExclude and sum of their values >= sum above
-        // 3. set charge if need
+        // 3. set change to changeAddress if need
         // 4. construct inputs and outputs lists, timestamp
         // 5. try to do RegularTransaction.create(...)
         long to_amount = 0;
@@ -50,9 +50,9 @@ public class RegularTransactionCreator {
         if(current_amount < to_amount)
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transction.");
 
-        // add charge to outputs
+        // add change to outputs
         if(current_amount > to_amount) {
-            to.add(new Pair<>(charge, current_amount - to_amount));
+            to.add(new Pair<>(changeAddress, current_amount - to_amount));
         }
 
         // TO DO: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
