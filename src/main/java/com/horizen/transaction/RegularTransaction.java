@@ -120,7 +120,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
                 Longs.toByteArray(_fee));
     }
 
-    public static RegularTransaction createTransaction(ArrayList<Pair<RegularBox, PrivateKey25519>> from,
+    public static RegularTransaction create(ArrayList<Pair<RegularBox, PrivateKey25519>> from,
                                                        ArrayList<Pair<PublicKey25519Proposition, Long>> to,
                                                        long fee,
                                                        long timestamp) {
@@ -136,7 +136,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
             unsignedTransaction = new RegularTransaction(inputs, to, fakeSignatures, fee, timestamp);
         }
         catch (Exception e) {
-            return null; // TO DO: null or exception?
+            throw e;
         }
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
@@ -150,7 +150,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
             return new RegularTransaction(inputs, to, signatures, fee, timestamp);
         }
         catch (Exception e) {
-            return null; // TO DO: null or exception?
+            throw e;
         }
     }
 }
