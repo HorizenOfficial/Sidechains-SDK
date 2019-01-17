@@ -1,6 +1,4 @@
-package com.horizen.proposition;
-
-import com.horizen.proof.ProofSerializer;
+package com.horizen.proof;
 
 import scala.util.Try;
 
