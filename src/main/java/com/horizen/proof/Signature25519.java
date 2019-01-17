@@ -1,8 +1,6 @@
-package com.horizen.proposition;
+package com.horizen.proof;
 
-import com.horizen.proof.ProofOfKnowledge;
-import com.horizen.proof.ProofSerializer;
-
+import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import scala.util.Failure;
 import scala.util.Success;

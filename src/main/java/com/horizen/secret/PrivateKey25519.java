@@ -2,11 +2,9 @@ package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.horizen.box.Box;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.proof.ProofOfKnowledge;
 
-import com.horizen.proposition.Signature25519;
+import com.horizen.proof.Signature25519;
 import scala.Tuple2;
 import scala.util.Failure;
 import scala.util.Success;
@@ -14,30 +12,29 @@ import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 
 public class PrivateKey25519
         implements Secret<PrivateKey25519,
                           PublicKey25519Proposition,
-        Signature25519>
+                          Signature25519>
 {
-    // TO DO: change to scorex.crypto.{PublicKey,PrivateKey}
-    private static int _keyLength = Curve25519.KeyLength();
+    public static final int KEY_LENGTH = Curve25519.KeyLength();
+
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;
 
     public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
-        if(privateKeyBytes.length != _keyLength)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", _keyLength,
+        if(privateKeyBytes.length != KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH,
                     privateKeyBytes.length));
-        if(publicKeyBytes.length != _keyLength)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", _keyLength,
+        if(publicKeyBytes.length != KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH,
                     publicKeyBytes.length));
 
-        _privateKeyBytes = Arrays.copyOf(privateKeyBytes, _keyLength);
-        _publicKeyBytes = Arrays.copyOf(publicKeyBytes, _keyLength);
+        _privateKeyBytes = Arrays.copyOf(privateKeyBytes, KEY_LENGTH);
+        _publicKeyBytes = Arrays.copyOf(publicKeyBytes, KEY_LENGTH);
     }
 
     @Override
@@ -73,8 +70,8 @@ public class PrivateKey25519
         return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
     }
 
-    public static boolean verify(byte[] message, ProofOfKnowledgeProposition<Secret> publicImage,
-                          ProofOfKnowledge<Secret, ProofOfKnowledgeProposition<Secret>> proof) {
+    public static boolean verify(byte[] message, PublicKey25519Proposition publicImage,
+                          Signature25519 proof) {
         return Curve25519.verify(proof.bytes(), message, publicImage.bytes());
     }
 
@@ -86,8 +83,8 @@ public class PrivateKey25519
 
     public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
         try {
-            byte[] privateKeyBytes = Arrays.copyOf(bytes, _keyLength);
-            byte[] publicKeyBytes = Arrays.copyOfRange(bytes, _keyLength, 2 * _keyLength);
+            byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
+            byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
             PrivateKey25519 secret = new PrivateKey25519(privateKeyBytes, publicKeyBytes);
             return new Success<PrivateKey25519>(secret);
         } catch (Exception e) {
@@ -100,15 +97,13 @@ public class PrivateKey25519
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PrivateKey25519 that = (PrivateKey25519) o;
-        return _keyLength == that._keyLength &&
-                Arrays.equals(_privateKeyBytes, that._privateKeyBytes) &&
+        return Arrays.equals(_privateKeyBytes, that._privateKeyBytes) &&
                 Arrays.equals(_publicKeyBytes, that._publicKeyBytes);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(_keyLength);
-        result = 31 * result + Arrays.hashCode(_privateKeyBytes);
+        int result = Arrays.hashCode(_privateKeyBytes);
         result = 31 * result + Arrays.hashCode(_publicKeyBytes);
         return result;
     }

@@ -10,7 +10,6 @@ import static org.junit.Assert.*;
 
 public class PublicKey25519PropositionTest {
 
-/*
     byte[] seed;
 
     byte[] publicKey;
@@ -35,7 +34,7 @@ public class PublicKey25519PropositionTest {
     public void PublicKey25519Proposition_CreationTest() {
 
         PublicKey25519Proposition prop1 = new PublicKey25519Proposition(publicKey);
-        assertEquals("Exception during PublicKey25519Proposition creation", publicKey, prop1.pubKeyBytes());
+        assertArrayEquals("Exception during PublicKey25519Proposition creation", publicKey, prop1.pubKeyBytes());
 
 
         boolean exceptionOccurred = false;
@@ -70,7 +69,7 @@ public class PublicKey25519PropositionTest {
         PublicKey25519Proposition prop1 = new PublicKey25519Proposition(publicKey);
         String encodedAddress = prop1.address();
         byte[] decodedAddress = PublicKey25519Proposition.encoder().decode(encodedAddress).get();
-        assertEquals("Another address length expected", PublicKey25519Proposition.AddressLength, decodedAddress.length);
+        assertEquals("Another address length expected", PublicKey25519Proposition.ADDRESS_LENGTH, decodedAddress.length);
 
         PublicKey25519Proposition prop2 = PublicKey25519Proposition.parseAddress(encodedAddress);
 
@@ -100,5 +99,4 @@ public class PublicKey25519PropositionTest {
         res = prop2.verify(messageToSign, signature);
         assertEquals("Signature expected to be NOT valid", false, res);
     }
-*/
 }
