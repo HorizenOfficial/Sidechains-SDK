@@ -1,28 +1,25 @@
 package com.horizen.transaction;
 
-//import com.horizen.SidechainWallet;
-import com.horizen.WalletBox;
 import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.node.NodeWallet;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
 
 import javafx.util.Pair;
-import scala.collection.Seq;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import scala.collection.JavaConverters.*;
 
 public class RegularTransactionCreator {
-    // TO DO: replace SidechainWallet with its Java wrapper
-    public static RegularTransaction create(/*SidechainWallet wallet, */ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
+
+    public static RegularTransaction create(NodeWallet wallet, ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
         // TO DO:
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
-        // 2. get from wallet proper number of closed RegularBox, which ids is not in boxIdsToExclude and sum of their values >= sum above
+        // 2. get from wallet proper number of closed RegularBox ordered by creation time, which ids is not in boxIdsToExclude and sum of their values >= sum above
         // 3. set change to changeAddress if need
         // 4. construct inputs and outputs lists, timestamp
         // 5. try to do RegularTransaction.create(...)
@@ -37,15 +34,34 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Fee must be >= 0.");
         to_amount += fee;
 
-        // TO DO: fill the list with real boxes from wallet, exclude "boxIdsToExclude" and filter by "age"
+
+        List<Pair<Box, Long>> walletBoxes = wallet.boxesWithCreationTime();
+        walletBoxes.sort( (a, b) ->  Long.signum (a.getValue() - b.getValue()));
         ArrayList<RegularBox> boxes = new ArrayList<>();
+        for(Pair<Box, Long> pair : walletBoxes) {
+            if (pair.getKey() instanceof RegularBox) {
+                boolean acceptable = true;
+                for (byte[] idToExclude : boxIdsToExclude) {
+                    if (Arrays.equals(idToExclude, pair.getKey().id())) {
+                        acceptable = false;
+                        break;
+                    }
+                }
+                if(acceptable)
+                    boxes.add((RegularBox) pair.getKey());
+            }
+        }
+
         ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
         long current_amount = 0;
         for(RegularBox box : boxes) {
-            from.add(new Pair<>(box, null));//(PrivateKey25519)wallet.secret(box.proposition()).get())); // TO DO: get from java wallet wrapper, check type and for null, etc
-            current_amount += box.value();
-            if(current_amount >= to_amount)
-                break;
+            Secret s = wallet.secretByPublicImage(box.proposition());
+            if(s instanceof PrivateKey25519) {
+                from.add(new Pair<>(box, (PrivateKey25519)s));
+                current_amount += box.value();
+                if (current_amount >= to_amount)
+                    break;
+            }
         }
         if(current_amount < to_amount)
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transction.");
