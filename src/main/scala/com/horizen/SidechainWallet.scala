@@ -13,6 +13,7 @@ import scala.util.Try
 // TO DO: we need to wrap LSMStore
 
 // TO DO: put also SidechainSecretsCompanion and SidechainBoxesCompanion with a data provided by Sidechain developer
+/*
 case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: LSMStore) extends Wallet[Secret,
                   ProofOfKnowledgeProposition[Secret],
                   BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]],
@@ -53,3 +54,4 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = ???
 }
+*/

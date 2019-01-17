@@ -1,13 +1,17 @@
 package com.horizen.proposition;
 
+import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;
+import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import static org.junit.Assert.*;
 
 public class PublicKey25519PropositionSerializerTest {
+
     PublicKey25519Proposition proposition;
 
     @Before
@@ -18,15 +22,14 @@ public class PublicKey25519PropositionSerializerTest {
 
     @Test
     public void PublicKey25519PropositionSerializerTest_SerializationTest() {
-        PublicKey25519PropositionSerializer serializer = new PublicKey25519PropositionSerializer();
+        PropositionSerializer serializer = proposition.serializer();
         byte[] bytes = serializer.toBytes(proposition);
 
-        PublicKey25519Proposition proposition2 = serializer.parseBytes(bytes).get();
-        assertEquals("Propositions expected to be equal", true, proposition.equals(proposition2));
+        Try<PublicKey25519Proposition> t = serializer.parseBytes(bytes);
+        assertEquals("Propositions expected to be equal", proposition, ((Try) t).get());
 
         boolean failureExpected = serializer.parseBytes("broken bytes".getBytes()).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
 
     }
-
 }

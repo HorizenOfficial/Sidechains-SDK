@@ -6,20 +6,27 @@ import scala.util.Try;
 
 class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
 {
+    private static PublicKey25519PropositionSerializer serializer;
+
+    static {
+        serializer = new PublicKey25519PropositionSerializer();
+    }
+
+    private PublicKey25519PropositionSerializer() {
+        super();
+    }
+
+    public static PublicKey25519PropositionSerializer getSerializer() {
+        return serializer;
+    }
 
     @Override
-    public byte[] toBytes(PublicKey25519Proposition obj) {
-        return obj.pubKeyBytes();
+    public byte[] toBytes(PublicKey25519Proposition proposition) {
+        return proposition.bytes();
     }
 
     @Override
     public Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
-        try {
-            PublicKey25519Proposition proposition = new PublicKey25519Proposition(bytes);
-            return new Success<PublicKey25519Proposition>(proposition);
-        }
-        catch (Exception e) {
-            return new Failure(e);
-        }
+        return PublicKey25519Proposition.parseBytes(bytes);
     }
 }

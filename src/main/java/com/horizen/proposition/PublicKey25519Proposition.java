@@ -1,5 +1,7 @@
 package com.horizen.proposition;
 
+import scala.util.Failure;
+import scala.util.Success;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
@@ -11,22 +13,22 @@ import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
 
-public class PublicKey25519Proposition<PK extends PrivateKey25519> extends ScorexEncoding implements ProofOfKnowledgeProposition<PK>
+public class PublicKey25519Proposition extends ScorexEncoding implements ProofOfKnowledgeProposition<PrivateKey25519>
 {
-    public static final byte AddressVersion = 1;
-    public static final int ChecksumLength = 4;
-    public static final int PubKeyLength = 32;
-    public static final int AddressLength = 1 + PubKeyLength + ChecksumLength;
+    public static final byte ADDRESS_VERSION = 1;
+    public static final int CHECKSUM_LENGTH = 4;
+    public static final int KEY_LENGTH = Curve25519.KeyLength();;
+    public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
     private byte[] _pubKeyBytes;
 
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
     {
-        if(pubKeyBytes.length != Curve25519.KeyLength())
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", Curve25519.KeyLength(), pubKeyBytes.length));
+        if(pubKeyBytes.length != KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, pubKeyBytes.length));
 
-        _pubKeyBytes = pubKeyBytes;
+        _pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
     }
 
     public byte[] pubKeyBytes() {
@@ -35,12 +37,12 @@ public class PublicKey25519Proposition<PK extends PrivateKey25519> extends Score
 
     @Override
     public byte[] bytes() {
-        return serializer().toBytes(this);
+        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
     }
 
     @Override
     public PropositionSerializer serializer() {
-        return new PublicKey25519PropositionSerializer();
+        return PublicKey25519PropositionSerializer.getSerializer();
     }
 
     @Override
@@ -60,11 +62,11 @@ public class PublicKey25519Proposition<PK extends PrivateKey25519> extends Score
     }
 
     private byte[] pubKeyBytesWithVersion() {
-        return Bytes.concat(new byte[] { AddressVersion }, pubKeyBytes());
+        return Bytes.concat(new byte[] { ADDRESS_VERSION }, pubKeyBytes());
     }
 
     public static byte[] calcCheckSum(byte[] bytes) {
-        return Arrays.copyOf(Blake2b256.hash(bytes), ChecksumLength);
+        return Arrays.copyOf(Blake2b256.hash(bytes), CHECKSUM_LENGTH);
     }
 
     public String address() {
@@ -87,11 +89,11 @@ public class PublicKey25519Proposition<PK extends PrivateKey25519> extends Score
             throw new IllegalArgumentException("Wrong address encoding");
 
         byte[] addressBytes = res.get();
-        if(addressBytes.length != AddressLength)
+        if(addressBytes.length != ADDRESS_LENGTH)
             throw new IllegalArgumentException("Wrong address length");
 
-        byte[] bytesWithVersion = Arrays.copyOf(addressBytes, addressBytes.length - ChecksumLength);
-        byte[] checksum = Arrays.copyOfRange(addressBytes, addressBytes.length - ChecksumLength, addressBytes.length);
+        byte[] bytesWithVersion = Arrays.copyOf(addressBytes, addressBytes.length - CHECKSUM_LENGTH);
+        byte[] checksum = Arrays.copyOfRange(addressBytes, addressBytes.length - CHECKSUM_LENGTH, addressBytes.length);
 
         byte[] checkSumGenerated = calcCheckSum(bytesWithVersion);
 
@@ -100,5 +102,16 @@ public class PublicKey25519Proposition<PK extends PrivateKey25519> extends Score
         else
             return new PublicKey25519Proposition(Arrays.copyOfRange(bytesWithVersion, 1,bytesWithVersion.length));
     }
+
+    public static Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
+        try {
+            PublicKey25519Proposition proposition = new PublicKey25519Proposition(bytes);
+            return new Success<PublicKey25519Proposition>(proposition);
+        }
+        catch (Exception e) {
+            return new Failure(e);
+        }
+    }
+
 }
 
