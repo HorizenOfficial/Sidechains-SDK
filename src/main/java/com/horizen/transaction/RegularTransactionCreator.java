@@ -23,6 +23,9 @@ public class RegularTransactionCreator {
         // 3. set change to changeAddress if need
         // 4. construct inputs and outputs lists, timestamp
         // 5. try to do RegularTransaction.create(...)
+
+        if(wallet == null || to == null || changeAddress == null || boxIdsToExclude == null)
+            throw new IllegalArgumentException("Parameters can't be null.");
         long to_amount = 0;
         for(Pair<PublicKey25519Proposition, Long> pair : to) {
             if (pair.getValue() < 0)
