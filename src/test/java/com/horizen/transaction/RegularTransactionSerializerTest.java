@@ -42,7 +42,7 @@ public class RegularTransactionSerializerTest {
     }
 
     @Test
-    public void PublicKey25519PropositionSerializerTest_SerializationTest() {
+    public void RegularTransactionSerializerTest_SerializationTest() {
         TransactionSerializer serializer = transaction.serializer();
         byte[] bytes = serializer.toBytes(transaction);
 

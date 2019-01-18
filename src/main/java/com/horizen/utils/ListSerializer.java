@@ -1,4 +1,4 @@
-package com.horizen.transaction;
+package com.horizen.utils;
 
 import scala.util.Try;
 import scorex.core.serialization.BytesSerializable;
@@ -10,10 +10,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
+public class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
     private HashMap<Integer, Serializer<T>> _serializers; // unique key + serializer
 
-    ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
+    public ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
         _serializers = serializers;
     }
 

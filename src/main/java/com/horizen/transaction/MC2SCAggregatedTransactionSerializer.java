@@ -2,6 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
+import com.horizen.utils.ListSerializer;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
