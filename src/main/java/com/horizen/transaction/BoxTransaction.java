@@ -7,14 +7,14 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
+import java.util.List;
 
 
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
-    public abstract ArrayList<BoxUnlocker<P>> unlockers();
+    public abstract List<BoxUnlocker<P>> unlockers();
 
-    public abstract ArrayList<B> newBoxes();
+    public abstract List<B> newBoxes();
 
     public abstract long fee();
 

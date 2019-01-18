@@ -8,8 +8,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
-class ListSerializer<T extends BytesSerializable> implements Serializer<ArrayList<T>> {
+class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
     private HashMap<Integer, Serializer<T>> _serializers; // unique key + serializer
 
     ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
@@ -17,8 +18,8 @@ class ListSerializer<T extends BytesSerializable> implements Serializer<ArrayLis
     }
 
     @Override
-    public byte[] toBytes(ArrayList<T> obj) {
-        ArrayList<Integer> lengthList = new ArrayList<Integer>();
+    public byte[] toBytes(List<T> obj) {
+        List<Integer> lengthList = new ArrayList<Integer>();
 
         ByteArrayOutputStream res = new ByteArrayOutputStream();
         ByteArrayOutputStream entireRes = new ByteArrayOutputStream();
@@ -49,7 +50,7 @@ class ListSerializer<T extends BytesSerializable> implements Serializer<ArrayLis
     }
 
     @Override
-    public Try<ArrayList<T>> parseBytes(byte[] bytes) {
+    public Try<List<T>> parseBytes(byte[] bytes) {
         // TO DO: implement backward logic
         return null;
     }

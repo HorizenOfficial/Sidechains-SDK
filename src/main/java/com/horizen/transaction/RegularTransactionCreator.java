@@ -15,7 +15,7 @@ import java.util.List;
 
 public class RegularTransactionCreator {
 
-    public static RegularTransaction create(NodeWallet wallet, ArrayList<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, ArrayList<byte[]> boxIdsToExclude) {
+    public static RegularTransaction create(NodeWallet wallet, List<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, List<byte[]> boxIdsToExclude) {
         // TO DO:
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
@@ -37,7 +37,7 @@ public class RegularTransactionCreator {
 
         List<Pair<Box, Long>> walletBoxes = wallet.boxesWithCreationTime();
         walletBoxes.sort( (a, b) ->  Long.signum (a.getValue() - b.getValue()));
-        ArrayList<RegularBox> boxes = new ArrayList<>();
+        List<RegularBox> boxes = new ArrayList<>();
         for(Pair<Box, Long> pair : walletBoxes) {
             if (pair.getKey() instanceof RegularBox) {
                 boolean acceptable = true;
@@ -52,7 +52,7 @@ public class RegularTransactionCreator {
             }
         }
 
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
+        List<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
         long current_amount = 0;
         for(RegularBox box : boxes) {
             Secret s = wallet.secretByPublicImage(box.proposition());

@@ -8,6 +8,7 @@ import scorex.core.serialization.Serializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
 {
@@ -18,13 +19,13 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     }
 
     @Override
-    public ArrayList<BoxUnlocker<Proposition>> unlockers() {
+    public List<BoxUnlocker<Proposition>> unlockers() {
         // create array and put BoxUnlocker<ProofOfCoinBurnProposition> and/or BoxUnlocker<ProofOfBeingIncludedIntoCertificateProposition> inside
         return null;
     }
 
     @Override
-    public ArrayList<Box<Proposition>> newBoxes() {
+    public List<Box<Proposition>> newBoxes() {
         // return list of RegularBoxes for MC2SC coins and CertifierRightBoxes for Certifier locks
         return null;
     }

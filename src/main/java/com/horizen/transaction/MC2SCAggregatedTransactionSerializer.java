@@ -5,8 +5,8 @@ import com.horizen.proposition.Proposition;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 class MC2SCAggregatedTransactionSerializer<T extends MC2SCAggregatedTransaction> implements TransactionSerializer<T>
 {
@@ -25,7 +25,7 @@ class MC2SCAggregatedTransactionSerializer<T extends MC2SCAggregatedTransaction>
 
     @Override
     public Try<T> parseBytes(byte[] bytes) {
-        ArrayList<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
+        List<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
 
         // create RegualrTransaction and init with Boxes
         return null;

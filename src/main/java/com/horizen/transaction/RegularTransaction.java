@@ -22,12 +22,13 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 public final class RegularTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
 {
-    private ArrayList<RegularBox> _inputs;
-    private ArrayList<Pair<PublicKey25519Proposition, Long>> _outputs;
-    private ArrayList<Signature25519> _signatures;
+    private List<RegularBox> _inputs;
+    private List<Pair<PublicKey25519Proposition, Long>> _outputs;
+    private List<Signature25519> _signatures;
     private long _fee;
     private long _timestamp;
     private byte[] _hashWithoutNonce;
@@ -51,9 +52,9 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         _signaturesSerializer = new ListSerializer<>(supportedProofSerializers);
     }
 
-    public RegularTransaction(ArrayList<RegularBox> inputs,
-                               ArrayList<Pair<PublicKey25519Proposition, Long>> outputs,
-                               ArrayList<Signature25519> signatures,
+    public RegularTransaction(List<RegularBox> inputs,
+                               List<Pair<PublicKey25519Proposition, Long>> outputs,
+                               List<Signature25519> signatures,
                                long fee,
                                long timestamp) {
         if(inputs.size() != signatures.size())
@@ -72,8 +73,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     }
 
     @Override
-    public ArrayList<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
-        ArrayList<BoxUnlocker<PublicKey25519Proposition>> list = new ArrayList<>();
+    public List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
+        List<BoxUnlocker<PublicKey25519Proposition>> list = new ArrayList<>();
         for(int i = 0; i < _inputs.size() && i < _signatures.size(); i++) {
             int finalI = i;
             list.add(new BoxUnlocker<PublicKey25519Proposition>() {
@@ -88,12 +89,12 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
                 }
             });
         }
-        return null;
+        return list;
     }
 
     @Override
-    public ArrayList<RegularBox> newBoxes() {
-        ArrayList<RegularBox> boxes = new ArrayList<>();
+    public List<RegularBox> newBoxes() {
+        List<RegularBox> boxes = new ArrayList<>();
         for(int i = 0; i < _outputs.size(); i++ ) {
             byte[] hash = Blake2b256.hash(Bytes.concat(_outputs.get(i).getKey().pubKeyBytes(), _hashWithoutNonce, Ints.toByteArray(i)));
             long nonce = Longs.fromByteArray(Arrays.copyOf(hash, 8));
@@ -123,8 +124,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
             unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
 
         ByteArrayOutputStream newBoxesStream = new ByteArrayOutputStream();
-        for(RegularBox b : newBoxes())
-            newBoxesStream.write(b.proposition().pubKeyBytes(), 0 , b.proposition().pubKeyBytes().length);
+        for(Pair<PublicKey25519Proposition, Long> output : _outputs)
+            newBoxesStream.write(output.getKey().pubKeyBytes(), 0 , output.getKey().pubKeyBytes().length);
 
 
         return Bytes.concat(unlockersStream.toByteArray(),
@@ -137,8 +138,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     public byte[] bytes() {
         byte[] inputBoxesBytes = _boxSerializer.toBytes(_inputs);
 
-        ArrayList<Pair<PublicKey25519Proposition, Long>> outputs = _outputs;
-        ArrayList<PublicKey25519Proposition> outputPropositions = new ArrayList<>();
+        List<Pair<PublicKey25519Proposition, Long>> outputs = _outputs;
+        List<PublicKey25519Proposition> outputPropositions = new ArrayList<>();
         ByteArrayOutputStream outputPropositionsValuesBytes = new ByteArrayOutputStream();
         for(Pair<PublicKey25519Proposition, Long> pair : outputs) {
             outputPropositions.add(pair.getKey());
@@ -171,33 +172,35 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
             offset += 8;
 
             int batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            ArrayList<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
             offset += batchSize;
 
             batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            ArrayList<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
             offset += batchSize;
 
-            ArrayList<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
+            List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
             for(PublicKey25519Proposition proposition : outputPropositions) {
                 outputs.add(new Pair<>(proposition, Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, 8))));
                 offset += 8;
             }
 
             batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            ArrayList<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {
             return new Failure(e);
         }
     }
-    public static RegularTransaction create(ArrayList<Pair<RegularBox, PrivateKey25519>> from,
-                                                       ArrayList<Pair<PublicKey25519Proposition, Long>> to,
+    public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
+                                                       List<Pair<PublicKey25519Proposition, Long>> to,
                                                        long fee,
                                                        long timestamp) {
-        ArrayList<RegularBox> inputs = new ArrayList<>();
-        ArrayList<Signature25519> fakeSignatures = new ArrayList<>();
+        if(from == null || to == null)
+            throw new IllegalArgumentException("Parameters can't be null.");
+        List<RegularBox> inputs = new ArrayList<>();
+        List<Signature25519> fakeSignatures = new ArrayList<>();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
             inputs.add(item.getKey());
             fakeSignatures.add(null); // TO DO: replace with real Signature25519
@@ -212,7 +215,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         }
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
-        ArrayList<Signature25519> signatures = new ArrayList<>();
+        List<Signature25519> signatures = new ArrayList<>();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
             signatures.add(item.getValue().sign(messageToSign));
         }
