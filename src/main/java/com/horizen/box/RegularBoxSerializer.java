@@ -11,9 +11,25 @@ import java.util.Arrays;
 
 public final class RegularBoxSerializer implements BoxSerializer<RegularBox>
 {
+
+    private static RegularBoxSerializer serializer;
+
+    static {
+        serializer = new RegularBoxSerializer();
+    }
+
+    private RegularBoxSerializer() {
+        super();
+
+    }
+
+    public static RegularBoxSerializer getSerializer() {
+        return serializer;
+    }
+
     @Override
-    public byte[] toBytes(RegularBox obj) {
-        return Bytes.concat(obj.proposition().pubKeyBytes(), Longs.toByteArray(obj.nonce()), Longs.toByteArray(obj.value()));
+    public byte[] toBytes(RegularBox box) {
+        return box.bytes();
     }
 
     @Override

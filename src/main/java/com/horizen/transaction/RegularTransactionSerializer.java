@@ -15,7 +15,7 @@ class RegularTransactionSerializer<T extends RegularTransaction> implements Tran
 
     RegularTransactionSerializer() {
         HashMap<Integer, Serializer<RegularBox>> supportedBoxSerializers = new HashMap<Integer, Serializer<RegularBox>>();
-        supportedBoxSerializers.put(1, new RegularBoxSerializer());
+        supportedBoxSerializers.put(1, RegularBoxSerializer.getSerializer());
 
         _boxSerializer  = new ListSerializer<RegularBox>(supportedBoxSerializers);
     }
