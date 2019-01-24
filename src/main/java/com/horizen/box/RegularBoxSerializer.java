@@ -34,15 +34,6 @@ public final class RegularBoxSerializer implements BoxSerializer<RegularBox>
 
     @Override
     public Try<RegularBox> parseBytes(byte[] bytes) {
-        try {
-            PublicKey25519Proposition proposition = new PublicKey25519Proposition(Arrays.copyOf(bytes, PublicKey25519Proposition.KEY_LENGTH));
-            long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.KEY_LENGTH, PublicKey25519Proposition.KEY_LENGTH + 8));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.KEY_LENGTH + 8, PublicKey25519Proposition.KEY_LENGTH + 16));
-            RegularBox box = new RegularBox(proposition, nonce, value);
-            return new Success<>(box);
-        }
-        catch (Exception e) {
-            return new Failure(e);
-        }
+        return RegularBox.parseBytes(bytes);
     }
 }
