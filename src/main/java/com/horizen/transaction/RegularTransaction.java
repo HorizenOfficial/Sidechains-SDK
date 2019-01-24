@@ -166,28 +166,31 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         try {
             int offset = 0;
 
-            long fee = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, 8));
+            long fee = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 8));
             offset += 8;
 
-            long timestamp = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, 8));
+            long timestamp = Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 8));
             offset += 8;
 
-            int batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            int batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 4));
+            offset += 4;
+            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
-            batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 4));
+            offset += 4;
+            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
             for(PublicKey25519Proposition proposition : outputPropositions) {
-                outputs.add(new Pair<>(proposition, Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, 8))));
+                outputs.add(new Pair<>(proposition, Longs.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 8))));
                 offset += 8;
             }
 
-            batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, 4));
-            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, batchSize)).get();
+            batchSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, offset, offset + 4));
+            offset += 4;
+            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {
