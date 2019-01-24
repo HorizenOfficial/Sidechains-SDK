@@ -53,7 +53,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         _signaturesSerializer = new ListSerializer<>(supportedProofSerializers);
     }
 
-    public RegularTransaction(List<RegularBox> inputs,
+    private RegularTransaction(List<RegularBox> inputs,
                                List<Pair<PublicKey25519Proposition, Long>> outputs,
                                List<Signature25519> signatures,
                                long fee,
