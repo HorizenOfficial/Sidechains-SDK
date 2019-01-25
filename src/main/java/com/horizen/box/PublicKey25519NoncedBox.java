@@ -10,9 +10,9 @@ import java.util.Arrays;
 
 public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposition> extends ScorexEncoding implements NoncedBox<PKP>
 {
-    private PKP _proposition;
-    private long _nonce;
-    private long _value;
+    protected PKP _proposition;
+    protected long _nonce;
+    protected long _value;
 
     public PublicKey25519NoncedBox(PKP proposition,
                             long nonce,
@@ -40,9 +40,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     }
 
     @Override
-    public final byte[] bytes() {
-        return serializer().toBytes(this);
-    }
+    public abstract byte[] bytes();
 
     @Override
     public int hashCode() {

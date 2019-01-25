@@ -20,7 +20,7 @@ public class RegularBoxSerializerTest
 
     @Test
     public void RegularBoxSerializerTest_SerializationTest() {
-        RegularBoxSerializer serializer = new RegularBoxSerializer();
+        RegularBoxSerializer serializer = RegularBoxSerializer.getSerializer();
         byte[] bytes = serializer.toBytes(box);
 
         RegularBox box2 = serializer.parseBytes(bytes).get();
