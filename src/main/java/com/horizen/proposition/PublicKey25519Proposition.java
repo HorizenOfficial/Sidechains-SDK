@@ -22,7 +22,6 @@ public class PublicKey25519Proposition extends ScorexEncoding implements ProofOf
 
     private byte[] _pubKeyBytes;
 
-
     public PublicKey25519Proposition(byte[] pubKeyBytes)
     {
         if(pubKeyBytes.length != KEY_LENGTH)
@@ -111,6 +110,10 @@ public class PublicKey25519Proposition extends ScorexEncoding implements ProofOf
         catch (Exception e) {
             return new Failure(e);
         }
+    }
+
+    public static int getLength() {
+        return KEY_LENGTH;
     }
 
 }

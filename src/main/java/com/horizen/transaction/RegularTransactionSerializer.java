@@ -5,7 +5,6 @@ import scala.util.Try;
 
 public class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
 {
-
     private static RegularTransactionSerializer serializer;
 
     static {

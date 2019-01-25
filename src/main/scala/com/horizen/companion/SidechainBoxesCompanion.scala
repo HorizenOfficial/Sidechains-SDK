@@ -11,7 +11,7 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.Modifie
     extends Serializer[Box[_ <: Proposition]] {
 
   val coreBoxSerializers: Map[scorex.core.ModifierTypeId.Raw, _ <: BoxSerializer[_]] =
-    Map(new RegularBox(null, 0, 0).boxTypeId() -> new RegularBoxSerializer())
+    Map(new RegularBox(null, 0, 0).boxTypeId() -> RegularBoxSerializer.getSerializer())
 
   val customBoxId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
 

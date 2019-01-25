@@ -41,7 +41,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
     static {
         HashMap<Integer, Serializer<RegularBox>> supportedBoxSerializers = new HashMap<>();
-        supportedBoxSerializers.put(1, new RegularBoxSerializer());
+        supportedBoxSerializers.put(1, RegularBoxSerializer.getSerializer());
         _boxSerializer  = new ListSerializer<>(supportedBoxSerializers);
 
         HashMap<Integer, Serializer<PublicKey25519Proposition>> supportedPropositionSerializers = new HashMap<>();
