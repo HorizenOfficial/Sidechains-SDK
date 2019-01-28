@@ -7,10 +7,10 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
+import com.horizen.secret.PrivateKey25519Companion;
 import javafx.util.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,37 +40,43 @@ class RegularTransactionCreatorNodeWallet implements NodeWallet {
         }
         return null;
     }
+
+    @Override
+    public List<Secret> getSecrets() {
+        return null;
+    }
 }
 
 public class RegularTransactionCreatorTest {
 
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair1;
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair2;
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair3;
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair4;
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair5;
-    Tuple2<PrivateKey25519, PublicKey25519Proposition> pair6;
+    PrivateKey25519 pk1;
+    PrivateKey25519 pk2;
+    PrivateKey25519 pk3;
+    PrivateKey25519 pk4;
+    PrivateKey25519 pk5;
+    PrivateKey25519 pk6;
 
     NodeWallet defaultWallet;
 
     @Before
     public void beforeEachTest() {
-        pair1 = PrivateKey25519.generateKeys("test_seed1".getBytes());
-        pair2 = PrivateKey25519.generateKeys("test_seed2".getBytes());
-        pair3 = PrivateKey25519.generateKeys("test_seed3".getBytes());
-        pair4 = PrivateKey25519.generateKeys("test_seed4".getBytes());
-        pair5 = PrivateKey25519.generateKeys("test_seed5".getBytes());
-        pair6 = PrivateKey25519.generateKeys("test_seed6".getBytes());
+        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
+        pk1 = companion.generateSecret("test_seed1".getBytes());
+        pk2 = companion.generateSecret("test_seed2".getBytes());
+        pk3 = companion.generateSecret("test_seed3".getBytes());
+        pk4 = companion.generateSecret("test_seed4".getBytes());
+        pk5 = companion.generateSecret("test_seed5".getBytes());
+        pk6 = companion.generateSecret("test_seed6".getBytes());
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair1._2, 1, 30), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair2._2, 1, 40), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair3._2, 1, 50), 3000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 30), 1000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 40), 2000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 50), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
-        secrets.add(pair2._1);
-        secrets.add(pair3._1);
+        secrets.add(pk1);
+        secrets.add(pk2);
+        secrets.add(pk3);
 
         defaultWallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
     }
@@ -78,9 +84,9 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 20L));
-        to.add( new Pair<>(pair5._2, 30L));
-        RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pair6._2, 10, new ArrayList<byte[]>());
+        to.add( new Pair<>(pk4.publicImage(), 20L));
+        to.add( new Pair<>(pk5.publicImage(), 30L));
+        RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, new ArrayList<byte[]>());
 
         assertEquals("RegularTransactionCreator: change expected.", 3, transaction.newBoxes().size());
         assertEquals("RegularTransactionCreator: 2 inputs expected.", 2, transaction.unlockers().size());
@@ -89,19 +95,19 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_FeeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair1._2, 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair2._2, 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair3._2, 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
-        secrets.add(pair2._1);
-        secrets.add(pair3._1);
+        secrets.add(pk1);
+        secrets.add(pk2);
+        secrets.add(pk3);
 
         NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 10L));
+        to.add( new Pair<>(pk4.publicImage(), 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
 
@@ -109,7 +115,7 @@ public class RegularTransactionCreatorTest {
         long fee = 100L;
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pair5._2, fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -121,7 +127,7 @@ public class RegularTransactionCreatorTest {
         fee = 50L;
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pair5._2, fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -133,7 +139,7 @@ public class RegularTransactionCreatorTest {
         fee = 50L;
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pair5._2, fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -144,22 +150,22 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_ChangeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair1._2, 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair2._2, 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair3._2, 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
-        secrets.add(pair2._1);
-        secrets.add(pair3._1);
+        secrets.add(pk1);
+        secrets.add(pk2);
+        secrets.add(pk3);
 
         NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 10L));
+        to.add( new Pair<>(pk4.publicImage(), 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
-        PublicKey25519Proposition changeAddress = pair5._2;
+        PublicKey25519Proposition changeAddress = pk5.publicImage();
 
         // Test 1: fee = total_from - total_to -> no change occurrence in newBoxes()
         boolean occurrenceExpected = false;
@@ -193,17 +199,17 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_OutputsTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair1._2, 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair2._2, 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair3._2, 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
-        secrets.add(pair2._1);
-        secrets.add(pair3._1);
+        secrets.add(pk1);
+        secrets.add(pk2);
+        secrets.add(pk3);
 
         NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
-        PublicKey25519Proposition changeAddress = pair6._2;
+        PublicKey25519Proposition changeAddress = pk6.publicImage();
 
 
         // Test 1: empty 'to' list
@@ -215,8 +221,8 @@ public class RegularTransactionCreatorTest {
 
         // Test 2: NOT empty 'to' list
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 10L));
-        to.add( new Pair<>(pair5._2, 20L));
+        to.add( new Pair<>(pk4.publicImage(), 10L));
+        to.add( new Pair<>(pk5.publicImage(), 20L));
         fee = 30L;
         // total 'from' value is 60, total 'to' value is 30
         transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
@@ -226,21 +232,21 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_BoxIdsToExcludeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox boxToExclude = new RegularBox(pair1._2, 1, 100);
+        RegularBox boxToExclude = new RegularBox(pk1.publicImage(), 1, 100);
         boxesWithCreationTime.add(new Pair<>(boxToExclude, 1000L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
+        secrets.add(pk1);
 
         NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair2._2, 50L));
+        to.add( new Pair<>(pk2.publicImage(), 50L));
 
         // Note: total 'from' value is 100, total 'to' value is 10
-        PublicKey25519Proposition changeAddress = pair5._2;
+        PublicKey25519Proposition changeAddress = pk5.publicImage();
 
-        // Test 1: exclude pair1 key -> now suitable keys in wallet
+        // Test 1: exclude pk1 key -> now suitable keys in wallet
         boolean exceptionOccurred = false;
         long fee = 10l;
 
@@ -258,23 +264,23 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_InputsOrderTrst() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox expectedBox = new RegularBox(pair3._2, 1, 10);
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair1._2, 1, 10), 3L));
+        RegularBox expectedBox = new RegularBox(pk3.publicImage(), 1, 10);
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 3L));
         boxesWithCreationTime.add(new Pair<>(expectedBox, 1L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pair2._2, 1, 10), 2L));
+        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 10), 2L));
 
         List<Secret> secrets = new ArrayList<>();
-        secrets.add(pair1._1);
-        secrets.add(pair2._1);
-        secrets.add(pair3._1);
+        secrets.add(pk1);
+        secrets.add(pk2);
+        secrets.add(pk3);
 
         NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 10L));
+        to.add( new Pair<>(pk4.publicImage(), 10L));
         long fee = 0L;
 
-        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pair5._2, fee, new ArrayList<byte[]>());
+        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
         assertEquals("Only one box unlocker expected.", 1, transaction.unlockers().size());
         assertArrayEquals("Another box expected.", expectedBox.id(), transaction.unlockers().get(0).closedBoxId());
     }
@@ -282,14 +288,14 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_NullArgumentTest() {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add( new Pair<>(pair4._2, 20L));
-        to.add( new Pair<>(pair5._2, 30L));
+        to.add( new Pair<>(pk4.publicImage(), 20L));
+        to.add( new Pair<>(pk5.publicImage(), 30L));
 
 
         // Test 1
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(null, to, pair6._2, 10, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(null, to, pk6.publicImage(), 10, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -300,7 +306,7 @@ public class RegularTransactionCreatorTest {
         // Test 2
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, null, pair6._2, 10, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, null, pk6.publicImage(), 10, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -322,7 +328,7 @@ public class RegularTransactionCreatorTest {
         // Test 4
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pair6._2, 10, null);
+            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, null);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;

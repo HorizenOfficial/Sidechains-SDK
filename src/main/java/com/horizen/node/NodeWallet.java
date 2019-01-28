@@ -12,4 +12,6 @@ public interface NodeWallet {
     List<Pair<Box, Long>> boxesWithCreationTime();
 
     Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage);
+
+    List<Secret> getSecrets();
 }

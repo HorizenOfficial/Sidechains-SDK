@@ -3,10 +3,10 @@ package com.horizen.transaction;
 import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.PrivateKey25519Companion;
 import javafx.util.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
 
 import java.util.ArrayList;
@@ -20,23 +20,24 @@ public class RegularTransactionSerializerTest {
     public void beforeEachTest() {
         long fee = 10;
         long timestamp = 1547798549470L;
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair1 = PrivateKey25519.generateKeys("test_seed1".getBytes());
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair2 = PrivateKey25519.generateKeys("test_seed2".getBytes());
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair3 = PrivateKey25519.generateKeys("test_seed3".getBytes());
+        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
+        PrivateKey25519 pk1 = companion.generateSecret("test_seed1".getBytes());
+        PrivateKey25519 pk2 = companion.generateSecret("test_seed2".getBytes());
+        PrivateKey25519 pk3 = companion.generateSecret("test_seed3".getBytes());
 
         ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
-        from.add(new Pair<>(new RegularBox(pair1._2, 1, 60), pair1._1));
-        from.add(new Pair<>(new RegularBox(pair2._2, 1, 50), pair2._1));
-        from.add(new Pair<>(new RegularBox(pair3._2, 1, 20), pair3._1));
+        from.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 60), pk1));
+        from.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 50), pk2));
+        from.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 20), pk3));
 
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair4 = PrivateKey25519.generateKeys("test_seed4".getBytes());
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair5 = PrivateKey25519.generateKeys("test_seed5".getBytes());
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> pair6 = PrivateKey25519.generateKeys("test_seed6".getBytes());
+        PrivateKey25519 pk4 = companion.generateSecret("test_seed4".getBytes());
+        PrivateKey25519 pk5 = companion.generateSecret("test_seed5".getBytes());
+        PrivateKey25519 pk6 = companion.generateSecret("test_seed6".getBytes());
 
         ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add(new Pair<>(pair4._2, 10L));
-        to.add(new Pair<>(pair5._2, 20L));
-        to.add(new Pair<>(pair6._2, 90L));
+        to.add(new Pair<>(pk4.publicImage(), 10L));
+        to.add(new Pair<>(pk5.publicImage(), 20L));
+        to.add(new Pair<>(pk6.publicImage(), 90L));
 
         transaction = RegularTransaction.create(from, to, fee, timestamp);
     }

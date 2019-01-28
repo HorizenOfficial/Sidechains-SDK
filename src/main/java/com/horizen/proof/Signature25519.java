@@ -10,7 +10,7 @@ import scorex.crypto.signatures.Curve25519;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
+public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
     static int _signatureLength = Curve25519.SignatureLength();
     byte[] _signatureBytes;

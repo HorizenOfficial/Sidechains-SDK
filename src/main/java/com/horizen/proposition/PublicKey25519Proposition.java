@@ -13,7 +13,7 @@ import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
 
-public class PublicKey25519Proposition extends ScorexEncoding implements ProofOfKnowledgeProposition<PrivateKey25519>
+public final class PublicKey25519Proposition extends ScorexEncoding implements ProofOfKnowledgeProposition<PrivateKey25519>
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
@@ -31,7 +31,7 @@ public class PublicKey25519Proposition extends ScorexEncoding implements ProofOf
     }
 
     public byte[] pubKeyBytes() {
-        return _pubKeyBytes;
+        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
     }
 
     @Override

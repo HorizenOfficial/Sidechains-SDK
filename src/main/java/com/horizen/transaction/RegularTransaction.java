@@ -12,6 +12,7 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.PrivateKey25519Companion;
 import com.horizen.utils.ListSerializer;
 import scala.util.Failure;
 import scala.util.Success;
@@ -220,8 +221,9 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         List<Signature25519> signatures = new ArrayList<>();
+        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
-            signatures.add(item.getValue().sign(messageToSign));
+            signatures.add(companion.sign(item.getValue(), messageToSign));
         }
 
         try {

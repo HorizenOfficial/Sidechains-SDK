@@ -2,9 +2,9 @@ package com.horizen.secret;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proof.Signature25519;
+import com.horizen.secret.PrivateKey25519Companion;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 
 import java.util.Random;
 
@@ -25,10 +25,8 @@ public class PrivateKey25519Test {
         byte[] seed = new byte[32];
         new Random().nextBytes(seed);
 
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> keyTuple = PrivateKey25519.generateKeys(seed);
-
-        key = (PrivateKey25519) keyTuple._1;
-        prp = keyTuple._2;
+        key = PrivateKey25519Companion.getCompanion().generateSecret(seed);
+        prp = key.publicImage();
     }
 
     @Test
@@ -51,7 +49,7 @@ public class PrivateKey25519Test {
 
     @Test
     public void verify() {
-        pr = key.sign(testMessage);
-        assertTrue("Verification of the sign filed.", key.verify(testMessage, prp, pr));
+        pr = key.companion().sign(key, testMessage);
+        assertTrue("Verification of the sign filed.", key.companion().verify(testMessage, prp, pr));
     }
 }

@@ -8,7 +8,7 @@ import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 
-public class PrivateKey25519Serializer implements SecretSerializer<PrivateKey25519>
+public final class PrivateKey25519Serializer implements SecretSerializer<PrivateKey25519>
 {
     private static PrivateKey25519Serializer serializer;
 

@@ -2,7 +2,7 @@ package com.horizen.proof;
 
 import scala.util.Try;
 
-public class Signature25519Serializer implements ProofSerializer<Signature25519> {
+public final class Signature25519Serializer implements ProofSerializer<Signature25519> {
 
     private static Signature25519Serializer serializer;
 

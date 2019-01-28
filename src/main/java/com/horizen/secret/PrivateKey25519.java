@@ -1,11 +1,8 @@
 package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
-import com.horizen.box.Box;
 import com.horizen.proposition.PublicKey25519Proposition;
 
-import com.horizen.proof.Signature25519;
-import scala.Tuple2;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -14,10 +11,7 @@ import scorex.crypto.signatures.Curve25519;
 import java.util.Arrays;
 
 
-public class PrivateKey25519
-        implements Secret<PrivateKey25519,
-                          PublicKey25519Proposition,
-                          Signature25519>
+public final class PrivateKey25519 implements Secret
 {
     public static final int KEY_LENGTH = Curve25519.KeyLength();
 
@@ -57,28 +51,13 @@ public class PrivateKey25519
         return new PublicKey25519Proposition(_publicKeyBytes);
     }
 
-    @Override
-    public boolean owns(Box<PublicKey25519Proposition> box) {
-        if (box.proposition() != null &&
-                java.util.Arrays.equals(_publicKeyBytes, box.proposition().pubKeyBytes()))
-            return true;
-        return false;
+    public byte[] privateKeyBytes() {
+        return  Arrays.copyOf(_privateKeyBytes, KEY_LENGTH);
     }
 
     @Override
-    public Signature25519 sign(byte[] message) {
-        return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
-    }
-
-    public static boolean verify(byte[] message, PublicKey25519Proposition publicImage,
-                          Signature25519 proof) {
-        return Curve25519.verify(proof.bytes(), message, publicImage.bytes());
-    }
-
-    public static Tuple2<PrivateKey25519, PublicKey25519Proposition> generateKeys(byte[] randomSeed) {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(randomSeed);
-        PrivateKey25519 secret = new PrivateKey25519(keyPair._1, keyPair._2);
-        return new Tuple2<PrivateKey25519, PublicKey25519Proposition>(secret, secret.publicImage());
+    public PrivateKey25519Companion companion() {
+        return PrivateKey25519Companion.getCompanion();
     }
 
     public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
