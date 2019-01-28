@@ -1,36 +1,32 @@
 package com.horizen.transaction;
 
-import com.horizen.box.RegularBox;
-import com.horizen.box.RegularBoxSerializer;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 
-class RegularTransactionSerializer<T extends RegularTransaction> implements TransactionSerializer<T>
+public class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
 {
-    private ListSerializer<RegularBox> _boxSerializer;
-    // todo: keep another serializers for inputs and signatures(secrets)
+    private static RegularTransactionSerializer serializer;
 
-    RegularTransactionSerializer() {
-        HashMap<Integer, Serializer<RegularBox>> supportedBoxSerializers = new HashMap<Integer, Serializer<RegularBox>>();
-        supportedBoxSerializers.put(1, RegularBoxSerializer.getSerializer());
+    static {
+        serializer = new RegularTransactionSerializer();
+    }
 
-        _boxSerializer  = new ListSerializer<RegularBox>(supportedBoxSerializers);
+    private RegularTransactionSerializer() {
+        super();
+    }
+
+    public static RegularTransactionSerializer getSerializer() {
+        return serializer;
     }
 
     @Override
-    public byte[] toBytes(T obj) {
-        return _boxSerializer.toBytes(obj.newBoxes());
+    public byte[] toBytes(RegularTransaction transaction) {
+        return transaction.bytes();
     }
 
     @Override
-    public Try<T> parseBytes(byte[] bytes) {
-        ArrayList<RegularBox> boxes = _boxSerializer.parseBytes(bytes).get();
-
-        // create RegualrTransaction and init with Boxes
-        return null;
+    public Try<RegularTransaction> parseBytes(byte[] bytes) {
+        return RegularTransaction.parseBytes(bytes);
     }
 }
 

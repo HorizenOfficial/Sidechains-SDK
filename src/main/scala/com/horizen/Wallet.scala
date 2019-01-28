@@ -1,5 +1,6 @@
 package com.horizen
 import com.horizen.box.Box
+import com.horizen.proof.ProofOfKnowledge
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition}
 import com.horizen.secret.Secret
 import com.horizen.transaction.Transaction
@@ -34,8 +35,8 @@ class WalletBoxSerializer[P <: Proposition, B <: Box[P]](boxDeserializer: Serial
   }*/
 }
 
-/*
-trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.block.Block[TX], W <: Wallet[S, P, TX, PMOD, W]]
+
+trait Wallet[S <: Secret[S, P, ProofOfKnowledge[S,P]], P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.block.Block[TX], W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 
@@ -51,4 +52,4 @@ trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction
 
   def publicKeys(): Set[P]
 }
-*/
+

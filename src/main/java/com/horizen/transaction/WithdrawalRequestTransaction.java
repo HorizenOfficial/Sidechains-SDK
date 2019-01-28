@@ -8,6 +8,7 @@ import scorex.core.serialization.Serializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public final class WithdrawalRequestTransaction extends NoncedBoxTransaction<Proposition, NoncedBox<Proposition>>
 {
@@ -17,11 +18,11 @@ public final class WithdrawalRequestTransaction extends NoncedBoxTransaction<Pro
     }
 
     @Override
-    public ArrayList<BoxUnlocker<Proposition>> unlockers() { return null; }
+    public List<BoxUnlocker<Proposition>> unlockers() { return null; }
 
     // nothing to create
     @Override
-    public ArrayList<NoncedBox<Proposition>> newBoxes() {
+    public List<NoncedBox<Proposition>> newBoxes() {
         return new ArrayList<NoncedBox<Proposition>>();
     }
 
@@ -38,5 +39,10 @@ public final class WithdrawalRequestTransaction extends NoncedBoxTransaction<Pro
     @Override
     public byte transactionTypeId() {
         return 4; // scorex.core.ModifierTypeId @@ 4.toByte
+    }
+
+    @Override
+    public byte[] bytes() {
+        return null;
     }
 }

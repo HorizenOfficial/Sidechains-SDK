@@ -2,11 +2,12 @@ package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
+import com.horizen.utils.ListSerializer;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestTransaction> implements TransactionSerializer<T>
 {
@@ -27,7 +28,7 @@ class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestTransact
 
     @Override
     public Try<T> parseBytes(byte[] bytes) {
-        ArrayList<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
+        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
         return null;
     }
 }
