@@ -1,0 +1,6 @@
+This is BLS signature scheme implemented with libsnark.
+
+To build it, compile libsnark first and adjust SNARK variable at the Makefile.
+
+This scheme requires a hash algorithm producing G1 points on the curve,
+to be implemented.
