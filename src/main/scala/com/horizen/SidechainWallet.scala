@@ -42,7 +42,7 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
   override def secrets(): Set[Secret] = ???
 
   // get all boxes as WalletBox object using SidechainBoxesCompanion
-  override def boxes(): Seq[WalletBox[ProofOfKnowledgeProposition[Secret], _ <: Box[ProofOfKnowledgeProposition[Secret]]]] = ???
+  override def boxes(): Seq[WalletBox] = ???
 
   // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
   override def publicKeys(): Set[ProofOfKnowledgeProposition[Secret]] = ???
