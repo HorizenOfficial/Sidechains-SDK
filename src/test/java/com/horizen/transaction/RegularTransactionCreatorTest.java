@@ -262,7 +262,7 @@ public class RegularTransactionCreatorTest {
     }
 
     @Test
-    public void RegularTransactionCreator_InputsOrderTrst() {
+    public void RegularTransactionCreator_InputsOrderTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
         RegularBox expectedBox = new RegularBox(pk3.publicImage(), 1, 10);
         boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 3L));

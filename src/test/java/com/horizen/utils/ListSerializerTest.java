@@ -132,6 +132,6 @@ public class ListSerializerTest {
 
         assertEquals("Deserialized list has different size than original", data.size(), res.size());
         for(int i = 0; i < data.size(); i++)
-            assertEquals("Deserialized list is different to original", true, data.get(i).equals(res.get(i)));
+            assertEquals("Deserialized list is different to original", data.get(i), res.get(i));
     }
 }

@@ -17,6 +17,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
 
+    // TO DO: set real limits according to block size limits
+    public final static int MAX_TRANSACTION_SIZE = 500000; // size in bytes
+    public final static int MAX_TRANSACTION_UNLOCKERS = 1000;
+    public final static int MAX_TRANSACTION_NEW_BOXES = 1000;
+
     public abstract List<BoxUnlocker<P>> unlockers();
 
     public abstract List<B> newBoxes();
