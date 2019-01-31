@@ -14,8 +14,15 @@ import java.util.*;
 public class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
     private HashMap<Integer, Serializer<T>> _serializers; // unique key : serializer
     private HashMap<Class, Integer> _serializersClasses; // serializer class : unique key
+    private int _maxListLength; // Used during parsing bytes. Not positive value for unlimited lists support.
 
     public ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
+        this(serializers, 0);
+    }
+
+    public ListSerializer(HashMap<Integer, Serializer<T>> serializers, int maxListLength)
+     {
+         _maxListLength = maxListLength;
         _serializers = serializers;
         _serializersClasses = new HashMap<>();
         for(Map.Entry<Integer, Serializer<T>> entry : _serializers.entrySet()){
@@ -76,6 +83,9 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
             int lengthListSize = ParseBytesUtils.getInt(bytes, offset);
             offset += 4;
 
+            if(_maxListLength > 0 && lengthListSize > _maxListLength)
+                throw new IllegalArgumentException("Input data contains to many elements.");
+
             if(bytes.length < offset + lengthListSize * 4)
                 throw new IllegalArgumentException("Input data corrupted.");
             int objectsTotalLength = 0;
@@ -112,20 +122,6 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
             return new Success<>(res);
         }
         catch(IllegalArgumentException e) {
-            return new Failure<>(e);
-        }
-        catch (Exception e) {
-            return new Failure<>(new IllegalArgumentException("Input data corrupted."));
-        }
-    }
-
-    public Try<Integer> parseListLength(byte[] bytes) {
-        try {
-            if (bytes.length < 4)
-                throw new IllegalArgumentException("Input data corrupted.");
-            return new Success<>(ParseBytesUtils.getInt(bytes, 0));
-        }
-        catch (Exception e) {
             return new Failure<>(e);
         }
     }

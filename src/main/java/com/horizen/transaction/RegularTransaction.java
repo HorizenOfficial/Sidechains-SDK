@@ -22,10 +22,7 @@ import scorex.core.serialization.Serializer;
 import scorex.crypto.hash.Blake2b256;
 import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public final class RegularTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
 {
@@ -43,13 +40,13 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     // Serializers definition
     private static ListSerializer<RegularBox> _boxSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<RegularBox>>() {{
             put(1, RegularBoxSerializer.getSerializer());
-        }});
+        }}, MAX_TRANSACTION_UNLOCKERS);
     private static ListSerializer<PublicKey25519Proposition> _propositionSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<PublicKey25519Proposition>>() {{
             put(1, PublicKey25519PropositionSerializer.getSerializer());
-        }});
+        }}, MAX_TRANSACTION_NEW_BOXES);
     private static ListSerializer<Signature25519> _signaturesSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<Signature25519>>() {{
             put(1, Signature25519Serializer.getSerializer());
-        }});
+        }}, MAX_TRANSACTION_UNLOCKERS);
 
     private RegularTransaction(List<RegularBox> inputs,
                                List<Pair<PublicKey25519Proposition, Long>> outputs,
@@ -71,40 +68,38 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     }
 
     @Override
-    public List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
-        if(_unlockers != null)
-            return _unlockers;
+    public synchronized List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
+        if(_unlockers == null) {
+            _unlockers = new ArrayList<>();
+            for (int i = 0; i < _inputs.size() && i < _signatures.size(); i++) {
+                int finalI = i;
+                _unlockers.add(new BoxUnlocker<PublicKey25519Proposition>() {
+                    @Override
+                    public byte[] closedBoxId() {
+                        return _inputs.get(finalI).id();
+                    }
 
-        _unlockers = new ArrayList<>();
-        for(int i = 0; i < _inputs.size() && i < _signatures.size(); i++) {
-            int finalI = i;
-            _unlockers.add(new BoxUnlocker<PublicKey25519Proposition>() {
-                @Override
-                public byte[] closedBoxId() {
-                    return _inputs.get(finalI).id();
-                }
-
-                @Override
-                public Proof<PublicKey25519Proposition> boxKey() {
-                    return _signatures.get(finalI);
-                }
-            });
+                    @Override
+                    public Proof<PublicKey25519Proposition> boxKey() {
+                        return _signatures.get(finalI);
+                    }
+                });
+            }
         }
-        return _unlockers;
+        return Collections.unmodifiableList(_unlockers);
     }
 
     @Override
-    public List<RegularBox> newBoxes() {
-        if(_newBoxes != null)
-            return _newBoxes;
-
-        _newBoxes = new ArrayList<>();
-        for(int i = 0; i < _outputs.size(); i++ ) {
-            byte[] hash = Blake2b256.hash(Bytes.concat(_outputs.get(i).getKey().pubKeyBytes(), hashWithoutNonce(), Ints.toByteArray(i)));
-            long nonce = ParseBytesUtils.getLong(hash, 0);
-            _newBoxes.add(new RegularBox(_outputs.get(i).getKey(), nonce, _outputs.get(i).getValue()));
+    public synchronized List<RegularBox> newBoxes() {
+        if(_newBoxes == null) {
+            _newBoxes = new ArrayList<>();
+            for (int i = 0; i < _outputs.size(); i++) {
+                byte[] hash = Blake2b256.hash(Bytes.concat(_outputs.get(i).getKey().pubKeyBytes(), hashWithoutNonce(), Ints.toByteArray(i)));
+                long nonce = ParseBytesUtils.getLong(hash, 0);
+                _newBoxes.add(new RegularBox(_outputs.get(i).getKey(), nonce, _outputs.get(i).getValue()));
+            }
         }
-        return _newBoxes;
+        return Collections.unmodifiableList(_newBoxes);
     }
 
     @Override
@@ -122,24 +117,23 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         return 1;
     }
 
-    private byte[] hashWithoutNonce() {
-        if(_hashWithoutNonce != null)
-            return _hashWithoutNonce;
+    private synchronized byte[] hashWithoutNonce() {
+        if(_hashWithoutNonce == null) {
+            ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
+            for (BoxUnlocker<PublicKey25519Proposition> u : unlockers())
+                unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
 
-        ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
-        for(BoxUnlocker<PublicKey25519Proposition> u : unlockers())
-            unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
-
-        ByteArrayOutputStream newBoxesStream = new ByteArrayOutputStream();
-        for(Pair<PublicKey25519Proposition, Long> output : _outputs)
-            newBoxesStream.write(output.getKey().pubKeyBytes(), 0 , output.getKey().pubKeyBytes().length);
+            ByteArrayOutputStream newBoxesStream = new ByteArrayOutputStream();
+            for (Pair<PublicKey25519Proposition, Long> output : _outputs)
+                newBoxesStream.write(output.getKey().pubKeyBytes(), 0, output.getKey().pubKeyBytes().length);
 
 
-        _hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
-                        newBoxesStream.toByteArray(),
-                        Longs.toByteArray(_timestamp),
-                        Longs.toByteArray(_fee));
+            _hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
+                    newBoxesStream.toByteArray(),
+                    Longs.toByteArray(_timestamp),
+                    Longs.toByteArray(_fee));
 
+        }
         return _hashWithoutNonce;
     }
 
@@ -157,54 +151,42 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
         byte[] outputPropositionsBytes = _propositionSerializer.toBytes(outputPropositions);
         byte[] signaturesBytes = _signaturesSerializer.toBytes(_signatures);
 
-        return Bytes.concat(
+        return Bytes.concat(                                        // minimum RegularTransaction length is 40 bytes
                 Longs.toByteArray(fee()),                           // 8 bytes
                 Longs.toByteArray(timestamp()),                     // 8 bytes
                 Ints.toByteArray(inputBoxesBytes.length),           // 4 bytes
-                inputBoxesBytes,                                    // depends on previous value
+                inputBoxesBytes,                                    // depends on previous value (>=4 bytes)
                 Ints.toByteArray(outputPropositionsBytes.length),   // 4 bytes
-                outputPropositionsBytes,                            // depends on previous value
-                outputPropositionsValuesBytes.toByteArray(),        // depends on outputPropositions count
+                outputPropositionsBytes,                            // depends on previous value (>=4 bytes)
+                outputPropositionsValuesBytes.toByteArray(),        // depends on outputPropositions count (>=0 bytes)
                 Ints.toByteArray(signaturesBytes.length),           // 4 bytes
-                signaturesBytes                                     // depends on previous value
+                signaturesBytes                                     // depends on previous value (>=4 bytes)
         );
     }
 
     public static Try<RegularTransaction> parseBytes(byte[] bytes) {
         try {
+            if(bytes.length < 40)
+                throw new IllegalArgumentException("Input data corrupted.");
             if(bytes.length > MAX_TRANSACTION_SIZE)
                 throw new IllegalArgumentException("Input data length is too large.");
 
             int offset = 0;
 
-            if(bytes.length < 8)
-                throw new IllegalArgumentException("Input data corrupted.");
             long fee = ParseBytesUtils.getLong(bytes, offset);
             offset += 8;
 
-            if(bytes.length < offset + 8)
-                throw new IllegalArgumentException("Input data corrupted.");
             long timestamp = ParseBytesUtils.getLong(bytes, offset);
             offset += 8;
 
-            if(bytes.length < offset + 4)
-                throw new IllegalArgumentException("Input data corrupted.");
             int batchSize = ParseBytesUtils.getInt(bytes, offset);
             offset += 4;
-
-            byte[] inputsBytes = Arrays.copyOfRange(bytes, offset, offset + batchSize);
-            if(_boxSerializer.parseListLength(inputsBytes).get() > MAX_TRANSACTION_UNLOCKERS)
-                throw new IllegalArgumentException("Transaction inputs count is too large.");
-            List<RegularBox> inputs = _boxSerializer.parseBytes(inputsBytes).get();
+            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             batchSize = ParseBytesUtils.getInt(bytes, offset);
             offset += 4;
-
-            byte[] outputBytes = Arrays.copyOfRange(bytes, offset, offset + batchSize);
-            if(_propositionSerializer.parseListLength(outputBytes).get() > MAX_TRANSACTION_NEW_BOXES)
-                throw new IllegalArgumentException("Transaction outputs count is too large.");
-            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(outputBytes).get();
+            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
@@ -215,12 +197,9 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
             batchSize = ParseBytesUtils.getInt(bytes, offset);
             offset += 4;
-            byte[] signaturesBytes = Arrays.copyOfRange(bytes, offset, offset + batchSize);
-            if(_signaturesSerializer.parseListLength(signaturesBytes).get() > MAX_TRANSACTION_UNLOCKERS)
-                throw new IllegalArgumentException("Transaction signatures count is too large.");
             if(bytes.length != offset + batchSize)
                 throw new IllegalArgumentException("Input data corrupted.");
-            List<Signature25519> signatures = _signaturesSerializer.parseBytes(signaturesBytes).get();
+            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {

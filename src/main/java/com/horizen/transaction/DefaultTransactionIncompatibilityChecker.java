@@ -16,18 +16,12 @@ public class DefaultTransactionIncompatibilityChecker implements TransactionInco
         // Algorithm difficulty is O(n+m), where n - number of spent boxes in newTx, m - number of currentTxs
         // Note: .boxIdsToOpen() and .unlockers() expected to be optimized (lazy calculated)
         for(BoxUnlocker unlocker : (List<BoxUnlocker>)newTx.unlockers()) {
+            ByteArrayWrapper closedBoxId = new ByteArrayWrapper(unlocker.closedBoxId());
             for (BoxTransaction tx : currentTxs) {
-                if(tx.boxIdsToOpen().contains(new ByteArrayWrapper(unlocker.closedBoxId())))
+                if(tx.boxIdsToOpen().contains(closedBoxId))
                     return true;
             }
         }
         return false;
-
-        /* More compact, but slower solution.
-        for(BoxTransaction tx : currentTxs) {
-            if(Sets.intersection(tx.boxIdsToOpen(), newTx.boxIdsToOpen()).size() > 0)
-                return true;
-        }
-        */
     }
 }

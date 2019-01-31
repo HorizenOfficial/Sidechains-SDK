@@ -8,6 +8,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,13 +31,13 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract long timestamp();
 
-    public final Set<ByteArrayWrapper> boxIdsToOpen() {
-        if(_boxIdsToOpen != null)
-            return _boxIdsToOpen;
-        _boxIdsToOpen = new HashSet<>();
-        for(BoxUnlocker u : unlockers())
-            _boxIdsToOpen.add(new ByteArrayWrapper(u.closedBoxId()));
-        return _boxIdsToOpen;
+    public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {
+        if(_boxIdsToOpen == null) {
+            _boxIdsToOpen = new HashSet<>();
+            for (BoxUnlocker u : unlockers())
+                _boxIdsToOpen.add(new ByteArrayWrapper(u.closedBoxId()));
+        }
+        return Collections.unmodifiableSet(_boxIdsToOpen);
     }
 
     public TransactionIncompatibilityChecker incompatibilityChecker() {
