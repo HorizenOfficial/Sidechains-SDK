@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.horizen.box.Box;
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.PublicKey25519Proposition;
 import scala.Tuple2;
@@ -20,21 +19,6 @@ public final class PrivateKey25519Companion implements SecretCompanion<PrivateKe
 
     public static PrivateKey25519Companion getCompanion() {
         return companion;
-    }
-
-    @Override
-    public boolean owns(PrivateKey25519 secret, Box box) {
-        if (box != null && box.proposition() instanceof PublicKey25519Proposition) {
-            PublicKey25519Proposition proposition = (PublicKey25519Proposition)box.proposition();
-            if(secret.publicImage().equals(proposition))
-                return true;
-        }
-        return false;
-    }
-
-    @Override
-    public Signature25519 sign(PrivateKey25519 secret, byte[] message) {
-        return new Signature25519(Curve25519.sign(secret.privateKeyBytes(), message));
     }
 
     @Override

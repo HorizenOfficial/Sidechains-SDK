@@ -11,8 +11,6 @@ import java.util.Random;
 import static org.junit.Assert.*;
 
 public class PrivateKey25519Test {
-
-
     byte[] testMessage = "Test string message to sign/verify.".getBytes();
 
     PrivateKey25519 key;
@@ -49,7 +47,7 @@ public class PrivateKey25519Test {
 
     @Test
     public void verify() {
-        pr = key.companion().sign(key, testMessage);
+        pr = key.sign(testMessage);
         assertTrue("Verification of the sign filed.", key.companion().verify(testMessage, prp, pr));
     }
 }

@@ -1,6 +1,8 @@
 package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
+import com.horizen.proof.Signature25519;
+import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 
 import scala.util.Failure;
@@ -51,10 +53,6 @@ public final class PrivateKey25519 implements Secret
         return new PublicKey25519Proposition(_publicKeyBytes);
     }
 
-    public byte[] privateKeyBytes() {
-        return  Arrays.copyOf(_privateKeyBytes, KEY_LENGTH);
-    }
-
     @Override
     public PrivateKey25519Companion companion() {
         return PrivateKey25519Companion.getCompanion();
@@ -85,5 +83,15 @@ public final class PrivateKey25519 implements Secret
         int result = Arrays.hashCode(_privateKeyBytes);
         result = 31 * result + Arrays.hashCode(_publicKeyBytes);
         return result;
+    }
+
+    @Override
+    public boolean owns(ProofOfKnowledgeProposition proposition) {
+        return publicImage().equals(proposition);
+    }
+
+    @Override
+    public Signature25519 sign(byte[] message) {
+        return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
     }
 }
