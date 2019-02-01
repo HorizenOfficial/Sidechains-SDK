@@ -25,7 +25,7 @@ public class Signature25519Test {
 
         key = PrivateKey25519Companion.getCompanion().generateSecret(seed);
         prp = key.publicImage();
-        pr = key.companion().sign(key, testMessage);
+        pr = key.sign(testMessage);
     }
 
     @Test

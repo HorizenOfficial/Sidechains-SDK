@@ -229,9 +229,8 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         List<Signature25519> signatures = new ArrayList<>();
-        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
         for(Pair<RegularBox, PrivateKey25519> item : from) {
-            signatures.add(companion.sign(item.getValue(), messageToSign));
+            signatures.add(item.getValue().sign(messageToSign));
         }
 
         return new RegularTransaction(inputs, to, signatures, fee, timestamp);
