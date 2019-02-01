@@ -3,7 +3,6 @@ package com.horizen.secret;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
 
 import java.util.Random;
@@ -18,8 +17,7 @@ public class PrivateKey25519SerializerTest {
         byte[] seed = new byte[32];
         new Random().nextBytes(seed);
 
-        Tuple2<PrivateKey25519, PublicKey25519Proposition> keyTuple = PrivateKey25519.generateKeys(seed);
-        PrivateKey25519 key = keyTuple._1;
+        PrivateKey25519 key = PrivateKey25519Companion.getCompanion().generateSecret(seed);
 
         SecretSerializer<PrivateKey25519> serializer = key.serializer();
 

@@ -1,42 +1,46 @@
 package com.horizen
+
+import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.Box
-import com.horizen.proof.ProofOfKnowledge
-import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition}
+import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.transaction.Transaction
 import scorex.core.serialization.{BytesSerializable, Serializer}
+import scorex.util.{bytesToId, idToBytes}
+import scorex.core.NodeViewModifier
 
 import scala.util.Try
 
-case class WalletBox[P <: Proposition, B <: Box[P]](box: B, transactionId: scorex.core.ModifierId, createdAt: Long)
-                                                   (boxDeserializer: Serializer[B]) extends BytesSerializable
-  with scorex.core.utils.ScorexEncoding { // To Do: check ScorexEncoding
 
-  override type M = WalletBox[P, B]
+case class WalletBox(box: Box[ProofOfKnowledgeProposition[Secret]], transactionId: scorex.util.ModifierId, createdAt: Long)
+                                                   (boxesCompanion: SidechainBoxesCompanion) extends BytesSerializable
+  with scorex.core.utils.ScorexEncoding {
 
-  override def serializer: Serializer[WalletBox[P, B]] = new WalletBoxSerializer(boxDeserializer)
+  override type M = WalletBox
 
-  //override def toString: String = s"WalletBox($box, ${encoder.encode(transactionId)}, $createdAt)"
+  override lazy val serializer: Serializer[WalletBox] = new WalletBoxSerializer(boxesCompanion)
+
+  override def toString: String = s"WalletBox($box, ${encoder.encode(transactionId)}, $createdAt)"
 }
 
+class WalletBoxSerializer(boxesCompanion: SidechainBoxesCompanion) extends Serializer[WalletBox] {
+  override def toBytes(walletBox: WalletBox): Array[Byte] = {
+    Bytes.concat(idToBytes(walletBox.transactionId), Longs.toByteArray(walletBox.createdAt), walletBox.box.bytes)
+  }
 
-class WalletBoxSerializer[P <: Proposition, B <: Box[P]](boxDeserializer: Serializer[B]) extends Serializer[WalletBox[P, B]] {
-  override def toBytes(box: WalletBox[P, B]): Array[Byte] = ??? /*{
-    Bytes.concat(idToBytes(box.transactionId), Longs.toByteArray(box.createdAt), box.box.bytes)
-  }*/
-
-  override def parseBytes(bytes: Array[Byte]): Try[WalletBox[P, B]] = ??? /*Try {
+  override def parseBytes(bytes: Array[Byte]): Try[WalletBox] = Try {
     val txId = bytesToId(bytes.slice(0, NodeViewModifier.ModifierIdSize))
     val createdAt = Longs.fromByteArray(
       bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
     val boxB = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
-    val box: B = boxDeserializer.parseBytes(boxB).get
-    WalletBox[P, B](box, txId, createdAt)(boxDeserializer)
-  }*/
+    val box: Box[ProofOfKnowledgeProposition[Secret]] = boxesCompanion.parseBytes(boxB).get
+    WalletBox(box, txId, createdAt)(boxesCompanion)
+  }
 }
 
 
-trait Wallet[S <: Secret[S, P, ProofOfKnowledge[S,P]], P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.block.Block[TX], W <: Wallet[S, P, TX, PMOD, W]]
+trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 
@@ -48,7 +52,7 @@ trait Wallet[S <: Secret[S, P, ProofOfKnowledge[S,P]], P <: ProofOfKnowledgeProp
 
   def secrets(): Set[S]
 
-  def boxes(): Seq[WalletBox[P, _ <: Box[P]]]
+  def boxes(): Seq[WalletBox]
 
   def publicKeys(): Set[P]
 }

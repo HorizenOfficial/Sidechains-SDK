@@ -12,6 +12,7 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.PrivateKey25519Companion;
 import com.horizen.utils.ListSerializer;
 import scala.util.Failure;
 import scala.util.Success;

@@ -4,7 +4,7 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 
-public class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
+public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
 {
     private static PublicKey25519PropositionSerializer serializer;
 
