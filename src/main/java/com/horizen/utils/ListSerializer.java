@@ -23,13 +23,13 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
     public ListSerializer(HashMap<Integer, Serializer<T>> serializers, int maxListLength)
      {
          _maxListLength = maxListLength;
-        _serializers = serializers;
-        _serializersClasses = new HashMap<>();
-        for(Map.Entry<Integer, Serializer<T>> entry : _serializers.entrySet()){
-            _serializersClasses.put(entry.getValue().getClass(), entry.getKey());
-        }
-        if(_serializers.size() != _serializersClasses.size())
-            throw new IllegalArgumentException("Serializers class types expected to be unique.");
+         _serializers = serializers;
+         _serializersClasses = new HashMap<>();
+         for(Map.Entry<Integer, Serializer<T>> entry : _serializers.entrySet()){
+             _serializersClasses.put(entry.getValue().getClass(), entry.getKey());
+         }
+         if(_serializers.size() != _serializersClasses.size())
+             throw new IllegalArgumentException("Serializers class types expected to be unique.");
     }
 
     @Override

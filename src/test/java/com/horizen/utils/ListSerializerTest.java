@@ -2,7 +2,6 @@ package com.horizen.utils;
 
 import com.google.common.primitives.Ints;
 import org.bouncycastle.util.Strings;
-import org.junit.Before;
 import org.junit.Test;
 import scala.util.Failure;
 import scala.util.Success;
@@ -11,6 +10,7 @@ import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.Serializer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -59,7 +59,6 @@ class ListSerializerTestObjectASerializer implements Serializer<ListSerializerTe
         } catch (Exception e) {
             return new Failure<>(e);
         }
-
     }
 }
 
@@ -106,11 +105,55 @@ class ListSerializerTestObjectBSerializer implements Serializer<ListSerializerTe
         } catch (Exception e) {
             return new Failure<>(e);
         }
-
     }
 }
 
 public class ListSerializerTest {
+
+    @Test
+    public void ListSerializerTest_CreationTest() {
+
+        // Test 1: try to create ListSerializer with valid parameters and no limits
+        boolean exceptionOccurred = false;
+        try {
+            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
+            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
+            serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
+            new ListSerializer<>(serializers);
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Unexpected exception occurred during creation without limits", false, exceptionOccurred);
+
+
+        // Test 2: try to create ListSerializer with valid parameters and with limits
+        exceptionOccurred = false;
+        try {
+            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
+            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
+            serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
+            new ListSerializer<>(serializers, 10);
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Unexpected exception occurred during creation with limits", false, exceptionOccurred);
+
+
+        // Test 3: try to create ListSerializer with invalid parameters (serializers duplications)
+        exceptionOccurred = false;
+        try {
+            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
+            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
+            serializers.put(2, (Serializer)new ListSerializerTestObjectASerializer());
+            new ListSerializer<>(serializers, 10);
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Exception expected during creation", true, exceptionOccurred);
+    }
 
     @Test
     public void ListSerializerTest_SerializationTest() {
@@ -119,6 +162,12 @@ public class ListSerializerTest {
         serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
         ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializers);
 
+        // Test 1: empty list serialization test
+        byte[] bytes = listSerializer.toBytes(new ArrayList<>());
+        List<BytesSerializable> res = listSerializer.parseBytes(bytes).get();
+        assertEquals("Deserialized list should by empty", 0, res.size());
+
+        // Test 2: not empty list with different types.
         ArrayList<BytesSerializable> data = new ArrayList<>();
         data.add(new ListSerializerTestObjectA("test1"));
         data.add(new ListSerializerTestObjectA("test2"));
@@ -127,11 +176,85 @@ public class ListSerializerTest {
         data.add(new ListSerializerTestObjectB(2));
         data.add(new ListSerializerTestObjectB(3));
 
-        byte[] bytes = listSerializer.toBytes((List)data);
-        List<BytesSerializable> res = listSerializer.parseBytes(bytes).get();
+        bytes = listSerializer.toBytes(data);
+        res = listSerializer.parseBytes(bytes).get();
 
         assertEquals("Deserialized list has different size than original", data.size(), res.size());
         for(int i = 0; i < data.size(); i++)
             assertEquals("Deserialized list is different to original", data.get(i), res.get(i));
+    }
+
+    @Test
+    public void ListSerializerTest_FailureSerializationTest() {
+        HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
+        serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
+        serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
+
+        ListSerializer<BytesSerializable> listSerializerWithLimits = new ListSerializer<>(serializers, 2);
+
+        ArrayList<BytesSerializable> data = new ArrayList<>();
+        data.add(new ListSerializerTestObjectA("test1"));
+        data.add(new ListSerializerTestObjectB(1));
+
+        // Test 1: bytes not broken, list size in NOT upper the limit
+        boolean exceptionOccurred = false;
+        byte[] bytes = listSerializerWithLimits.toBytes(data);
+        try {
+            listSerializerWithLimits.parseBytes(bytes).get();
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("List expected to be deserialized successful", false, exceptionOccurred);
+
+        // Test 2: bytes not broken, list size in upper the limit
+        exceptionOccurred = false;
+        data.add(new ListSerializerTestObjectA("test2"));
+        bytes = listSerializerWithLimits.toBytes(data);
+        try {
+            listSerializerWithLimits.parseBytes(bytes).get();
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Exception expected during deserialization, because of list size limits.", true, exceptionOccurred);
+
+
+        // Test 3: broken bytes: contains some garbage in the end
+        exceptionOccurred = false;
+        bytes = new byte[]{ 0, 0, 0, 0, 1};
+        try {
+            listSerializerWithLimits.parseBytes(bytes).get();
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Exception expected during deserialization, because of garbage.", true, exceptionOccurred);
+
+
+        // Test 4: broken bytes: some bytes in the end were cut
+        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializers);
+        bytes = listSerializerWithLimits.toBytes(data);
+        bytes = Arrays.copyOfRange(bytes, 0, bytes.length - 1);
+        exceptionOccurred = false;
+        try {
+            listSerializerWithLimits.parseBytes(bytes).get();
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Exception expected during deserialization, because of cut end of bytes.", true, exceptionOccurred);
+
+
+        // Test 5: broken bytes passed
+        exceptionOccurred = false;
+        bytes = new byte[]{ 0, 0, 0, 2, 1, 0, 3, 0, 1, 0, 4, 5, 6};
+        try {
+            listSerializerWithLimits.parseBytes(bytes).get();
+        }
+        catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Exception expected during deserialization, because of garbage.", true, exceptionOccurred);
     }
 }
