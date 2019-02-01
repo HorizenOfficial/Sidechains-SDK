@@ -13,22 +13,71 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
 
-class RegularTransactionCreatorNodeWallet implements NodeWallet {
+class TransactionCreatorNodeWallet implements NodeWallet {
 
-    List<Pair<Box, Long>> _boxesWithCreationTime;
+    List<Box> _boxesOrderedBytCreationTime;
     List<Secret> _secrets;
-    public RegularTransactionCreatorNodeWallet(List<Pair<Box, Long>> boxesWithCreationTime, List<Secret> secrets) {
-        _boxesWithCreationTime = boxesWithCreationTime;
+    public TransactionCreatorNodeWallet(List<Pair<Box, Long>> boxesWithCreationTime, List<Secret> secrets) {
+        List<Pair<Box, Long>> _boxesWithCreationTime = new ArrayList<>(boxesWithCreationTime);
+        _boxesWithCreationTime.sort( (a, b) ->  Long.signum (a.getValue() - b.getValue()));
+        _boxesOrderedBytCreationTime = new ArrayList<>();
+        for(Pair<Box, Long> walletBox : _boxesWithCreationTime)
+            _boxesOrderedBytCreationTime.add(walletBox.getKey());
         _secrets = secrets;
     }
 
     @Override
-    public List<Pair<Box, Long>> boxesWithCreationTime() {
-        return _boxesWithCreationTime;
+    public List<Box> allBoxes() {
+        return _boxesOrderedBytCreationTime;
+    }
+
+    @Override
+    public List<Box> allBoxes(List<byte[]> boxIdsToExclude) {
+        List<Box> filteredBoxes = new ArrayList<>();
+        for(Box box : _boxesOrderedBytCreationTime) {
+            boolean acceptable = true;
+            for(byte[] idToExclude : boxIdsToExclude)
+                if(Arrays.equals(box.id(), idToExclude)) {
+                    acceptable = false;
+                    break;
+                }
+            if(acceptable)
+                filteredBoxes.add(box);
+        }
+        return filteredBoxes;
+    }
+
+    @Override
+    public List<Box> boxesOfType(Class<? extends Box> type) {
+        List<Box> filteredBoxes = new ArrayList<>();
+        for(Box box : _boxesOrderedBytCreationTime) {
+            if(box.getClass().equals(type))
+                filteredBoxes.add(box);
+        }
+        return filteredBoxes;
+    }
+
+    @Override
+    public List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude) {
+        List<Box> filteredBoxes = new ArrayList<>();
+        for(Box box : _boxesOrderedBytCreationTime) {
+            if(!box.getClass().equals(type))
+                continue;
+            boolean acceptable = true;
+            for(byte[] idToExclude : boxIdsToExclude)
+                if(Arrays.equals(box.id(), idToExclude)) {
+                    acceptable = false;
+                    break;
+                }
+            if(acceptable)
+                filteredBoxes.add(box);
+        }
+        return filteredBoxes;
     }
 
     @Override
@@ -42,7 +91,12 @@ class RegularTransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Secret> getSecrets() {
+    public List<Secret> allSecrets() {
+        return null;
+    }
+
+    @Override
+    public List<Secret> secretsOfType(Class<? extends Secret> type) {
         return null;
     }
 }
@@ -78,7 +132,7 @@ public class RegularTransactionCreatorTest {
         secrets.add(pk2);
         secrets.add(pk3);
 
-        defaultWallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        defaultWallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
     }
 
     @Test
@@ -104,7 +158,7 @@ public class RegularTransactionCreatorTest {
         secrets.add(pk2);
         secrets.add(pk3);
 
-        NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
@@ -159,7 +213,7 @@ public class RegularTransactionCreatorTest {
         secrets.add(pk2);
         secrets.add(pk3);
 
-        NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
@@ -208,7 +262,7 @@ public class RegularTransactionCreatorTest {
         secrets.add(pk2);
         secrets.add(pk3);
 
-        NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
         PublicKey25519Proposition changeAddress = pk6.publicImage();
 
 
@@ -238,7 +292,7 @@ public class RegularTransactionCreatorTest {
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
 
-        NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk2.publicImage(), 50L));
@@ -274,7 +328,7 @@ public class RegularTransactionCreatorTest {
         secrets.add(pk2);
         secrets.add(pk3);
 
-        NodeWallet wallet = new RegularTransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
+        NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
