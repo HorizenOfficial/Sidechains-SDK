@@ -42,7 +42,9 @@ public class PublicKey25519PropositionSerializerTest {
     public void PublicKey25519PropositionSerializerTest_RegressionTest() {
         byte[] bytes;
         try {
-            bytes = Files.readAllBytes(new File("src\\test\\resources\\publickey25519proposition_bytes").toPath());
+            ClassLoader classLoader = getClass().getClassLoader();
+            File file = new File(classLoader.getResource("publickey25519proposition_bytes").getFile());
+            bytes = Files.readAllBytes(file.toPath());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

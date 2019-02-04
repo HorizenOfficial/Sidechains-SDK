@@ -42,7 +42,9 @@ public class RegularBoxSerializerTest
     public void RegularBoxSerializerTest_RegressionTest() {
         byte[] bytes;
         try {
-            bytes = Files.readAllBytes(new File("src\\test\\resources\\regularbox_bytes").toPath());
+            ClassLoader classLoader = getClass().getClassLoader();
+            File file = new File(classLoader.getResource("regularbox_bytes").getFile());
+            bytes = Files.readAllBytes(file.toPath());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

@@ -155,6 +155,17 @@
                 </configuration>
             </plugin>
         </plugins>
+        <testResources>
+            <testResource>
+                <directory>${basedir}/src/test/resources</directory>
+                <includes>
+                    <include>publickey25519proposition_bytes</include>
+                    <include>privatekey25519_bytes</include>
+                    <include>regulartransaction_bytes</include>
+                    <include>regularbox_bytes</include>
+                </includes>
+            </testResource>
+        </testResources>
     </build>
     <reporting>
         <plugins>

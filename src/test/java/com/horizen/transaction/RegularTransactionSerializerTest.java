@@ -41,7 +41,7 @@ public class RegularTransactionSerializerTest {
         to.add(new Pair<>(pk5.publicImage(), 20L));
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
-        // Note: current transaction bytes are also stored in "src/test/resources/regular_transaction_bytes"
+        // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
     }
 
@@ -62,7 +62,9 @@ public class RegularTransactionSerializerTest {
     public void RegularTransactionSerializerTest_RegressionTest() {
         byte[] bytes;
         try {
-            bytes = Files.readAllBytes(new File("src\\test\\resources\\regular_transaction_bytes").toPath());
+            ClassLoader classLoader = getClass().getClassLoader();
+            File file = new File(classLoader.getResource("regulartransaction_bytes").getFile());
+            bytes = Files.readAllBytes(file.toPath());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

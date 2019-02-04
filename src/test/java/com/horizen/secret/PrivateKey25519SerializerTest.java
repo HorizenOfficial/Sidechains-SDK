@@ -36,7 +36,9 @@ public class PrivateKey25519SerializerTest {
     public void PrivateKey25519SerializerTest_RegressionTest() {
         byte[] bytes;
         try {
-            bytes = Files.readAllBytes(new File("src\\test\\resources\\privatekey25519_bytes").toPath());
+            ClassLoader classLoader = getClass().getClassLoader();
+            File file = new File(classLoader.getResource("privatekey25519_bytes").getFile());
+            bytes = Files.readAllBytes(file.toPath());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);
