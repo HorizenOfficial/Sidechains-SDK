@@ -1,22 +1,25 @@
 package com.horizen.transaction;
 
 import com.horizen.box.BoxUnlocker;
+import com.horizen.utils.ByteArrayWrapper;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
 public class DefaultTransactionIncompatibilityChecker implements TransactionIncompatibilityChecker<BoxTransaction>
 {
     @Override
-    public boolean hasIncompatibleTransactions(BoxTransaction newTx, ArrayList<BoxTransaction> currentTxs) {
-        // check intersections between spending boxes of current and txs
-        // TO DO: is it optimal (take in consideration other places of currentTxs usage)?
-        for(BoxUnlocker unlocker : (ArrayList<BoxUnlocker>)newTx.unlockers()) {
-            for(BoxTransaction tx : currentTxs) {
-                ArrayList<BoxUnlocker> ctxUnlockers = (ArrayList<BoxUnlocker>)tx.unlockers();
-                for(BoxUnlocker u : ctxUnlockers)
-                    if(Arrays.equals(unlocker.closedBoxId(), u.closedBoxId()))
-                        return true;
+    public boolean hasIncompatibleTransactions(BoxTransaction newTx, List<BoxTransaction> currentTxs) {
+        if(newTx == null || currentTxs == null)
+            throw new IllegalArgumentException("Parameters can't be null.");
+
+        // Check intersections between spent boxes of newTx and currentTxs
+        // Algorithm difficulty is O(n+m), where n - number of spent boxes in newTx, m - number of currentTxs
+        // Note: .boxIdsToOpen() and .unlockers() expected to be optimized (lazy calculated)
+        for(BoxUnlocker unlocker : (List<BoxUnlocker>)newTx.unlockers()) {
+            ByteArrayWrapper closedBoxId = new ByteArrayWrapper(unlocker.closedBoxId());
+            for (BoxTransaction tx : currentTxs) {
+                if(tx.boxIdsToOpen().contains(closedBoxId))
+                    return true;
             }
         }
         return false;

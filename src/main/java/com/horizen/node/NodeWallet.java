@@ -9,9 +9,19 @@ import java.util.List;
 
 public interface NodeWallet {
 
-    List<Pair<Box, Long>> boxesWithCreationTime();
+    // boxes are sorted by creation time in wallet from oldest to newest
+    List<Box> allBoxes();
+
+    // boxes are sorted by creation time in wallet from oldest to newest
+    List<Box> allBoxes(List<byte[]> boxIdsToExclude);
+
+    List<Box> boxesOfType(Class<? extends Box> type);
+
+    List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude);
 
     Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage);
 
-    List<Secret> getSecrets();
+    List<Secret> allSecrets();
+
+    List<Secret> secretsOfType(Class<? extends Secret> type);
 }
