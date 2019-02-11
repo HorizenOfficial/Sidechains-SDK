@@ -80,7 +80,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
 
             if(bytes.length < 4)
                 throw new IllegalArgumentException("Input data corrupted.");
-            int lengthListSize = ParseBytesUtils.getInt(bytes, offset);
+            int lengthListSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
 
             if(_maxListLength > 0 && lengthListSize > _maxListLength)
@@ -91,7 +91,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
             int objectsTotalLength = 0;
             ArrayList<Integer> lengthList = new ArrayList<>();
             while(offset < 4 * lengthListSize + 4) {
-                int objectLength = ParseBytesUtils.getInt(bytes, offset);
+                int objectLength = BytesUtils.getInt(bytes, offset);
                 objectsTotalLength += objectLength;
                 lengthList.add(objectLength);
                 offset += 4;
@@ -102,7 +102,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
             // Pair <serializer id : bytes>
             ArrayList<Pair<Integer, byte[]>> objects = new ArrayList<>();
             for(int length : lengthList) {
-                int serializerId = ParseBytesUtils.getInt(bytes, offset);
+                int serializerId = BytesUtils.getInt(bytes, offset);
                 offset += 4;
                 objects.add(new Pair<>(serializerId, Arrays.copyOfRange(bytes, offset, offset + length - 4)));
                 offset += length - 4;

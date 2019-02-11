@@ -2,6 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
+import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.ListSerializer;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
@@ -9,27 +10,30 @@ import scorex.core.serialization.Serializer;
 import java.util.HashMap;
 import java.util.List;
 
-class MC2SCAggregatedTransactionSerializer<T extends MC2SCAggregatedTransaction> implements TransactionSerializer<T>
+class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
 {
-    private ListSerializer<Box<Proposition>> _boxSerializer;
+    private static MC2SCAggregatedTransactionSerializer serializer;
 
-    MC2SCAggregatedTransactionSerializer() {
-        HashMap<Integer, Serializer<Box>> supportedBoxSerializers = new HashMap<Integer, Serializer<Box>>();
-        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
-        //_boxSerializer  = new ListSerializer<Box<Proposition>>(supportedBoxSerializers);
+    static {
+        serializer = new MC2SCAggregatedTransactionSerializer();
+    }
+
+    private MC2SCAggregatedTransactionSerializer() {
+        super();
+    }
+
+    public static MC2SCAggregatedTransactionSerializer getSerializer() {
+        return serializer;
     }
 
     @Override
-    public byte[] toBytes(T obj) {
-        return _boxSerializer.toBytes(obj.newBoxes());
+    public byte[] toBytes(MC2SCAggregatedTransaction transaction) {
+        return transaction.bytes();
     }
 
     @Override
-    public Try<T> parseBytes(byte[] bytes) {
-        List<Box<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
-
-        // create RegualrTransaction and init with Boxes
-        return null;
+    public Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
+        return MC2SCAggregatedTransaction.parseBytes(bytes);
     }
 }
 

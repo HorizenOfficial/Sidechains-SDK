@@ -42,6 +42,8 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   }
 
   // Validate block itself, then validate transactions through validateAgainstModifier(tx, mod)
+  // In the block validation we need to verify that for every MC block referenced there is a corresponding MC2SC transaction and verify merkle roots in transaction and block is equal
+  // and moreover verify that every mc2sc transaction has a corresponding mainchain block reference.
   override def validate(mod: SidechainBlock): Try[Unit] = ???
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
@@ -52,13 +54,14 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
 
+  // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
   override def validate(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // NOTE: mod is only for internal usage: e.g. for Backward and Forward transactions.
   def validateAgainstModifier(tx: BoxTransaction[Proposition, Box[Proposition]],
                mod: SidechainBlock): Try[Unit] = {
     tx match {
-      case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
+      //case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
       //case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
       // other SDK known objects with specific validation processing
       // ...
