@@ -1,16 +1,8 @@
 package com.horizen.transaction;
 
-import com.horizen.box.Box;
-import com.horizen.proposition.Proposition;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.utils.ListSerializer;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
 
-import java.util.HashMap;
-import java.util.List;
-
-class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
+public final class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
 {
     private static MC2SCAggregatedTransactionSerializer serializer;
 

@@ -3,16 +3,9 @@ package com.horizen.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.horizen.block.MainchainHeader;
-import com.horizen.block.MainchainTransaction;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
-import com.horizen.proof.Proof;
-import com.horizen.proof.Signature25519;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.Proposition;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainTransaction;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.ListSerializer;
@@ -23,7 +16,6 @@ import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
-import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
