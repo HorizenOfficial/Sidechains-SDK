@@ -6,6 +6,7 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainTransaction;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.ListSerializer;
@@ -29,7 +30,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainTransaction> _mc2scTransactionsSerializer = new ListSerializer<>(new HashMap<Integer, Serializer<SidechainRelatedMainchainTransaction>>() {{
-        //TO DO: put(1, ForwardTransferSerializer); ...
+        put(1, (Serializer)ForwardTransferSerializer.getSerializer());
     }});
 
     private MC2SCAggregatedTransaction(byte[] mc2scTransactionsMerkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
