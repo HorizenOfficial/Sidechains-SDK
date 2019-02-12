@@ -71,7 +71,11 @@ class SidechainMemoryPool(val unconfirmed: TrieMap[String, SidechainTypes#BT])
   private def internalPut (tx: SidechainTypes#BT) : Boolean = {
     val txIC = tx.incompatibilityChecker()
     val txs = this.unconfirmed.values.toList.asJava.asInstanceOf[java.util.List[BoxTransaction[Proposition, Box[Proposition]]]]
-    txIC.hasIncompatibleTransactions(tx, txs)
+    if (!txIC.hasIncompatibleTransactions(tx, txs)) {
+      unconfirmed.put(tx.id(), tx)
+      true
+    } else
+    false
   }
 
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
