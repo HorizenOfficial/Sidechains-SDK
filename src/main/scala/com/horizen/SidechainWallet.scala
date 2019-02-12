@@ -2,6 +2,7 @@ package com.horizen
 
 import java.{lang, util}
 
+import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
 import com.horizen.node.NodeWallet
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition}
@@ -21,9 +22,9 @@ import scala.util.Try
 
 
 case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: LSMStore) extends Wallet[Secret,
-                  ProofOfKnowledgeProposition[Secret],
-                  BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]],
-                  Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]],
+                  SidechainTypes#P,
+                  SidechainTypes#BT,
+                  SidechainBlock,
                   SidechainWallet] with NodeWallet {
 
   override type NVCT = SidechainWallet
@@ -34,9 +35,9 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
 
   // 1) check for existence
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
-  override def removeSecret(publicImage: ProofOfKnowledgeProposition[Secret]): Try[SidechainWallet] = ???
+  override def removeSecret(publicImage: SidechainTypes#P): Try[SidechainWallet] = ???
 
-  override def secret(publicImage: ProofOfKnowledgeProposition[Secret]): Option[Secret] = ???
+  override def secret(publicImage: SidechainTypes#P): Option[Secret] = ???
 
   // get all secrets, use SidechainSecretsCompanion to deserialize
   override def secrets(): Set[Secret] = ???
@@ -45,17 +46,17 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
   override def boxes(): Seq[WalletBox] = ???
 
   // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
-  override def publicKeys(): Set[ProofOfKnowledgeProposition[Secret]] = ???
+  override def publicKeys(): Set[SidechainTypes#P] = ???
 
   // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(tx: BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]): SidechainWallet = this
+  override def scanOffchain(tx: SidechainTypes#BT): SidechainWallet = this
 
   // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(txs: Seq[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): SidechainWallet = this
+  override def scanOffchain(txs: Seq[SidechainTypes#BT]): SidechainWallet = this
 
   // scan like in HybridApp, but in more general way.
   // update boxes in BoxStore
-  override def scanPersistent(modifier: Block[BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]]): SidechainWallet = ???
+  override def scanPersistent(modifier: SidechainBlock): SidechainWallet = ???
 
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = ???

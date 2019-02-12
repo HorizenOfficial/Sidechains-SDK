@@ -12,32 +12,32 @@ import scala.util.{Failure, Success, Try}
 
 class LSMStore
 
-case class SidechainState(store: LSMStore, override val version: VersionTag, applicationState: ApplicationState) extends
-    BoxMinimalState[Proposition,
-                    Box[Proposition],
-                    BoxTransaction[Proposition, Box[Proposition]],
+case class SidechainState(store: LSMStore, override val version: VersionTag, applicationState: ApplicationState)
+  extends BoxMinimalState[SidechainTypes#P,
+                    SidechainTypes#B,
+                    SidechainTypes#BT,
                     SidechainBlock,
-                    SidechainState]{
+                    SidechainState]
+{
 
   //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
   //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")
 
   override type NVCT = SidechainState
-  //type HPMOD = SidechainBlock
-
+  type HPMOD = SidechainBlock
 
   // Note: emit tx.semanticValidity for each tx
-  override def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+  override def semanticValidity(tx: SidechainTypes#BT): Try[Unit] = ???
 
   // get closed box from State storage
-  override def closedBox(boxId: Array[Byte]): Option[Box[Proposition]] = ???
+  override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#B] = ???
 
   // get boxes for given proposition from state storage
-  override def boxesOf(proposition: Proposition): Seq[Box[Proposition]] = ???
+  override def boxesOf(proposition: SidechainTypes#P): Seq[SidechainTypes#B] = ???
 
   // Note: aggregate New boxes and spent boxes for Block
   override def changes(mod: SidechainBlock)
-  : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
+  : Try[BoxStateChanges[SidechainTypes#P, SidechainTypes#B]] = {
     SidechainState.changes(mod)
   }
 
@@ -52,13 +52,13 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
 
-  override def validate(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+  override def validate(tx: SidechainTypes#BT): Try[Unit] = ???
 
   // NOTE: mod is only for internal usage: e.g. for Backward and Forward transactions.
-  def validateAgainstModifier(tx: BoxTransaction[Proposition, Box[Proposition]],
+  def validateAgainstModifier(tx: SidechainTypes#BT,
                mod: SidechainBlock): Try[Unit] = {
     tx match {
-      case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
+      //case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
       //case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
       // other SDK known objects with specific validation processing
       // ...
@@ -94,7 +94,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[Proposition, Box[Proposition]], newVersion: VersionTag): Try[SidechainState] = ???
+  override def applyChanges(changes: BoxStateChanges[SidechainTypes#P, SidechainTypes#B], newVersion: VersionTag): Try[SidechainState] = ???
 
   override def maxRollbackDepth: Int = ??? //store.keepVersions
 
@@ -102,29 +102,28 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
 
 }
 
-
 object SidechainState {
-  def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+  def semanticValidity(tx: SidechainTypes#BT): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
   def changes(mod: SidechainBlock)
-    : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
+    : Try[BoxStateChanges[SidechainTypes#P, SidechainTypes#B]] = {
 
-    val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = Seq()
+    val transactions: Seq[SidechainTypes#BT] = Seq()
 
     Try {
-      val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
+      val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[SidechainTypes#B], 0L)
 
       // calculate list of ID of unlokers' boxes -> toRemove
       // calculate list of new boxes -> toAppend
       // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
 
       @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
-      val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
-        initial._1.map(id => Removal[Proposition, Box[Proposition]](scorex.crypto.authds.ADKey(id))) ++
-          initial._2.map(b => Insertion[Proposition, Box[Proposition]](b))
-      BoxStateChanges[Proposition, Box[Proposition]](ops)
+      val ops: Seq[BoxStateChangeOperation[SidechainTypes#P, SidechainTypes#B]] =
+        initial._1.map(id => Removal[SidechainTypes#P, SidechainTypes#B](scorex.crypto.authds.ADKey(id))) ++
+          initial._2.map(b => Insertion[SidechainTypes#P, SidechainTypes#B](b))
+      BoxStateChanges[SidechainTypes#P, SidechainTypes#B](ops)
 
       // Q: Do we need to call some static method of ApplicationState?
       // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
@@ -132,3 +131,4 @@ object SidechainState {
     }
   }
 }
+

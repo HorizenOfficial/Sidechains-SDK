@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.ScorexEncoding
+import com.horizen.{ScorexEncoding, SidechainTypes}
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
@@ -11,7 +11,7 @@ import scorex.core.serialization.Serializer
 
 import scala.util.Try
 
-class SidechainBlock extends PersistentNodeViewModifier with Block[BoxTransaction[Proposition, Box[Proposition]]]{
+class SidechainBlock extends PersistentNodeViewModifier with Block[SidechainTypes#BT]{
 
   override type M = SidechainBlock
 
@@ -33,7 +33,7 @@ class SidechainBlock extends PersistentNodeViewModifier with Block[BoxTransactio
 
   def mainchainBlock: Option[MainchainHeader] = ???
 
-  override def transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = ???
+  override def transactions: Seq[SidechainTypes#BT] = ???
 
   // Fraud notification part
 }

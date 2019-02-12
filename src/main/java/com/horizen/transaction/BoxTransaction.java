@@ -20,7 +20,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract long timestamp();
 
-    public TransactionIncompatibilityChecker incompatibilityChecker() {
+    public TransactionIncompatibilityChecker<BoxTransaction<Proposition, Box<Proposition>>> incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
 

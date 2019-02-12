@@ -1,8 +1,8 @@
 package com.horizen.transaction;
 
-import java.util.ArrayList;
+import java.util.List;
 
-interface TransactionIncompatibilityChecker<T extends BoxTransaction>
+public interface TransactionIncompatibilityChecker<T>
 {
-    boolean hasIncompatibleTransactions(T newTx, ArrayList<BoxTransaction> currentTxs);
+    boolean hasIncompatibleTransactions(T newTx, List<T> currentTxs);
 }

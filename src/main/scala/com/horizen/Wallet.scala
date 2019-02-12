@@ -3,7 +3,7 @@ package com.horizen
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.Box
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.proposition.ProofOfKnowledgeProposition
+import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.transaction.Transaction
 import scorex.core.serialization.{BytesSerializable, Serializer}
@@ -13,7 +13,7 @@ import scorex.core.NodeViewModifier
 import scala.util.Try
 
 
-case class WalletBox(box: Box[ProofOfKnowledgeProposition[Secret]], transactionId: scorex.util.ModifierId, createdAt: Long)
+case class WalletBox(box: SidechainTypes#B, transactionId: scorex.util.ModifierId, createdAt: Long)
                                                    (boxesCompanion: SidechainBoxesCompanion) extends BytesSerializable
   with scorex.core.utils.ScorexEncoding {
 
@@ -34,13 +34,13 @@ class WalletBoxSerializer(boxesCompanion: SidechainBoxesCompanion) extends Seria
     val createdAt = Longs.fromByteArray(
       bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
     val boxB = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
-    val box: Box[ProofOfKnowledgeProposition[Secret]] = boxesCompanion.parseBytes(boxB).get
+    val box: SidechainTypes#B = boxesCompanion.parseBytes(boxB).get
     WalletBox(box, txId, createdAt)(boxesCompanion)
   }
 }
 
 
-trait Wallet[S <: Secret, P <: ProofOfKnowledgeProposition[S], TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
+trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 
