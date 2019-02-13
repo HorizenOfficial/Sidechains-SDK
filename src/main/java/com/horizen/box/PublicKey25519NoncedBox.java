@@ -51,7 +51,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(obj instanceof PublicKey25519NoncedBox))
+        if (!(this.getClass().equals(obj.getClass())))
             return false;
         if (obj == this)
             return true;

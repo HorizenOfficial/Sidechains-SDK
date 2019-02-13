@@ -6,6 +6,7 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainTransaction;
 import com.horizen.utils.BytesUtils;
@@ -17,7 +18,6 @@ import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
-import javax.naming.OperationNotSupportedException;
 import java.util.*;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
@@ -32,6 +32,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainTransaction> _mc2scTransactionsSerializer = new ListSerializer<>(new HashMap<Integer, Serializer<SidechainRelatedMainchainTransaction>>() {{
         put(1, (Serializer)ForwardTransferSerializer.getSerializer());
+        put(2, (Serializer)CertifierLockSerializer.getSerializer());
     }});
 
     private MC2SCAggregatedTransaction(byte[] mc2scTransactionsMerkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
@@ -87,9 +88,14 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         return 2;
     }
 
-    @Override
+    @Override // Note: messageToSign must be defined, because it's used in id() calculation
     public byte[] messageToSign() {
-        throw new UnsupportedOperationException("MC2SCAggreagatedTransaction can'not be signed.");
+        byte[] message = super.messageToSign();
+
+        return Bytes.concat(
+                message,
+                _mc2scTransactionsMerkleRoot
+        );
     }
 
     public byte[] mc2scMerkleRoot() {

@@ -163,6 +163,7 @@
                     <include>privatekey25519_bytes</include>
                     <include>regulartransaction_bytes</include>
                     <include>regularbox_bytes</include>
+                    <include>certifierrightbox_bytes</include>
                 </includes>
             </testResource>
         </testResources>

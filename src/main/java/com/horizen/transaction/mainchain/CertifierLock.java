@@ -1,8 +1,7 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.box.RegularBox;
+import com.horizen.box.CertifierRightBox;
 import com.horizen.utils.Utils;
-import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -10,11 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public final class ForwardTransfer implements SidechainRelatedMainchainTransaction<RegularBox> {
+public final class CertifierLock implements SidechainRelatedMainchainTransaction<CertifierRightBox> {
 
     private byte[] _transactionBytes;
 
-    public ForwardTransfer(byte[] transactionBytes) {
+    public CertifierLock(byte[] transactionBytes) {
         _transactionBytes = Arrays.copyOf(transactionBytes, transactionBytes.length);
     }
     @Override
@@ -22,9 +21,9 @@ public final class ForwardTransfer implements SidechainRelatedMainchainTransacti
         return Utils.doubleSHA256Hash(_transactionBytes);
     }
 
-    // DO TO: parse outputs, detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
+    // DO TO: parse outputs, detect SC related addresses (PublicKey25519Proposition) and values, create CertifierLockBoxes for them.
     @Override
-    public List<RegularBox> outputs() {
+    public List<CertifierRightBox> outputs() {
         return new ArrayList<>();
     }
 
@@ -33,13 +32,13 @@ public final class ForwardTransfer implements SidechainRelatedMainchainTransacti
         return Arrays.copyOf(_transactionBytes, _transactionBytes.length);
     }
 
-    public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
+    public static Try<CertifierLock> parseBytes(byte[] bytes) {
         // do some checks
-        return new Success<>(new ForwardTransfer(bytes));
+        return new Success<>(new CertifierLock(bytes));
     }
 
     @Override
     public SidechainRelatedMainchainTransactionSerializer serializer() {
-        return ForwardTransferSerializer.getSerializer();
+        return CertifierLockSerializer.getSerializer();
     }
 }
