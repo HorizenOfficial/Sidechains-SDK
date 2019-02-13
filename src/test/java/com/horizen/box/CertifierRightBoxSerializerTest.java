@@ -28,10 +28,6 @@ public class CertifierRightBoxSerializerTest
     public void CertifierRightBoxSerializer_SerializationTest() {
         BoxSerializer<CertifierRightBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
-        /*try {
-            java.io.FileOutputStream fos = new java.io.FileOutputStream("certifierrightbox_bytes");
-            fos.write(bytes);
-        } catch (Exception e) {}*/
         CertifierRightBox box2 = serializer.parseBytes(bytes).get();
         assertEquals("Boxes expected to be equal", true, box.equals(box2));
 
