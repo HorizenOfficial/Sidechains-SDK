@@ -1,7 +1,6 @@
 package com.horizen.transaction.mainchain;
 
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Utils;
 import scala.util.Failure;
 import scala.util.Success;
@@ -11,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public final class ForwardTransfer implements SidechainRelatedMainchainTransaction<PublicKey25519Proposition, RegularBox> {
+public final class ForwardTransfer implements SidechainRelatedMainchainTransaction<RegularBox> {
 
     private byte[] _transactionBytes;
     public ForwardTransfer(byte[] transactionBytes) {
@@ -39,7 +38,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainTransacti
     }
 
     @Override
-    public ForwardTransferSerializer serializer() {
+    public SidechainRelatedMainchainTransactionSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
     }
 }

@@ -5,7 +5,7 @@ import com.horizen.proposition.Proposition;
 
 import java.util.List;
 
-public interface SidechainRelatedMainchainTransaction<P extends Proposition, B extends Box<P>> extends scorex.core.serialization.BytesSerializable
+public interface SidechainRelatedMainchainTransaction<B extends Box<? extends Proposition>> extends scorex.core.serialization.BytesSerializable
 {
     byte[] hash();
 

@@ -17,6 +17,7 @@ import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
+import javax.naming.OperationNotSupportedException;
 import java.util.*;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
@@ -88,12 +89,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     @Override
     public byte[] messageToSign() {
-        byte[] message = super.messageToSign();
-
-        return Bytes.concat(
-                message,
-                _mc2scTransactionsMerkleRoot
-        );
+        throw new UnsupportedOperationException("MC2SCAggreagatedTransaction can'not be signed.");
     }
 
     public byte[] mc2scMerkleRoot() {
