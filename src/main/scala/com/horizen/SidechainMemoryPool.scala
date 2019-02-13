@@ -13,15 +13,11 @@ import scala.collection.concurrent.TrieMap
 import scala.util.{Try, Success, Failure}
 import scala.collection.JavaConverters._
 
-class SidechainMemoryPool(val unconfirmed: TrieMap[String, SidechainTypes#BT])
+class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   extends scorex.core.transaction.MemoryPool[SidechainTypes#BT, SidechainMemoryPool]
 {
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
-
-  def this(memoryPool : SidechainMemoryPool) {
-    this(memoryPool.unconfirmed.clone())
-  }
 
   // Getters:
   override def getById(id: ModifierId): Option[SidechainTypes#BT] = {
@@ -81,9 +77,8 @@ class SidechainMemoryPool(val unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    val memoryPool = new SidechainMemoryPool(this)
-    if (memoryPool.internalPut(tx))
-      new Success[SidechainMemoryPool](memoryPool)
+    if (internalPut(tx))
+      new Success[SidechainMemoryPool](this)
     else
       new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
   }
@@ -91,11 +86,10 @@ class SidechainMemoryPool(val unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def put(txs: Iterable[SidechainTypes#BT]): Try[SidechainMemoryPool] = {
     // for each tx in txs call "put"
     // rollback to initial state if "put(tx)" failed
-    val memoryPool = new SidechainMemoryPool(this)
     for (tx <- txs)
-      if (!memoryPool.internalPut(tx))
+      if (!internalPut(tx))
         new Failure(new IllegalArgumentException("There is incompatible transaction - " + tx))
-    new Success[SidechainMemoryPool](memoryPool)
+    new Success[SidechainMemoryPool](this)
   }
 
   // TO DO: check usage in Scorex core
@@ -105,9 +99,8 @@ class SidechainMemoryPool(val unconfirmed: TrieMap[String, SidechainTypes#BT])
   }
 
   override def remove(tx: SidechainTypes#BT): SidechainMemoryPool = {
-    val memoryPool = new SidechainMemoryPool(this)
-    memoryPool.unconfirmed.remove(tx.id)
-    memoryPool
+    unconfirmed.remove(tx.id)
+    this
   }
 }
 
