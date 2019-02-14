@@ -1,8 +1,12 @@
 package com.horizen.transaction;
 
+import com.horizen.proposition.Proposition;
+import com.horizen.box.Box;
+
 import java.util.List;
 
-public interface TransactionIncompatibilityChecker<T>
+public interface TransactionIncompatibilityChecker
 {
-    boolean hasIncompatibleTransactions(T newTx, List<T> currentTxs);
+    boolean hasIncompatibleTransactions(BoxTransaction<Proposition, Box<Proposition>> newTx,
+                                        List<BoxTransaction<Proposition, Box<Proposition>>> currentTxs);
 }
