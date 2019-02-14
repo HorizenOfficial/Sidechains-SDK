@@ -9,7 +9,6 @@ import com.horizen.secret.Secret;
 
 import javafx.util.Pair;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -38,21 +37,9 @@ public class RegularTransactionCreator {
         to_amount += fee;
 
 
-        List<Pair<Box, Long>> walletBoxes = wallet.boxesWithCreationTime();
-        walletBoxes.sort( (a, b) ->  Long.signum (a.getValue() - b.getValue()));
         List<RegularBox> boxes = new ArrayList<>();
-        for(Pair<Box, Long> pair : walletBoxes) {
-            if (pair.getKey() instanceof RegularBox) {
-                boolean acceptable = true;
-                for (byte[] idToExclude : boxIdsToExclude) {
-                    if (Arrays.equals(idToExclude, pair.getKey().id())) {
-                        acceptable = false;
-                        break;
-                    }
-                }
-                if(acceptable)
-                    boxes.add((RegularBox) pair.getKey());
-            }
+        for(Box box : wallet.boxesOfType(RegularBox.class, boxIdsToExclude)) {
+            boxes.add((RegularBox) box);
         }
 
         List<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
@@ -67,7 +54,7 @@ public class RegularTransactionCreator {
             }
         }
         if(current_amount < to_amount)
-            throw new IllegalArgumentException("Not enough balances in the wallet to create a transction.");
+            throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
         if(current_amount > to_amount) {

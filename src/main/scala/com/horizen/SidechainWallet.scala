@@ -8,7 +8,6 @@ import com.horizen.node.NodeWallet
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition}
 import com.horizen.secret.Secret
 import com.horizen.transaction.BoxTransaction
-import javafx.util
 import scorex.core.VersionTag
 import scorex.core.block.Block
 
@@ -61,10 +60,19 @@ case class SidechainWallet(seed: Array[Byte], boxStore: LSMStore, secretStore: L
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = ???
 
+
   // Java NodeWallet interface definition
-  override def boxesWithCreationTime(): java.util.List[javafx.util.Pair[Box[_ <: Proposition], lang.Long]] = ???
+  override def allBoxes(): util.List[Box[_ <: Proposition]] = ???
+
+  override def allBoxes(boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: Proposition]] = ???
+
+  override def boxesOfType(`type`: Class[_ <: Box[_ <: Proposition]]): util.List[Box[_ <: Proposition]] = ???
+
+  override def boxesOfType(`type`: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: Proposition]] = ???
 
   override def secretByPublicImage(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Secret = ???
 
-  override def getSecrets: java.util.List[Secret] = ???
+  override def allSecrets(): util.List[Secret] = ???
+
+  override def secretsOfType(`type`: Class[_ <: Secret]): util.List[Secret] = ???
 }

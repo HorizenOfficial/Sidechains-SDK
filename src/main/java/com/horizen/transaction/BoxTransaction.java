@@ -32,15 +32,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract long timestamp();
 
-    @Override
-    public boolean isMemoryPoolCompatible() {
-        return true;
-    }
-
-    public TransactionIncompatibilityChecker incompatibilityChecker() {
-        return new DefaultTransactionIncompatibilityChecker();
-    }
-
     public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {
         if(_boxIdsToOpen == null) {
             _boxIdsToOpen = new HashSet<>();
@@ -48,6 +39,10 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
                 _boxIdsToOpen.add(new ByteArrayWrapper(u.closedBoxId()));
         }
         return Collections.unmodifiableSet(_boxIdsToOpen);
+    }
+
+    public TransactionIncompatibilityChecker incompatibilityChecker() {
+        return new DefaultTransactionIncompatibilityChecker();
     }
 
     @Override
