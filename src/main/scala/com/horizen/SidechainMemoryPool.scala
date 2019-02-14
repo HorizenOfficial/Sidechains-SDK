@@ -40,6 +40,11 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
     unconfirmed.values.toSeq.sortBy(-_.fee).take(limit)
   }
 
+  def take(sortFunc: (SidechainTypes#BT, SidechainTypes#BT) => Boolean,
+           limit: Int): Iterable[SidechainTypes#BT] = {
+    unconfirmed.values.toSeq.sortWith(sortFunc).take(limit)
+  }
+
   override def filter(txs: Seq[SidechainTypes#BT]): SidechainMemoryPool = {
     filter(t => !txs.exists(_.id == t.id))
   }
