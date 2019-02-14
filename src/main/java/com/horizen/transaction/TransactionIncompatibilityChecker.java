@@ -5,6 +5,7 @@ import com.horizen.box.Box;
 
 import java.util.List;
 
+@FunctionalInterface
 public interface TransactionIncompatibilityChecker
 {
     boolean hasIncompatibleTransactions(BoxTransaction<Proposition, Box<Proposition>> newTx,

@@ -20,10 +20,6 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
 
   // Getters:
-  override def getById(id: ModifierId): Option[SidechainTypes#BT] = {
-    unconfirmed.get(id)
-  }
-
   override def modifierById(modifierId: ModifierId): Option[SidechainTypes#BT] = {
     unconfirmed.get(modifierId)
   }
@@ -64,21 +60,19 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   }
 
   // Setters:
-  private def internalPut (tx: SidechainTypes#BT) : Boolean = {
+  private def checkCompatibility (tx: SidechainTypes#BT) : Boolean = {
     val txIC = tx.incompatibilityChecker()
     val txs = this.unconfirmed.values.toList.asJava.asInstanceOf[java.util.List[BoxTransaction[Proposition,Box[Proposition]]]]
-    if (!txIC.hasIncompatibleTransactions(tx, txs)) {
-      unconfirmed.put(tx.id(), tx)
-      true
-    } else
-    false
+    tx.isMemoryPoolCompatible && txIC.hasIncompatibleTransactions(tx, txs)
   }
 
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (internalPut(tx))
+    if (checkCompatibility(tx)) {
+      unconfirmed.put(tx.id(), tx)
       new Success[SidechainMemoryPool](this)
+    }
     else
       new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
   }
@@ -87,8 +81,10 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
     // for each tx in txs call "put"
     // rollback to initial state if "put(tx)" failed
     for (tx <- txs)
-      if (!internalPut(tx))
+      if (!checkCompatibility(tx))
         new Failure(new IllegalArgumentException("There is incompatible transaction - " + tx))
+    for (tx <- txs)
+      unconfirmed.put(tx.id(), tx)
     new Success[SidechainMemoryPool](this)
   }
 

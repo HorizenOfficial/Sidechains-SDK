@@ -11,6 +11,7 @@ import java.util.List;
 
 
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
+    implements MemoryPoolCompatibilityChecker
 {
     public abstract List<BoxUnlocker<P>> unlockers();
 
@@ -19,6 +20,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public abstract long fee();
 
     public abstract long timestamp();
+
+    @Override
+    public boolean isMemoryPoolCompatible() {
+        return true;
+    }
 
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
