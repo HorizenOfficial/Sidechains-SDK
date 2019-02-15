@@ -111,10 +111,24 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         return _timestamp;
     }
 
-    // TO DO: do real check
     @Override
     public boolean semanticValidity() {
-        return false;
+        if(_fee < 0 || _timestamp < 0)
+            return false;
+
+        // check that we have enough proofs and try to open each box only once.
+        if(_inputs.size() != _signatures.size() || _inputs.size() != boxIdsToOpen().size())
+            return false;
+        for(Pair<PublicKey25519Proposition, Long> output : _outputs)
+            if(output.getValue() <= 0)
+                return false;
+
+        for(int i = 0; i < _inputs.size(); i++) {
+            if (!_signatures.get(i).isValid(_inputs.get(i).proposition(), messageToSign()))
+                return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -238,6 +252,9 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
             signatures.add(item.getValue().sign(messageToSign));
         }
 
-        return new RegularTransaction(inputs, to, signatures, fee, timestamp);
+        RegularTransaction transaction = new RegularTransaction(inputs, to, signatures, fee, timestamp);
+        if(!transaction.semanticValidity())
+            throw new IllegalArgumentException("Created transaction is semantically invalid.");
+        return transaction;
     }
 }

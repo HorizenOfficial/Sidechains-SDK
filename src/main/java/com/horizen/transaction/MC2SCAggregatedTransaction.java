@@ -176,7 +176,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
         MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(mainchainBlockHash, merkleRoot, mc2scTransactions, timestamp);
         if(!transaction.semanticValidity())
-            throw new IllegalArgumentException("Created trunsaction is invalid. Proposed merkle root not equal to calculated one.");
+            throw new IllegalArgumentException("Created transaction is semantically invalid. Proposed merkle root not equal to calculated one.");
         return transaction;
     }
 }
