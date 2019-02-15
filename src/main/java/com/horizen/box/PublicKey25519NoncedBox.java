@@ -36,7 +36,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
 
     @Override
     public byte[] id() {
-        return PublicKey25519NoncedBox.idFromBox(_proposition, _nonce);
+        return Blake2b256.hash(Bytes.concat(_proposition.pubKeyBytes(), Longs.toByteArray(_nonce)));
     }
 
     @Override
@@ -51,7 +51,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(obj instanceof PublicKey25519NoncedBox))
+        if (!(this.getClass().equals(obj.getClass())))
             return false;
         if (obj == this)
             return true;
@@ -61,12 +61,9 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
 
     @Override
     public String toString() {
-        return String.format("PublicKey25519NoncedBox(id: %s, proposition: %s, nonce: %d, value: %d)", encoder().encode(id()), _proposition, _nonce, _value);
+        return String.format("%s(id: %s, proposition: %s, nonce: %d, value: %d)", this.getClass().toString(), encoder().encode(id()), _proposition, _nonce, _value);
     }
 
-    public static <PKP extends PublicKey25519Proposition> byte[] idFromBox(PKP proposition, long nonce) {
-        return Blake2b256.hash(Bytes.concat(proposition.pubKeyBytes(), Longs.toByteArray(nonce)));
-    }
 }
 
 

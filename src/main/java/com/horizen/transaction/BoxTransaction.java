@@ -32,6 +32,8 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract long timestamp();
 
+    public abstract boolean semanticValidity();
+
     public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {
         if(_boxIdsToOpen == null) {
             _boxIdsToOpen = new HashSet<>();

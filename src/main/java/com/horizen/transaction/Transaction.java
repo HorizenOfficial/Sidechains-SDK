@@ -1,6 +1,9 @@
 package com.horizen.transaction;
 
 
+import scorex.crypto.hash.Blake2b256;
+import scorex.util.encode.Base16;
+
 public abstract class Transaction extends scorex.core.transaction.Transaction
 {
     @Override
@@ -9,9 +12,8 @@ public abstract class Transaction extends scorex.core.transaction.Transaction
     }
 
     @Override
-    // TO DO: maybe we need to provide our own implementation
-    public final String id() {
-        return super.id();
+    public String id() {
+        return Base16.encode(Blake2b256.hash(messageToSign()));
     }
 
     @Override

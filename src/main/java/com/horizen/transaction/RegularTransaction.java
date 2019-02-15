@@ -12,9 +12,8 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Companion;
 import com.horizen.utils.ListSerializer;
-import com.horizen.utils.ParseBytesUtils;
+import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -24,7 +23,7 @@ import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-public final class RegularTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
+public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
 {
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
@@ -95,7 +94,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
             _newBoxes = new ArrayList<>();
             for (int i = 0; i < _outputs.size(); i++) {
                 byte[] hash = Blake2b256.hash(Bytes.concat(_outputs.get(i).getKey().pubKeyBytes(), hashWithoutNonce(), Ints.toByteArray(i)));
-                long nonce = ParseBytesUtils.getLong(hash, 0);
+                long nonce = BytesUtils.getLong(hash, 0);
                 _newBoxes.add(new RegularBox(_outputs.get(i).getKey(), nonce, _outputs.get(i).getValue()));
             }
         }
@@ -110,6 +109,12 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     @Override
     public long timestamp() {
         return _timestamp;
+    }
+
+    // TO DO: do real check
+    @Override
+    public boolean semanticValidity() {
+        return false;
     }
 
     @Override
@@ -173,29 +178,29 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
             int offset = 0;
 
-            long fee = ParseBytesUtils.getLong(bytes, offset);
+            long fee = BytesUtils.getLong(bytes, offset);
             offset += 8;
 
-            long timestamp = ParseBytesUtils.getLong(bytes, offset);
+            long timestamp = BytesUtils.getLong(bytes, offset);
             offset += 8;
 
-            int batchSize = ParseBytesUtils.getInt(bytes, offset);
+            int batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
             List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
-            batchSize = ParseBytesUtils.getInt(bytes, offset);
+            batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
             List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
             for(PublicKey25519Proposition proposition : outputPropositions) {
-                outputs.add(new Pair<>(proposition, ParseBytesUtils.getLong(bytes, offset)));
+                outputs.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
                 offset += 8;
             }
 
-            batchSize = ParseBytesUtils.getInt(bytes, offset);
+            batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
             if(bytes.length != offset + batchSize)
                 throw new IllegalArgumentException("Input data corrupted.");
@@ -203,7 +208,7 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {
-            return new Failure(e);
+            return new Failure<>(e);
         }
     }
 

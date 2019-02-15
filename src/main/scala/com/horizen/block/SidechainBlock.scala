@@ -1,55 +1,66 @@
 package com.horizen.block
 
-import com.horizen.{ScorexEncoding, SidechainTypes}
-import com.horizen.box.Box
+import com.google.common.primitives.Longs
+import com.horizen.ScorexEncoding
+import com.horizen.box.{Box, RegularBox}
 import com.horizen.proposition.Proposition
+import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.BoxTransaction
-import scorex.core.{ModifierId, ModifierTypeId, PersistentNodeViewModifier}
 import scorex.core.block.Block
-import scorex.core.block.Block.{Timestamp, Version}
+import scorex.core.ModifierTypeId
+import scorex.util.ModifierId
 import scorex.core.serialization.Serializer
+import scorex.core.transaction.proof.Signature25519
+import scorex.crypto.hash.Blake2b256
+import scorex.core.{bytesToId, idToBytes}
 
 import scala.util.Try
 
-class SidechainBlock extends PersistentNodeViewModifier with Block[SidechainTypes#BT]{
+class SidechainBlock(
+                      override val parentId: ModifierId,
+                      override val timestamp: Block.Timestamp,
+                      val mainchainHeader : Option[MainchainHeader],
+                      override val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]],
+                      ownerBox: RegularBox,
+                      ownerSignature: Signature25519,
+                    ) extends Block[BoxTransaction[Proposition, Box[Proposition]]] {
 
   override type M = SidechainBlock
 
   override lazy val serializer = SidechainBlockSerializer
 
-  override lazy val version = ???
-
-  override lazy val timestamp = ???
-
-  override def parentId: ModifierId = ???
+  override lazy val version: Block.Version = 0: Byte
 
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
-  override lazy val id = ???
+  override lazy val id: ModifierId =
+    bytesToId(Blake2b256(idToBytes(parentId) ++ Longs.toByteArray(timestamp))) // TO DO: update later.
 
-  //...
-
-  def mainchainBlockHash: Option[Array[Byte]] = ???
-
-  def mainchainBlock: Option[MainchainHeader] = ???
-
-  override def transactions: Seq[SidechainTypes#BT] = ???
-
-  // Fraud notification part
 }
 
 object SidechainBlock extends ScorexEncoding {
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 4.toByte
+  val MAX_BLOCK_SIZE = 2048 * 1024 //2048K
+  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
 
-  //...
+  def create(parentId: Block.BlockId,
+             timestamp: Block.Timestamp,
+             transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]],
+             mainchainHeader: Option[MainchainHeader],
+             sidechainRelatedTransactions: Seq[Array[Byte]],
+             ownerBox: RegularBox,
+             ownerPrivateKey: PrivateKey25519
+            ) : Try[SidechainBlock] = {
+    null
+  }
 
-  // TODO: see PosBlock/PowBlock implementation in HybridApp
+  // TO DO: check box and signature, mainchain hashes and related data, merkle roots, transactions, etc.
+  def semanticValidity(): Boolean = true
 }
 
 
 
 object SidechainBlockSerializer extends Serializer[SidechainBlock] {
-  override def toBytes(obj: SidechainBlock): Array[Version] = ???
+  override def toBytes(obj: SidechainBlock): Array[Byte] = ???
 
-  override def parseBytes(bytes: Array[Version]): Try[SidechainBlock] = ???
+  override def parseBytes(bytes: Array[Byte]): Try[SidechainBlock] = ???
 }
