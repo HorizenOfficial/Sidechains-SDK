@@ -40,6 +40,11 @@ public class RegularBoxTest
         RegularBox box1 = new RegularBox(proposition, nonce, value);
         RegularBox box2 = new RegularBox(proposition, nonce, value);
 
+        assertEquals("Boxes hash codes expected to be equal", true, box1.hashCode() == box2.hashCode());
+        assertEquals("Boxes expected to be equal", true, box1.equals(box2));
+        assertEquals("Boxes ids expected to be equal", true, Arrays.equals(box1.id(), box2.id()));
+
+
         byte[] anotherSeed = "another test seed".getBytes();
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair._2());

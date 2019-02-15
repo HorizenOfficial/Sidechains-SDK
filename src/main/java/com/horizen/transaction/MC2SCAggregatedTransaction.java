@@ -17,11 +17,14 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
+import scorex.crypto.hash.Blake2b256;
+import scorex.util.encode.Base16;
 
 import java.util.*;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
 {
+    private byte[] _mainchainBlockHash;
     private byte[] _mc2scTransactionsMerkleRoot;
     private List<SidechainRelatedMainchainTransaction> _mc2scTransactions;
     private long _timestamp;
@@ -35,7 +38,8 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         put(2, (Serializer)CertifierLockSerializer.getSerializer());
     }});
 
-    private MC2SCAggregatedTransaction(byte[] mc2scTransactionsMerkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
+    private MC2SCAggregatedTransaction(byte[] mainchainBlockHash, byte[] mc2scTransactionsMerkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
+        _mainchainBlockHash = Arrays.copyOf(mainchainBlockHash, mainchainBlockHash.length);
         _mc2scTransactionsMerkleRoot = Arrays.copyOf(mc2scTransactionsMerkleRoot, mc2scTransactionsMerkleRoot.length);
         _mc2scTransactions = mc2scTransactions;
         _timestamp = timestamp;
@@ -88,14 +92,18 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         return 2;
     }
 
-    @Override // Note: messageToSign must be defined, because it's used in id() calculation
-    public byte[] messageToSign() {
-        byte[] message = super.messageToSign();
+    @Override
+    public String id() {
+        return Base16.encode(Blake2b256.hash(Bytes.concat(_mainchainBlockHash, _mc2scTransactionsMerkleRoot)));
+    }
 
-        return Bytes.concat(
-                message,
-                _mc2scTransactionsMerkleRoot
-        );
+    @Override
+    public byte[] messageToSign() {
+        throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
+    }
+
+    public byte[] mainchainBlockHash() {
+        return Arrays.copyOf(_mainchainBlockHash, _mainchainBlockHash.length);
     }
 
     public byte[] mc2scMerkleRoot() {
@@ -119,7 +127,8 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     @Override
     public byte[] bytes() {
         byte[] transactions = _mc2scTransactionsSerializer.toBytes(_mc2scTransactions);
-        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 48 bytes
+        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 80 bytes
+                _mainchainBlockHash,                                // 32 bytes
                 _mc2scTransactionsMerkleRoot,                       // 32 bytes
                 Longs.toByteArray(timestamp()),                     // 8 bytes
                 Ints.toByteArray(transactions.length),              // 4 bytes
@@ -129,12 +138,15 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     public static Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
         try {
-            if(bytes.length < 48)
+            if(bytes.length < 80)
                 throw new IllegalArgumentException("Input data corrupted.");
             if(bytes.length > MAX_TRANSACTION_SIZE)
                 throw new IllegalArgumentException("Input data length is too large.");
 
             int offset = 0;
+
+            byte[] mainchainBlockHash = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+            offset += Utils.SHA256_LENGTH;
 
             byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
             offset += Utils.SHA256_LENGTH;
@@ -146,21 +158,23 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
             offset += 4;
             List<SidechainRelatedMainchainTransaction> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
 
-            return new Success<>(new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp));
+            return new Success<>(new MC2SCAggregatedTransaction(mainchainBlockHash, merkleRoot, mc2scTransactions, timestamp));
         } catch (Exception e) {
             return new Failure<>(e);
         }
     }
 
-    public static MC2SCAggregatedTransaction create(byte[] merkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
-        if(merkleRoot == null || mc2scTransactions == null)
+    public static MC2SCAggregatedTransaction create(byte[] mainchainBlockHash, byte[] merkleRoot, List<SidechainRelatedMainchainTransaction> mc2scTransactions, long timestamp) {
+        if(mainchainBlockHash == null || merkleRoot == null || mc2scTransactions == null)
             throw new IllegalArgumentException("Parameters can't be null.");
+        if(mainchainBlockHash.length != Utils.SHA256_LENGTH)
+            throw new IllegalArgumentException(String.format("Mainchain block hash length is %d, expected to be %d", mainchainBlockHash.length, Utils.SHA256_LENGTH));
         if(merkleRoot.length != Utils.SHA256_LENGTH)
             throw new IllegalArgumentException(String.format("Merkle root length is %d, expected to be %d", merkleRoot.length, Utils.SHA256_LENGTH));
         if(mc2scTransactions.size() == 0)
             throw new IllegalArgumentException("MC2SC Transactions list is empty.");
 
-        MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp);
+        MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(mainchainBlockHash, merkleRoot, mc2scTransactions, timestamp);
         if(!transaction.semanticValidity())
             throw new IllegalArgumentException("Created trunsaction is invalid. Proposed merkle root not equal to calculated one.");
         return transaction;

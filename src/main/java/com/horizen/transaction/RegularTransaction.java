@@ -23,7 +23,7 @@ import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-public final class RegularTransaction extends NoncedBoxTransaction<PublicKey25519Proposition, RegularBox>
+public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
 {
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
@@ -109,6 +109,12 @@ public final class RegularTransaction extends NoncedBoxTransaction<PublicKey2551
     @Override
     public long timestamp() {
         return _timestamp;
+    }
+
+    // TO DO: do real check
+    @Override
+    public boolean semanticValidity() {
+        return false;
     }
 
     @Override

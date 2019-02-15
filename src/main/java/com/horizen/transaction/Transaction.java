@@ -12,7 +12,7 @@ public abstract class Transaction extends scorex.core.transaction.Transaction
     }
 
     @Override
-    public final String id() {
+    public String id() {
         return Base16.encode(Blake2b256.hash(messageToSign()));
     }
 

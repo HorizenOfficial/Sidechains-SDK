@@ -21,7 +21,7 @@ public class CertifierRightBoxSerializerTest
     public void setUp() {
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_bytes"
-        box = new CertifierRightBox(new PublicKey25519Proposition(keyPair._2()), 1000);
+        box = new CertifierRightBox(new PublicKey25519Proposition(keyPair._2()), 1000, 10);
     }
 
     @Test
