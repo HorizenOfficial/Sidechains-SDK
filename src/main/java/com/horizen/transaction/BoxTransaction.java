@@ -15,7 +15,6 @@ import java.util.Set;
 
 
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
-    implements MemoryPoolCompatibilityChecker
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
 
@@ -43,7 +42,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
         return Collections.unmodifiableSet(_boxIdsToOpen);
     }
 
-    public TransactionIncompatibilityChecker incompatibilityChecker() {
+    public TransactionIncompatibilityChecker<BoxTransaction<Proposition, Box<Proposition>>> incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
 

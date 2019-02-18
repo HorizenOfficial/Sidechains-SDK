@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{List => JList}
+import java.util.{List => JList, ArrayList => JArrayList}
 
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -67,8 +67,8 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   // Setters:
   private def checkCompatibility (tx: SidechainTypes#BT) : Boolean = {
     val txIC = tx.incompatibilityChecker()
-    val txs = this.unconfirmed.values.toList.asJava.asInstanceOf[java.util.List[BoxTransaction[Proposition,Box[Proposition]]]]
-    tx.isMemoryPoolCompatible && txIC.hasIncompatibleTransactions(tx, txs)
+    val txs = this.unconfirmed.values.toList.asJava.asInstanceOf[java.util.List[SidechainTypes#BT]]
+    txIC.isMemoryPoolCompatible && txIC.hasIncompatibleTransactions(tx, txs)
   }
 
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
