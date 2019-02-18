@@ -10,6 +10,30 @@ import static org.junit.Assert.*;
 public class BytesUtilsTest {
 
     @Test
+    public void BytesUtilsTest_getShort() {
+        byte[] bytes = {0, 0, 1, 0};
+        assertEquals("Values expected to by equal", 0, BytesUtils.getShort(bytes, 0));
+        assertEquals("Values expected to by equal", 1, BytesUtils.getShort(bytes, 1));
+        assertEquals("Values expected to by equal", 256, BytesUtils.getShort(bytes, 2));
+
+        boolean exceptionOccurred = false;
+        try {
+            BytesUtils.getInt(bytes, 3);
+        } catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
+
+        exceptionOccurred = false;
+        try {
+            BytesUtils.getInt(bytes, -1);
+        } catch (Exception e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
+    }
+
+    @Test
     public void BytesUtilsTest_getInt() {
         byte[] bytes = {0, 0, 0, 0, 1, 0, 0, 1};
         assertEquals("Values expected to by equal", 0, BytesUtils.getInt(bytes, 0));

@@ -1,36 +1,72 @@
 package com.horizen.block
 
+import akka.actor.FSM.Failure
+import com.horizen.utils.{BytesUtils, Utils}
+import scorex.core.serialization.{BytesSerializable, Serializer}
 
-/**
-  * Basic trait for all Mainchain objects
-  * It can provide basic serialization, parsing interfaces and so on
-  */
-trait MainchainObject {
+import scala.util.Try
 
+//
+// Representation of MC header
+//
+// Note: Horizen MC Block header should be updated by SCMap merkle root.
+// SCMap merkle root is a merkle root of particular SC related transactions merkle roots.
+//
+class MainchainHeader(
+                       val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
+                       val version: Int,                      // 4 bytes
+                       val hashPrevBlock: Array[Byte],        // 32 bytes
+                       val merkleRoot: Array[Byte],           // 32 bytes
+                       val SCMapMerkleRoot: Array[Byte],      // 32 bytes
+                       val time: Int,                         // 4 bytes
+                       val bits: Int,                         // 4 bytes
+                       val nonce: Int                         // 4 bytes
+                    ) extends BytesSerializable {
+
+  def hash(): Array[Byte] = Utils.doubleSHA256Hash(mainchainHeaderBytes)
+
+  override type M = MainchainHeader
+
+  override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer
 }
 
 
-/**
-  * Basic representation of MC header
-  */
-class MainchainHeader(val header: Array[Byte]) extends MainchainObject {
-  def version: Int = ???
+object MainchainHeader {
+  val HEADER_SIZE = 112
 
-  def blockHash: Array[Byte] = ???
+  def create(headerBytes: Array[Byte]): Try[MainchainHeader] = Try {
+    if(headerBytes.length != HEADER_SIZE)
+      throw new IllegalArgumentException("Input data corrupted.")
 
-  def previousBlockHash: Array[Byte] = ???
+    var offset: Int = 0
 
-  def merkleRoot: Array[Byte] = ???
+    val version: Int = BytesUtils.getInt(headerBytes, offset)
+    offset += 4
 
-  def timestamp: Int = ???
+    val hashPrevBlock: Array[Byte] = headerBytes.slice(offset, offset + 32)
+    offset += 32
 
-  def difficultyTarget: Int = ???
+    val merkleRoot: Array[Byte] = headerBytes.slice(offset, offset + 32)
+    offset += 32
 
-  def nonce: Int = ???
+    val SCMapMerkleRoot: Array[Byte] = headerBytes.slice(offset, offset + 32)
+    offset += 32
 
-  // Expect such data from MC after update.
-  def sidechainsMerkleRoots: Map[Integer, Array[Byte]] = ???
+    val time: Int = BytesUtils.getInt(headerBytes, offset)
+    offset += 4
 
-  def bytes: Array[Byte] = ???
-  //...
+    val bits: Int = BytesUtils.getInt(headerBytes, offset)
+    offset += 4
+
+    val nonce: Int = BytesUtils.getInt(headerBytes, offset)
+    offset += 4
+
+    new MainchainHeader(headerBytes, version, hashPrevBlock, merkleRoot, SCMapMerkleRoot, time, bits, nonce)
+  }
+}
+
+object MainchainHeaderSerializer extends Serializer[MainchainHeader] {
+  override def toBytes(obj: MainchainHeader): Array[Byte] = obj.mainchainHeaderBytes
+
+  override def parseBytes(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes)
 }

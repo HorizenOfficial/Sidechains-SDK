@@ -3,9 +3,19 @@ package com.horizen.utils;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.primitives.Shorts;
 
 public final class BytesUtils {
     private BytesUtils() {}
+
+    // Get Short value from byte array starting from an offset position without copying an array
+    public static short getShort(byte[] bytes, int offset) {
+        if(offset < 0 || bytes.length < offset + 2)
+            throw new IllegalArgumentException("Value is out of array bounds");
+
+        return Shorts.fromBytes(  bytes[offset],
+                bytes[offset + 1]);
+    }
 
     // Get Int value from byte array starting from an offset position without copying an array
     public static int getInt(byte[] bytes, int offset) {
