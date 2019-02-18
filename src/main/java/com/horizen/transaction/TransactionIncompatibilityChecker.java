@@ -7,8 +7,9 @@ import com.horizen.proposition.Proposition;
 
 public interface TransactionIncompatibilityChecker<T extends BoxTransaction>
 {
-    boolean hasIncompatibleTransactions(T newTx,
-                                        List<T> currentTxs);
+    boolean isTransactionCompatible(T newTx, T currentTx);
+
+    boolean isTransactionCompatible(T newTx, List<T> currentTxs);
 
     boolean isMemoryPoolCompatible();
 }

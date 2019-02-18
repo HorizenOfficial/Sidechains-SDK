@@ -1,6 +1,8 @@
 package com.horizen.transaction;
 
+import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
+import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Companion;
@@ -61,20 +63,21 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
 
         // Test 1: test against empty list
-        assertEquals("Transaction expected to be compatible to empty list", false, checker.hasIncompatibleTransactions(newTx, new ArrayList<>()));
+        assertEquals("Transaction expected to be compatible to empty list", true,
+                checker.isTransactionCompatible((BoxTransaction<Proposition, Box<Proposition>>) newTx, new ArrayList<>()));
 
 
         // Test 2: test against compatible list
         ArrayList<BoxTransaction> compatibleList = new ArrayList<>();
         compatibleList.add(currentTx1);
         compatibleList.add(currentTx2);
-        assertEquals("Transaction expected to be compatible to list", false, checker.hasIncompatibleTransactions(newTx, compatibleList));
+        assertEquals("Transaction expected to be compatible to list", true, checker.isTransactionCompatible(newTx, compatibleList));
 
 
         // Test 3: test against incompatible list
         ArrayList<BoxTransaction> incompatibleList = new ArrayList<>();
         incompatibleList.add(currentTx1);
         incompatibleList.add(currentTx3);
-        assertEquals("Transaction expected to be incompatible to list", true, checker.hasIncompatibleTransactions(newTx, incompatibleList));
+        assertEquals("Transaction expected to be incompatible to list", false, checker.isTransactionCompatible(newTx, incompatibleList));
     }
 }

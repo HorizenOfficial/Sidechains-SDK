@@ -65,16 +65,11 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   }
 
   // Setters:
-  private def checkCompatibility (tx: SidechainTypes#BT) : Boolean = {
-    val txIC = tx.incompatibilityChecker()
-    val txs = this.unconfirmed.values.toList.asJava.asInstanceOf[java.util.List[SidechainTypes#BT]]
-    txIC.isMemoryPoolCompatible && txIC.hasIncompatibleTransactions(tx, txs)
-  }
-
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (checkCompatibility(tx)) {
+    if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
+        tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava)) {
       unconfirmed.put(tx.id(), tx)
       new Success[SidechainMemoryPool](this)
     }
@@ -85,11 +80,21 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def put(txs: Iterable[SidechainTypes#BT]): Try[SidechainMemoryPool] = {
     // for each tx in txs call "put"
     // rollback to initial state if "put(tx)" failed
-    for (tx <- txs)
-      if (!checkCompatibility(tx))
-        new Failure(new IllegalArgumentException("There is incompatible transaction - " + tx))
-    for (tx <- txs)
-      unconfirmed.put(tx.id(), tx)
+    val cmptxs = txs.filter(_.incompatibilityChecker().isMemoryPoolCompatible)
+
+    for (t <- cmptxs.tails) {
+      if (!t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
+        return new Failure(new IllegalArgumentException("There is incompatible transaction - " + t.head))
+    }
+
+    for (t <- cmptxs) {
+      if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.asJava))
+        return new Failure(new IllegalArgumentException("There is incompatible transaction - " + t))
+    }
+
+    for (t <- cmptxs)
+      unconfirmed.put(t.id(), t)
+
     new Success[SidechainMemoryPool](this)
   }
 

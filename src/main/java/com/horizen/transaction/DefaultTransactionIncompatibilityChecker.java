@@ -10,9 +10,27 @@ import java.util.List;
 public class DefaultTransactionIncompatibilityChecker
         implements TransactionIncompatibilityChecker<BoxTransaction<Proposition, Box<Proposition>>>
 {
+
     @Override
-    public boolean hasIncompatibleTransactions(BoxTransaction<Proposition, Box<Proposition>> newTx,
-                                               List<BoxTransaction<Proposition, Box<Proposition>>> currentTxs) {
+    public boolean isTransactionCompatible(BoxTransaction<Proposition, Box<Proposition>> newTx,
+                                           BoxTransaction<Proposition, Box<Proposition>> currentTx) {
+        if(newTx == null || currentTx == null)
+            throw new IllegalArgumentException("Parameters can't be null.");
+
+        // Check intersections between spent boxes of newTx and currentTxs
+        // Algorithm difficulty is O(n+m), where n - number of spent boxes in newTx, m - number of currentTxs
+        // Note: .boxIdsToOpen() and .unlockers() expected to be optimized (lazy calculated)
+        for(BoxUnlocker unlocker : newTx.unlockers()) {
+            ByteArrayWrapper closedBoxId = new ByteArrayWrapper(unlocker.closedBoxId());
+            if(currentTx.boxIdsToOpen().contains(closedBoxId))
+                return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean isTransactionCompatible(BoxTransaction<Proposition, Box<Proposition>> newTx,
+                                           List<BoxTransaction<Proposition, Box<Proposition>>> currentTxs) {
         if(newTx == null || currentTxs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
 
@@ -23,10 +41,10 @@ public class DefaultTransactionIncompatibilityChecker
             ByteArrayWrapper closedBoxId = new ByteArrayWrapper(unlocker.closedBoxId());
             for (BoxTransaction tx : currentTxs) {
                 if(tx.boxIdsToOpen().contains(closedBoxId))
-                    return true;
+                    return false;
             }
         }
-        return false;
+        return true;
     }
 
     @Override
