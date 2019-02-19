@@ -73,14 +73,14 @@ object MainchainBlock {
         // try parse var length int
         mainchainBlockBytes(offset) match {
           case 253 =>
-            SCMapItemsSize = BytesUtils.getShort(mainchainBlockBytes, offset)
-            offset += 2
+            SCMapItemsSize = BytesUtils.getShort(mainchainBlockBytes, offset + 1)
+            offset += 3
           case 254 =>
-            SCMapItemsSize = BytesUtils.getInt(mainchainBlockBytes, offset)
-            offset += 4
+            SCMapItemsSize = BytesUtils.getInt(mainchainBlockBytes, offset + 1)
+            offset += 5
           case 255 =>
-            SCMapItemsSize = BytesUtils.getLong(mainchainBlockBytes, offset)
-            offset += 8
+            SCMapItemsSize = BytesUtils.getLong(mainchainBlockBytes, offset + 1)
+            offset += 9
           case _ =>
             SCMapItemsSize = mainchainBlockBytes(offset).longValue()
             offset += 1
@@ -101,14 +101,14 @@ object MainchainBlock {
         // try parse var length int
         mainchainBlockBytes(offset) match {
           case 253 =>
-            transactionsSize = BytesUtils.getShort(mainchainBlockBytes, offset)
-            offset += 2
+            transactionsSize = BytesUtils.getShort(mainchainBlockBytes, offset + 1)
+            offset += 3
           case 254 =>
-            transactionsSize = BytesUtils.getInt(mainchainBlockBytes, offset)
-            offset += 4
+            transactionsSize = BytesUtils.getInt(mainchainBlockBytes, offset + 1)
+            offset += 5
           case 255 =>
-            transactionsSize = BytesUtils.getLong(mainchainBlockBytes, offset)
-            offset += 8
+            transactionsSize = BytesUtils.getLong(mainchainBlockBytes, offset + 1)
+            offset += 9
           case _ =>
             transactionsSize = mainchainBlockBytes(offset).longValue()
             offset += 1
