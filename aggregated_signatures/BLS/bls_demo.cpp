@@ -1,7 +1,7 @@
 /* BLS signature scheme, on top of libsnark "alt BN curve"
  * "small" G1: message and signature; "larger" G2: public key
  * 2019 Vadym Fedyukovych
- * todo: hash the message to-G2
+ * todo: hash the message to-G1
  */
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 
