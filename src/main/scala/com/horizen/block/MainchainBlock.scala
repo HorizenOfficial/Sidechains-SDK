@@ -1,11 +1,11 @@
 package com.horizen.block
 
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.{Failure, Success, Try}
-import scala.collection.mutable.{Map}
+import scala.collection.mutable.Map
 
 // Mainchain Block structure:
 //
@@ -40,8 +40,8 @@ object MainchainBlock {
     require(sidechainId.length == 32)
 
     parseMainchainBlockBytes(mainchainBlockBytes) match {
-      case Success((header, scmap, transactions)) =>
-        val mc2scTransaction: Option[MC2SCAggregatedTransaction] = calculateMC2SCTransaction(sidechainId, transactions)
+      case Success((header, scmap, mainchainTxs)) =>
+        val mc2scTransaction: Option[MC2SCAggregatedTransaction] = calculateMC2SCTransaction(sidechainId, mainchainTxs)
         val block = new MainchainBlock(header, mc2scTransaction)
         if(!block.semanticValidity())
           Failure(new Exception("Mainchain Block bytes were parsed, but lead to not semantically valid data."))
@@ -52,8 +52,8 @@ object MainchainBlock {
     }
   }
 
-  // Try to parse Mainchain block and return MainchainHeader, SCMap and Transactions bytes sequence.
-  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]): Try[(MainchainHeader, Map[ByteArrayWrapper, Array[Byte]], Seq[Array[Byte]])] = Try {
+  // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
+  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]): Try[(MainchainHeader, Map[ByteArrayWrapper, Array[Byte]], Seq[MainchainTransaction])] = Try {
     var offset: Int = 0
 
     val magicNumber: Array[Byte] = mainchainBlockBytes.slice(offset, offset + 4)
@@ -69,27 +69,14 @@ object MainchainBlock {
     MainchainHeader.create(mainchainBlockBytes.slice(offset, offset + MainchainHeader.HEADER_SIZE)) match {
       case Success(header) =>
         offset += MainchainHeader.HEADER_SIZE
-        var SCMapItemsSize: Long = 0
-        // try parse var length int
-        mainchainBlockBytes(offset) match {
-          case 253 =>
-            SCMapItemsSize = BytesUtils.getShort(mainchainBlockBytes, offset + 1)
-            offset += 3
-          case 254 =>
-            SCMapItemsSize = BytesUtils.getInt(mainchainBlockBytes, offset + 1)
-            offset += 5
-          case 255 =>
-            SCMapItemsSize = BytesUtils.getLong(mainchainBlockBytes, offset + 1)
-            offset += 9
-          case _ =>
-            SCMapItemsSize = mainchainBlockBytes(offset).longValue()
-            offset += 1
-        }
+
+        val SCMapItemsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset);
+        offset += SCMapItemsSize.size();
 
         // parse SCMap
         val SCMap: Map[ByteArrayWrapper, Array[Byte]] = Map[ByteArrayWrapper, Array[Byte]]()
         val SCMapStartingOffset = offset
-        while(offset != SCMapStartingOffset + SCMapItemsSize * 64) {
+        while(offset != SCMapStartingOffset + SCMapItemsSize.value() * 64) {
           SCMap.put(
             new ByteArrayWrapper(mainchainBlockBytes.slice(offset, offset + 32)),
             mainchainBlockBytes.slice(offset + 32, offset + 64)
@@ -97,38 +84,25 @@ object MainchainBlock {
           offset += 64
         }
 
-        var transactionsSize: Long = 0
-        // try parse var length int
-        mainchainBlockBytes(offset) match {
-          case 253 =>
-            transactionsSize = BytesUtils.getShort(mainchainBlockBytes, offset + 1)
-            offset += 3
-          case 254 =>
-            transactionsSize = BytesUtils.getInt(mainchainBlockBytes, offset + 1)
-            offset += 5
-          case 255 =>
-            transactionsSize = BytesUtils.getLong(mainchainBlockBytes, offset + 1)
-            offset += 9
-          case _ =>
-            transactionsSize = mainchainBlockBytes(offset).longValue()
-            offset += 1
-        }
+        val transactionsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset);
+        offset += transactionsSize.size()
 
-        // parse SCMap
-        val transactions: Seq[Array[Byte]] = Seq[Array[Byte]]()
+        // parse transactions
+        var transactions: Seq[MainchainTransaction] = Seq[MainchainTransaction]()
 
         while(offset != mainchainBlockBytes.length) {
-          //  TO DO: parse transactions one by one
+          val tx: MainchainTransaction = new MainchainTransaction(mainchainBlockBytes, offset)
+          transactions = transactions :+ tx
+          offset += tx.size
         }
 
         (header, SCMap, transactions)
       case Failure(e) =>
         throw e
     }
-
   }
 
-  private def calculateMC2SCTransaction(sidechainID: Array[Byte], transactions: Seq[Array[Byte]]): Option[MC2SCAggregatedTransaction] = ???
+  private def calculateMC2SCTransaction(sidechainID: Array[Byte], transactions: Seq[MainchainTransaction]): Option[MC2SCAggregatedTransaction] = ???
 }
 
 

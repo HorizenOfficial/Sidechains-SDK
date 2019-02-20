@@ -16,8 +16,8 @@ class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
                        val version: Int,                      // 4 bytes
                        val hashPrevBlock: Array[Byte],        // 32 bytes
-                       val merkleRoot: Array[Byte],           // 32 bytes
-                       val SCMapMerkleRoot: Array[Byte],      // 32 bytes
+                       val hashMerkleRoot: Array[Byte],       // 32 bytes
+                       val hashSCMerkleRootsMap: Array[Byte], // 32 bytes
                        val time: Int,                         // 4 bytes
                        val bits: Int,                         // 4 bytes
                        val nonce: Int                         // 4 bytes

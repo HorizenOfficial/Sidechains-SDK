@@ -1,5 +1,6 @@
 package com.horizen.transaction.mainchain;
 
+import com.horizen.block.MainchainTransaction;
 import com.horizen.box.RegularBox;
 import com.horizen.utils.Utils;
 import scala.util.Failure;
@@ -12,17 +13,17 @@ import java.util.List;
 
 public final class ForwardTransfer implements SidechainRelatedMainchainTransaction<RegularBox> {
 
-    private byte[] _transactionBytes;
+    private MainchainTransaction _mainchainTx;
 
-    public ForwardTransfer(byte[] transactionBytes) {
-        _transactionBytes = Arrays.copyOf(transactionBytes, transactionBytes.length);
+    public ForwardTransfer(MainchainTransaction tx) {
+        _mainchainTx = tx;
     }
     @Override
     public byte[] hash() {
-        return Utils.doubleSHA256Hash(_transactionBytes);
+        return _mainchainTx.hash();
     }
 
-    // DO TO: parse outputs, detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
+    // DO TO: loop through _mainchainTx.outputs, detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
     @Override
     public List<RegularBox> outputs() {
         return new ArrayList<>();
@@ -30,12 +31,13 @@ public final class ForwardTransfer implements SidechainRelatedMainchainTransacti
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_transactionBytes, _transactionBytes.length);
+        return Arrays.copyOf(_mainchainTx.bytes(), _mainchainTx.bytes().length);
     }
 
     public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
-        // do some checks
-        return new Success<>(new ForwardTransfer(bytes));
+        MainchainTransaction tx = new MainchainTransaction(bytes, 0);
+        // TO DO: check if tx is a ForwardTransfer
+        return new Success<>(new ForwardTransfer(tx));
     }
 
     @Override

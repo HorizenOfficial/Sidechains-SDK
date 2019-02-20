@@ -92,9 +92,10 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         return 2;
     }
 
+    // Note: maybe we also need to use _mainchainBlockHash for id calculation?
     @Override
     public String id() {
-        return Base16.encode(Blake2b256.hash(Bytes.concat(_mainchainBlockHash, _mc2scTransactionsMerkleRoot)));
+        return Base16.encode(Blake2b256.hash(_mc2scTransactionsMerkleRoot));
     }
 
     @Override
