@@ -82,6 +82,12 @@ public class BytesUtilsTest {
     }
 
     @Test
+    public void BytesUtilsTest_getVarInt() {
+        assertEquals("Test is not implemented.", true, false);
+
+    }
+
+    @Test
     public void BytesUtilsTest_reverseBytes() {
         byte[] bytes = {1, 2, 3, 4};
         byte[] expectedBytes = {4, 3, 2, 1};
