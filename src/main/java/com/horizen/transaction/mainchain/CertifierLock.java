@@ -43,4 +43,9 @@ public final class CertifierLock implements SidechainRelatedMainchainTransaction
     public SidechainRelatedMainchainTransactionSerializer serializer() {
         return CertifierLockSerializer.getSerializer();
     }
+
+    public static boolean isCurrentSidechainCertifierLock(MainchainTransaction tx, byte[] sidechainId) {
+        //TO DO: implement later, when CertifierLock structure in MC will be known
+        return false;
+    }
 }

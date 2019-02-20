@@ -44,4 +44,9 @@ public final class ForwardTransfer implements SidechainRelatedMainchainTransacti
     public SidechainRelatedMainchainTransactionSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
     }
+
+    public static boolean isCurrentSidechainForwardTransfer(MainchainTransaction tx, byte[] sidechainId) {
+        //TO DO: implement later, when ForwardTransfer structure in MC will be known
+        return false;
+    }
 }

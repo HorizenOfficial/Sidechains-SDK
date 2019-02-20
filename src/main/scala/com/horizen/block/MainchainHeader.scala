@@ -32,7 +32,7 @@ class MainchainHeader(
 
 
 object MainchainHeader {
-  val HEADER_SIZE = 112
+  val HEADER_SIZE: Int = 112
 
   def create(headerBytes: Array[Byte]): Try[MainchainHeader] = Try {
     if(headerBytes.length != HEADER_SIZE)
