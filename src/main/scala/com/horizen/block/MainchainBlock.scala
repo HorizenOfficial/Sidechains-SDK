@@ -1,6 +1,12 @@
 package com.horizen.block
 
-import com.horizen.transaction.MC2SCAggregatedTransaction
+import java.util
+
+import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
+import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
@@ -41,10 +47,27 @@ object MainchainBlock {
 
     parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, scmap, mainchainTxs)) =>
-        val mc2scTransaction: Option[MC2SCAggregatedTransaction] = calculateMC2SCTransaction(sidechainId, mainchainTxs)
+        val mc2scTransaction: Option[MC2SCAggregatedTransaction] = {
+          if (scmap.contains(new ByteArrayWrapper(sidechainId))) {
+            // get SidechainRelatedMainchainTransaction, then create MC2SCAggregatedTransaction
+            var sidechainRelatedTransactions: java.util.ArrayList[SidechainRelatedMainchainTransaction[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
+            for(tx <- mainchainTxs) {
+              if(ForwardTransfer.isCurrentSidechainForwardTransfer(tx, sidechainId))
+                sidechainRelatedTransactions.add(new ForwardTransfer(tx))
+              else if(CertifierLock.isCurrentSidechainCertifierLock(tx, sidechainId))
+                sidechainRelatedTransactions.add(new CertifierLock(tx))
+              // TO DO: put Certificate processing later.
+            }
+            Some(MC2SCAggregatedTransaction.create(header.hash(), scmap.get(new ByteArrayWrapper(sidechainId)).get, sidechainRelatedTransactions, header.time))
+          }
+          else
+            Option(null)
+        }
+
+        // TO DO: we also need to put SCMap or at least Merkle Tree path for current Sidechain mc2scTransaction
         val block = new MainchainBlock(header, mc2scTransaction)
         if(!block.semanticValidity())
-          Failure(new Exception("Mainchain Block bytes were parsed, but lead to not semantically valid data."))
+          Failure(new Exception("Mainchain Block bytes were parsed, but lead to semantically invalid data."))
         else
           Success(block)
       case Failure(e) =>
@@ -101,14 +124,46 @@ object MainchainBlock {
         throw e
     }
   }
-
-  private def calculateMC2SCTransaction(sidechainID: Array[Byte], transactions: Seq[MainchainTransaction]): Option[MC2SCAggregatedTransaction] = ???
 }
 
 
 
 object MainchainBlockSerializer extends Serializer[MainchainBlock] {
-  override def toBytes(obj: MainchainBlock): Array[Byte] = ???
+  override def toBytes(obj: MainchainBlock): Array[Byte] = {
+    val mc2scAggregatedTransactionSize: Int = obj.sidechainRelatedAggregatedTransaction match {
+      case Some(tx) => tx.bytes().length
+      case _ => 0
+    }
 
-  override def parseBytes(bytes: Array[Byte]): Try[MainchainBlock] = ???
+    Bytes.concat(
+      Ints.toByteArray(MainchainHeader.HEADER_SIZE), // Stored only for supporting Header version updates
+      obj.header.bytes,
+      Ints.toByteArray(mc2scAggregatedTransactionSize),
+      if (mc2scAggregatedTransactionSize == 0) Array[Byte]() else obj.sidechainRelatedAggregatedTransaction.get.bytes()
+    )
+  }
+
+  override def parseBytes(bytes: Array[Byte]): Try[MainchainBlock] = Try {
+    if(bytes.length < 4 + MainchainHeader.HEADER_SIZE + 4)
+      throw new IllegalArgumentException("Input data corrupted.")
+
+    var offset: Int = 0
+    val headerSize: Int = BytesUtils.getInt(bytes, offset)
+    offset += 4
+
+    val header: MainchainHeader = MainchainHeaderSerializer.parseBytes(bytes.slice(offset, headerSize + offset)).get
+    offset += headerSize
+
+    val mc2scAggregatedTransactionSize: Int = BytesUtils.getInt(bytes, offset)
+    offset += 4
+
+    val mc2scTx: Option[MC2SCAggregatedTransaction] = {
+      if (mc2scAggregatedTransactionSize > 0)
+        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(bytes.slice(offset, mc2scAggregatedTransactionSize + offset)).get)
+      else
+        Option(null)
+    }
+
+    new MainchainBlock(header, mc2scTx)
+  }
 }
