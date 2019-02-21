@@ -140,6 +140,15 @@
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>compile</goal>
+<!--
+                            <goal>testCompile</goal>
+-->
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>compile-scala-tests</id>
+                        <phase>test-compile</phase>
+                        <goals>
                             <goal>testCompile</goal>
                         </goals>
                     </execution>

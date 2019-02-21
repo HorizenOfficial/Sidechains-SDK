@@ -64,7 +64,7 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
         // Test 1: test against empty list
         assertEquals("Transaction expected to be compatible to empty list", true,
-                checker.isTransactionCompatible((BoxTransaction<Proposition, Box<Proposition>>) newTx, new ArrayList<>()));
+                checker.isTransactionCompatible(newTx, new ArrayList<>()));
 
 
         // Test 2: test against compatible list

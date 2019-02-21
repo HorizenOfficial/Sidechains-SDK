@@ -12,4 +12,6 @@ trait SecretFixture {
   val pk5 = pkc.generateSecret("seed5".getBytes())
   val pk6 = pkc.generateSecret("seed6".getBytes())
 
+  val pk7 = pkc.generateSecret("seed7".getBytes())
+
 }

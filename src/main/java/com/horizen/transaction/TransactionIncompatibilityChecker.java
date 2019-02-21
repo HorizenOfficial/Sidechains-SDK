@@ -5,11 +5,9 @@ import java.util.List;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 
-public interface TransactionIncompatibilityChecker<T extends BoxTransaction>
+public interface TransactionIncompatibilityChecker
 {
-    boolean isTransactionCompatible(T newTx, T currentTx);
-
-    boolean isTransactionCompatible(T newTx, List<T> currentTxs);
+    <T extends BoxTransaction> boolean isTransactionCompatible(T newTx, List<T> currentTxs);
 
     boolean isMemoryPoolCompatible();
 }

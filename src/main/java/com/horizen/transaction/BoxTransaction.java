@@ -42,7 +42,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
         return Collections.unmodifiableSet(_boxIdsToOpen);
     }
 
-    public TransactionIncompatibilityChecker<BoxTransaction<Proposition, Box<Proposition>>> incompatibilityChecker() {
+    public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
 

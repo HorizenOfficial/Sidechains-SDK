@@ -29,7 +29,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   }
 
   override def getAll(ids: Seq[ModifierId]): Seq[SidechainTypes#BT] = {
-    ids.flatMap(getById)
+    ids.flatMap(modifierById)
   }
 
   override def size: Int = {
@@ -68,13 +68,12 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
-        tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava)) {
-      unconfirmed.put(tx.id(), tx)
-      new Success[SidechainMemoryPool](this)
-    }
-    else
-      new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
+    if (tx.incompatibilityChecker().isMemoryPoolCompatible)
+      if (!tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava))
+        return new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
+      else
+        unconfirmed.put(tx.id(), tx)
+    new Success[SidechainMemoryPool](this)
   }
 
   override def put(txs: Iterable[SidechainTypes#BT]): Try[SidechainMemoryPool] = {
@@ -83,7 +82,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
     val cmptxs = txs.filter(_.incompatibilityChecker().isMemoryPoolCompatible)
 
     for (t <- cmptxs.tails) {
-      if (!t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
+      if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
         return new Failure(new IllegalArgumentException("There is incompatible transaction - " + t.head))
     }
 

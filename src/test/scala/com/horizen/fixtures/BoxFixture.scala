@@ -11,7 +11,7 @@ trait BoxFixture extends SecretFixture{
   val rb2 : RegularBox = new RegularBox(pk2.publicImage, 1, 50)
   val rb3 : RegularBox = new RegularBox(pk3.publicImage, 1, 20)
 
-  def getBoxArray () : JList[RegularBox] = {
+  def getBoxList () : JList[RegularBox] = {
     val list : JList[RegularBox] = new JArrayList[RegularBox]()
     list.add(rb1)
     list.add(rb2)
