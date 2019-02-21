@@ -11,7 +11,7 @@
 using namespace libff;
 using namespace std;
 
-#ifdef HASHBN
+#ifdef POC_HASHBN
 alt_bn128_Fq HashToBase(const void *alpha) {
   return alt_bn128_Fq::random_element();
 }
@@ -63,7 +63,7 @@ alt_bn128_G1 hashG1(const void *alpha) {
   s1 = power(fx1, alt_bn128_Fq::euler);
   s2 = power(fx2, alt_bn128_Fq::euler);
   s3 = power(fx3, alt_bn128_Fq::euler);
-#ifdef HASHBN
+#ifdef POC_HASHBN
   if(!(s1 == alt_bn128_Fq::one() ||
        s2 == alt_bn128_Fq::one() ||
        s3 == alt_bn128_Fq::one())) {
@@ -87,7 +87,7 @@ alt_bn128_G1 hashG1(const void *alpha) {
   return alt_bn128_G1(x, y, alt_bn128_Fq::one());
 }
 
-#ifdef HASHBN
+#ifdef POC_HASHBN
 int main() {
   alt_bn128_G1 P;
   alt_bn128_pp::init_public_params();
