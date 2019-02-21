@@ -41,7 +41,7 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
             RegularBox box = new RegularBox(t.get(), nonce, value);
             return new Success<>(box);
         } catch (Exception e) {
-            return new Failure(e);
+            return new Failure<>(e);
         }
     }
 }

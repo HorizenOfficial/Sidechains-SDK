@@ -70,6 +70,8 @@ public class RegularTransactionTest {
             assertEquals(String.format("Exception during RegularTransaction creation: unlocker %d proof is invalid!", i),
                     true, actual.boxKey().isValid(expected.getValue().publicImage(), transaction.messageToSign()));
         }
+
+        assertEquals("Transaction should be semantically valid.", true, transaction.semanticValidity());
     }
 
     // TO DO: extend FailureCreationTest with other cases. Look into semantic validity in SimpleBoxTransaction.
