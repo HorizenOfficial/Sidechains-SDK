@@ -1,7 +1,7 @@
 package com.horizen
 
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
-import scorex.core.utils.ScorexLogging
+import scorex.util.ScorexLogging
 
 case class SidechainSettings(scorexSettings: ScorexSettings);
 

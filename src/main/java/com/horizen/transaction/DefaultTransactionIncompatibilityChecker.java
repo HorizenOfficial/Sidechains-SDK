@@ -1,14 +1,19 @@
 package com.horizen.transaction;
 
+import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
+import com.horizen.proposition.Proposition;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 
-public class DefaultTransactionIncompatibilityChecker implements TransactionIncompatibilityChecker<BoxTransaction>
+public class DefaultTransactionIncompatibilityChecker
+    implements TransactionIncompatibilityChecker
 {
+
     @Override
-    public boolean hasIncompatibleTransactions(BoxTransaction newTx, List<BoxTransaction> currentTxs) {
+    public <T extends BoxTransaction> boolean isTransactionCompatible(T newTx,
+                                                                      List<T> currentTxs) {
         if(newTx == null || currentTxs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
 
@@ -19,9 +24,14 @@ public class DefaultTransactionIncompatibilityChecker implements TransactionInco
             ByteArrayWrapper closedBoxId = new ByteArrayWrapper(unlocker.closedBoxId());
             for (BoxTransaction tx : currentTxs) {
                 if(tx.boxIdsToOpen().contains(closedBoxId))
-                    return true;
+                    return false;
             }
         }
-        return false;
+        return true;
+    }
+
+    @Override
+    public boolean isMemoryPoolCompatible() {
+        return true;
     }
 }
