@@ -68,30 +68,31 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def put(tx: SidechainTypes#BT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (tx.incompatibilityChecker().isMemoryPoolCompatible)
-      if (!tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava))
-        return new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
-      else
-        unconfirmed.put(tx.id(), tx)
-    new Success[SidechainMemoryPool](this)
+    if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
+        tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava)) {
+      unconfirmed.put(tx.id(), tx)
+      new Success[SidechainMemoryPool](this)
+    }
+    else
+        new Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
   }
 
   override def put(txs: Iterable[SidechainTypes#BT]): Try[SidechainMemoryPool] = {
     // for each tx in txs call "put"
     // rollback to initial state if "put(tx)" failed
-    val cmptxs = txs.filter(_.incompatibilityChecker().isMemoryPoolCompatible)
-
-    for (t <- cmptxs.tails) {
-      if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
+    for (t <- txs.tails) {
+      if (t != Nil &&
+          (!t.head.incompatibilityChecker().isMemoryPoolCompatible ||
+           !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava)))
         return new Failure(new IllegalArgumentException("There is incompatible transaction - " + t.head))
     }
 
-    for (t <- cmptxs) {
+    for (t <- txs) {
       if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.asJava))
         return new Failure(new IllegalArgumentException("There is incompatible transaction - " + t))
     }
 
-    for (t <- cmptxs)
+    for (t <- txs)
       unconfirmed.put(t.id(), t)
 
     new Success[SidechainMemoryPool](this)
@@ -100,7 +101,20 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   // TO DO: check usage in Scorex core
   // Probably, we need to do a Global check inside for both new and existing transactions.
   override def putWithoutCheck(txs: Iterable[SidechainTypes#BT]): SidechainMemoryPool = {
-    throw new UnsupportedOperationException()
+    for (t <- txs.tails) {
+      if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
+        return this
+    }
+
+    for (t <- txs) {
+      if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.asJava))
+        return this
+    }
+
+    for (t <- txs)
+      unconfirmed.put(t.id(), t)
+
+    this
   }
 
   override def remove(tx: SidechainTypes#BT): SidechainMemoryPool = {

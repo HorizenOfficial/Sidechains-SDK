@@ -77,16 +77,22 @@ class SidechainMemoryPoolTest extends JUnitSuite
   @Test def putWithoutCheck(): Unit = {
     val memoryPool = getSidechainMemoryPool()
     val txLst = getTransactionList().asInstanceOf[List[SidechainTypes#BT]]
-    var et : Boolean = false
+    val txId : ModifierId = ModifierId(txLst.head.id())
 
-    try {
-      memoryPool.putWithoutCheck(txLst)
-    }
-    catch {
-      case e : UnsupportedOperationException => et = true
-      case unknown => fail("Wrong exception type.", unknown)
-    }
+    val txIncompat = txLst ::: getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]
+    assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess, false);
+    assertEquals("Size must be 0.", memoryPool.size, 0)
 
-    assertEquals("Exception must be thrown.", et, true)
+    assertEquals("Put operation must be success.", memoryPool.put(txLst).isSuccess, true);
+    assertEquals("Size must be 1.", memoryPool.size, 1)
+    assertEquals("MemoryPool must contain transaction" + txId, memoryPool.modifierById(txId).get, txLst.head)
+
+    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+      true)
+    assertEquals("Size must be 2.", memoryPool.size, 2)
+
+    assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+      false)
+    assertEquals("Size must be 2.", memoryPool.size, 2)
   }
 }
