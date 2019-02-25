@@ -2,7 +2,12 @@ package com.horizen.transaction;
 
 import java.util.List;
 
-interface TransactionIncompatibilityChecker<T extends BoxTransaction>
+import com.horizen.box.Box;
+import com.horizen.proposition.Proposition;
+
+public interface TransactionIncompatibilityChecker
 {
-    boolean hasIncompatibleTransactions(T newTx, List<BoxTransaction> currentTxs);
+    <T extends BoxTransaction> boolean isTransactionCompatible(T newTx, List<T> currentTxs);
+
+    boolean isMemoryPoolCompatible();
 }

@@ -1,5 +1,6 @@
 package com.horizen
 
+import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
 import scorex.core.{ModifierTypeId, NodeViewModifier}
@@ -8,14 +9,15 @@ import scorex.core.serialization.Serializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 
-abstract class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
+class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
-  extends scorex.core.NodeViewHolder[Transaction, Block[Transaction]] {
+  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock]
+{
   override type SI = scorex.core.consensus.SyncInfo
-  /*override type HIS = SidechainHistory
+  override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet
-  override type MP = MemoryPool*/
+  override type MP = SidechainMemoryPool
 
   override val scorexSettings: ScorexSettings = sdkSettings.scorexSettings;
 
