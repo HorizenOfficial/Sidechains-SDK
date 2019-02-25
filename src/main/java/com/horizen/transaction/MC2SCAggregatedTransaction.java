@@ -119,9 +119,9 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         ArrayList<byte[]> hashes = new ArrayList<>();
         for(SidechainRelatedMainchainOutput t : _mc2scTransactions)
             hashes.add(t.hash());
-        List<byte[]> merkleTree = MerkleTree.calculateMerkleTree(hashes);
+        byte[] merkleRootHash = MerkleTree.createMerkleTree(hashes).rootHash();
 
-        return Arrays.equals(_mc2scTransactionsMerkleRootHash, merkleTree.get(merkleTree.size() - 1));
+        return Arrays.equals(_mc2scTransactionsMerkleRootHash, merkleRootHash);
     }
 
 
