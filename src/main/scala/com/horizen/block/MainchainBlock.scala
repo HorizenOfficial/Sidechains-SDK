@@ -6,7 +6,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainTransaction}
+import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
@@ -49,14 +49,11 @@ object MainchainBlock {
       case Success((header, scmap, mainchainTxs)) =>
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] = {
           if (scmap.contains(new ByteArrayWrapper(sidechainId))) {
-            // get SidechainRelatedMainchainTransaction, then create MC2SCAggregatedTransaction
-            var sidechainRelatedTransactions: java.util.ArrayList[SidechainRelatedMainchainTransaction[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
+            // get SidechainRelatedMainchainOutput, then create MC2SCAggregatedTransaction
+            var sidechainRelatedTransactions: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
             for(tx <- mainchainTxs) {
-              if(ForwardTransfer.isCurrentSidechainForwardTransfer(tx, sidechainId))
-                sidechainRelatedTransactions.add(new ForwardTransfer(tx))
-              else if(CertifierLock.isCurrentSidechainCertifierLock(tx, sidechainId))
-                sidechainRelatedTransactions.add(new CertifierLock(tx))
-              // TO DO: put Certificate processing later.
+              sidechainRelatedTransactions.addAll(tx.getSidechainRelatedOutputs(sidechainId))
+              // TO DO: put Certificate and FraudReports processing later.
             }
             Some(MC2SCAggregatedTransaction.create(header.hash(), scmap.get(new ByteArrayWrapper(sidechainId)).get, sidechainRelatedTransactions, header.time))
           }

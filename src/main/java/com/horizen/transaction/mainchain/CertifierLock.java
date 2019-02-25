@@ -1,51 +1,43 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.block.MainchainTransaction;
+import com.horizen.block.MainchainTxCertifierLockOutput;
+import com.horizen.block.MainchainTxCertifierLockOutputSeializer;
 import com.horizen.box.CertifierRightBox;
-import com.horizen.utils.Utils;
 import scala.util.Success;
 import scala.util.Try;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-public final class CertifierLock implements SidechainRelatedMainchainTransaction<CertifierRightBox> {
+public final class CertifierLock implements SidechainRelatedMainchainOutput<CertifierRightBox> {
 
-    private MainchainTransaction _mainchainTx;
+    private MainchainTxCertifierLockOutput _output;
 
-    public CertifierLock(MainchainTransaction tx) {
-        _mainchainTx = tx;
+    public CertifierLock(MainchainTxCertifierLockOutput output) {
+        _output = output;
     }
     @Override
     public byte[] hash() {
-        return _mainchainTx.hash();
+        return _output.hash();
     }
 
-    // DO TO: loop through _mainchainTx.outputs, detect SC related addresses (PublicKey25519Proposition) and values, create CertifierLockBoxes for them.
+    // DO TO: detect SC related addresses (PublicKey25519Proposition) and values, create CertifierRightBox for them.
     @Override
-    public List<CertifierRightBox> outputs() {
-        return new ArrayList<>();
+    public CertifierRightBox getBox() {
+        return null;
     }
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_mainchainTx.bytes(), _mainchainTx.bytes().length);
+        return Arrays.copyOf(_output.bytes(), _output.bytes().length);
     }
 
     public static Try<CertifierLock> parseBytes(byte[] bytes) {
-        MainchainTransaction tx = new MainchainTransaction(bytes, 0);
-        // TO DO: check if tx is a CertifierLock
-        return new Success<>(new CertifierLock(tx));
+        MainchainTxCertifierLockOutput output = MainchainTxCertifierLockOutputSeializer.parseBytes(bytes).get();
+        return new Success<>(new CertifierLock(output));
     }
 
     @Override
-    public SidechainRelatedMainchainTransactionSerializer serializer() {
-        return CertifierLockSerializer.getSerializer();
-    }
-
-    public static boolean isCurrentSidechainCertifierLock(MainchainTransaction tx, byte[] sidechainId) {
-        //TO DO: implement later, when CertifierLock structure in MC will be known
-        return false;
+    public SidechainRelatedMainchainOutputSerializer serializer() {
+        return ForwardTransferSerializer.getSerializer();
     }
 }

@@ -2,7 +2,7 @@ package com.horizen.transaction.mainchain;
 
 import scala.util.Try;
 
-public final class CertifierLockSerializer implements SidechainRelatedMainchainTransactionSerializer<CertifierLock>
+public final class CertifierLockSerializer implements SidechainRelatedMainchainOutputSerializer<CertifierLock>
 {
     private static CertifierLockSerializer serializer;
 

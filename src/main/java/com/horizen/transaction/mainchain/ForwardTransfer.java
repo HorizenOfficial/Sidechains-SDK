@@ -1,52 +1,43 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.block.MainchainTransaction;
+import com.horizen.block.MainchainTxForwardTransferOutput;
+import com.horizen.block.MainchainTxForwardTransferOutputSeializer;
 import com.horizen.box.RegularBox;
-import com.horizen.utils.Utils;
-import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-public final class ForwardTransfer implements SidechainRelatedMainchainTransaction<RegularBox> {
+public final class ForwardTransfer implements SidechainRelatedMainchainOutput<RegularBox> {
 
-    private MainchainTransaction _mainchainTx;
+    private MainchainTxForwardTransferOutput _output;
 
-    public ForwardTransfer(MainchainTransaction tx) {
-        _mainchainTx = tx;
+    public ForwardTransfer(MainchainTxForwardTransferOutput output) {
+        _output = output;
     }
     @Override
     public byte[] hash() {
-        return _mainchainTx.hash();
+        return _output.hash();
     }
 
-    // DO TO: loop through _mainchainTx.outputs, detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
+    // DO TO: detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
     @Override
-    public List<RegularBox> outputs() {
-        return new ArrayList<>();
+    public RegularBox getBox() {
+        return null;
     }
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_mainchainTx.bytes(), _mainchainTx.bytes().length);
+        return Arrays.copyOf(_output.bytes(), _output.bytes().length);
     }
 
     public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
-        MainchainTransaction tx = new MainchainTransaction(bytes, 0);
-        // TO DO: check if tx is a ForwardTransfer
-        return new Success<>(new ForwardTransfer(tx));
+        MainchainTxForwardTransferOutput output = MainchainTxForwardTransferOutputSeializer.parseBytes(bytes).get();
+        return new Success<>(new ForwardTransfer(output));
     }
 
     @Override
-    public SidechainRelatedMainchainTransactionSerializer serializer() {
+    public SidechainRelatedMainchainOutputSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
-    }
-
-    public static boolean isCurrentSidechainForwardTransfer(MainchainTransaction tx, byte[] sidechainId) {
-        //TO DO: implement later, when ForwardTransfer structure in MC will be known
-        return false;
     }
 }

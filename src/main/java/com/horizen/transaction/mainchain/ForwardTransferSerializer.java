@@ -2,7 +2,7 @@ package com.horizen.transaction.mainchain;
 
 import scala.util.Try;
 
-public final class ForwardTransferSerializer implements SidechainRelatedMainchainTransactionSerializer<ForwardTransfer>
+public final class ForwardTransferSerializer implements SidechainRelatedMainchainOutputSerializer<ForwardTransfer>
 {
     private static ForwardTransferSerializer serializer;
 
