@@ -31,4 +31,9 @@ public class ByteArrayWrapperTest {
         assertEquals("Data bytes expected to be the same", true, Arrays.equals(b1, bw1.data()));
         assertNotEquals("Data bytes and source bytes expected to be different objects", b1, bw1.data());
     }
+
+    @Test
+    public void ByteArrayWrapperTest_ComparableTest() {
+        assertEquals("Test is not implemented yet.", true, false);
+    }
 }

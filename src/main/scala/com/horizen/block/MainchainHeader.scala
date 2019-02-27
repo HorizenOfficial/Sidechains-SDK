@@ -12,6 +12,9 @@ import scala.util.Try
 // Note: Horizen MC Block header should be updated by SCMap merkle root.
 // SCMap merkle root is a merkle root of particular SC related transactions merkle roots.
 //
+// SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
+// hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
+//
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
                        val version: Int,                      // 4 bytes

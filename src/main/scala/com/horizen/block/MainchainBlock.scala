@@ -7,11 +7,12 @@ import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainOutput}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
+import com.horizen.utils._
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.mutable.Map
+import scala.collection.JavaConverters._
 
 // Mainchain Block structure:
 //
@@ -26,7 +27,8 @@ import scala.collection.mutable.Map
 
 class MainchainBlock(
                     val header: MainchainHeader,
-                    val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction]
+                    val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
+                    val merklePath: Option[MerklePath]
                     ) extends BytesSerializable {
 
   def semanticValidity(): Boolean = ???
@@ -47,6 +49,7 @@ object MainchainBlock {
 
     parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, scmap, mainchainTxs)) =>
+        // Calculate MC2SCAggregatedTransaction for current sidechain
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] = {
           if (scmap.contains(new ByteArrayWrapper(sidechainId))) {
             // get SidechainRelatedMainchainOutput, then create MC2SCAggregatedTransaction
@@ -58,11 +61,22 @@ object MainchainBlock {
             Some(MC2SCAggregatedTransaction.create(header.hash(), scmap.get(new ByteArrayWrapper(sidechainId)).get, sidechainRelatedTransactions, header.time))
           }
           else
-            Option(null)
+            None
         }
 
-        // TO DO: we also need to put SCMap or at least Merkle Tree path for current Sidechain mc2scTransaction
-        val block = new MainchainBlock(header, mc2scTransaction)
+        // Calculate MerklePath for current Sidechain in SCMap
+        val merklePath: Option[MerklePath] = mc2scTransaction match {
+          case Some(_) =>
+            val scSeq = scmap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+            val indexOfSidechain = scSeq.indexWhere(a => a._1.equals(new ByteArrayWrapper(sidechainId)))
+            val sidechainsMerkleRootsHashesList = scSeq.map(_._2).toList.asJava
+
+            Some(MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList).getMerklePathForLeaf(indexOfSidechain))
+
+          case None => None
+        }
+
+        val block = new MainchainBlock(header, mc2scTransaction, merklePath)
         if(!block.semanticValidity())
           Failure(new Exception("Mainchain Block bytes were parsed, but lead to semantically invalid data."))
         else
@@ -90,11 +104,11 @@ object MainchainBlock {
       case Success(header) =>
         offset += MainchainHeader.HEADER_SIZE
 
-        val SCMapItemsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset);
-        offset += SCMapItemsSize.size();
+        val SCMapItemsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
+        offset += SCMapItemsSize.size()
 
         // parse SCMap
-        val SCMap: Map[ByteArrayWrapper, Array[Byte]] = Map[ByteArrayWrapper, Array[Byte]]()
+        val SCMap = Map[ByteArrayWrapper, Array[Byte]]()
         val SCMapStartingOffset = offset
         while(offset != SCMapStartingOffset + SCMapItemsSize.value() * 64) {
           SCMap.put(
@@ -104,7 +118,7 @@ object MainchainBlock {
           offset += 64
         }
 
-        val transactionsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset);
+        val transactionsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
         offset += transactionsSize.size()
 
         // parse transactions
@@ -132,16 +146,23 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
       case _ => 0
     }
 
+    val merklePathSize: Int = obj.merklePath match {
+      case Some(path) => path.bytes.length
+      case _ => 0
+    }
+
     Bytes.concat(
       Ints.toByteArray(MainchainHeader.HEADER_SIZE), // Stored only for supporting Header version updates
       obj.header.bytes,
       Ints.toByteArray(mc2scAggregatedTransactionSize),
-      if (mc2scAggregatedTransactionSize == 0) Array[Byte]() else obj.sidechainRelatedAggregatedTransaction.get.bytes()
+      if (mc2scAggregatedTransactionSize == 0) Array[Byte]() else obj.sidechainRelatedAggregatedTransaction.get.bytes,
+      Ints.toByteArray(merklePathSize),
+      if (merklePathSize == 0) Array[Byte]() else obj.merklePath.get.bytes
     )
   }
 
   override def parseBytes(bytes: Array[Byte]): Try[MainchainBlock] = Try {
-    if(bytes.length < 4 + MainchainHeader.HEADER_SIZE + 4)
+    if(bytes.length < 4 + MainchainHeader.HEADER_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
     var offset: Int = 0
@@ -156,11 +177,22 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
 
     val mc2scTx: Option[MC2SCAggregatedTransaction] = {
       if (mc2scAggregatedTransactionSize > 0)
-        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(bytes.slice(offset, mc2scAggregatedTransactionSize + offset)).get)
+        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(bytes.slice(offset, offset + mc2scAggregatedTransactionSize)).get)
       else
-        Option(null)
+        None
+    }
+    offset += mc2scAggregatedTransactionSize
+
+    val merklePathSize: Int = BytesUtils.getInt(bytes, offset)
+    offset += 4
+
+    val merklePath: Option[MerklePath] = {
+      if (merklePathSize > 0)
+        Some(MerklePath.parseBytes(bytes.slice(offset, offset + merklePathSize)).get)
+      else
+        None
     }
 
-    new MainchainBlock(header, mc2scTx)
+    new MainchainBlock(header, mc2scTx, merklePath)
   }
 }
