@@ -10,6 +10,7 @@ import scala.util.Try;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class MerklePath {
@@ -40,6 +41,10 @@ public class MerklePath {
         }
 
         _merklePath = merklePath;
+    }
+
+    public List<Pair<Byte, byte[]>> merklePathList() {
+        return Collections.unmodifiableList(_merklePath);
     }
 
     // apply merkle path to element and return resulting hash, which must be a Merkle Root hash of corresponding MerkleTree.
@@ -87,7 +92,7 @@ public class MerklePath {
             while(size > 0) {
                 merklePath.add(new Pair<>(bytes[offset], Arrays.copyOfRange(bytes, offset + 1, offset + 1 + Utils.SHA256_LENGTH)));
                 offset += 1 + Utils.SHA256_LENGTH;
-                size++;
+                size--;
             }
             return new Success<>(new MerklePath(merklePath));
         } catch (Exception e) {

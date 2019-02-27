@@ -2,8 +2,10 @@ package com.horizen.utils;
 
 import javafx.util.Pair;
 import org.junit.Test;
+import scala.util.Try;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -64,5 +66,35 @@ public class MerklePathTest {
         // Test 2: apply inappropriate leaf to merkle path -> fail
         res = BytesUtils.toHexString(path.apply(BytesUtils.fromHexString(merkleTreeHex.get(5))));
         assertNotEquals("Leaf applied to merkle path expected to be different to merkle root.", merkleTreeHex.get(19), res);
+    }
+
+    @Test
+    public void MerklePathTest_SerializationTest() {
+
+        ArrayList<Pair<Byte, byte[]>> merklePathSources = new ArrayList<>();
+        merklePathSources.add(new Pair<>((byte)0, BytesUtils.fromHexString("29d000eee85f08b6482026be2d92d081d6f9418346e6b2e9fe2e9b985f24ed1e")));
+        merklePathSources.add(new Pair<>((byte)1, BytesUtils.fromHexString("61bfbdf7038dc7f21e2bcf193faef8e6caa8222af016a6ed86b9e9d860f046df")));
+        merklePathSources.add(new Pair<>((byte)1, BytesUtils.fromHexString("9567fc20e47374adda00ee83d89ea9939798b282543ea6cbd8fb0023b57465ed")));
+        merklePathSources.add(new Pair<>((byte)0, BytesUtils.fromHexString("2d9b08361ac900cb55c71516c513db868f38536ebac65c6de16e6db26367c970")));
+
+        // Test 1: serialization/deserialization of empty MerklePath
+        MerklePath mp1 = new MerklePath(new ArrayList<>());
+        byte[] bytes = mp1.bytes();
+
+        Try<MerklePath> mp2 = MerklePath.parseBytes(bytes);
+        assertEquals("Empty Merkle Path expected.",0, mp2.get().merklePathList().size());
+
+        // Test 2: serialization/deserialization of non-empty MerklePath
+        MerklePath mp3 = new MerklePath(merklePathSources);
+        bytes = mp3.bytes();
+
+        MerklePath mp4 = MerklePath.parseBytes(bytes).get();
+        assertEquals("Merkle Path list size expected to be 4.",4, mp4.merklePathList().size());
+        for(int i = 0; i < merklePathSources.size(); i++) {
+            assertEquals(String.format("Merkle Path list item %d key expected to be equal.", i), merklePathSources.get(i).getKey(), mp4.merklePathList().get(i).getKey());
+
+            assertEquals(String.format("Merkle Path list item %d value expected to be equal.", i),
+                    true, Arrays.equals(merklePathSources.get(i).getValue(), mp4.merklePathList().get(i).getValue()));
+        }
     }
 }
