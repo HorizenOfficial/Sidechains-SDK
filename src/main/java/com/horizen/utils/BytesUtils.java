@@ -30,6 +30,17 @@ public final class BytesUtils {
                                 bytes[offset + 3]);
     }
 
+    // Get Reversed Int value from byte array starting from an offset position without copying an array
+    public static int getReversedInt(byte[] bytes, int offset) {
+        if(offset < 0 || bytes.length < offset + 4)
+            throw new IllegalArgumentException("Value is out of array bounds");
+
+        return Ints.fromBytes(  bytes[offset + 3],
+                                bytes[offset + 2],
+                                bytes[offset + 1],
+                                bytes[offset]);
+    }
+
     // Get Long value from byte array starting from an offset position without copying an array
     public static long getLong(byte[] bytes, int offset) {
         if(offset < 0 || bytes.length < offset + 8)
@@ -43,6 +54,21 @@ public final class BytesUtils {
                                 bytes[offset + 5],
                                 bytes[offset + 6],
                                 bytes[offset + 7]);
+    }
+
+    // Get Reversed Long value from byte array starting from an offset position without copying an array
+    public static long getReversedLong(byte[] bytes, int offset) {
+        if(offset < 0 || bytes.length < offset + 8)
+            throw new IllegalArgumentException("Value is out of array bounds");
+
+        return Longs.fromBytes( bytes[offset + 7],
+                                bytes[offset + 6],
+                                bytes[offset + 5],
+                                bytes[offset + 4],
+                                bytes[offset + 3],
+                                bytes[offset + 2],
+                                bytes[offset + 1],
+                                bytes[offset]);
     }
 
     // get Bitcoin VarInt value, which length is from 1 to 9 bytes, starting from an offset position without copying an array.

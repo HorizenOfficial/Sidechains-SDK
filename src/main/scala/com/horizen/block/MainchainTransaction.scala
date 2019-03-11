@@ -3,13 +3,14 @@ package com.horizen.block
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt}
+
+import scala.collection.mutable.ArrayBuffer
 
 class MainchainTransaction(
                           transactionsBytes: Array[Byte],
                           offset: Int
                           ) {
-  parse()
 
   private val PHGR_TX_VERSION: Int = 2
   private val GROTH_TX_VERSION: Int = 0xFFFFFFFD // -3
@@ -21,13 +22,17 @@ class MainchainTransaction(
 //  private var _marker: Byte = 0
 //  private var _flag: Byte = 0
 //  private var _useSegwit: Boolean = false
-  private var _inputs: Seq[MainchainTxInput] = Seq()
-  private var _outputs: Seq[MainchainTxOutput] = Seq()
+  private var _inputs: ArrayBuffer[MainchainTxInput] = ArrayBuffer()
+  private var _outputs: ArrayBuffer[MainchainTxOutput] = ArrayBuffer()
   private var _lockTime: Int = 0
+
+  parse()
 
   lazy val bytes: Array[Byte] = transactionsBytes.slice(offset, offset + _size)
 
-  lazy val hash: Array[Byte] = Utils.doubleSHA256Hash(bytes)
+  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bytes))
+
+  lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   def size = _size
 
@@ -35,7 +40,7 @@ class MainchainTransaction(
   private def parse() = {
     var currentOffset: Int = offset
 
-    _version = BytesUtils.getInt(transactionsBytes, currentOffset)
+    _version = BytesUtils.getReversedInt(transactionsBytes, currentOffset)
     currentOffset += 4
 
 //    Bitcoin segwit support
@@ -65,7 +70,7 @@ class MainchainTransaction(
       val sequence: Int = BytesUtils.getInt(transactionsBytes, currentOffset)
       currentOffset += 4
 
-      _inputs = _inputs :+ new MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
+      _inputs += new MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
     }
 
     // parse outputs
@@ -76,13 +81,14 @@ class MainchainTransaction(
       // TO DO: implement
     } else { // parse as MainchainTxOutputsV1
       for (i <- 1 to outputsNumber.value().intValue()) {
-        val value: Long = BytesUtils.getLong(transactionsBytes, currentOffset)
+        val value: Long = BytesUtils.getReversedLong(transactionsBytes, currentOffset)
         currentOffset += 8
 
         val scriptLength: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
         currentOffset += scriptLength.size()
 
         val script: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
+        val scriptHex: String = BytesUtils.toHexString(script)
         currentOffset += scriptLength.value().intValue()
 
         _outputs = _outputs :+ new MainchainTxOutputV1(value, script)
@@ -106,7 +112,10 @@ class MainchainTransaction(
 //      }
 //    }
 
-    _lockTime = BytesUtils.getInt(transactionsBytes, currentOffset)
+    // TO DO: check. maybe need to use getInt
+    _lockTime = BytesUtils.getReversedInt(transactionsBytes, currentOffset)
+    if(_lockTime != 0)
+      _lockTime + 4
     currentOffset += 4
 
 
@@ -114,7 +123,7 @@ class MainchainTransaction(
     // Note: actually joinsplit data is not important for us. So we will just parse it for knowing its size
     if (_version >= PHGR_TX_VERSION || _version == GROTH_TX_VERSION) {
       val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-      currentOffset += outputsNumber.size()
+      currentOffset += joinSplitsNumber.size()
       for (i <- 1 to joinSplitsNumber.value().intValue()) {
         currentOffset += 8        // int64_t vpub_old
                        + 8        // int64_t vpub_new
@@ -131,6 +140,7 @@ class MainchainTransaction(
           currentOffset += 192         // typedef std::array<unsigned char, GROTH_PROOF_SIZE> GrothProof, where GROTH_PROOF_SIZE = 48 + 96 + 48
 
         currentOffset += 601 * 2 // std::array<ZCNoteEncryption::Ciphertext, ZC_NUM_JS_OUTPUTS>, where typedef std::array<unsigned char, CLEN> Ciphertext and CLEN = 1 + 8 + 32 + 32 + 512 + 16
+        currentOffset += 360 // TO DO: check from where these 360 byte are taken
       }
       if(joinSplitsNumber.value() > 0) {
         currentOffset += 32 // uint256 joinSplitPubKey;
@@ -139,6 +149,15 @@ class MainchainTransaction(
     }
 
     _size = currentOffset - offset
+  }
+
+  def getRelatedSidechains(): Set[ByteArrayWrapper] = {
+    // TO DO: parse all outputs, detect New Outputs and extract all mentioned Sidechain Ids as a Set
+    _outputs.foreach {
+      case (output: MainchainTxForwardTransferOutput) =>
+        // TO DO
+    }
+    Set[ByteArrayWrapper]()
   }
 
   def getSidechainRelatedOutputs(sidechainId: Array[Byte]): java.util.List[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
