@@ -6,8 +6,8 @@ import com.horizen.node.NodeWallet;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.secret.Secret;
-import com.horizen.secret.PrivateKey25519Companion;
 import javafx.util.Pair;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,13 +114,13 @@ public class RegularTransactionCreatorTest {
 
     @Before
     public void beforeEachTest() {
-        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
-        pk1 = companion.generateSecret("test_seed1".getBytes());
-        pk2 = companion.generateSecret("test_seed2".getBytes());
-        pk3 = companion.generateSecret("test_seed3".getBytes());
-        pk4 = companion.generateSecret("test_seed4".getBytes());
-        pk5 = companion.generateSecret("test_seed5".getBytes());
-        pk6 = companion.generateSecret("test_seed6".getBytes());
+        PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
+        pk1 = creator.generateSecret("test_seed1".getBytes());
+        pk2 = creator.generateSecret("test_seed2".getBytes());
+        pk3 = creator.generateSecret("test_seed3".getBytes());
+        pk4 = creator.generateSecret("test_seed4".getBytes());
+        pk5 = creator.generateSecret("test_seed5".getBytes());
+        pk6 = creator.generateSecret("test_seed6".getBytes());
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
         boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 30), 1000L));

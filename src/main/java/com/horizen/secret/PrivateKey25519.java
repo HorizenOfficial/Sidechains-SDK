@@ -53,11 +53,6 @@ public final class PrivateKey25519 implements Secret
         return new PublicKey25519Proposition(_publicKeyBytes);
     }
 
-    @Override
-    public PrivateKey25519Companion companion() {
-        return PrivateKey25519Companion.getCompanion();
-    }
-
     public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
         try {
             byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
