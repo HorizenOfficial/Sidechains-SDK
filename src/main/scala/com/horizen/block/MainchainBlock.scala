@@ -31,11 +31,24 @@ class MainchainBlock(
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
-  def semanticValidity(): Boolean = true
-
   override type M = MainchainBlock
 
   override def serializer: Serializer[MainchainBlock] = MainchainBlockSerializer
+
+  def semanticValidity(): Boolean = {
+    if(header == null || !header.semanticValidity())
+      return false
+    if(sidechainRelatedAggregatedTransaction.isDefined != SCMapMerklePath.isDefined)
+      return false
+
+    if(sidechainRelatedAggregatedTransaction.isDefined) {
+      val rootHash: Array[Byte] = SCMapMerklePath.get.apply(sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
+      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, rootHash))
+        return false
+    }
+
+    true
+  }
 }
 
 
@@ -58,17 +71,17 @@ object MainchainBlock {
 
             var aggregatedTransactionsMap: Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
             for (id <- scIds) {
-              var sidechainRelatedTransactions: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
+              var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
               for (tx <- mainchainTxs) {
-                sidechainRelatedTransactions.addAll(tx.getSidechainRelatedOutputs(sidechainId))
+                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(sidechainId))
                 // TO DO: put Certificate and FraudReports processing later.
               }
-              aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(header.hash, id.data(), sidechainRelatedTransactions, header.time))
+              aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(header.hash, sidechainRelatedTransactionsOutputs, header.time))
             }
 
             val SCMap: Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
               case (k, v) =>
-                (k, v.bytes())
+                (k, v.mc2scMerkleRootHash())
             }
 
             // verify SCMap

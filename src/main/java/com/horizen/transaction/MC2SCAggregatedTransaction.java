@@ -26,7 +26,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 {
     private byte[] _mainchainBlockHash;
     private byte[] _mc2scTransactionsMerkleRootHash;
-    private List<SidechainRelatedMainchainOutput> _mc2scTransactions;
+    private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
     private long _timestamp;
 
     private List<BoxUnlocker<Proposition>> _unlockers;
@@ -38,10 +38,10 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         put(2, (Serializer)CertifierLockSerializer.getSerializer());
     }});
 
-    private MC2SCAggregatedTransaction(byte[] mainchainBlockHash, byte[] mc2scTransactionsMerkleRootHash, List<SidechainRelatedMainchainOutput> mc2scTransactions, long timestamp) {
+    private MC2SCAggregatedTransaction(byte[] mainchainBlockHash, byte[] mc2scTransactionsMerkleRootHash, List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
         _mainchainBlockHash = Arrays.copyOf(mainchainBlockHash, mainchainBlockHash.length);
         _mc2scTransactionsMerkleRootHash = Arrays.copyOf(mc2scTransactionsMerkleRootHash, mc2scTransactionsMerkleRootHash.length);
-        _mc2scTransactions = mc2scTransactions;
+        _mc2scTransactionsOutputs = mc2scTransactionsOutputs;
         _timestamp = timestamp;
     }
 
@@ -71,7 +71,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     public List<Box<Proposition>> newBoxes() {
         if (_newBoxes == null) {
             _newBoxes = new ArrayList<>();
-            for(SidechainRelatedMainchainOutput t : _mc2scTransactions)
+            for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
                 _newBoxes.add(t.getBox());
         }
         return Collections.unmodifiableList(_newBoxes);
@@ -113,11 +113,11 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     public boolean semanticValidity() {
         // Transaction is valid if it contains all mc2sc transactions and merkle root based on them is equal to the one defined in constructor.
-        if(_mc2scTransactions == null || _mc2scTransactions.size() == 0)
+        if(_mc2scTransactionsOutputs == null || _mc2scTransactionsOutputs.size() == 0)
             return false;
 
         ArrayList<byte[]> hashes = new ArrayList<>();
-        for(SidechainRelatedMainchainOutput t : _mc2scTransactions)
+        for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
             hashes.add(t.hash());
         byte[] merkleRootHash = MerkleTree.createMerkleTree(hashes).rootHash();
 
@@ -127,7 +127,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     @Override
     public byte[] bytes() {
-        byte[] transactions = _mc2scTransactionsSerializer.toBytes(_mc2scTransactions);
+        byte[] transactions = _mc2scTransactionsSerializer.toBytes(_mc2scTransactionsOutputs);
         return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 80 bytes
                 _mainchainBlockHash,                                // 32 bytes
                 _mc2scTransactionsMerkleRootHash,                   // 32 bytes
@@ -165,17 +165,21 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         }
     }
 
-    public static MC2SCAggregatedTransaction create(byte[] mainchainBlockHash, byte[] mc2scTransactionsMerkleRootHash, List<SidechainRelatedMainchainOutput> mc2scTransactions, long timestamp) {
-        if(mainchainBlockHash == null || mc2scTransactionsMerkleRootHash == null || mc2scTransactions == null)
+    public static MC2SCAggregatedTransaction create(byte[] mainchainBlockHash, List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
+        if(mainchainBlockHash == null || mc2scTransactionsOutputs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
         if(mainchainBlockHash.length != Utils.SHA256_LENGTH)
             throw new IllegalArgumentException(String.format("Mainchain block hash length is %d, expected to be %d", mainchainBlockHash.length, Utils.SHA256_LENGTH));
-        if(mc2scTransactionsMerkleRootHash.length != Utils.SHA256_LENGTH)
-            throw new IllegalArgumentException(String.format("Merkle root length is %d, expected to be %d", mc2scTransactionsMerkleRootHash.length, Utils.SHA256_LENGTH));
-        if(mc2scTransactions.size() == 0)
-            throw new IllegalArgumentException("MC2SC Transactions list is empty.");
+        if(mc2scTransactionsOutputs.size() == 0)
+            throw new IllegalArgumentException("MC2SC Transactions Outputs list is empty.");
 
-        MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(mainchainBlockHash, mc2scTransactionsMerkleRootHash, mc2scTransactions, timestamp);
+
+        ArrayList<byte[]> hashes = new ArrayList<>();
+        for(SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs)
+            hashes.add(t.hash());
+        byte[] mc2scTransactionsMerkleRootHash = MerkleTree.createMerkleTree(hashes).rootHash();
+
+        MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(mainchainBlockHash, mc2scTransactionsMerkleRootHash, mc2scTransactionsOutputs, timestamp);
         if(!transaction.semanticValidity())
             throw new IllegalArgumentException("Created transaction is semantically invalid. Proposed merkle root not equal to calculated one.");
         return transaction;

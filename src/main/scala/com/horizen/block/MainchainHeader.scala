@@ -32,6 +32,20 @@ class MainchainHeader(
   override type M = MainchainHeader
 
   override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer
+
+  def semanticValidity(): Boolean = {
+    if(hashPrevBlock == null || hashPrevBlock.length != 32
+        || hashMerkleRoot == null || hashMerkleRoot.length != 32
+        || hashReserved == null || hashReserved.length != 32
+        || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
+        || nonce == null || nonce.length != 32
+        || solution == null || solution.length != 32
+        || time <= 0
+      )
+      return false
+
+    true
+  }
 }
 
 
