@@ -3,7 +3,7 @@ package com.horizen.utils;
 import java.util.Arrays;
 
 // Wraps byte array without copying it and provides proper hashCode and compare methods implementation.
-public class ByteArrayWrapper {
+public class ByteArrayWrapper implements Comparable<ByteArrayWrapper>{
     private byte[] _dataRef;
 
     public ByteArrayWrapper(byte[] data) {
@@ -30,5 +30,18 @@ public class ByteArrayWrapper {
         if (obj == this)
             return true;
         return Arrays.equals(_dataRef, ((ByteArrayWrapper) obj)._dataRef);
+    }
+
+    @Override
+    public int compareTo(ByteArrayWrapper wrapper) {
+        int lengthDiff = _dataRef.length - wrapper._dataRef.length;
+        if(lengthDiff != 0)
+            return lengthDiff;
+        for(int i = 0; i < _dataRef.length; i++) {
+            int res = Byte.toUnsignedInt(_dataRef[i]) - Byte.toUnsignedInt(wrapper._dataRef[i]);
+            if(res != 0)
+                return res;
+        }
+        return 0;
     }
 }

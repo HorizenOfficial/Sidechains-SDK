@@ -1,11 +1,20 @@
 package com.horizen.utils;
 
+import javafx.util.Pair;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class MerkleTree
 {
-    private MerkleTree() {}
+    private int _leavesNumber;
+    private List<byte[]> _merkleTree;
+
+    private MerkleTree(int leavesNumber, List<byte[]> merkleTree) {
+        _leavesNumber = leavesNumber;
+        _merkleTree = merkleTree;
+    }
 
     // The Merkle root is based on a tree of hashes calculated from the transactions:
     //
@@ -36,7 +45,7 @@ public final class MerkleTree
     //       t1 t2  t3 t4  t5 t5  t5  t5
     //
     // For optimisation purpose, we don't need to calculate branch D to calculate CD, because C == D, so CD = hash(C+C)
-    public static List<byte[]> calculateMerkleTree(List<byte[]> leavesHashes) {
+    public static MerkleTree createMerkleTree(List<byte[]> leavesHashes) {
         if(leavesHashes == null || leavesHashes.size() == 0)
             throw new IllegalArgumentException("Non leaves provided. Merkle Tree can not be calculated.");
 
@@ -62,6 +71,58 @@ public final class MerkleTree
             levelSize = (levelSize + 1) / 2;
         }
 
-        return merkleTree;
+        return new MerkleTree(leavesHashes.size(), merkleTree);
+    }
+
+    public byte[] rootHash() {
+        return _merkleTree.get(_merkleTree.size() - 1);
+    }
+
+    public List<byte[]> toList() {
+        return _merkleTree;
+    }
+
+    public int leavesNumber() {
+        return _leavesNumber;
+    }
+
+    public List<byte[]> leaves() {
+        return _merkleTree.subList(0, _leavesNumber);
+    }
+
+    public MerklePath getMerklePathForLeaf(int leafIdx) {
+        if(leafIdx < 0 || leafIdx >= _leavesNumber)
+            throw new IllegalArgumentException("Leaf index is out of bound. Merkle Path can not be calculated.");
+
+        // offset in a merkleTree list.
+        int offset = 0;
+        // number of nodes on current level.
+        int levelSize = _leavesNumber;
+        int idxOnLevel = leafIdx;
+
+
+        // pair of <concatenation position> : <hash to concatenate>
+        ArrayList<Pair<Byte, byte[]>> merklePath = new ArrayList<>();
+
+        while(levelSize > 1) {
+            boolean isOdd = levelSize % 2 == 1;
+            if(isOdd && idxOnLevel == levelSize - 1) // last element on level with odd number of elements -> concatenate with itself
+                merklePath.add(new Pair<>((byte)1, _merkleTree.get(offset + idxOnLevel)));
+            else if(leafIdx % 2 == 1) // right child
+                merklePath.add(new Pair<>((byte)0, _merkleTree.get(offset + idxOnLevel - 1)));
+            else // left child
+                merklePath.add(new Pair<>((byte)1, _merkleTree.get(offset + idxOnLevel + 1)));
+
+            offset += levelSize;
+            // calculate next level size
+            levelSize = (levelSize + 1) / 2;
+            // calculate next level idx
+            idxOnLevel /= 2;
+        }
+        return new MerklePath(merklePath);
+    }
+
+    public boolean validateMerklePath(byte[] leaf, MerklePath merklePath) {
+        return Arrays.equals(rootHash(), merklePath.apply(leaf));
     }
 }

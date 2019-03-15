@@ -182,6 +182,11 @@
                     <include>regulartransaction_bytes</include>
                     <include>regularbox_bytes</include>
                     <include>certifierrightbox_bytes</include>
+                    <include>mcblock1</include>             <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
+                    <include>mctx_v1</include>              <!-- from https://explorer.zen-solutions.io/api/rawtx/6054f092033e5bb352d46ddb837b10da91eb43b40da46656e46140e3ce938db9 -->
+                    <include>mctx_v1_coinbase</include>     <!-- from https://explorer.zen-solutions.io/api/rawtx/e2f681e0431bc5f77299373632350ac493211fa8f3d0491a2d6c5e0284f5d377 -->
+                    <include>mctx_v2</include>              <!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
+                    <include>mctx_v-3</include>             <!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
                 </includes>
             </testResource>
         </testResources>
