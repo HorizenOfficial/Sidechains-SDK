@@ -1,22 +1,38 @@
 package com.horizen.fixtures
 
-import com.horizen.box.RegularBox
+import com.horizen.box.{CertifierRightBox, RegularBox}
+import com.horizen.proposition.PublicKey25519Proposition
+import java.util.{ArrayList => JArrayList, List => JList}
 
-import java.util.{List => JList}
-import java.util.{ArrayList => JArrayList}
+import scala.util.Random
 
 trait BoxFixture extends SecretFixture{
 
-  val rb1 : RegularBox = new RegularBox(pk1.publicImage, 1, 60)
-  val rb2 : RegularBox = new RegularBox(pk2.publicImage, 1, 50)
-  val rb3 : RegularBox = new RegularBox(pk3.publicImage, 1, 20)
-
-  def getBoxList () : JList[RegularBox] = {
-    val list : JList[RegularBox] = new JArrayList[RegularBox]()
-    list.add(rb1)
-    list.add(rb2)
-    list.add(rb3)
-    list
+  def getRegularBox () : RegularBox = {
+    new RegularBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
   }
 
+  def getRegularBoxList (count : Int) : JList[RegularBox] = {
+    val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getRegularBox())
+
+    boxList
+  }
+
+  def getCertifierRightBox () : CertifierRightBox = {
+    new CertifierRightBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+  }
+
+  def getCretifierRightBoxList (count : Int) : JList[CertifierRightBox] = {
+    val boxList : JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getCertifierRightBox())
+
+    boxList
+  }
 }
+
+class BoxFixtureClass extends BoxFixture

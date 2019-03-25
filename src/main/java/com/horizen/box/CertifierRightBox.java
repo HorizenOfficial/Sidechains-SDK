@@ -11,6 +11,8 @@ import java.util.Arrays;
 
 public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25519Proposition>
 {
+
+    public static final byte BOX_TYPE_ID = 2;
     // CertifierRightBox can be opened starting from specified Withdrawal epoch.
     private long _activeFromWithdrawalEpoch;
 
@@ -29,7 +31,7 @@ public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25
 
     @Override
     public byte boxTypeId() {
-        return 1;
+        return BOX_TYPE_ID;
     }
 
     @Override

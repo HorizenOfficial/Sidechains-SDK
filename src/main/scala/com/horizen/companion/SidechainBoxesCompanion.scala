@@ -1,26 +1,64 @@
 package com.horizen.companion
 
-import com.horizen.SidechainTypes
-import com.horizen.box.{Box, BoxSerializer, RegularBox, RegularBoxSerializer}
-import com.horizen.proposition.ProofOfKnowledgeProposition
-import com.horizen.secret.Secret
+import com.horizen.box._
 import scorex.core.ModifierTypeId
 import scorex.core.serialization.Serializer
 
-import scala.util.Try
+import scala.util.{Failure, Try}
+import com.google.common.primitives.Bytes
 
-case class SidechainBoxesCompanion(customBoxSerializers: Map[scorex.core.ModifierTypeId.Raw, BoxSerializer[SidechainTypes#B]])
-    extends Serializer[SidechainTypes#B] {
+import scala.collection.mutable.{Map, HashMap}
 
-  val coreBoxSerializers: Map[scorex.core.ModifierTypeId.Raw, _ <: BoxSerializer[_]] =
-    Map(new RegularBox(null, 0, 0).boxTypeId() -> RegularBoxSerializer.getSerializer())
+case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer[_ <: Box[_]]])
+    extends Serializer[Box[_]]
+{
 
-  val customBoxId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
+  val coreBoxSerializers: Map[Byte, _ <: BoxSerializer[Box[_]]] =
+    Map(RegularBox.BOX_TYPE_ID -> RegularBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[Box[_]]],
+      CertifierRightBox.BOX_TYPE_ID -> CertifierRightBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[Box[_]]])
+
+  val coreBoxType : Byte = (0: Byte)
+  val customBoxType : Byte =  Byte.MaxValue // TO DO: think about proper value
+
+  def registerCustomSerializer (box : Box[_]) : Unit = {
+    customBoxSerializers.put(box.boxTypeId(), box.serializer())
+  }
+
+  def unregisterCustomSerializer (box : Box[_]) : Unit = {
+    customBoxSerializers.remove(box.boxTypeId())
+  }
 
   // TO DO: do like in SidechainTransactionsCompanion
-  override def toBytes(obj: SidechainTypes#B): Array[Byte] = ???
+  override def toBytes(box: Box[_]): Array[Byte] = {
+    box match {
+      case b: RegularBox => Bytes.concat(Array(coreBoxType), Array(box.boxTypeId()),
+        box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
+      case b: CertifierRightBox => Bytes.concat(Array(coreBoxType), Array(box.boxTypeId()),
+        box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
+      case _ => Bytes.concat(Array(customBoxType), Array(box.boxTypeId()),
+        box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
+    }
+  }
 
   // TO DO: do like in SidechainTransactionsCompanion
-  override def parseBytes(bytes: Array[Byte]): Try[SidechainTypes#B] = ???
+  override def parseBytes(bytes: Array[Byte]): Try[Box[_]] = {
+    val boxType = bytes(0)
+    val boxTypeId = bytes(1)
+    boxType match {
+      case `coreBoxType` => coreBoxSerializers.get(boxTypeId) match {
+        case Some(b) => b.parseBytes(bytes.drop(2))
+        case None => Failure(new MatchError("Unknown core box type id"))
+      }
+      case `customBoxType` => customBoxSerializers.get(boxTypeId) match {
+        case Some(b) => b.parseBytes(bytes.drop(2))
+        case None => Failure(new MatchError("Unknown custom box type id"))
+      }
+      case _ => Failure(new MatchError("Unknown box type"))
+    }
+  }
+}
+
+object SidechainBoxesCompanion {
+  val sidechainBoxesCompanion : SidechainBoxesCompanion = new SidechainBoxesCompanion(new HashMap[scorex.core.ModifierTypeId.Raw, BoxSerializer[_ <: Box[_]]]())
 }
 

@@ -9,7 +9,7 @@ import scorex.core.serialization.Serializer;
 import java.util.HashMap;
 import java.util.List;
 
-class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestTransaction> implements TransactionSerializer<T>
+public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 

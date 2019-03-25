@@ -123,6 +123,14 @@
             <version>1.8.0-beta2</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
+        <dependency>
+            <groupId>org.scorexfoundation</groupId>
+            <artifactId>iodb_2.12</artifactId>
+            <version>0.3.2</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
@@ -140,14 +148,14 @@
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>compile</goal>
-<!--
+                            <!--
                             <goal>testCompile</goal>
 -->
                         </goals>
                     </execution>
                     <execution>
                         <id>compile-scala-tests</id>
-                        <phase>test-compile</phase>
+                        <phase>generate-test-sources</phase>
                         <goals>
                             <goal>testCompile</goal>
                         </goals>

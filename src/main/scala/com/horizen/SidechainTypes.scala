@@ -8,7 +8,7 @@ import com.horizen.transaction.BoxTransaction
 
 class SidechainTypes {
 
-  //type P = ProofOfKnowledgeProposition[Secret]
+  type S <: Secret
   type P <: Proposition
   type B <: Box[P]
   type BT <: BoxTransaction[P,B]

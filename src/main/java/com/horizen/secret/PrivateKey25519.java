@@ -16,6 +16,7 @@ import java.util.Arrays;
 public final class PrivateKey25519 implements Secret
 {
     public static final int KEY_LENGTH = Curve25519.KeyLength();
+    public static final byte SECRET_TYPE_ID = 0;
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;
@@ -35,7 +36,7 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public byte secretTypeId() {
-        return 0;
+        return SECRET_TYPE_ID;
     }
 
     @Override
@@ -93,5 +94,13 @@ public final class PrivateKey25519 implements Secret
     @Override
     public Signature25519 sign(byte[] message) {
         return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
+    }
+
+    @Override
+    public String toString() {
+        return "PrivateKey25519{" +
+                "_privateKeyBytes=" + Arrays.toString(_privateKeyBytes) +
+                ", _publicKeyBytes=" + Arrays.toString(_publicKeyBytes) +
+                '}';
     }
 }
