@@ -80,6 +80,12 @@ class TransactionCreatorNodeWallet implements NodeWallet {
         return filteredBoxes;
     }
 
+    //TODO Implement
+    @Override
+    public Long boxAmount(Class<? extends Box> type) {
+        return null;
+    }
+
     @Override
     public Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage) {
         for(Secret s : _secrets)

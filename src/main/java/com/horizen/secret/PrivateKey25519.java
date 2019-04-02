@@ -5,6 +5,7 @@ import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 
+import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -99,8 +100,8 @@ public final class PrivateKey25519 implements Secret
     @Override
     public String toString() {
         return "PrivateKey25519{" +
-                "_privateKeyBytes=" + Arrays.toString(_privateKeyBytes) +
-                ", _publicKeyBytes=" + Arrays.toString(_publicKeyBytes) +
+                "_privateKeyBytes=" + BytesUtils.toHexString(_privateKeyBytes) +
+                ", _publicKeyBytes=" + BytesUtils.toHexString(_publicKeyBytes) +
                 '}';
     }
 }

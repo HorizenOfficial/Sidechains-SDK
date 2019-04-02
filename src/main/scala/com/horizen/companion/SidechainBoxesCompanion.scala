@@ -20,20 +20,12 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
   val coreBoxType : Byte = (0: Byte)
   val customBoxType : Byte =  Byte.MaxValue // TO DO: think about proper value
 
-  def registerCustomSerializer (box : Box[_]) : Unit = {
-    customBoxSerializers.put(box.boxTypeId(), box.serializer())
-  }
-
-  def unregisterCustomSerializer (box : Box[_]) : Unit = {
-    customBoxSerializers.remove(box.boxTypeId())
-  }
-
   // TO DO: do like in SidechainTransactionsCompanion
   override def toBytes(box: Box[_]): Array[Byte] = {
     box match {
-      case b: RegularBox => Bytes.concat(Array(coreBoxType), Array(box.boxTypeId()),
+      case b: RegularBox => Bytes.concat(Array(box.boxTypeId()),
         box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
-      case b: CertifierRightBox => Bytes.concat(Array(coreBoxType), Array(box.boxTypeId()),
+      case b: CertifierRightBox => Bytes.concat(Array(box.boxTypeId()),
         box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
       case _ => Bytes.concat(Array(customBoxType), Array(box.boxTypeId()),
         box.serializer().asInstanceOf[BoxSerializer[Box[_]]].toBytes(box))
@@ -43,17 +35,16 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
   // TO DO: do like in SidechainTransactionsCompanion
   override def parseBytes(bytes: Array[Byte]): Try[Box[_]] = {
     val boxType = bytes(0)
-    val boxTypeId = bytes(1)
+    //val boxTypeId = bytes(1)
     boxType match {
-      case `coreBoxType` => coreBoxSerializers.get(boxTypeId) match {
-        case Some(b) => b.parseBytes(bytes.drop(2))
-        case None => Failure(new MatchError("Unknown core box type id"))
-      }
-      case `customBoxType` => customBoxSerializers.get(boxTypeId) match {
+      case `customBoxType` => customBoxSerializers.get(bytes(1)) match {
         case Some(b) => b.parseBytes(bytes.drop(2))
         case None => Failure(new MatchError("Unknown custom box type id"))
       }
-      case _ => Failure(new MatchError("Unknown box type"))
+      case _ => coreBoxSerializers.get(boxType) match {
+        case Some(b) => b.parseBytes(bytes.drop(1))
+        case None => Failure(new MatchError("Unknown core box type id"))
+      }
     }
   }
 }
