@@ -13,7 +13,7 @@ import scorex.util.ScorexLogging
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: SidechainBoxesCompanion)
+class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
 {
   // Version - block Id

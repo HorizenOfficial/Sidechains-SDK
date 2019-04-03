@@ -17,7 +17,7 @@ import com.horizen.utils.ByteArrayWrapper
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class SidechainSecretStorage(storage : Storage)(sidechainSecretsCompanion: SidechainSecretsCompanion)
+class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends ScorexLogging
 {
   // Version - public key bytes
