@@ -1,9 +1,18 @@
 package com.horizen.block
 
+import java.math.BigInteger
+
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.Try
+import java.time.Instant
+import java.util
+
+import com.google.common.primitives.{Bytes, Ints, UnsignedInts}
+import org.bouncycastle.crypto.digests.Blake2bDigest
+
+import scala.collection.mutable.ArrayBuffer
 
 //
 // Representation of MC header
@@ -24,7 +33,7 @@ class MainchainHeader(
                        val time: Int,                         // 4 bytes
                        val bits: Int,                         // 4 bytes
                        val nonce: Array[Byte],                // 32 bytes
-                       val solution: Array[Byte]              // 32 bytes
+                       val solution: Array[Byte]              // 1344 bytes + 3 bytes representing length
                     ) extends BytesSerializable {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
@@ -39,9 +48,34 @@ class MainchainHeader(
         || hashReserved == null || hashReserved.length != 32
         || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
         || nonce == null || nonce.length != 32
-        || solution == null || solution.length != 32
-        || time <= 0
+        || solution == null || solution.length != 1344
       )
+      return false
+
+    // Check if timestamp is valid and not too far in the future
+    if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2* 60 * 60 like in Horizen
+      return false
+
+    if(!checkProofOfWork())
+      return false
+
+    // check equihash for header bytes without solution part
+    if(!new Equihash(200, 9).checkEquihashSolution(mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - 1344 - 3), solution))
+      return false
+    true
+  }
+
+  private def checkProofOfWork(): Boolean = {
+    val target: BigInteger = Utils.decodeCompactBits(UnsignedInts.toLong(bits))
+    val maxTarget: BigInteger = new BigInteger("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16) // defined in Horizen Consensus::params.powLimit
+    val hashTarget: BigInteger = new BigInteger(1, hash)
+
+    // Check that target is not negative and is not below the minimum work defined in Horizen
+    if(target.signum() <= 0 || target.compareTo(maxTarget) > 0)
+      return false
+
+    // Check that block hash target is not greater than target.
+    if(hashTarget.compareTo(target) > 0)
       return false
 
     true
