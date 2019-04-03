@@ -48,7 +48,7 @@ class MainchainHeader(
         || hashReserved == null || hashReserved.length != 32
         || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
         || nonce == null || nonce.length != 32
-        || solution == null || solution.length != 1344
+        || solution == null || solution.length != 1344 // Note: actually solution length depends on Equihash (N, K) params, which are different for RegTest
       )
       return false
 
@@ -123,12 +123,11 @@ object MainchainHeader {
     val nonce: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    // To Do: expect here a VarInt = 1344, but the value is wrong. Why?
-    val solutionLengthBytes: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + 3)
-    currentOffset += 3
+    val solutionLength =  BytesUtils.getReversedVarInt(headerBytes, currentOffset)
+    currentOffset += solutionLength.size()
 
-    val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + 1344)
-    currentOffset += 1344
+    val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
+    currentOffset += solutionLength.value().intValue()
 
     new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashReserved, SCMapMerkleRoot, time, bits, nonce, solution)
   }
