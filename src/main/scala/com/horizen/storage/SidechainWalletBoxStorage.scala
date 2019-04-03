@@ -23,8 +23,11 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
   type B <: Box[_]
   type BoxClass = Class[B]
 
-  private val _walletBoxes = new mutable.LinkedHashMap[Array[Byte], WalletBox]()
-  private val _walletBoxesByType = new mutable.LinkedHashMap[BoxClass, mutable.Map[Array[Byte], WalletBox]]()
+  require(storage != null, "Storage must be NOT NULL.")
+  require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
+
+  private val _walletBoxes = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
+  private val _walletBoxesByType = new mutable.LinkedHashMap[BoxClass, mutable.Map[ByteArrayWrapper, WalletBox]]()
   private val _walletBoxesAmount = new mutable.LinkedHashMap[BoxClass, Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
@@ -37,14 +40,14 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
     val bc = walletBox.box.getClass.asInstanceOf[BoxClass]
     val t = _walletBoxesByType.get(bc)
     if (t.isEmpty) {
-      val m = new mutable.LinkedHashMap[Array[Byte], WalletBox]()
-      m.put(walletBox.box.id(), walletBox)
+      val m = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
+      m.put(new ByteArrayWrapper(walletBox.box.id()), walletBox)
       _walletBoxesByType.put(bc, m)
     } else
-      t.get.put(walletBox.box.id(), walletBox)
+      t.get.put(new ByteArrayWrapper(walletBox.box.id()), walletBox)
   }
 
-  private def removeWalletBoxByType(boxIdToRemove : Array[Byte]) : Unit = {
+  private def removeWalletBoxByType(boxIdToRemove : ByteArrayWrapper) : Unit = {
     for (bc <- _walletBoxesByType.keys)
       _walletBoxesByType(bc).remove(boxIdToRemove)
   }
@@ -55,15 +58,17 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
     for (wb <- storage.getAll.asScala){
       val walletBox = _walletBoxSerializer.parseBytes(wb.getValue.data)
       if (walletBox.isSuccess) {
-        _walletBoxes.put(walletBox.get.box.id(), walletBox.get)
+        _walletBoxes.put(new ByteArrayWrapper(walletBox.get.box.id()), walletBox.get)
         updateWalletBoxByType(walletBox.get)
-      }
+      } else
+        log.error("Error while WalletBox parsing.", walletBox)
+
     }
     calculateBoxesAmounts()
   }
 
   def get (boxId : Array[Byte]) : Option[WalletBox] = {
-    _walletBoxes.get(boxId)
+    _walletBoxes.get(new ByteArrayWrapper(boxId))
   }
 
   def get (boxIds : List[Array[Byte]]) : List[WalletBox] = {
@@ -92,11 +97,11 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
       List(new ByteArrayWrapper(boxIdToRemove)).asJava,
       List(new JPair(keyToUpdate, valueToUpdate)).asJava)
 
-    _walletBoxes.put(walletBoxToUpdate.box.id(), walletBoxToUpdate)
+    _walletBoxes.put(new ByteArrayWrapper(walletBoxToUpdate.box.id()), walletBoxToUpdate)
     updateWalletBoxByType(walletBoxToUpdate)
 
-    _walletBoxes.remove(boxIdToRemove)
-    removeWalletBoxByType(boxIdToRemove)
+    _walletBoxes.remove(new ByteArrayWrapper(boxIdToRemove))
+    removeWalletBoxByType(new ByteArrayWrapper(boxIdToRemove))
 
     calculateBoxesAmounts()
   }
@@ -106,15 +111,16 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     for (b <- boxIdsRemoveList) {
-      removeList.add(new ByteArrayWrapper(b))
-      _walletBoxes.remove(b)
-      removeWalletBoxByType(b)
+      val box = new ByteArrayWrapper(b)
+      removeList.add(new ByteArrayWrapper(box))
+      _walletBoxes.remove(box)
+      removeWalletBoxByType(box)
     }
 
     for (b <- walletBoxUpdateList) {
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(b.box.id()),
         new ByteArrayWrapper(_walletBoxSerializer.toBytes(b))))
-      _walletBoxes.put(b.box.id(), b)
+      _walletBoxes.put(new ByteArrayWrapper(b.box.id()), b)
       updateWalletBoxByType(b)
     }
 

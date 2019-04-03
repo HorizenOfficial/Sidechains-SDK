@@ -17,7 +17,6 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
     Map(RegularBox.BOX_TYPE_ID -> RegularBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[Box[_]]],
       CertifierRightBox.BOX_TYPE_ID -> CertifierRightBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[Box[_]]])
 
-  val coreBoxType : Byte = (0: Byte)
   val customBoxType : Byte =  Byte.MaxValue // TO DO: think about proper value
 
   // TO DO: do like in SidechainTransactionsCompanion

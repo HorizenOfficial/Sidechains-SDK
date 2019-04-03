@@ -45,7 +45,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
 class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage)
                      (applicationWallet: ApplicationWallet)
-  extends Wallet[Secret,
+  extends Wallet[SidechainTypes#S,
                  SidechainTypes#P,
                  SidechainTypes#BT,
                  SidechainBlock,
@@ -54,12 +54,13 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 {
   override type NVCT = SidechainWallet
 
+  require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
+
   // 1) check for existence
   // 2) try to store in SecretStoreusing SidechainSecretsCompanion
-  override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
-    secretStorage.update(secret)
-    if (applicationWallet != null)
-      applicationWallet.onAddSecret(secret)
+  override def addSecret(secret: SidechainTypes#S): Try[SidechainWallet] = Try {
+    secretStorage.add(secret)
+    applicationWallet.onAddSecret(secret)
     this
   }
 
@@ -67,18 +68,17 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: SidechainTypes#P): Try[SidechainWallet] = Try {
       secretStorage.remove(publicImage)
-      if (applicationWallet != null)
-        applicationWallet.onRemoveSecret(publicImage)
+      applicationWallet.onRemoveSecret(publicImage)
       this
   }
 
-  override def secret(publicImage: SidechainTypes#P): Option[Secret] = {
-    secretStorage.get(publicImage)
+  override def secret(publicImage: SidechainTypes#P): Option[SidechainTypes#S] = {
+    secretStorage.get(publicImage).asInstanceOf[Option[SidechainTypes#S]]
   }
 
   // get all secrets, use SidechainSecretsCompanion to deserialize
-  override def secrets(): immutable.Set[Secret] = {
-    secretStorage.getAll.toSet
+  override def secrets(): immutable.Set[SidechainTypes#S] = {
+    secretStorage.getAll.map(_.asInstanceOf[SidechainTypes#S]).toSet
   }
 
   // get all boxes as WalletBox object using SidechainBoxesCompanion
@@ -114,9 +114,8 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
     val boxIdsToRemove = changes.toRemove.map(_.boxId).map(new ByteArrayWrapper(_))
     walletBoxStorage.update(modifier.id.getBytes, newBoxes.toList, boxIdsToRemove.map(_.data).toList)
 
-    if (applicationWallet != null)
-      applicationWallet.onChangeBox(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
-        boxIdsToRemove.map(_.data).toList.asJava)
+    applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
+      boxIdsToRemove.map(_.data).toList.asJava)
 
     this
   }

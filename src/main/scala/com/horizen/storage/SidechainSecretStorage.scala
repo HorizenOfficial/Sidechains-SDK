@@ -23,6 +23,9 @@ class SidechainSecretStorage(storage : Storage)(sidechainSecretsCompanion: Sidec
   // Version - public key bytes
   // Key - byte array public key bytes?
 
+  require(storage != null, "Storage must be NOT NULL.")
+  require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
+
   private val _secrets = new mutable.LinkedHashMap[Proposition, Secret]()
 
   private def loadSecrets : Unit = {
@@ -31,6 +34,8 @@ class SidechainSecretStorage(storage : Storage)(sidechainSecretsCompanion: Sidec
       val secret = sidechainSecretsCompanion.parseBytes(s.getValue.data)
       if (secret.isSuccess)
         _secrets.put(secret.get.publicImage().asInstanceOf[Proposition], secret.get)
+      else
+        log.error("Error while secret key parsing.", secret)
     }
   }
 
@@ -54,7 +59,7 @@ class SidechainSecretStorage(storage : Storage)(sidechainSecretsCompanion: Sidec
     _secrets.values.toList
   }
 
-  def update (secret : Secret) : Unit = {
+  def add (secret : Secret) : Unit = {
     val version = new Array[Byte](32)
     val key = new ByteArrayWrapper(secret.publicImage().bytes)
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
@@ -67,7 +72,7 @@ class SidechainSecretStorage(storage : Storage)(sidechainSecretsCompanion: Sidec
       List(new JPair(key, value)).asJava)
   }
 
-  def update (secretList : List[Secret]) : Unit = {
+  def add (secretList : List[Secret]) : Unit = {
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
     val version = new Array[Byte](32)
 
