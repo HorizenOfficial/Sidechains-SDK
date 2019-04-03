@@ -82,8 +82,8 @@ class TransactionCreatorNodeWallet implements NodeWallet {
 
     //TODO Implement
     @Override
-    public Long boxAmount(Class<? extends Box> type) {
-        return null;
+    public Long boxesBalance(Class<? extends Box> type) {
+        return 0L;
     }
 
     @Override

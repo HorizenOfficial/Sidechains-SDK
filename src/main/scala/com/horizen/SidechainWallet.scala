@@ -151,8 +151,8 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
       .asJava
   }
 
-  override def boxAmount(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
-    walletBoxStorage.getBoxAmount(boxType)
+  override def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
+    walletBoxStorage.getBoxesBalance(boxType)
   }
 
   override def secretByPublicImage(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Secret = {

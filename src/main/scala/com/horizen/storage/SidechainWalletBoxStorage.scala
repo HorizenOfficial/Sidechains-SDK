@@ -28,12 +28,23 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
 
   private val _walletBoxes = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
   private val _walletBoxesByType = new mutable.LinkedHashMap[BoxClass, mutable.Map[ByteArrayWrapper, WalletBox]]()
-  private val _walletBoxesAmount = new mutable.LinkedHashMap[BoxClass, Long]()
+  private val _walletBoxesBalances = new mutable.LinkedHashMap[BoxClass, Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
-  private def calculateBoxesAmounts() : Unit = {
+  private def calculateBoxesBalances() : Unit = {
     for (bc <-_walletBoxesByType.keys)
-      _walletBoxesAmount.put(bc, _walletBoxesByType(bc).map(_._2.box.value()).sum)
+      _walletBoxesBalances.put(bc, _walletBoxesByType(bc).map(_._2.box.value()).sum)
+  }
+
+  private def updateBoxesBalance (boxToAdd : WalletBox, boxToRemove : WalletBox) : Unit = {
+    if (boxToAdd != null) {
+      val bca = boxToAdd.box.getClass.asInstanceOf[BoxClass]
+      _walletBoxesBalances.put(bca, _walletBoxesBalances.getOrElse(bca, 0L) + boxToAdd.box.value())
+    }
+    if (boxToRemove != null) {
+      val bcr = boxToRemove.box.getClass.asInstanceOf[BoxClass]
+      _walletBoxesBalances.put(bcr, _walletBoxesBalances.getOrElse(bcr, 0L) - boxToRemove.box.value())
+    }
   }
 
   private def updateWalletBoxByType(walletBox : WalletBox) : Unit = {
@@ -64,7 +75,7 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
         log.error("Error while WalletBox parsing.", walletBox)
 
     }
-    calculateBoxesAmounts()
+    calculateBoxesBalances()
   }
 
   def get (boxId : Array[Byte]) : Option[WalletBox] = {
@@ -85,25 +96,8 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
     _walletBoxesByType(boxType.asInstanceOf[BoxClass]).values.toList
   }
 
-  def getBoxAmount (boxType: Class[_ <: Box[_ <: Proposition]]): Long = {
-    _walletBoxesAmount(boxType.asInstanceOf[BoxClass])
-  }
-
-  def update (version : Array[Byte], walletBoxToUpdate : WalletBox, boxIdToRemove : Array[Byte]) : Unit = {
-    val keyToUpdate = new ByteArrayWrapper(walletBoxToUpdate.box.id())
-    val valueToUpdate = new ByteArrayWrapper(_walletBoxSerializer.toBytes(walletBoxToUpdate))
-
-    storage.update(new ByteArrayWrapper(version),
-      List(new ByteArrayWrapper(boxIdToRemove)).asJava,
-      List(new JPair(keyToUpdate, valueToUpdate)).asJava)
-
-    _walletBoxes.put(new ByteArrayWrapper(walletBoxToUpdate.box.id()), walletBoxToUpdate)
-    updateWalletBoxByType(walletBoxToUpdate)
-
-    _walletBoxes.remove(new ByteArrayWrapper(boxIdToRemove))
-    removeWalletBoxByType(new ByteArrayWrapper(boxIdToRemove))
-
-    calculateBoxesAmounts()
+  def getBoxesBalance (boxType: Class[_ <: Box[_ <: Proposition]]): Long = {
+    _walletBoxesBalances(boxType.asInstanceOf[BoxClass])
   }
 
   def update (version : Array[Byte], walletBoxUpdateList : List[WalletBox], boxIdsRemoveList : List[Array[Byte]]) : Unit = {
@@ -113,22 +107,24 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
     for (b <- boxIdsRemoveList) {
       val box = new ByteArrayWrapper(b)
       removeList.add(new ByteArrayWrapper(box))
-      _walletBoxes.remove(box)
+      val btr = _walletBoxes.remove(box)
       removeWalletBoxByType(box)
+      if (btr.isDefined)
+        updateBoxesBalance(null, btr.get)
     }
 
     for (b <- walletBoxUpdateList) {
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(b.box.id()),
         new ByteArrayWrapper(_walletBoxSerializer.toBytes(b))))
-      _walletBoxes.put(new ByteArrayWrapper(b.box.id()), b)
+      val bta = _walletBoxes.put(new ByteArrayWrapper(b.box.id()), b)
       updateWalletBoxByType(b)
+      if (bta.isEmpty)
+        updateBoxesBalance(b, null)
     }
 
     storage.update(new ByteArrayWrapper(version),
       removeList,
       updateList)
-
-    calculateBoxesAmounts()
   }
 
   def lastVesrionId : Optional[ByteArrayWrapper] = {
@@ -142,7 +138,7 @@ class SidechainWalletBoxStorage (storage : Storage)(sidechainBoxesCompanion: Sid
   def rollback (version : ByteArrayWrapper) : Unit = {
     storage.rollback(version)
     loadWalletBoxes()
-    calculateBoxesAmounts()
+    calculateBoxesBalances()
   }
 
 }

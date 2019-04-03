@@ -19,7 +19,7 @@ public interface NodeWallet {
 
     List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude);
 
-    Long boxAmount(Class<? extends Box> type);
+    Long boxesBalance(Class<? extends Box> type);
 
     Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage);
 
