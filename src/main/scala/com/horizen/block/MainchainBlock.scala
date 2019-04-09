@@ -1,5 +1,6 @@
 package com.horizen.block
 
+import java.io.ByteArrayOutputStream
 import java.util
 
 import com.google.common.primitives.{Bytes, Ints}
@@ -24,7 +25,7 @@ import scala.collection.JavaConverters._
 class MainchainBlock(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                    val SCMapMerklePath: Option[MerklePath]
+                    val SCMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
                     ) extends BytesSerializable {
 
   lazy val hash: Array[Byte] = header.hash
@@ -38,12 +39,44 @@ class MainchainBlock(
   def semanticValidity(): Boolean = {
     if(header == null || !header.semanticValidity())
       return false
-    if(sidechainRelatedAggregatedTransaction.isDefined != SCMapMerklePath.isDefined)
-      return false
 
-    if(sidechainRelatedAggregatedTransaction.isDefined) {
-      val rootHash: Array[Byte] = SCMapMerklePath.get.apply(sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
-      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, rootHash))
+    // check Block version
+    if(header.version == MainchainHeader.SCMAP_BLOCK_VERSION) {
+      if (util.Arrays.equals(header.hashSCMerkleRootsMap, new Array[Byte](32))) { // TO DO: put empty 32 bytes array to some Singletone class
+        // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
+        if (SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
+          return false
+      }
+      else {
+        if (SCMap.isEmpty)
+          return false
+
+        // verify SCMap Merkle root hash equals to one in the header.
+        val SCSeq = SCMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+        val sidechainsMerkleRootsHashesList = SCSeq.map(_._2).toList.asJava
+        val merkleTree: MerkleTree = MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList)
+        if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
+          return false
+
+        val sidechainMerkleRootHash = SCMap.get.get(new ByteArrayWrapper(new Array[Byte](32))) // TO DO: replace with real SC Id
+        if (sidechainMerkleRootHash.isEmpty) {
+          // there is no related outputs for current Sidechain, AggTx expected to be not defined.
+          return sidechainRelatedAggregatedTransaction.isEmpty
+        } else {
+          if (sidechainRelatedAggregatedTransaction.isEmpty)
+            return false
+
+          // verify AggTx
+          if (!util.Arrays.equals(sidechainRelatedAggregatedTransaction.get.mainchainBlockHash(), header.hash)
+            || !util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
+            || !sidechainRelatedAggregatedTransaction.get.semanticValidity())
+            return false
+        }
+      }
+    } else {
+      // Old Block version has no SCMap and AggTx, also Header.hashSCMerkleRootsMap bytes should be zero
+      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, new Array[Byte](32)) // TO DO: same as above
+          || SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
         return false
     }
 
@@ -84,26 +117,9 @@ object MainchainBlock {
                 (k, v.mc2scMerkleRootHash())
             }
 
-            // verify SCMap
-            val SCSeq = SCMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-            val sidechainsMerkleRootsHashesList = SCSeq.map(_._2).toList.asJava
-            val merkleTree: MerkleTree = MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList)
-            if(!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
-              throw new Exception("Mainchain Block MC2SCAggregatedTransactions were parsed, but lead to different SCMerkleRootsMap hash.")
-
-
             val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(sidechainId))
 
-            // Calculate MerklePath for current Sidechain in SCMap
-            val SCMapMerklePath: Option[MerklePath] = mc2scTransaction match {
-              case Some(_) =>
-                val indexOfSidechain = SCSeq.indexWhere(a => a._1.equals(new ByteArrayWrapper(sidechainId)))
-                Some(merkleTree.getMerklePathForLeaf(indexOfSidechain))
-
-              case None => None
-            }
-
-            Success(new MainchainBlock(header, mc2scTransaction, SCMapMerklePath))
+            Success(new MainchainBlock(header, mc2scTransaction, Option(SCMap)))
           }
 
           case _ =>
@@ -133,8 +149,8 @@ object MainchainBlock {
       case Success(header) =>
         offset += header.mainchainHeaderBytes.length
 
-        val transactionsSize: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
-        offset += transactionsSize.size()
+        val transactionsCount: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
+        offset += transactionsCount.size()
 
         // parse transactions
         var transactions: Seq[MainchainTransaction] = Seq[MainchainTransaction]()
@@ -144,6 +160,8 @@ object MainchainBlock {
           transactions = transactions :+ tx
           offset += tx.size
         }
+        if(transactions.size != transactionsCount.value())
+          throw new IllegalArgumentException("Input data corrupted. Actual Tx number parsed %d, expected %d".format(transactions.size, transactionsCount.value()))
 
         (header, transactions)
       case Failure(e) =>
@@ -161,9 +179,23 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
       case _ => 0
     }
 
-    val merklePathSize: Int = obj.SCMapMerklePath match {
-      case Some(path) => path.bytes.length
+    val SCMapSize: Int = obj.SCMap match {
+      case Some(scmap) => scmap.size * (32 + 32)
       case _ => 0
+    }
+    val SCMapBytes: Array[Byte] = {
+      if(SCMapSize == 0)
+        Array[Byte]()
+      else {
+        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+        obj.SCMap.get.foreach {
+          case (k, v) => {
+            stream.write(k.data())
+            stream.write(v)
+          }
+        }
+        stream.toByteArray
+      }
     }
 
     Bytes.concat(
@@ -171,8 +203,8 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
       obj.header.bytes,
       Ints.toByteArray(mc2scAggregatedTransactionSize),
       if (mc2scAggregatedTransactionSize == 0) Array[Byte]() else obj.sidechainRelatedAggregatedTransaction.get.bytes,
-      Ints.toByteArray(merklePathSize),
-      if (merklePathSize == 0) Array[Byte]() else obj.SCMapMerklePath.get.bytes
+      Ints.toByteArray(SCMapSize),
+      SCMapBytes
     )
   }
 
@@ -198,16 +230,25 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
     }
     offset += mc2scAggregatedTransactionSize
 
-    val merklePathSize: Int = BytesUtils.getInt(bytes, offset)
+    val SCMapSize: Int = BytesUtils.getInt(bytes, offset)
     offset += 4
 
-    val SCMapMerklePath: Option[MerklePath] = {
-      if (merklePathSize > 0)
-        Some(MerklePath.parseBytes(bytes.slice(offset, offset + merklePathSize)).get)
+    if(offset + SCMapSize != bytes.length)
+      throw new IllegalArgumentException("Input data corrupted.")
+
+    val SCMap: Option[Map[ByteArrayWrapper, Array[Byte]]] = {
+      if(SCMapSize > 0) {
+        val scmap = Map[ByteArrayWrapper, Array[Byte]]()
+        while(offset < bytes.length) {
+          scmap.put(new ByteArrayWrapper(bytes.slice(offset, offset + 32)), bytes.slice(offset + 32, offset + 64))
+          offset += 64
+        }
+        Some(scmap)
+      }
       else
         None
     }
 
-    new MainchainBlock(header, mc2scTx, SCMapMerklePath)
+    new MainchainBlock(header, mc2scTx, SCMap)
   }
 }

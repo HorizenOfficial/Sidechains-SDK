@@ -2,17 +2,12 @@ package com.horizen.block
 
 import java.math.BigInteger
 
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.Try
 import java.time.Instant
-import java.util
-
-import com.google.common.primitives.{Bytes, Ints, UnsignedInts}
-import org.bouncycastle.crypto.digests.Blake2bDigest
-
-import scala.collection.mutable.ArrayBuffer
+import com.google.common.primitives.UnsignedInts
 
 //
 // Representation of MC header
@@ -105,7 +100,7 @@ object MainchainHeader {
     val hashReserved: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val SCMapMerkleRoot: Array[Byte] = version match {
+    val hashSCMerkleRootsMap: Array[Byte] = version match {
       case SCMAP_BLOCK_VERSION =>
         val tmpOffset = currentOffset
         currentOffset += 32
@@ -129,7 +124,7 @@ object MainchainHeader {
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
     currentOffset += solutionLength.value().intValue()
 
-    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashReserved, SCMapMerkleRoot, time, bits, nonce, solution)
+    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashReserved, hashSCMerkleRootsMap, time, bits, nonce, solution)
   }
 }
 
