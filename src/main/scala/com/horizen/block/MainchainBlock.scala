@@ -89,7 +89,7 @@ object MainchainBlock {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE = 2048 * 1024 //2048K
 
-  def create(mainchainBlockBytes: Array[Byte], sidechainId: Array[Byte]): Try[MainchainBlock] = {
+  def create(mainchainBlockBytes: Array[Byte], sidechainId: Array[Byte]): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(sidechainId.length == 32)
 
