@@ -13,6 +13,7 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.secret._
 import com.horizen.proposition._
 import com.horizen.utils.ByteArrayWrapper
+import scorex.crypto.hash.Blake2b256
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -20,34 +21,40 @@ import scala.collection.mutable.ListBuffer
 class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends ScorexLogging
 {
-  // Version - public key bytes
-  // Key - byte array public key bytes?
+  // Version - RandomBytes(32)
+  // Key - Blake2b256 hash from public key bytes
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
 
-  private val _secrets = new mutable.LinkedHashMap[Proposition, Secret]()
+  private val _secrets = new mutable.LinkedHashMap[ByteArrayWrapper, Secret]()
+
+  private def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
+    new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
+  }
 
   private def loadSecrets : Unit = {
     _secrets.clear()
     for (s <- storage.getAll.asScala) {
       val secret = sidechainSecretsCompanion.parseBytes(s.getValue.data)
       if (secret.isSuccess)
-        _secrets.put(secret.get.publicImage().asInstanceOf[Proposition], secret.get)
+        _secrets.put(calculateKey(secret.get.publicImage()), secret.get)
       else
-        log.error("Error while secret key parsing.", secret)
+        throw new RuntimeException("Error while secret key parsing.")
     }
   }
 
-  def get (proposition : Proposition) : Option[Secret] = {
-    _secrets.get(proposition)
+  loadSecrets
+
+  def get (proposition : ProofOfKnowledgeProposition[_ <: Secret]) : Option[Secret] = {
+    _secrets.get(calculateKey(proposition))
   }
 
-  def get (propositions : List[Proposition]) : List[Secret] = {
+  def get (propositions : List[ProofOfKnowledgeProposition[_ <: Secret]]) : List[Secret] = {
     val secretList = new ListBuffer[Secret]()
 
     for (p <- propositions) {
-      val s = _secrets.get(p)
+      val s = _secrets.get(calculateKey(p))
       if (s.isDefined)
         secretList.append(s.get)
     }
@@ -59,63 +66,76 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     _secrets.values.toList
   }
 
-  def add (secret : Secret) : Unit = {
+  def add (secret : Secret) : Try[SidechainSecretStorage] = Try {
     val version = new Array[Byte](32)
-    val key = new ByteArrayWrapper(secret.publicImage().bytes)
+    val key = calculateKey(secret.publicImage())
+
+    require(!_secrets.contains(key), "Key alredy exists - " + secret)
+
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.put(secret.publicImage().asInstanceOf[Proposition], secret)
+    _secrets.put(key, secret)
     storage.update(new ByteArrayWrapper(version),
       List[ByteArrayWrapper]().asJava,
       List(new JPair(key, value)).asJava)
+
+    this
   }
 
-  def add (secretList : List[Secret]) : Unit = {
+  def add (secretList : List[Secret]) : Try[SidechainSecretStorage] = Try {
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
     val version = new Array[Byte](32)
 
     scala.util.Random.nextBytes(version)
 
     for (s <- secretList) {
-      _secrets.put(s.publicImage().asInstanceOf[Proposition], s)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(s.publicImage().bytes),
+      val key = calculateKey(s.publicImage())
+      require(!_secrets.contains(key), "Key already exists - " + s)
+      _secrets.put(key, s)
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](key,
         new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
     }
 
     storage.update(new ByteArrayWrapper(version),
       List[ByteArrayWrapper]().asJava,
       updateList)
+
+    this
   }
 
-  def remove (proposition : Proposition) : Unit = {
+  def remove (proposition : ProofOfKnowledgeProposition[_ <: Secret]) : Try[SidechainSecretStorage] = Try {
     val version = new Array[Byte](32)
-    val key = new ByteArrayWrapper(proposition.bytes)
+    val key = calculateKey(proposition)
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.remove(proposition)
+    _secrets.remove(key)
     storage.update(new ByteArrayWrapper(version),
       List(key).asJava,
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava)
+
+    this
   }
 
-  def remove (propositionList : List[Proposition]) : Unit = {
+  def remove (propositionList : List[ProofOfKnowledgeProposition[_ <: Secret]]) : Try[SidechainSecretStorage] = Try {
     val removeList = new JArrayList[ByteArrayWrapper]()
     val version = new Array[Byte](32)
 
     scala.util.Random.nextBytes(version)
 
     for (p <- propositionList) {
-      _secrets.remove(p)
-      removeList.add(new ByteArrayWrapper(p.bytes))
+      val key = calculateKey(p)
+      _secrets.remove(key)
+      removeList.add(key)
     }
 
     storage.update(new ByteArrayWrapper(version),
       removeList,
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava)
 
+    this
   }
 
 }

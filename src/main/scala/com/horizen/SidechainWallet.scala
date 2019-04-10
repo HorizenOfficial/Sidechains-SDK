@@ -45,8 +45,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
 class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage)
                      (applicationWallet: ApplicationWallet)
-  extends Wallet[SidechainTypes#S,
-                 SidechainTypes#P,
+  extends Wallet[Secret,
+                 ProofOfKnowledgeProposition[_ <: Secret],
                  SidechainTypes#BT,
                  SidechainBlock,
                  SidechainWallet]
@@ -58,7 +58,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   // 1) check for existence
   // 2) try to store in SecretStoreusing SidechainSecretsCompanion
-  override def addSecret(secret: SidechainTypes#S): Try[SidechainWallet] = Try {
+  override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
     secretStorage.add(secret)
     applicationWallet.onAddSecret(secret)
     this
@@ -66,19 +66,19 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   // 1) check for existence
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
-  override def removeSecret(publicImage: SidechainTypes#P): Try[SidechainWallet] = Try {
+  override def removeSecret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Try[SidechainWallet] = Try {
       secretStorage.remove(publicImage)
       applicationWallet.onRemoveSecret(publicImage)
       this
   }
 
-  override def secret(publicImage: SidechainTypes#P): Option[SidechainTypes#S] = {
-    secretStorage.get(publicImage).asInstanceOf[Option[SidechainTypes#S]]
+  override def secret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Option[Secret] = {
+    secretStorage.get(publicImage)
   }
 
   // get all secrets, use SidechainSecretsCompanion to deserialize
-  override def secrets(): immutable.Set[SidechainTypes#S] = {
-    secretStorage.getAll.map(_.asInstanceOf[SidechainTypes#S]).toSet
+  override def secrets(): immutable.Set[Secret] = {
+    secretStorage.getAll.toSet
   }
 
   // get all boxes as WalletBox object using SidechainBoxesCompanion
@@ -87,8 +87,8 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   }
 
   // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
-  override def publicKeys(): immutable.Set[SidechainTypes#P] = {
-    secretStorage.getAll.map(_.publicImage().asInstanceOf[SidechainTypes#P]).toSet
+  override def publicKeys(): immutable.Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
+    secretStorage.getAll.map(_.publicImage()).toSet
   }
 
   // just do nothing, we don't need to care about offchain objects inside the wallet
@@ -101,8 +101,9 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // update boxes in BoxStore
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
     val changes = SidechainState.changes(modifier).get
+    val pubKeys = publicKeys().map(_.bytes)
 
-    val newBoxes = changes.toAppend.filter(s => publicKeys().contains(s.box.proposition().asInstanceOf[SidechainTypes#P]))
+    val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.bytes))
         .map(_.box)
         .map { box =>
                val boxTransaction = modifier.transactions.find(t => t.newBoxes().asScala.exists(tb => java.util.Arrays.equals(tb.id, box.id)))

@@ -4,7 +4,7 @@ import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 
 
-interface SecretCompanion<S extends Secret, P extends ProofOfKnowledgeProposition<S>, PR extends ProofOfKnowledge<S,P>>
+public interface SecretCompanion<S extends Secret, P extends ProofOfKnowledgeProposition<S>, PR extends ProofOfKnowledge<S,P>>
 {
     boolean verify(byte[] message, P publicImage, PR proof);
 

@@ -1,7 +1,7 @@
 package com.horizen.fixtures
 
-import com.horizen.box.{CertifierRightBox, RegularBox}
-import com.horizen.proposition.PublicKey25519Proposition
+import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import scala.util.Random
