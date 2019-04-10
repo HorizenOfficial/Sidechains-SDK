@@ -2,6 +2,8 @@ package com.horizen.utils;
 
 import org.junit.Test;
 
+import java.math.BigInteger;
+
 import static org.junit.Assert.*;
 
 public class UtilsTest {
@@ -32,5 +34,13 @@ public class UtilsTest {
 
         assertEquals("Hash length expected to be 32", Utils.SHA256_LENGTH, res.length);
         assertEquals("Different hash value expected", expectedRes, BytesUtils.toHexString(res));
+    }
+
+    @Test
+    public void UtilsTest_compactEncoding() throws Exception {
+        assertEquals(new BigInteger("1234560000", 16), Utils.decodeCompactBits(0x05123456L));
+        assertEquals(new BigInteger("c0de000000", 16), Utils.decodeCompactBits(0x0600c0de));
+        assertEquals(0x05123456L, Utils.encodeCompactBits(new BigInteger("1234560000", 16)));
+        assertEquals(0x0600c0deL, Utils.encodeCompactBits(new BigInteger("c0de000000", 16)));
     }
 }
