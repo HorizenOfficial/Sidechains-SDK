@@ -5,6 +5,7 @@ import java.util
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
@@ -36,8 +37,8 @@ class MainchainBlock(
 
   override def serializer: Serializer[MainchainBlock] = MainchainBlockSerializer
 
-  def semanticValidity(): Boolean = {
-    if(header == null || !header.semanticValidity())
+  def semanticValidity(params: NetworkParams): Boolean = {
+    if(header == null || !header.semanticValidity(params))
       return false
 
     // check Block version
@@ -89,7 +90,7 @@ object MainchainBlock {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE = 2048 * 1024 //2048K
 
-  def create(mainchainBlockBytes: Array[Byte], sidechainId: Array[Byte]): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
+  def create(mainchainBlockBytes: Array[Byte], sidechainId: Array[Byte], params: NetworkParams): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(sidechainId.length == 32)
 
@@ -134,7 +135,7 @@ object MainchainBlock {
     if(tryBlock.isFailure)
       tryBlock
     else {
-      if(!tryBlock.get.semanticValidity())
+      if(!tryBlock.get.semanticValidity(params))
         throw new Exception("Mainchain Block bytes were parsed, but lead to semantically invalid data.")
       else
         tryBlock

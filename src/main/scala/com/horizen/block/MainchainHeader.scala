@@ -7,7 +7,9 @@ import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.Try
 import java.time.Instant
+
 import com.google.common.primitives.UnsignedInts
+import com.horizen.params.NetworkParams
 
 //
 // Representation of MC header
@@ -37,7 +39,7 @@ class MainchainHeader(
 
   override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer
 
-  def semanticValidity(): Boolean = {
+  def semanticValidity(params: NetworkParams): Boolean = {
     if(hashPrevBlock == null || hashPrevBlock.length != 32
         || hashMerkleRoot == null || hashMerkleRoot.length != 32
         || hashReserved == null || hashReserved.length != 32
@@ -51,28 +53,12 @@ class MainchainHeader(
     if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2* 60 * 60 like in Horizen
       return false
 
-    if(!checkProofOfWork())
+    if(!ProofOfWorkVerifier.checkProofOfWork(this, params))
       return false
 
     // check equihash for header bytes without solution part
-    if(!new Equihash(200, 9).checkEquihashSolution(mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - 1344 - 3), solution))
+    if(!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashSolutionLength), solution))
       return false
-    true
-  }
-
-  private def checkProofOfWork(): Boolean = {
-    val target: BigInteger = Utils.decodeCompactBits(UnsignedInts.toLong(bits))
-    val maxTarget: BigInteger = new BigInteger("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16) // defined in Horizen Consensus::params.powLimit
-    val hashTarget: BigInteger = new BigInteger(1, hash)
-
-    // Check that target is not negative and is not below the minimum work defined in Horizen
-    if(target.signum() <= 0 || target.compareTo(maxTarget) > 0)
-      return false
-
-    // Check that block hash target is not greater than target.
-    if(hashTarget.compareTo(target) > 0)
-      return false
-
     true
   }
 }

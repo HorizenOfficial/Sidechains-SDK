@@ -7,6 +7,7 @@ import java.util
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.ScorexEncoding
 import com.horizen.box.Box
+import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
@@ -73,7 +74,7 @@ class SidechainBlock (
     )
   }
 
-  def semanticValidity(): Boolean = {
+  def semanticValidity(params: NetworkParams): Boolean = {
     if(parentId == null || parentId.length != 32
         || sidechainTransactions == null
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
@@ -91,7 +92,7 @@ class SidechainBlock (
 
     // check blocks and txs validity
     for(b <- mainchainBlocks)
-      if(!b.semanticValidity())
+      if(!b.semanticValidity(params))
         return false
     for(tx <- sidechainTransactions)
       if(!tx.semanticValidity())
@@ -115,7 +116,8 @@ object SidechainBlock extends ScorexEncoding {
              timestamp: Block.Timestamp,
              mainchainBlocks : Seq[MainchainBlock],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
-             ownerPrivateKey: PrivateKey25519
+             ownerPrivateKey: PrivateKey25519,
+             params: NetworkParams
             ) : Try[SidechainBlock] = {
     require(parentId.length == 32)
     require(mainchainBlocks != null && mainchainBlocks.size <= SidechainBlock.MAX_MC_BLOCKS_NUMBER)
@@ -142,7 +144,7 @@ object SidechainBlock extends ScorexEncoding {
       signature
     )
 
-    if(!block.semanticValidity())
+    if(!block.semanticValidity(params))
       throw new Exception("Sidechain Block is semantically invalid.")
 
     Success(block)
