@@ -4,10 +4,10 @@ import java.math.BigInteger
 
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
-
   val EquihashN: Int
   val EquihashK: Int
-  val EquihashSolutionLength: Int // VarInt length + solution bytes length
+  val EquihashVarIntLength: Int // VarInt value length for Equihash solution bytes
+  val EquihashSolutionLength: Int // solution bytes length
 
   val powLimit: BigInteger
   val nPowAveragingWindow: Int
@@ -17,4 +17,9 @@ trait NetworkParams {
   final def averagingWindowTimespan: Int = nPowAveragingWindow * nPowTargetSpacing
   final def MinActualTimespan: Int = (averagingWindowTimespan * (100 - nPowMaxAdjustUp  )) / 100
   final def MaxActualTimespan: Int = (averagingWindowTimespan * (100 + nPowMaxAdjustDown)) / 100
+
+
+  // Sidechain params:
+  val zeroHashBytes: Array[Byte] = new Array[Byte](32)
+  val sidechainId: Array[Byte]
 }

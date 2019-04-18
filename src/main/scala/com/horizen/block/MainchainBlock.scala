@@ -43,7 +43,7 @@ class MainchainBlock(
 
     // check Block version
     if(header.version == MainchainHeader.SCMAP_BLOCK_VERSION) {
-      if (util.Arrays.equals(header.hashSCMerkleRootsMap, new Array[Byte](32))) { // TO DO: put empty 32 bytes array to some Singletone class
+      if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
         // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
         if (SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
           return false
@@ -59,7 +59,7 @@ class MainchainBlock(
         if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
           return false
 
-        val sidechainMerkleRootHash = SCMap.get.get(new ByteArrayWrapper(new Array[Byte](32))) // TO DO: replace with real SC Id
+        val sidechainMerkleRootHash = SCMap.get.get(new ByteArrayWrapper(params.sidechainId))
         if (sidechainMerkleRootHash.isEmpty) {
           // there is no related outputs for current Sidechain, AggTx expected to be not defined.
           return sidechainRelatedAggregatedTransaction.isEmpty
@@ -76,7 +76,7 @@ class MainchainBlock(
       }
     } else {
       // Old Block version has no SCMap and AggTx, also Header.hashSCMerkleRootsMap bytes should be zero
-      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, new Array[Byte](32)) // TO DO: same as above
+      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)
           || SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
         return false
     }
@@ -90,9 +90,9 @@ object MainchainBlock {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE = 2048 * 1024 //2048K
 
-  def create(mainchainBlockBytes: Array[Byte], sidechainId: Array[Byte], params: NetworkParams): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
+  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
-    require(sidechainId.length == 32)
+    require(params.sidechainId.length == 32)
 
     val tryBlock: Try[MainchainBlock] = parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, mainchainTxs)) =>
@@ -107,7 +107,7 @@ object MainchainBlock {
             for (id <- scIds) {
               var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
               for (tx <- mainchainTxs) {
-                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(sidechainId))
+                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(params.sidechainId))
                 // TO DO: put Certificate and FraudReports processing later.
               }
               aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(header.hash, sidechainRelatedTransactionsOutputs, header.time))
@@ -118,7 +118,7 @@ object MainchainBlock {
                 (k, v.mc2scMerkleRootHash())
             }
 
-            val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(sidechainId))
+            val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
 
             Success(new MainchainBlock(header, mc2scTransaction, Option(SCMap)))
           }

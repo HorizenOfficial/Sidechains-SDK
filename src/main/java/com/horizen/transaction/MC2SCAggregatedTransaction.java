@@ -113,7 +113,9 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     public boolean semanticValidity() {
         // Transaction is valid if it contains all mc2sc transactions and merkle root based on them is equal to the one defined in constructor.
-        if(_mc2scTransactionsOutputs == null || _mc2scTransactionsOutputs.size() == 0)
+        if(_mainchainBlockHash == null || _mainchainBlockHash.length != 32
+                || _mc2scTransactionsMerkleRootHash == null || _mc2scTransactionsMerkleRootHash.length != 32
+                || _mc2scTransactionsOutputs == null || _mc2scTransactionsOutputs.size() == 0)
             return false;
 
         ArrayList<byte[]> hashes = new ArrayList<>();

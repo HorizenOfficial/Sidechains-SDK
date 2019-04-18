@@ -1,14 +1,11 @@
 package com.horizen.block
 
-import java.math.BigInteger
-
 import com.horizen.utils.{BytesUtils, Utils}
 import scorex.core.serialization.{BytesSerializable, Serializer}
 
 import scala.util.Try
 import java.time.Instant
 
-import com.google.common.primitives.UnsignedInts
 import com.horizen.params.NetworkParams
 
 //
@@ -30,7 +27,7 @@ class MainchainHeader(
                        val time: Int,                         // 4 bytes
                        val bits: Int,                         // 4 bytes
                        val nonce: Array[Byte],                // 32 bytes
-                       val solution: Array[Byte]              // 1344 bytes + 3 bytes representing length
+                       val solution: Array[Byte]              // depends on NetworkParams
                     ) extends BytesSerializable {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
@@ -45,19 +42,22 @@ class MainchainHeader(
         || hashReserved == null || hashReserved.length != 32
         || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
         || nonce == null || nonce.length != 32
-        || solution == null || solution.length != 1344 // Note: actually solution length depends on Equihash (N, K) params, which are different for RegTest
+        || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
       )
       return false
 
     // Check if timestamp is valid and not too far in the future
-    if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2* 60 * 60 like in Horizen
+    if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen
       return false
 
     if(!ProofOfWorkVerifier.checkProofOfWork(this, params))
       return false
 
     // check equihash for header bytes without solution part
-    if(!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashSolutionLength), solution))
+    if(!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
+        mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
+        solution)
+    )
       return false
     true
   }
@@ -66,7 +66,7 @@ class MainchainHeader(
 
 object MainchainHeader {
   val SCMAP_BLOCK_VERSION: Int = 0xFFFFFFFC // -4
-  val MIN_HEADER_SIZE: Int = 140 + 3 + 1344 // + 32 (for SCMapHash size)
+  val MIN_HEADER_SIZE: Int = 140 // + 32 (for SCMapHash size)
 
   def create(headerBytes: Array[Byte], offset: Int): Try[MainchainHeader] = Try {
     if(offset < 0 || headerBytes.length - offset < MIN_HEADER_SIZE)
