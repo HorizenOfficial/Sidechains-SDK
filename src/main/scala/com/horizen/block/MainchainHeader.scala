@@ -32,6 +32,8 @@ class MainchainHeader(
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
 
+  lazy val hashHex: String = BytesUtils.toHexString(hash)
+
   override type M = MainchainHeader
 
   override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer

@@ -123,6 +123,36 @@ public final class BytesUtils {
         }
     }
 
+    // Get byte array from VarInt value
+    public static byte[] fromVarInt(VarInt vi) {
+        byte[] res = new byte[vi.size()];
+        switch (vi.size()) {
+            case 1:
+                res[0] = (byte) (vi.value() & 255L);
+            case 3:
+                res[0] = (byte)253;
+                res[1] = (byte) (vi.value() & 255L);
+                res[2] = (byte) ((vi.value() >> 8) & 255L);
+            case 5:
+                res[0] = (byte)254;
+                res[1] = (byte) (vi.value() & 255L);
+                res[2] = (byte) ((vi.value() >> 8) & 255L);
+                res[3] = (byte) ((vi.value() >> 16) & 255L);
+                res[4] = (byte) ((vi.value() >> 24) & 255L);
+            case 9:
+                res[0] = (byte)255;
+                res[1] = (byte) (vi.value() & 255L);
+                res[2] = (byte) ((vi.value() >> 8) & 255L);
+                res[3] = (byte) ((vi.value() >> 16) & 255L);
+                res[4] = (byte) ((vi.value() >> 24) & 255L);
+                res[5] = (byte) ((vi.value() >> 32) & 255L);
+                res[6] = (byte) ((vi.value() >> 40) & 255L);
+                res[7] = (byte) ((vi.value() >> 48) & 255L);
+                res[8] = (byte) ((vi.value() >> 56) & 255L);
+        }
+        return res;
+    }
+
     // Get reversed copy of byte array
     public static byte[] reverseBytes(byte[] bytes) {
         byte[] res = new byte[bytes.length];

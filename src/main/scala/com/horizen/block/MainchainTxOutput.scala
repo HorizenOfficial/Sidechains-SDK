@@ -5,7 +5,8 @@ import scorex.core.serialization.{BytesSerializable, Serializer}
 import scala.util.Try
 
 trait MainchainTxOutput extends BytesSerializable
-
+// inchainTxOutput
+// crosschainTxOutput
 
 class MainchainTxOutputV1(
                            val value: Long,
