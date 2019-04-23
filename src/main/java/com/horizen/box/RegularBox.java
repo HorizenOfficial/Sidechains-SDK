@@ -32,6 +32,16 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
     }
 
     @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    @Override
     public BoxSerializer serializer() {
         return RegularBoxSerializer.getSerializer();
     }
@@ -47,4 +57,5 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
             return new Failure<>(e);
         }
     }
+
 }

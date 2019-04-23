@@ -6,6 +6,7 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretCompanion;
 import com.horizen.secret.SecretSerializer;
+import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -93,5 +94,13 @@ public class CustomPrivateKey implements Secret
         int result = Arrays.hashCode(_privateKeyBytes);
         result = 31 * result + Arrays.hashCode(_publicKeyBytes);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "CustomPrivateKey{" +
+                "_privateKeyBytes=" + BytesUtils.toHexString(_privateKeyBytes) +
+                ", _publicKeyBytes=" + BytesUtils.toHexString(_publicKeyBytes) +
+                '}';
     }
 }

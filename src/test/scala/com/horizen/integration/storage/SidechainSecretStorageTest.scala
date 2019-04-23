@@ -1,18 +1,15 @@
-package com.horizen.storage
+package com.horizen.integration.storage
 
-import java.util.{List => JList}
-
-import com.horizen.LSMStore
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
+import com.horizen.fixtures._
+import com.horizen.secret._
+import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage}
+import org.junit.Assert._
+import org.junit.Test
+import org.scalatest.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
-import org.scalatest.junit.JUnitSuite
-import org.junit.{Before, Test}
-import org.junit.Assert._
-import com.horizen.secret._
-import com.horizen.fixtures._
-
 import scala.collection.mutable.Map
 
 class SidechainSecretStorageTest
@@ -108,7 +105,7 @@ class SidechainSecretStorageTest
       ss2 = new SidechainSecretStorage(new IODBStoreAdapter(store2), sidechainSecretsCompanion)
       secret2 = ss2.get(secret.publicImage())
     } catch {
-      case _ => exceptionThrown = true
+      case _ : Throwable => exceptionThrown = true
     }
 
     assertFalse("Exception must not be thrown for custom secret type.", exceptionThrown)

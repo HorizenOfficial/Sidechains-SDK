@@ -14,7 +14,7 @@ import scorex.core.NodeViewModifier
 
 import scala.util.{Try, Success, Failure}
 
-case class WalletBox(box: SidechainTypes#B, transactionId: Array[Byte], createdAt: Long)
+class WalletBox(val box: Box[_ <: Proposition], val transactionId: Array[Byte], val createdAt: Long)
 //  extends BytesSerializable
   extends scorex.core.utils.ScorexEncoding
 {
@@ -25,6 +25,15 @@ case class WalletBox(box: SidechainTypes#B, transactionId: Array[Byte], createdA
 
   def serializer (sidechainBoxesCompanion: SidechainBoxesCompanion) : WalletBoxSerializer = {
     new WalletBoxSerializer(sidechainBoxesCompanion)
+  }
+
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case wb: WalletBox => box.equals(wb.box) && transactionId.deep.equals(wb.transactionId.deep) && createdAt.equals(wb.createdAt)
+      case _ => false
+    }
   }
 
 }
@@ -45,9 +54,9 @@ class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
       val boxBytes = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
       val box = sidechainBoxesCompanion.parseBytes(boxBytes)
       if (box.isSuccess)
-        Success(WalletBox(box.get.asInstanceOf[SidechainTypes#B], txId, createdAt))
+        Success(new WalletBox(box.get, txId, createdAt))
       else
-        Failure(box.asInstanceOf[Failure[Box[_]]].exception)
+        Failure(box.asInstanceOf[Failure[Box[_ <: Proposition]]].exception)
     } catch {
       case e : Throwable => Failure(e)
     }

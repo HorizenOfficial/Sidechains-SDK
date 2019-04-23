@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional, List => JList, Map => JMap}
+import java.util.{Optional, List => JList, Map => JMap, Arrays => JArrays}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -43,8 +43,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage)
-                     (applicationWallet: ApplicationWallet)
+class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+                     applicationWallet: ApplicationWallet)
   extends Wallet[Secret,
                  ProofOfKnowledgeProposition[_ <: Secret],
                  SidechainTypes#BT,
@@ -101,15 +101,15 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // update boxes in BoxStore
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
     val changes = SidechainState.changes(modifier).get
-    val pubKeys = publicKeys().map(_.bytes)
+    val pubKeys = publicKeys().map(_.asInstanceOf[Proposition])
 
-    val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.bytes))
+    val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
         .map(_.box)
         .map { box =>
                val boxTransaction = modifier.transactions.find(t => t.newBoxes().asScala.exists(tb => java.util.Arrays.equals(tb.id, box.id)))
                val txId : Array[Byte]= boxTransaction.map(_.id).get.getBytes
                val ts = boxTransaction.map(_.timestamp).getOrElse(modifier.timestamp)
-               WalletBox(box.asInstanceOf[SidechainTypes#B], txId, ts)
+               new WalletBox(box, txId, ts)
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId).map(new ByteArrayWrapper(_))
@@ -130,25 +130,36 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   // Java NodeWallet interface definition
   override def allBoxes : JList[Box[_ <: Proposition]] = {
-    walletBoxStorage.getAll.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava
+    walletBoxStorage.getAll.map(_.box).toList.asJava
   }
 
   override def allBoxes(boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {
-    walletBoxStorage.getAll.filter((wb : WalletBox) => !boxIdsToExclude.contains(wb.box.id()))
-      .map(_.box.asInstanceOf[Box[_ <: Proposition]])
+    walletBoxStorage.getAll
+      .filter((wb : WalletBox) => {
+        var exclude = false
+        for (b <- boxIdsToExclude.asScala)
+          exclude ||= JArrays.equals(b, wb.box.id())
+        !exclude
+      })
+      .map(_.box)
       .asJava
   }
 
   override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[_ <: Proposition]] = {
     walletBoxStorage.getByType(boxType)
-      .map(_.box.asInstanceOf[Box[_ <: Proposition]])
+      .map(_.box)
       .asJava
   }
 
   override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {
     walletBoxStorage.getByType(boxType)
-      .map(_.box.asInstanceOf[Box[_ <: Proposition]])
-      .filter(box => !boxIdsToExclude.contains(box.id()))
+      .filter((wb : WalletBox) => {
+        var exclude = false
+        for (b <- boxIdsToExclude.asScala)
+          exclude ||= JArrays.equals(b, wb.box.id())
+        !exclude
+      })
+      .map(_.box)
       .asJava
   }
 

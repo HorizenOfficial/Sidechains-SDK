@@ -3,6 +3,7 @@ package com.horizen.customtypes;
 import com.horizen.ScorexEncoding;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PropositionSerializer;
+import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -56,5 +57,12 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
 
     public static int getLength() {
         return KEY_LENGTH;
+    }
+
+    @Override
+    public String toString() {
+        return "CustomPublicKeyProposition{" +
+                "_pubKeyBytes=" + BytesUtils.toHexString(_pubKeyBytes) +
+                '}';
     }
 }
