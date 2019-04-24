@@ -67,6 +67,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   }
 
   def add (secret : Secret) : Try[SidechainSecretStorage] = Try {
+    require(secret != null, "Secret must be NOT NULL.")
     val version = new Array[Byte](32)
     val key = calculateKey(secret.publicImage())
 
@@ -85,6 +86,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   }
 
   def add (secretList : List[Secret]) : Try[SidechainSecretStorage] = Try {
+    require(!secretList.contains(null), "Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
     val version = new Array[Byte](32)
 
@@ -106,6 +108,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   }
 
   def remove (proposition : ProofOfKnowledgeProposition[_ <: Secret]) : Try[SidechainSecretStorage] = Try {
+    require(proposition != null, "Proposition must be NOT NULL.")
     val version = new Array[Byte](32)
     val key = calculateKey(proposition)
 
@@ -120,6 +123,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   }
 
   def remove (propositionList : List[ProofOfKnowledgeProposition[_ <: Secret]]) : Try[SidechainSecretStorage] = Try {
+    require(!propositionList.contains(null), "Proposition must be NOT NULL.")
     val removeList = new JArrayList[ByteArrayWrapper]()
     val version = new Array[Byte](32)
 

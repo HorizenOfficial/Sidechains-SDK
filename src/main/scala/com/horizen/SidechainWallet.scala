@@ -59,6 +59,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // 1) check for existence
   // 2) try to store in SecretStoreusing SidechainSecretsCompanion
   override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
+    require(secret != null, "Secret must be NOT NULL.")
     secretStorage.add(secret)
     applicationWallet.onAddSecret(secret)
     this
@@ -67,9 +68,10 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // 1) check for existence
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Try[SidechainWallet] = Try {
-      secretStorage.remove(publicImage)
-      applicationWallet.onRemoveSecret(publicImage)
-      this
+    require(publicImage != null, "PublicImage must be NOT NULL.")
+    secretStorage.remove(publicImage)
+    applicationWallet.onRemoveSecret(publicImage)
+    this
   }
 
   override def secret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Option[Secret] = {
@@ -100,6 +102,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // scan like in HybridApp, but in more general way.
   // update boxes in BoxStore
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
+    //require(modifier != null, "SidechainBlock must be NOT NULL.")
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys().map(_.asInstanceOf[Proposition])
 
@@ -123,8 +126,8 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
+    require(to != null, "Version to rollback to must be NOT NULL.")
     walletBoxStorage.rollback(new ByteArrayWrapper(to.getBytes))
-
     this
   }
 

@@ -5,6 +5,9 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 public final class BytesUtils {
     private BytesUtils() {}
 
@@ -59,5 +62,13 @@ public final class BytesUtils {
     // Get hex string representation of byte array
     public static String toHexString(byte[] bytes) {
         return BaseEncoding.base16().lowerCase().encode(bytes);
+    }
+
+    public static boolean contains(Collection<byte[]> collection, byte[] value) {
+        for (byte [] v : collection) {
+            if (Arrays.equals(v, value))
+                return true;
+        }
+        return false;
     }
 }

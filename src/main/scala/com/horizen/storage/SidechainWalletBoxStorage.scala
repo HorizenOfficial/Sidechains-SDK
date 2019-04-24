@@ -108,6 +108,9 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   def update (version : Array[Byte], walletBoxUpdateList : List[WalletBox],
               boxIdsRemoveList : List[Array[Byte]]) : Try[SidechainWalletBoxStorage] = Try {
+    require(!walletBoxUpdateList.contains(null), "WalletBox to add/update must be NOT NULL.")
+    require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
+
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
@@ -146,9 +149,9 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   }
 
   def rollback (version : ByteArrayWrapper) : Try[SidechainWalletBoxStorage] = Try {
+    require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     loadWalletBoxes()
-
     this
   }
 
