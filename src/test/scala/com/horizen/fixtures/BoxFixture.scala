@@ -9,18 +9,19 @@ import com.horizen.WalletBox
 
 import scala.util.Random
 import com.horizen.customtypes._
+import com.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters._
 
 
-trait BoxFixture extends SecretFixture{
+trait BoxFixture extends SecretFixture {
 
   def getRegularBox () : RegularBox = {
     new RegularBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
   }
 
-  def getRegularBox (secret : Secret) : RegularBox = {
-    new RegularBox(secret.publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+  def getRegularBox (secret : Secret, nonce: Int, value: Int) : RegularBox = {
+    new RegularBox(secret.publicImage().asInstanceOf[PublicKey25519Proposition], nonce, value)
   }
 
   def getRegularBoxList (count : Int) : JList[RegularBox] = {
@@ -36,7 +37,7 @@ trait BoxFixture extends SecretFixture{
     val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getRegularBox(s))
+      boxList.add(getRegularBox(s, 1, Random.nextInt(100)))
 
     boxList
   }
@@ -73,9 +74,9 @@ trait BoxFixture extends SecretFixture{
     Random.nextBytes(txId)
 
     boxClass match {
-      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), txId, Random.nextLong())
-      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), txId, Random.nextLong())
-      case _ => new WalletBox(getCustomBox(), txId, Random.nextLong())
+      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case _ => new WalletBox(getCustomBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
     }
   }
 
@@ -94,7 +95,7 @@ trait BoxFixture extends SecretFixture{
     Random.nextBytes(txId)
 
     for (b <- boxList.asScala)
-      wboxList.add(new WalletBox(b, txId, Random.nextLong()))
+      wboxList.add(new WalletBox(b, BytesUtils.toHexString(txId), Random.nextInt(100000)))
 
     wboxList
   }

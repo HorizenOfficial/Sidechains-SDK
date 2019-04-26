@@ -1,14 +1,13 @@
 package com.horizen.storage
 
 import java.util.{Optional, ArrayList => JArrayList}
-import javafx.util.{Pair => JPair}
 
+import javafx.util.{Pair => JPair}
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.{WalletBox, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
-
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -33,6 +32,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   private val _walletBoxesBalances = new mutable.LinkedHashMap[BoxClass, Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
+  loadWalletBoxes()
+
   private def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
@@ -44,17 +45,17 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   private def updateBoxesBalance (boxToAdd : WalletBox, boxToRemove : WalletBox) : Unit = {
     if (boxToAdd != null) {
-      val bca = boxToAdd.box.getClass.asInstanceOf[BoxClass]
+      val bca = boxToAdd.box.getClass
       _walletBoxesBalances.put(bca, _walletBoxesBalances.getOrElse(bca, 0L) + boxToAdd.box.value())
     }
     if (boxToRemove != null) {
-      val bcr = boxToRemove.box.getClass.asInstanceOf[BoxClass]
+      val bcr = boxToRemove.box.getClass
       _walletBoxesBalances.put(bcr, _walletBoxesBalances.getOrElse(bcr, 0L) - boxToRemove.box.value())
     }
   }
 
   private def updateWalletBoxByType(walletBox : WalletBox) : Unit = {
-    val bc = walletBox.box.getClass.asInstanceOf[BoxClass]
+    val bc = walletBox.box.getClass
     val key = calculateKey(walletBox.box.id())
     val t = _walletBoxesByType.get(bc)
     if (t.isEmpty) {
@@ -84,29 +85,27 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     calculateBoxesBalances()
   }
 
-  loadWalletBoxes()
-
   def get (boxId : Array[Byte]) : Option[WalletBox] = {
     _walletBoxes.get(calculateKey(boxId))
   }
 
   def get (boxIds : List[Array[Byte]]) : List[WalletBox] = {
-    for (id <- boxIds.map(calculateKey(_)) if _walletBoxes.get(id).isDefined) yield _walletBoxes(id)
+    for (id <- boxIds.map(calculateKey) if _walletBoxes.get(id).isDefined) yield _walletBoxes(id)
   }
 
   def getAll : List[WalletBox] = {
     _walletBoxes.values.toList
   }
 
-  def getByType (boxType: Class[_ <: Box[_ <: Proposition]]) : List[WalletBox] = {
+  def getByType (boxType: BoxClass) : List[WalletBox] = {
     _walletBoxesByType(boxType).values.toList
   }
 
-  def getBoxesBalance (boxType: Class[_ <: Box[_ <: Proposition]]): Long = {
+  def getBoxesBalance (boxType: BoxClass): Long = {
     _walletBoxesBalances(boxType)
   }
 
-  def update (version : Array[Byte], walletBoxUpdateList : List[WalletBox],
+  def update (version : ByteArrayWrapper, walletBoxUpdateList : List[WalletBox],
               boxIdsRemoveList : List[Array[Byte]]) : Try[SidechainWalletBoxStorage] = Try {
     require(!walletBoxUpdateList.contains(null), "WalletBox to add/update must be NOT NULL.")
     require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
@@ -133,14 +132,14 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
         updateBoxesBalance(b, null)
     }
 
-    storage.update(new ByteArrayWrapper(version),
+    storage.update(version,
       removeList,
       updateList)
 
     this
   }
 
-  def lastVesrionId : Optional[ByteArrayWrapper] = {
+  def lastVersionId : Optional[ByteArrayWrapper] = {
     storage.lastVersionID()
   }
 

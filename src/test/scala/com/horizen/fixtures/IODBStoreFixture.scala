@@ -39,7 +39,7 @@ trait IODBStoreFixture {
   def tempFile(): File = {
     val ret = new File(System.getProperty("java.io.tmpdir") + File.separator + "iodb" + Math.random())
     ret.deleteOnExit()
-    return ret
+    ret
   }
 
   def deleteRecur(dir: File): Unit = {
@@ -50,14 +50,14 @@ trait IODBStoreFixture {
     dir.delete()
   }
 
-  def getStore () : Store = {
+  def getStore() : Store = {
     val dir = tempDir()
     val store = new LSMStore(dir, keySize)
     stores.append(Tuple2(dir, store))
     store
   }
 
-  def getStoreWithPath () : (Store, File) = {
+  def getStoreWithPath() : (Store, File) = {
     val dir = tempDir()
     val store = new LSMStore(dir, keySize)
     stores.append(Tuple2(dir, store))

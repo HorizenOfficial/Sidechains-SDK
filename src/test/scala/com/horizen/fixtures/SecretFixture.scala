@@ -24,6 +24,10 @@ trait SecretFixture {
     pkc.generateSecret(seed)
   }
 
+  def getSecret(seed: Array[Byte]) : Secret = {
+    pkc.generateSecret(seed)
+  }
+
   def getSecretList(count : Int) : JList[Secret] = {
     val seed = new Array[Byte](32);
     val keysList : JList[Secret] = new JArrayList[Secret]()

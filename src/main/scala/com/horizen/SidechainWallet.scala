@@ -110,13 +110,13 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
         .map(_.box)
         .map { box =>
                val boxTransaction = modifier.transactions.find(t => t.newBoxes().asScala.exists(tb => java.util.Arrays.equals(tb.id, box.id)))
-               val txId : Array[Byte]= boxTransaction.map(_.id).get.getBytes
+               val txId = boxTransaction.map(_.id).get
                val ts = boxTransaction.map(_.timestamp).getOrElse(modifier.timestamp)
                new WalletBox(box, txId, ts)
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId).map(new ByteArrayWrapper(_))
-    walletBoxStorage.update(modifier.id.getBytes, newBoxes.toList, boxIdsToRemove.map(_.data).toList)
+    walletBoxStorage.update(new ByteArrayWrapper(modifier.id.getBytes), newBoxes.toList, boxIdsToRemove.map(_.data).toList)
 
     applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
       boxIdsToRemove.map(_.data).toList.asJava)
