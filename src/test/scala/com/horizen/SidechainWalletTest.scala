@@ -2,7 +2,6 @@ package com.horizen.storage
 
 import scorex.util.ModifierId
 import scorex.core.{bytesToId, idToBytes}
-
 import com.horizen.{SidechainWallet, WalletBox, WalletBoxSerializer}
 import com.horizen.box._
 import com.horizen.companion._
@@ -26,6 +25,7 @@ import org.scalatest.mockito._
 import scala.collection.JavaConverters._
 import org.mockito._
 import org.mockito.stubbing._
+import scorex.crypto.hash.Blake2b256
 
 import scala.util.Random
 
@@ -67,7 +67,7 @@ class SidechainWalletTest
 
     for (s <- secretList) {
       storedSecretList.append({
-        val key = new ByteArrayWrapper(s.publicImage().bytes)
+        val key = new ByteArrayWrapper(Blake2b256.hash(s.publicImage().bytes))
         val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))
         new Pair(key,value)
       })
@@ -103,7 +103,7 @@ class SidechainWalletTest
     for (b <- boxList) {
       storedBoxList.append({
         val wbs = new WalletBoxSerializer(sidechainBoxesCompanion)
-        val key = new ByteArrayWrapper(b.box.id())
+        val key = new ByteArrayWrapper(Blake2b256.hash(b.box.id()))
         val value = new ByteArrayWrapper(wbs.toBytes(b))
         new Pair(key,value)
       })
@@ -126,11 +126,15 @@ class SidechainWalletTest
       ArgumentMatchers.anyList[Pair[ByteArrayWrapper,ByteArrayWrapper]]()))
       .thenAnswer((answer) => {
         boxVersions.append(answer.getArgument(0))
-        for (s <- answer.getArgument(1).asInstanceOf[JList[ByteArrayWrapper]].asScala)
+        for (s <- answer.getArgument(1).asInstanceOf[JList[ByteArrayWrapper]].asScala) {
           storedBoxList.remove(storedBoxList.indexWhere((p) => p.getKey.equals(s)))
-        for (s <- answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
-          storedBoxList.remove(storedBoxList.indexWhere((p) => p.getKey.equals(s.getKey)))
-        storedBoxList.appendAll(answer.getArgument(2))
+        }
+        for (s <- answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala) {
+          val index = storedBoxList.indexWhere((p) => p.getKey.equals(s.getKey))
+          if (index != -1)
+            storedBoxList.remove(index)
+        }
+        storedBoxList.appendAll(answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
 
   }

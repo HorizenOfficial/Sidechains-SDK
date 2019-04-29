@@ -38,7 +38,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  private def calculateBoxesBalances() : Unit = {
+  def calculateBoxesBalances() : Unit = {
     for (bc <-_walletBoxesByType.keys)
       _walletBoxesBalances.put(bc, _walletBoxesByType(bc).map(_._2.box.value()).sum)
   }
@@ -98,11 +98,14 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   }
 
   def getByType (boxType: BoxClass) : List[WalletBox] = {
-    _walletBoxesByType(boxType).values.toList
+    _walletBoxesByType.get(boxType) match {
+      case Some(v) => v.values.toList
+      case None => List[WalletBox]()
+    }
   }
 
   def getBoxesBalance (boxType: BoxClass): Long = {
-    _walletBoxesBalances(boxType)
+    _walletBoxesBalances.getOrElse(boxType, 0L)
   }
 
   def update (version : ByteArrayWrapper, walletBoxUpdateList : List[WalletBox],
@@ -113,28 +116,30 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
-    for (b <- boxIdsRemoveList) {
-      val key = calculateKey(b)
-      removeList.add(new ByteArrayWrapper(key))
+    removeList.addAll(boxIdsRemoveList.map(calculateKey(_)).asJavaCollection)
+
+    for (wb <- walletBoxUpdateList)
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(wb.box.id()),
+        new ByteArrayWrapper(_walletBoxSerializer.toBytes(wb))))
+
+    storage.update(version,
+      removeList,
+      updateList)
+
+    for (key <- removeList.asScala) {
       val btr = _walletBoxes.remove(key)
       removeWalletBoxByType(key)
       if (btr.isDefined)
         updateBoxesBalance(null, btr.get)
     }
 
-    for (b <- walletBoxUpdateList) {
-      val key = calculateKey(b.box.id())
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](key,
-        new ByteArrayWrapper(_walletBoxSerializer.toBytes(b))))
-      val bta = _walletBoxes.put(key, b)
-      updateWalletBoxByType(b)
+    for (wba <- walletBoxUpdateList) {
+      val key = calculateKey(wba.box.id())
+      val bta = _walletBoxes.put(key, wba)
+      updateWalletBoxByType(wba)
       if (bta.isEmpty)
-        updateBoxesBalance(b, null)
+        updateBoxesBalance(wba, null)
     }
-
-    storage.update(version,
-      removeList,
-      updateList)
 
     this
   }

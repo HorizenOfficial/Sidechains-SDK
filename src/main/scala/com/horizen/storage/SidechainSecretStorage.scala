@@ -29,7 +29,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
   private val _secrets = new mutable.LinkedHashMap[ByteArrayWrapper, Secret]()
 
-  private def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
+  def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
   }
 
