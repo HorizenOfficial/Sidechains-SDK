@@ -31,7 +31,7 @@ class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: Side
 
   loadSecrets()
 
-  private def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
+  def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
   }
 

@@ -116,7 +116,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId).map(new ByteArrayWrapper(_))
-    walletBoxStorage.update(new ByteArrayWrapper(modifier.id.getBytes), newBoxes.toList, boxIdsToRemove.map(_.data).toList)
+    walletBoxStorage.update(new ByteArrayWrapper(modifier.id.getBytes), newBoxes.toList, boxIdsToRemove.map(_.data).toList).get
 
     applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
       boxIdsToRemove.map(_.data).toList.asJava)
