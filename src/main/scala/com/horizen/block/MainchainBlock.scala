@@ -68,8 +68,7 @@ class MainchainBlock(
             return false
 
           // verify AggTx
-          if (!util.Arrays.equals(sidechainRelatedAggregatedTransaction.get.mainchainBlockHash(), header.hash)
-            || !util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
+          if (!util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
             || !sidechainRelatedAggregatedTransaction.get.semanticValidity())
             return false
         }
@@ -110,7 +109,7 @@ object MainchainBlock {
                 sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(params.sidechainId))
                 // TO DO: put Certificate and FraudReports processing later.
               }
-              aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(header.hash, sidechainRelatedTransactionsOutputs, header.time))
+              aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
             }
 
             val SCMap: Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
