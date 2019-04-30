@@ -18,7 +18,7 @@ import scorex.crypto.hash.Blake2b256
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
+class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends ScorexLogging
 {
   // Version - RandomBytes(32)
@@ -29,11 +29,13 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
   private val _secrets = new mutable.LinkedHashMap[ByteArrayWrapper, Secret]()
 
+  loadSecrets()
+
   private def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
   }
 
-  private def loadSecrets : Unit = {
+  private def loadSecrets() : Unit = {
     _secrets.clear()
     for (s <- storage.getAll.asScala) {
       val secret = sidechainSecretsCompanion.parseBytes(s.getValue.data)
@@ -43,8 +45,6 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
         throw new RuntimeException("Error while secret key parsing.")
     }
   }
-
-  loadSecrets
 
   def get (proposition : ProofOfKnowledgeProposition[_ <: Secret]) : Option[Secret] = {
     _secrets.get(calculateKey(proposition))
@@ -71,7 +71,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     val version = new Array[Byte](32)
     val key = calculateKey(secret.publicImage())
 
-    require(!_secrets.contains(key), "Key alredy exists - " + secret)
+    require(!_secrets.contains(key), "Key already exists - " + secret)
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
