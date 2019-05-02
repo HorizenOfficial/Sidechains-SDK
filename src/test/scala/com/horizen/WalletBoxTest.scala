@@ -33,7 +33,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
       new WalletBox(box, BytesUtils.toHexString(new Array[Byte](31)), creationTime)
     }
     catch {
-      case _ => exceptionOccurred = true
+      case _ : Throwable => exceptionOccurred = true
     }
     assertTrue("WalletBox creation: exception expected.", exceptionOccurred)
 
@@ -44,7 +44,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
       new WalletBox(box, BytesUtils.toHexString(new Array[Byte](32)), -100)
     }
     catch {
-      case _ => exceptionOccurred = true
+      case _ : Throwable => exceptionOccurred = true
     }
     assertTrue("WalletBox creation: exception expected.", exceptionOccurred)
   }

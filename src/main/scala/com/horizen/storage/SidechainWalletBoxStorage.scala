@@ -34,11 +34,11 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   loadWalletBoxes()
 
-  private def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
+  def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def calculateBoxesBalances() : Unit = {
+  private def calculateBoxesBalances() : Unit = {
     for (bc <-_walletBoxesByType.keys)
       _walletBoxesBalances.put(bc, _walletBoxesByType(bc).map(_._2.box.value()).sum)
   }
@@ -110,6 +110,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   def update (version : ByteArrayWrapper, walletBoxUpdateList : List[WalletBox],
               boxIdsRemoveList : List[Array[Byte]]) : Try[SidechainWalletBoxStorage] = Try {
+    require(walletBoxUpdateList != null, "List of WalletBoxes to add/update must be NOT NULL. Use empty List instead.")
+    require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
     require(!walletBoxUpdateList.contains(null), "WalletBox to add/update must be NOT NULL.")
     require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
 

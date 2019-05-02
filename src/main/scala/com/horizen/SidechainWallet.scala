@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional, List => JList, Map => JMap, Arrays => JArrays}
+import java.util.{Optional, Arrays => JArrays, List => JList, Map => JMap}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -11,7 +11,7 @@ import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.storage.{SidechainSecretStorage, SidechainWalletBoxStorage}
 import com.horizen.transaction.{BoxTransaction, Transaction}
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.VersionTag
 import scorex.util.{bytesToId, idToBytes}
 
@@ -138,12 +138,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   override def allBoxes(boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {
     walletBoxStorage.getAll
-      .filter((wb : WalletBox) => {
-        var exclude = false
-        for (b <- boxIdsToExclude.asScala)
-          exclude ||= JArrays.equals(b, wb.box.id())
-        !exclude
-      })
+      .filter((wb : WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
@@ -156,12 +151,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {
     walletBoxStorage.getByType(boxType)
-      .filter((wb : WalletBox) => {
-        var exclude = false
-        for (b <- boxIdsToExclude.asScala)
-          exclude ||= JArrays.equals(b, wb.box.id())
-        !exclude
-      })
+      .filter((wb : WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
