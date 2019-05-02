@@ -162,7 +162,7 @@ class SidechainWalletTest
     Mockito.when(mockedBlock.id)
       .thenReturn(bytesToId(blockId))
 
-    val sidechainWallet = new SidechainWallet(seed, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     sidechainWallet.scanPersistent(mockedBlock)
@@ -180,7 +180,7 @@ class SidechainWalletTest
   @Test
   def testSecrets() : Unit = {
 
-    val sidechainWallet = new SidechainWallet(seed, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     //TEST for - Wallet.secrets
@@ -225,7 +225,7 @@ class SidechainWalletTest
   @Test
   def testWalletBoxes() : Unit = {
 
-    val sidechainWallet = new SidechainWallet(seed, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     //TEST for - Wallet.boxes

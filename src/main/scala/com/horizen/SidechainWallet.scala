@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional, Arrays => JArrays, List => JList, Map => JMap}
+import java.util.{Optional => JOptional, Arrays => JArrays, List => JList, Map => JMap}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -16,7 +16,6 @@ import scorex.core.VersionTag
 import scorex.util.{bytesToId, idToBytes}
 
 import scala.collection.immutable
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
@@ -43,7 +42,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                      applicationWallet: ApplicationWallet)
   extends Wallet[Secret,
                  ProofOfKnowledgeProposition[_ <: Secret],
@@ -79,17 +78,17 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   }
 
   // get all secrets, use SidechainSecretsCompanion to deserialize
-  override def secrets(): immutable.Set[Secret] = {
+  override def secrets(): Set[Secret] = {
     secretStorage.getAll.toSet
   }
 
   // get all boxes as WalletBox object using SidechainBoxesCompanion
-  override def boxes(): immutable.Seq[WalletBox] = {
+  override def boxes(): Seq[WalletBox] = {
     walletBoxStorage.getAll.toSeq
   }
 
   // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
-  override def publicKeys(): immutable.Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
+  override def publicKeys(): Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
     secretStorage.getAll.map(_.publicImage()).toSet
   }
 
@@ -115,11 +114,11 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
                new WalletBox(box, txId, ts)
     }
 
-    val boxIdsToRemove = changes.toRemove.map(_.boxId).map(new ByteArrayWrapper(_))
-    walletBoxStorage.update(new ByteArrayWrapper(modifier.id.getBytes), newBoxes.toList, boxIdsToRemove.map(_.data).toList).get
+    val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
+    walletBoxStorage.update(new ByteArrayWrapper(BytesUtils.fromHexString(modifier.id)), newBoxes.toList, boxIdsToRemove.toList).get
 
     applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
-      boxIdsToRemove.map(_.data).toList.asJava)
+      boxIdsToRemove.toList.asJava)
 
     this
   }
@@ -127,7 +126,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
-    walletBoxStorage.rollback(new ByteArrayWrapper(to.getBytes))
+    walletBoxStorage.rollback(new ByteArrayWrapper(BytesUtils.fromHexString(to)))
     this
   }
 
@@ -160,8 +159,8 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
     walletBoxStorage.getBoxesBalance(boxType)
   }
 
-  override def secretByPublicImage(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Secret = {
-    secretStorage.get(publicImage).get
+  override def secretByPublicKey(publicKey: ProofOfKnowledgeProposition[_ <: Secret]): JOptional[Secret] = {
+    JOptional.ofNullable(secretStorage.get(publicKey).orNull)
   }
 
   override def allSecrets(): JList[Secret] = {

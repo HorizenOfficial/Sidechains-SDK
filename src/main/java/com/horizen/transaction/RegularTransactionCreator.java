@@ -45,7 +45,7 @@ public class RegularTransactionCreator {
         List<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
         long current_amount = 0;
         for(RegularBox box : boxes) {
-            Secret s = wallet.secretByPublicImage(box.proposition());
+            Secret s = wallet.secretByPublicKey(box.proposition()).get();
             if(s instanceof PrivateKey25519) {
                 from.add(new Pair<>(box, (PrivateKey25519)s));
                 current_amount += box.value();
