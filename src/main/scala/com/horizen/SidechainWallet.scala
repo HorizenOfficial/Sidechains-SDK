@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional, List => JList, Map => JMap, Arrays => JArrays}
+import java.util.{List => JList, Arrays => JArrays}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -10,21 +10,13 @@ import com.horizen.proposition.Proposition
 import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.storage.{SidechainSecretStorage, SidechainWalletBoxStorage}
-import com.horizen.transaction.{BoxTransaction, Transaction}
+import com.horizen.transaction.Transaction
 import com.horizen.utils.ByteArrayWrapper
 import scorex.core.VersionTag
-import scorex.util.{bytesToId, idToBytes}
 
-import scala.collection.immutable
-import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
 
-
-// 2 stores: one for Boxes(WalletBoxes), another for secrets
-// TO DO: we need to wrap LSMStore
-
-// TO DO: put also SidechainSecretsCompanion and SidechainBoxesCompanion with a data provided by Sidechain developer
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
@@ -42,6 +34,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
   def publicKeys(): Set[P]
 }
+
 
 class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                      applicationWallet: ApplicationWallet)
@@ -78,18 +71,15 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
     secretStorage.get(publicImage)
   }
 
-  // get all secrets, use SidechainSecretsCompanion to deserialize
-  override def secrets(): immutable.Set[Secret] = {
+  override def secrets(): Set[Secret] = {
     secretStorage.getAll.toSet
   }
 
-  // get all boxes as WalletBox object using SidechainBoxesCompanion
-  override def boxes(): immutable.Seq[WalletBox] = {
-    walletBoxStorage.getAll.toSeq
+  override def boxes(): Seq[WalletBox] = {
+    walletBoxStorage.getAll
   }
 
-  // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
-  override def publicKeys(): immutable.Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
+  override def publicKeys(): Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
     secretStorage.getAll.map(_.publicImage()).toSet
   }
 
@@ -133,7 +123,7 @@ class SidechainWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxSto
 
   // Java NodeWallet interface definition
   override def allBoxes : JList[Box[_ <: Proposition]] = {
-    walletBoxStorage.getAll.map(_.box).toList.asJava
+    walletBoxStorage.getAll.map(_.box).asJava
   }
 
   override def allBoxes(boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {
