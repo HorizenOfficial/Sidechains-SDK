@@ -15,6 +15,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -87,13 +88,13 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage) {
+    public Optional<Secret> secretByPublicKey(ProofOfKnowledgeProposition publicImage) {
         for(Secret s : _secrets)
         {
             if(s.publicImage().equals(publicImage))
-                return s;
+                return Optional.ofNullable(s);
         }
-        return null;
+        return Optional.empty();
     }
 
     @Override
