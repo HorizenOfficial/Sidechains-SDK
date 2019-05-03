@@ -54,7 +54,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     }
   }
 
-  private def updateWalletBoxByType(walletBox : WalletBox) : Unit = {
+  private def addWalletBoxByType(walletBox : WalletBox) : Unit = {
     val bc = walletBox.box.getClass
     val key = calculateKey(walletBox.box.id())
     val t = _walletBoxesByType.get(bc)
@@ -78,7 +78,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
       val walletBox = _walletBoxSerializer.parseBytes(wb.getValue.data)
       if (walletBox.isSuccess) {
         _walletBoxes.put(calculateKey(walletBox.get.box.id()), walletBox.get)
-        updateWalletBoxByType(walletBox.get)
+        addWalletBoxByType(walletBox.get)
       } else
         log.error("Error while WalletBox parsing.", walletBox)
     }
@@ -138,7 +138,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     for (wba <- walletBoxUpdateList) {
       val key = calculateKey(wba.box.id())
       val bta = _walletBoxes.put(key, wba)
-      updateWalletBoxByType(wba)
+      addWalletBoxByType(wba)
       if (bta.isEmpty)
         updateBoxesBalance(wba, null)
     }
