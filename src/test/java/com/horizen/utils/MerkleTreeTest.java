@@ -11,7 +11,7 @@ public class MerkleTreeTest {
 
     // Test data receive from https://webbtc.com/block/000000000000000002775ff227222f47a46cad46b0f634db53c1a8737d7ecd41.json
     @Test
-    public void MerkleTreeTest_calculateMerkleTree() {
+    public void MerkleTreeTest_createAndVerifyMerkleTree() {
         // set test data of 9 hashes
         ArrayList<String> transactionsHashes = new ArrayList<>();
         transactionsHashes.add("b82c849c6abcd1ad17f4457333afc45723557348d2dda6974363253223b0f378");
@@ -43,14 +43,30 @@ public class MerkleTreeTest {
         expectedRes.add("f6374a6dd9d838b1871e0ce8d4e537011aa79c60dc12ef80a472c43bc5021aeb");
         expectedRes.add("29d000eee85f08b6482026be2d92d081d6f9418346e6b2e9fe2e9b985f24ed1e"); // merkle root
 
-        List<byte[]> resAsBytes = MerkleTree.calculateMerkleTree(hashesAsBytes);
+
+        MerkleTree merkleTree = MerkleTree.createMerkleTree(hashesAsBytes);
+
+        // Test leaf related logic
+        assertEquals("Leaves number expected to be equal", transactionsHashes.size(), merkleTree.leavesNumber());
+        List<byte[]> actualLeaves = merkleTree.leaves();
+        for(int i = 0; i < actualLeaves.size(); i++)
+            assertEquals(String.format("Leaves expected to be equal. Leaf %d is different.", i), transactionsHashes.get(i), BytesUtils.toHexString(actualLeaves.get(i)));
+
+
+        // Test that merkle tree was constructed properly
+        List<byte[]> resAsBytes = merkleTree.toList();
         // Encode from bytes to hex string
         ArrayList<String> res = new ArrayList<>();
         for(byte[] bytes : resAsBytes)
             res.add(BytesUtils.toHexString(bytes));
 
         assertEquals("Calculated Merkle Tree size should be the same as expected Merkle Tree", expectedRes.size(), res.size());
-        assertEquals("Calculated Merkle root shoud be the same as expected one", expectedRes.get(expectedRes.size() - 1), res.get(res.size() - 1));
+        assertEquals("Calculated Merkle root shoud be the same as expected one", expectedRes.get(expectedRes.size() - 1), BytesUtils.toHexString(merkleTree.rootHash()));
 
+
+        // Test merkle path construction:
+        MerklePath path = merkleTree.getMerklePathForLeaf(0);
+
+        assertEquals("Merkle path validation failed.", true, merkleTree.validateMerklePath(merkleTree.leaves().get(0), path));
     }
 }

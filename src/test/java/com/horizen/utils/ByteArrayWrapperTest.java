@@ -31,4 +31,23 @@ public class ByteArrayWrapperTest {
         assertEquals("Data bytes expected to be the same", true, Arrays.equals(b1, bw1.data()));
         //assertNotEquals("Data bytes and source bytes expected to be different objects", b1, bw1.data());
     }
+
+    @Test
+    public void ByteArrayWrapperTest_ComparableTest() {
+
+        // Compare two empty wrappers
+        assertEquals("ByteArrayWrappers expected to be equal", true, new ByteArrayWrapper(new byte[0]).compareTo(new ByteArrayWrapper(new byte[0])) == 0);
+
+        // Compare different combinations
+        ByteArrayWrapper bw1 = new ByteArrayWrapper(BytesUtils.fromHexString("ba11"));
+        ByteArrayWrapper bw2 = new ByteArrayWrapper(BytesUtils.fromHexString("ba11"));
+        ByteArrayWrapper bw3 = new ByteArrayWrapper(BytesUtils.fromHexString("1221"));
+        ByteArrayWrapper bw4 = new ByteArrayWrapper(BytesUtils.fromHexString("bc11"));
+        ByteArrayWrapper bw5 = new ByteArrayWrapper(BytesUtils.fromHexString("ba11ae"));
+
+        assertEquals("ByteArrayWrappers expected to be equal", true, bw1.compareTo(bw2) == 0);
+        assertEquals("First ByteArrayWrapper expected to be greater than second one", true, bw1.compareTo(bw3) > 0);
+        assertEquals("First ByteArrayWrapper expected to be less than second one", true, bw1.compareTo(bw4) < 0);
+        assertEquals("First ByteArrayWrapper expected to be less than second one", true, bw1.compareTo(bw5) < 0);
+    }
 }

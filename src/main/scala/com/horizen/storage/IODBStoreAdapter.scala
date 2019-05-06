@@ -36,7 +36,7 @@ class IODBStoreAdapter (store : Store)
     val values = new JArrayList[Pair[ByteArrayWrapper,Optional[ByteArrayWrapper]]]()
 
     for (v <- valList)
-      if (v._2.isEmpty)
+      if (v._2.isDefined)
         values.add(new Pair[ByteArrayWrapper,Optional[ByteArrayWrapper]](new ByteArrayWrapper(v._1),
           Optional.of(new ByteArrayWrapper(v._2.get))))
       else
