@@ -9,47 +9,44 @@ import scala.util.{Failure, Try}
 // import com.google.common.primitives.Bytes;
 
 
-case class SidechainTransactionsCompanion(customTransactionSerializers: Map[scorex.core.ModifierTypeId.Raw, TransactionSerializer[_ <: Transaction]])
+case class SidechainTransactionsCompanion(customTransactionSerializers: Map[Byte, TransactionSerializer[_ <: Transaction]])
     extends Serializer[Transaction] {
 
-  val coreTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] =
+  val coreTransactionSerializers: Map[Byte, TransactionSerializer[_ <: Transaction]] =
     // TO DO: uncomment, when Serizalizers will be placed to separate files
-    Map();//Map(new RegularTransaction().transactionTypeId() -> new RegularTransactionSerializer(),
-      //new MC2SCAggregatedTransaction().transactionTypeId() -> new MC2SCAggregatedTransactionSerializer(),
-      //new WithdrawalRequestTransaction().transactionTypeId() -> new WithdrawalRequestTransactionSerializer())
+    Map(RegularTransaction.TRANSACTION_TYPE_ID -> RegularTransactionSerializer.getSerializer,
+        MC2SCAggregatedTransaction.TRANSACTION_TYPE_ID -> MC2SCAggregatedTransactionSerializer.getSerializer)
+        //WithdrawalRequestTransaction.TRANSACTION_TYPE_ID -> new WithdrawalRequestTransactionSerializer()
+        //CertifierUnlockRequestTransaction.TRANSACTION_TYPE_ID -> new CertifierUnlockRequestTransactionSerializer())
 
-  val customTransactionId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
+  val customTransactionType : Byte = Byte.MaxValue // TO DO: think about proper value
 
   override def toBytes(tx: Transaction): Array[Byte] = {
     tx match {
         // TO DO: look into SimpleBoxTransaction in Treasury POC
-      case t: RegularTransaction => Array[Byte]()//Bytes.concat(Array(tx.transactionTypeId.), new RegularTransactionSerializer().toBytes(t))
-      case t: MC2SCAggregatedTransaction => Array[Byte]()//Bytes.concat(Array(tx.transactionTypeId), new MC2SCAggregatedTransactionSerializer().toBytes(t))
-      case t: WithdrawalRequestTransaction => Array[Byte]()//Bytes.concat(Array(tx.transactionTypeId), new WithdrawalRequestTransactionSerializer().toBytes(t))
-      case _ => {
-        customTransactionSerializers.get(tx.transactionTypeId()) match {
-          case Some(s) => Array[Byte]()//Bytes.concat(Array(customTransactionId), Array(tx.transactionTypeId()), s.toBytes(tx));
-          case None => null // TO DO: process "missed serializer error"
-        }
-      }
+      case t: RegularTransaction => Bytes.concat(Array(tx.transactionTypeId()),
+        tx.serializer().asInstanceOf[TransactionSerializer[Transaction]].toBytes(tx))
+      case t: MC2SCAggregatedTransaction => Bytes.concat(Array(tx.transactionTypeId()),
+        tx.serializer().asInstanceOf[TransactionSerializer[Transaction]].toBytes(tx))
+      case t: WithdrawalRequestTransaction => Bytes.concat(Array(tx.transactionTypeId()),
+        tx.serializer().asInstanceOf[TransactionSerializer[Transaction]].toBytes(tx))
+      case t: CertifierUnlockRequestTransaction => Bytes.concat(Array(tx.transactionTypeId()),
+        tx.serializer().asInstanceOf[TransactionSerializer[Transaction]].toBytes(tx))
+      case _ => Bytes.concat(Array(customTransactionType), Array(tx.transactionTypeId()),
+        tx.serializer().asInstanceOf[TransactionSerializer[Transaction]].toBytes(tx))
     }
   }
 
   override def parseBytes(bytes: Array[Byte]): Try[Transaction] = {
-    val transactionTypeId = ModifierTypeId @@ bytes(0)
-    coreTransactionSerializers.get(transactionTypeId) match {
-      case Some(s) => s.parseBytes(bytes.drop(1))
-      case None => {
-        if(customTransactionId == transactionTypeId) {
-          val sidechainBytes = bytes.drop(1)
-          val sidechainTransactionTypeId = ModifierTypeId @@ sidechainBytes(0)
-          customTransactionSerializers.get(sidechainTransactionTypeId) match {
-            case Some(s) => s.parseBytes(sidechainBytes.drop(1))
-            case None => Failure(new MatchError("Unknown custom transaction type id"))
-          }
-        } else {
-          Failure(new MatchError("Unknown transaction type id"))
-        }
+    val transactionType = bytes(0)
+    transactionType match {
+      case `customTransactionType` => customTransactionSerializers.get(bytes(1)) match {
+        case Some(b) => b.parseBytes(bytes.drop(2))
+        case None => Failure(new MatchError("Unknown custom transaction type id"))
+      }
+      case _ => coreTransactionSerializers.get(transactionType) match {
+        case Some(b) => b.parseBytes(bytes.drop(1))
+        case None => Failure(new MatchError("Unknown core transaction type id"))
       }
     }
   }

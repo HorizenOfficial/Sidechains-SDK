@@ -25,6 +25,9 @@ import java.util.*;
 
 public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
 {
+
+    public static final byte TRANSACTION_TYPE_ID = 1;
+
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
     private List<Signature25519> _signatures;
@@ -133,7 +136,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
 
     @Override
     public byte transactionTypeId() {
-        return 1;
+        return TRANSACTION_TYPE_ID;
     }
 
     private synchronized byte[] hashWithoutNonce() {

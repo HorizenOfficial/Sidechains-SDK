@@ -124,8 +124,9 @@ class MainchainTransaction(
     if (_version >= PHGR_TX_VERSION || _version == GROTH_TX_VERSION) {
       val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
       currentOffset += joinSplitsNumber.size()
-      for (i <- 1 to joinSplitsNumber.value().intValue()) {
-        currentOffset += 8        // int64_t vpub_old
+
+      var joinSplitsOffset: Int = 0
+      joinSplitsOffset += 8        // int64_t vpub_old
                        + 8        // int64_t vpub_new
                        + 32       // uint256 anchor
                        + 32 * 2   // std::array<uint256, ZC_NUM_JS_INPUTS> nullifiers, where ZC_NUM_JS_INPUTS = 2
@@ -134,18 +135,22 @@ class MainchainTransaction(
                        + 32       // uint256 randomSeed
                        + 32 * 2  // std::array<uint256, ZC_NUM_JS_INPUTS> macs
 
-        if(_version >= PHGR_TX_VERSION) // parse PHGRProof
-          currentOffset += 33 * 7 + 65 // PHGRProof consists of 7 CompressedG1  (33 bytes each) + 1 CompressedG2 (65 bytes)
-        else // _version == _version == GROTH_TX_VERSION -> parse GrothProof
-          currentOffset += 192         // typedef std::array<unsigned char, GROTH_PROOF_SIZE> GrothProof, where GROTH_PROOF_SIZE = 48 + 96 + 48
+      if(_version >= PHGR_TX_VERSION) // parse PHGRProof
+        joinSplitsOffset += 33 * 7 + 65 // PHGRProof consists of 7 CompressedG1  (33 bytes each) + 1 CompressedG2 (65 bytes)
+      else // _version == _version == GROTH_TX_VERSION -> parse GrothProof
+        joinSplitsOffset += 192         // typedef std::array<unsigned char, GROTH_PROOF_SIZE> GrothProof, where GROTH_PROOF_SIZE = 48 + 96 + 48
 
-        currentOffset += 601 * 2 // std::array<ZCNoteEncryption::Ciphertext, ZC_NUM_JS_OUTPUTS>, where typedef std::array<unsigned char, CLEN> Ciphertext and CLEN = 1 + 8 + 32 + 32 + 512 + 16
-        currentOffset += 360 // TO DO: check from where these 360 byte are taken
-      }
+      joinSplitsOffset += 601 * 2 // std::array<ZCNoteEncryption::Ciphertext, ZC_NUM_JS_OUTPUTS>, where typedef std::array<unsigned char, CLEN> Ciphertext and CLEN = 1 + 8 + 32 + 32 + 512 + 16
+      joinSplitsOffset += 360 // TO DO: check from where these 360 byte are taken
+
+      joinSplitsOffset *= joinSplitsNumber.value().intValue()
+
       if(joinSplitsNumber.value() > 0) {
-        currentOffset += 32 // uint256 joinSplitPubKey;
+        joinSplitsOffset += 32 // uint256 joinSplitPubKey;
                        + 64 // typedef boost::array<unsigned char, 64> joinsplit_sig_t
       }
+
+      currentOffset += joinSplitsOffset
     }
 
     _size = currentOffset - offset

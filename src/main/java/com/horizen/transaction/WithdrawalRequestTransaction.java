@@ -9,6 +9,8 @@ import java.util.List;
 
 public final class WithdrawalRequestTransaction extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
+    public static final byte TRANSACTION_TYPE_ID = 4;
+
     @Override
     public WithdrawalRequestTransactionSerializer serializer() {
         return new WithdrawalRequestTransactionSerializer();
@@ -40,7 +42,7 @@ public final class WithdrawalRequestTransaction extends SidechainTransaction<Pro
 
     @Override
     public byte transactionTypeId() {
-        return 4; // scorex.core.ModifierTypeId @@ 4.toByte
+        return TRANSACTION_TYPE_ID; // scorex.core.ModifierTypeId @@ 4.toByte
     }
 
     @Override

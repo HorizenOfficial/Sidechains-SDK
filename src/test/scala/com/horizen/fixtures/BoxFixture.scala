@@ -1,22 +1,105 @@
 package com.horizen.fixtures
 
-import com.horizen.box.RegularBox
+import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.secret.Secret
+import java.util.{ArrayList => JArrayList, List => JList}
 
-import java.util.{List => JList}
-import java.util.{ArrayList => JArrayList}
+import com.horizen.WalletBox
 
-trait BoxFixture extends SecretFixture{
+import scala.util.Random
+import com.horizen.customtypes._
+import com.horizen.utils.BytesUtils
 
-  val rb1 : RegularBox = new RegularBox(pk1.publicImage, 1, 60)
-  val rb2 : RegularBox = new RegularBox(pk2.publicImage, 1, 50)
-  val rb3 : RegularBox = new RegularBox(pk3.publicImage, 1, 20)
+import scala.collection.JavaConverters._
 
-  def getBoxList () : JList[RegularBox] = {
-    val list : JList[RegularBox] = new JArrayList[RegularBox]()
-    list.add(rb1)
-    list.add(rb2)
-    list.add(rb3)
-    list
+
+trait BoxFixture extends SecretFixture {
+
+  def getRegularBox () : RegularBox = {
+    new RegularBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+  }
+
+  def getRegularBox (secret : Secret, nonce: Int, value: Int) : RegularBox = {
+    new RegularBox(secret.publicImage().asInstanceOf[PublicKey25519Proposition], nonce, value)
+  }
+
+  def getRegularBoxList (count : Int) : JList[RegularBox] = {
+    val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getRegularBox())
+
+    boxList
+  }
+
+  def getRegularBoxList (secretList : JList[Secret]) : JList[RegularBox] = {
+    val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
+
+    for (s <- secretList.asScala)
+      boxList.add(getRegularBox(s, 1, Random.nextInt(100)))
+
+    boxList
+  }
+
+  def getCertifierRightBox () : CertifierRightBox = {
+    new CertifierRightBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+  }
+
+  def getCretifierRightBoxList (count : Int) : JList[CertifierRightBox] = {
+    val boxList : JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getCertifierRightBox())
+
+    boxList
+  }
+
+  def getCustomBox () : CustomBox = {
+    new CustomBox(getCustomSecret().publicImage().asInstanceOf[CustomPublicKeyProposition], Random.nextInt(100))
+  }
+
+  def getCustomBoxList (count : Int) : JList[CustomBox] = {
+    val boxList : JList[CustomBox] = new JArrayList[CustomBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getCustomBox())
+
+    boxList
+  }
+
+
+  def getWalletBox (boxClass : Class[_ <: Box[_ <: Proposition]]) : WalletBox = {
+    val txId = new Array[Byte](32)
+    Random.nextBytes(txId)
+
+    boxClass match {
+      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case _ => new WalletBox(getCustomBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+    }
+  }
+
+  def getWalletBoxList (boxClass : Class[_ <: Box[_ <: Proposition]], count : Int) : JList[WalletBox] = {
+    val boxList : JList[WalletBox] = new JArrayList[WalletBox]()
+
+    for (i <- 1 to count)
+      boxList.add(getWalletBox(boxClass))
+
+    boxList
+  }
+
+  def getWalletBoxList (boxList : JList[_ <: Box[_ <: Proposition]]) : JList[WalletBox] = {
+    val wboxList : JList[WalletBox] = new JArrayList[WalletBox]()
+    val txId = new Array[Byte](32)
+    Random.nextBytes(txId)
+
+    for (b <- boxList.asScala)
+      wboxList.add(new WalletBox(b, BytesUtils.toHexString(txId), Random.nextInt(100000)))
+
+    wboxList
   }
 
 }
+
+class BoxFixtureClass extends BoxFixture
