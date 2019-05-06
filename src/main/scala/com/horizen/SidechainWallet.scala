@@ -51,7 +51,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
     require(secret != null, "Secret must be NOT NULL.")
-    secretStorage.add(secret)
+    secretStorage.add(secret).get
     applicationWallet.onAddSecret(secret)
     this
   }
@@ -60,7 +60,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Try[SidechainWallet] = Try {
     require(publicImage != null, "PublicImage must be NOT NULL.")
-    secretStorage.remove(publicImage)
+    secretStorage.remove(publicImage).get
     applicationWallet.onRemoveSecret(publicImage)
     this
   }

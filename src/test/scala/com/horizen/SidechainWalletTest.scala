@@ -336,7 +336,7 @@ class SidechainWalletTest
 
     var failureResult = sidechainWallet.addSecret(secret1)
     assertTrue("SidechainWallet failure expected during adding new Secret.", failureResult.isFailure)
-    assertEquals("SidechainWallet different exception expected during adding new Secret.", actualException, failureResult.failed)
+    assertEquals("SidechainWallet different exception expected during adding new Secret.", actualException, failureResult.failed.get)
     assertFalse("ApplicationWallet onAddSecret() event should NOT be emitted.", onAddSecretEvent)
 
 
@@ -352,6 +352,7 @@ class SidechainWalletTest
 
     // Test 7: try to remove null Secret
     // ApplicationWallet.onRemoveSecret() event NOT expected
+    onRemoveSecretEvent = false
     assertTrue("SidechainWallet failure expected during removing NULL Secret.", sidechainWallet.removeSecret(null).isFailure)
     assertFalse("ApplicationWallet onRemoveSecret() event should NOT be emitted.", onRemoveSecretEvent)
 
@@ -364,7 +365,7 @@ class SidechainWalletTest
 
     failureResult = sidechainWallet.removeSecret(secret1.publicImage())
     assertTrue("SidechainWallet failure expected during removing new Secret.", failureResult.isFailure)
-    assertEquals("SidechainWallet different exception expected during removing new Secret.", actualException, failureResult.failed)
+    assertEquals("SidechainWallet different exception expected during removing new Secret.", actualException, failureResult.failed.get)
     assertFalse("ApplicationWallet onRemoveSecret() event should NOT be emitted.", onRemoveSecretEvent)
   }
 
