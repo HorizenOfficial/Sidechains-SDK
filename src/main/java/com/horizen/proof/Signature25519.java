@@ -12,15 +12,15 @@ import java.util.Objects;
 
 public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
-    static int _signatureLength = Curve25519.SignatureLength();
+    public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
     byte[] _signatureBytes;
 
     public Signature25519 (byte[] signatureBytes) {
-        if(signatureBytes.length != _signatureLength)
-            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", _signatureLength,
+        if(signatureBytes.length != SIGNATURE_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
                     signatureBytes.length));
 
-        _signatureBytes = Arrays.copyOf(signatureBytes, _signatureLength);
+        _signatureBytes = Arrays.copyOf(signatureBytes, SIGNATURE_LENGTH);
     }
 
     @Override
@@ -30,7 +30,7 @@ public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, P
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_signatureBytes, _signatureLength);
+        return Arrays.copyOf(_signatureBytes, SIGNATURE_LENGTH);
     }
 
     @Override
@@ -52,13 +52,13 @@ public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, P
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Signature25519 that = (Signature25519) o;
-        return _signatureLength == that._signatureLength &&
+        return SIGNATURE_LENGTH == that.SIGNATURE_LENGTH &&
                 Arrays.equals(_signatureBytes, that._signatureBytes);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(_signatureLength);
+        int result = Objects.hash(SIGNATURE_LENGTH);
         result = 31 * result + Arrays.hashCode(_signatureBytes);
         return result;
     }
