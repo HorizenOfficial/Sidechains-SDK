@@ -12,9 +12,21 @@ import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 public class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
+    private boolean _ignoreSerializerID;
     private HashMap<Integer, Serializer<T>> _serializers; // unique key : serializer
     private HashMap<Class, Integer> _serializersClasses; // serializer class : unique key
+    private Serializer<T> _singleSerializer;    // used if ignoreSerializerID == true
     private int _maxListLength; // Used during parsing bytes. Not positive value for unlimited lists support.
+
+    public ListSerializer(Serializer<T> serializer) {
+        this(serializer, 0);
+    }
+
+    public ListSerializer(Serializer<T> serializer, int maxListLength) {
+        _ignoreSerializerID = true;
+        _maxListLength = maxListLength;
+        _singleSerializer = serializer;
+    }
 
     public ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
         this(serializers, 0);
@@ -22,6 +34,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
 
     public ListSerializer(HashMap<Integer, Serializer<T>> serializers, int maxListLength)
      {
+         _ignoreSerializerID = false;
          _maxListLength = maxListLength;
          _serializers = serializers;
          _serializersClasses = new HashMap<>();
@@ -40,7 +53,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
         // Array with objects                               rest of bytes
 
         // Each object in array has the next structure:
-        // Serializer ID                                    4 bytes
+        // Serializer ID                                    4 bytes, if _ignoreSerializerID == false, 0 - otherwise
         // Object itself                                    rest of bytes
 
         List<Integer> lengthList = new ArrayList<>();
@@ -48,19 +61,26 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
         ByteArrayOutputStream res = new ByteArrayOutputStream();
         ByteArrayOutputStream entireRes = new ByteArrayOutputStream();
         for (T t : obj) {
-            // get proper Serializer or return nothing
-            int idOfSerializer = 0;
-            boolean serializerFound = _serializersClasses.containsKey(t.serializer().getClass());
+            if(_ignoreSerializerID) {
+                // We have single serializer defined, so we don't need to store Serializer ID.
+                byte[] tBytes = _singleSerializer.toBytes(t);
+                lengthList.add(tBytes.length); // size of serialized T object
+                entireRes.write(tBytes, 0, tBytes.length);
+            } else {
+                // get proper Serializer or return nothing
+                int idOfSerializer = 0;
+                boolean serializerFound = _serializersClasses.containsKey(t.serializer().getClass());
 
-            if(serializerFound)
-                idOfSerializer = _serializersClasses.get(t.serializer().getClass());
-            else
-                throw new IllegalArgumentException("Object without defined serializer occurred.");
+                if (serializerFound)
+                    idOfSerializer = _serializersClasses.get(t.serializer().getClass());
+                else
+                    throw new IllegalArgumentException("Object without defined serializer occurred.");
 
-            byte[] tBytes = t.bytes();
-            lengthList.add(4 + tBytes.length); // size of Int + size of serialized T object
-            entireRes.write(Ints.toByteArray(idOfSerializer), 0, 4);
-            entireRes.write(tBytes, 0, tBytes.length);
+                byte[] tBytes = t.bytes();
+                lengthList.add(4 + tBytes.length); // size of Int + size of serialized T object
+                entireRes.write(Ints.toByteArray(idOfSerializer), 0, 4);
+                entireRes.write(tBytes, 0, tBytes.length);
+            }
         }
 
         res.write(Ints.toByteArray(lengthList.size()), 0, 4);
@@ -99,24 +119,35 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
 
             if(bytes.length != offset + objectsTotalLength)
                 throw new IllegalArgumentException("Input data corrupted.");
-            // Pair <serializer id : bytes>
-            ArrayList<Pair<Integer, byte[]>> objects = new ArrayList<>();
-            for(int length : lengthList) {
-                int serializerId = BytesUtils.getInt(bytes, offset);
-                offset += 4;
-                objects.add(new Pair<>(serializerId, Arrays.copyOfRange(bytes, offset, offset + length - 4)));
-                offset += length - 4;
-            }
-
 
             ArrayList<T> res = new ArrayList<>();
-            for(Pair<Integer, byte[]> obj : objects) {
-                if(!_serializers.containsKey(obj.getKey()))
-                    throw new IllegalArgumentException("Input data corrupted.");
-                Try<T> t =_serializers.get(obj.getKey()).parseBytes(obj.getValue());
-                if(t.isFailure())
-                    throw new IllegalArgumentException("Input data corrupted.");
-                res.add(t.get());
+            if(_ignoreSerializerID) {
+                // We have single serializer defined, so we don't need to parse 4 bytes for Serializer ID.
+                for(int length : lengthList) {
+                    Try<T> t =_singleSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + length));
+                    if (t.isFailure())
+                        throw new IllegalArgumentException("Input data corrupted.");
+                    res.add(t.get());
+                    offset += length;
+                }
+            } else {
+                // Pair <serializer id : bytes>
+                ArrayList<Pair<Integer, byte[]>> objects = new ArrayList<>();
+                for (int length : lengthList) {
+                    int serializerId = BytesUtils.getInt(bytes, offset);
+                    offset += 4;
+                    objects.add(new Pair<>(serializerId, Arrays.copyOfRange(bytes, offset, offset + length - 4)));
+                    offset += length - 4;
+                }
+
+                for (Pair<Integer, byte[]> obj : objects) {
+                    if (!_serializers.containsKey(obj.getKey()))
+                        throw new IllegalArgumentException("Input data corrupted.");
+                    Try<T> t = _serializers.get(obj.getKey()).parseBytes(obj.getValue());
+                    if (t.isFailure())
+                        throw new IllegalArgumentException("Input data corrupted.");
+                    res.add(t.get());
+                }
             }
 
             return new Success<>(res);
