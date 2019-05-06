@@ -48,7 +48,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
 
   // 1) check for existence
-  // 2) try to store in SecretStoreusing SidechainSecretsCompanion
+  // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
     require(secret != null, "Secret must be NOT NULL.")
     secretStorage.add(secret)

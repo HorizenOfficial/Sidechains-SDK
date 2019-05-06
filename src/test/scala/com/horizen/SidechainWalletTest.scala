@@ -1,20 +1,22 @@
-package com.horizen.storage
+package com.horizen
 
-import scorex.util.ModifierId
-import scorex.core.{bytesToId, idToBytes}
-import com.horizen.{SidechainWallet, WalletBox, WalletBoxSerializer}
+import java.util
+
+import scorex.core.bytesToId
 import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import javafx.util.Pair
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Companion, Secret, SecretSerializer}
+import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
+import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 
 import scala.collection.mutable.{ListBuffer, Map}
@@ -24,20 +26,17 @@ import org.scalatest.mockito._
 
 import scala.collection.JavaConverters._
 import org.mockito._
-import org.mockito.stubbing._
 import scorex.crypto.hash.Blake2b256
 
-import scala.util.Random
+import scala.util.{Failure, Random, Try}
 
 class SidechainWalletTest
   extends JUnitSuite
     with SecretFixture
-    with BoxFixture
+    with TransactionFixture
     with IODBStoreFixture
     with MockitoSugar
 {
-  var seed = new Array[Byte](32)
-
   val mockedBoxStorage : Storage = mock[IODBStoreAdapter]
   val mockedSecretStorage : Storage = mock[IODBStoreAdapter]
 
@@ -60,8 +59,7 @@ class SidechainWalletTest
   @Before
   def setUp() : Unit = {
 
-    Random.nextBytes(seed)
-
+    // Set base Secrets data
     secretList ++= getSecretList(5).asScala
     secretVersions += getVersion
 
@@ -69,34 +67,38 @@ class SidechainWalletTest
       storedSecretList.append({
         val key = new ByteArrayWrapper(Blake2b256.hash(s.publicImage().bytes))
         val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))
-        new Pair(key,value)
+        new Pair(key, value)
       })
     }
 
+
+    // Mock get and update methods of SecretStorage
     Mockito.when(mockedSecretStorage.getAll).thenReturn(storedSecretList.asJava)
 
     Mockito.when(mockedSecretStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
+      .thenAnswer(answer => {
         storedSecretList.filter(_.getKey.equals(answer.getArgument(0)))
       })
 
     Mockito.when(mockedSecretStorage.get(ArgumentMatchers.anyList[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
-        storedSecretList.filter((p) => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
+      .thenAnswer(answer => {
+        storedSecretList.filter(p => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
       })
 
     Mockito.when(mockedSecretStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
         ArgumentMatchers.anyList[ByteArrayWrapper](),
         ArgumentMatchers.anyList[Pair[ByteArrayWrapper,ByteArrayWrapper]]()))
-      .thenAnswer((answer) => {
+      .thenAnswer(answer => {
         secretVersions.append(answer.getArgument(0))
         for (s <- answer.getArgument(1).asInstanceOf[JList[ByteArrayWrapper]].asScala)
-          storedSecretList.remove(storedSecretList.indexWhere((p) => p.getKey.equals(s)))
+          storedSecretList.remove(storedSecretList.indexWhere(p => p.getKey.equals(s)))
         for (s <- answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
-          storedSecretList.remove(storedSecretList.indexWhere((p) => p.getKey.equals(s.getKey)))
+          storedSecretList.remove(storedSecretList.indexWhere(p => p.getKey.equals(s.getKey)))
         storedSecretList.appendAll(answer.getArgument(2))
       })
 
+
+    // Set base WalletBox data
     boxList ++= getWalletBoxList(getRegularBoxList(secretList.asJava)).asScala
     boxVersions += getVersion
 
@@ -109,34 +111,127 @@ class SidechainWalletTest
       })
     }
 
+
+    // Mock get and update methods of BoxStorage
     Mockito.when(mockedBoxStorage.getAll).thenReturn(storedBoxList.asJava)
 
     Mockito.when(mockedBoxStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
+      .thenAnswer(answer => {
         storedBoxList.filter(_.getKey.equals(answer.getArgument(0)))
       })
 
     Mockito.when(mockedBoxStorage.get(ArgumentMatchers.anyList[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
-        storedBoxList.filter((p) => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
+      .thenAnswer(answer => {
+        storedBoxList.filter(p => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
       })
 
     Mockito.when(mockedBoxStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.anyList[ByteArrayWrapper](),
       ArgumentMatchers.anyList[Pair[ByteArrayWrapper,ByteArrayWrapper]]()))
-      .thenAnswer((answer) => {
+      .thenAnswer(answer => {
         boxVersions.append(answer.getArgument(0))
         for (s <- answer.getArgument(1).asInstanceOf[JList[ByteArrayWrapper]].asScala) {
-          storedBoxList.remove(storedBoxList.indexWhere((p) => p.getKey.equals(s)))
+          storedBoxList.remove(storedBoxList.indexWhere(p => p.getKey.equals(s)))
         }
         for (s <- answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala) {
-          val index = storedBoxList.indexWhere((p) => p.getKey.equals(s.getKey))
+          val index = storedBoxList.indexWhere(p => p.getKey.equals(s.getKey))
           if (index != -1)
             storedBoxList.remove(index)
         }
         storedBoxList.appendAll(answer.getArgument(2).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
 
+  }
+
+  @Test
+  def testScanPersistent2(): Unit = {
+    val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
+    val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+
+    // Prepare list of transactions:
+    val secret1 = PrivateKey25519Companion.getCompanion.generateSecret("seed1".getBytes())
+    val secret2 = PrivateKey25519Companion.getCompanion.generateSecret("seed2".getBytes())
+    val secret3 = PrivateKey25519Companion.getCompanion.generateSecret("seed3".getBytes())
+    val secret4 = PrivateKey25519Companion.getCompanion.generateSecret("seed4".getBytes())
+
+    val transaction1 = getRegularTransaction(Seq(secret1, secret2, secret3), Seq(secret4.publicImage()))
+    val transaction2 = getRegularTransaction(Seq(secret1, secret2), Seq(secret1.publicImage(), secret3.publicImage()))
+
+    // create mocked SidechainBlock
+    val blockId = new Array[Byte](32)
+    Random.nextBytes(blockId)
+    val mockedBlock : SidechainBlock = mock[SidechainBlock]
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(Seq(
+        transaction1.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]],
+        transaction2.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]
+      ))
+    Mockito.when(mockedBlock.id)
+      .thenReturn(bytesToId(blockId))
+
+    // Prepare mockedSecretStorage1 Secrets
+    Mockito.when(mockedSecretStorage1.getAll).thenReturn(List(secret1, secret2, secret3))
+
+
+    // Test:
+    // Prepare what we expect to receive for WalletBoxStorage.update
+    Mockito.when(mockedWalletBoxStorage1.update(
+      ArgumentMatchers.any[ByteArrayWrapper](),
+      ArgumentMatchers.any[List[WalletBox]](),
+      ArgumentMatchers.any[List[Array[Byte]]]()))
+      .thenAnswer(answer => {
+        val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val walletBoxUpdateList = answer.getArgument(1).asInstanceOf[List[WalletBox]]
+        val boxIdsRemoveList = answer.getArgument(2).asInstanceOf[List[Array[Byte]]]
+
+        // check
+        assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual version is wrong.", new ByteArrayWrapper(blockId), version)
+        assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual walletBoxUpdateList is wrong.", List(
+          new WalletBox(transaction2.newBoxes().get(0), transaction2.id(), transaction2.timestamp()),
+          new WalletBox(transaction2.newBoxes().get(1), transaction2.id(), transaction2.timestamp())
+        ), walletBoxUpdateList)
+
+        assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual boxIdsRemoveList is wrong.", List(
+          new ByteArrayWrapper(transaction1.unlockers().get(0).closedBoxId()),
+          new ByteArrayWrapper(transaction1.unlockers().get(1).closedBoxId()),
+          new ByteArrayWrapper(transaction1.unlockers().get(2).closedBoxId()),
+          new ByteArrayWrapper(transaction2.unlockers().get(0).closedBoxId()),
+          new ByteArrayWrapper(transaction2.unlockers().get(1).closedBoxId())
+        ), boxIdsRemoveList.map(new ByteArrayWrapper(_)))
+
+        Try {
+          mockedWalletBoxStorage1
+        }
+      })
+
+    // Prepare what we expect to receive for ApplicationWallet.onChangeBoxes
+    Mockito.when(mockedApplicationWallet.onChangeBoxes(
+      ArgumentMatchers.anyList[Box[_ <: Proposition]](),
+      ArgumentMatchers.anyList[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxesToUpdate = answer.getArgument(0).asInstanceOf[JList[Box[_ <: Proposition]]]
+        val boxIdsToRemove = answer.getArgument(1).asInstanceOf[JList[Array[Byte]]].asScala.map(new ByteArrayWrapper(_)).toList.asJava
+
+        // check
+        assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxesToUpdate list is wrong.", util.Arrays.asList(
+          transaction2.newBoxes().get(0),
+          transaction2.newBoxes().get(1)
+        ), boxesToUpdate)
+
+        assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxIdsToRemove list is wrong.", util.Arrays.asList(
+          new ByteArrayWrapper(transaction1.unlockers().get(0).closedBoxId()),
+          new ByteArrayWrapper(transaction1.unlockers().get(1).closedBoxId()),
+          new ByteArrayWrapper(transaction1.unlockers().get(2).closedBoxId()),
+          new ByteArrayWrapper(transaction2.unlockers().get(0).closedBoxId()),
+          new ByteArrayWrapper(transaction2.unlockers().get(1).closedBoxId())
+        ), boxIdsToRemove)
+
+      })
+
+    sidechainWallet.scanPersistent(mockedBlock)
   }
 
   @Test
@@ -175,6 +270,102 @@ class SidechainWalletTest
     assertTrue("Wallet must contain all specified WalletBoxes.",
       wbl.map(_.box).asJavaCollection.containsAll(tx.newBoxes))
 
+  }
+
+  @Test
+  def testSecrets2(): Unit = {
+    val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
+    val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+    val secret1 = getSecret("testSeed1".getBytes())
+    val secret2 = getSecret("testSeed2".getBytes())
+
+
+    // Test 1: test secret(proposition) and secretByPublicKey(proposition)
+    Mockito.when(mockedSecretStorage1.get(secret1.publicImage())).thenReturn(Some(secret1))
+
+    var actualSecret = sidechainWallet.secret(secret1.publicImage()).get
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
+
+    actualSecret = sidechainWallet.secretByPublicKey(secret1.publicImage()).get
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
+
+
+    // Test 2: test secrets(), publicKeys(), allSecrets(), secretsOfType(type)
+    Mockito.when(mockedSecretStorage1.getAll).thenReturn(List(secret1, secret2))
+
+    val actualSecrets = sidechainWallet.secrets()
+    assertEquals("SidechainWallet failed to retrieve a proper Secrets.", Set(secret1, secret2), actualSecrets)
+
+    val actualPublicKeys = sidechainWallet.publicKeys()
+    assertEquals("SidechainWallet failed to retrieve a proper Public Keys.", Set(secret1.publicImage(), secret2.publicImage()), actualPublicKeys)
+
+    val actualSecretsJava = sidechainWallet.allSecrets()
+    assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualSecretsJava)
+
+    var actualPrivateKeysJava = sidechainWallet.secretsOfType(classOf[PrivateKey25519])
+    assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualPrivateKeysJava)
+
+    var actualCustomKeysJava = sidechainWallet.secretsOfType(classOf[CustomPrivateKey])
+    assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(), actualCustomKeysJava)
+
+
+    // Test 3: try to add new valid Secret
+    // ApplicationWallet.onAddSecret() event expected
+    var onAddSecretEvent: Boolean = false
+    Mockito.when(mockedSecretStorage1.add(secret1)).thenReturn(Try{mockedSecretStorage1})
+    Mockito.when(mockedApplicationWallet.onAddSecret(secret1)).thenAnswer(_ => onAddSecretEvent = true)
+
+    var result: Boolean = sidechainWallet.addSecret(secret1).isSuccess
+    assertTrue("SidechainWallet failed to add new Secret.", result)
+    assertTrue("ApplicationWallet onAddSecret() event should be emitted.", onAddSecretEvent)
+
+
+    // Test 4: try to add null Secret
+    // ApplicationWallet.onAddSecret() event NOT expected
+    onAddSecretEvent = false
+    assertTrue("SidechainWallet failure expected during adding NULL Secret.", sidechainWallet.addSecret(null).isFailure)
+    assertFalse("ApplicationWallet onAddSecret() event should NOT be emitted.", onAddSecretEvent)
+
+
+    // Test 5: try to add some Secret, exception in SecretStorage occurred.
+    // ApplicationWallet.onAddSecret() event NOT expected
+    var actualException = new IllegalArgumentException("on add exception")
+    Mockito.when(mockedSecretStorage1.add(secret1)).thenReturn(Failure(actualException))
+
+    var failureResult = sidechainWallet.addSecret(secret1)
+    assertTrue("SidechainWallet failure expected during adding new Secret.", failureResult.isFailure)
+    assertEquals("SidechainWallet different exception expected during adding new Secret.", actualException, failureResult.failed)
+    assertFalse("ApplicationWallet onAddSecret() event should NOT be emitted.", onAddSecretEvent)
+
+
+    // Test 6: try to remove valid Secret
+    // ApplicationWallet.onRemoveSecret() event expected
+    var onRemoveSecretEvent: Boolean = false
+    Mockito.when(mockedSecretStorage1.remove(secret1.publicImage())).thenReturn(Try{mockedSecretStorage1})
+    Mockito.when(mockedApplicationWallet.onRemoveSecret(secret1.publicImage())).thenAnswer(_ => onRemoveSecretEvent = true)
+    result = sidechainWallet.removeSecret(secret1.publicImage()).isSuccess
+    assertTrue("SidechainWallet failed to remove Secret.", result)
+    assertTrue("ApplicationWallet onRemoveSecret() event should be emitted.", onRemoveSecretEvent)
+
+
+    // Test 7: try to remove null Secret
+    // ApplicationWallet.onRemoveSecret() event NOT expected
+    assertTrue("SidechainWallet failure expected during removing NULL Secret.", sidechainWallet.removeSecret(null).isFailure)
+    assertFalse("ApplicationWallet onRemoveSecret() event should NOT be emitted.", onRemoveSecretEvent)
+
+
+    // Test 8: try to remove some Secret, exception in SecretStorage occurred.
+    // ApplicationWallet.onRemoveSecret() event NOT expected
+    onRemoveSecretEvent = false
+    actualException = new IllegalArgumentException("on remove exception")
+    Mockito.when(mockedSecretStorage1.remove(secret1.publicImage())).thenReturn(Failure(actualException))
+
+    failureResult = sidechainWallet.removeSecret(secret1.publicImage())
+    assertTrue("SidechainWallet failure expected during removing new Secret.", failureResult.isFailure)
+    assertEquals("SidechainWallet different exception expected during removing new Secret.", actualException, failureResult.failed)
+    assertFalse("ApplicationWallet onRemoveSecret() event should NOT be emitted.", onRemoveSecretEvent)
   }
 
   @Test
@@ -220,6 +411,53 @@ class SidechainWalletTest
     //TEST for - NodeWallet.allSecrets
     val sl1 = sidechainWallet.allSecrets()
     assertTrue("Wallet must contain all Secrets.", secretList.slice(1,5).+=(s).asJavaCollection.containsAll(sl1))
+  }
+
+  @Test
+  def testWalletBoxes2(): Unit = {
+    val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
+    val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, new CustomApplicationWallet())
+    val walletBoxRegular1 = getWalletBox(classOf[RegularBox])
+    val walletBoxRegular2 = getWalletBox(classOf[RegularBox])
+    val walletBoxCustom = getWalletBox(classOf[RegularBox])
+
+
+    // Test 1: test test boxes(), allBoxes(), allBoxes(boxIdsToExclude)
+    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxRegular1, walletBoxRegular2, walletBoxCustom))
+
+    val actualBoxes = sidechainWallet.boxes()
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
+      List(walletBoxRegular1, walletBoxRegular2, walletBoxCustom), actualBoxes)
+
+    val actualBoxesJava = sidechainWallet.allBoxes
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
+      util.Arrays.asList(walletBoxRegular1.box, walletBoxRegular2.box, walletBoxCustom.box), actualBoxesJava)
+
+    // exclude id of walletBoxRegular1
+    val actualBoxesWithExcludeJava = sidechainWallet.allBoxes(util.Arrays.asList(walletBoxRegular1.box.id()))
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes with excluded ids.",
+      util.Arrays.asList(walletBoxRegular2.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
+
+
+    // Test 2: test boxesOfType(type) and boxesOfType(type, boxIdsToExclude)
+    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[RegularBox])).thenReturn(List(walletBoxRegular1, walletBoxRegular2))
+
+    val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[RegularBox])
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox.",
+      util.Arrays.asList(walletBoxRegular1.box, walletBoxRegular2.box), actualBoxesByTypeJava)
+
+    val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[RegularBox], util.Arrays.asList(walletBoxRegular1.box.id()))
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox with excluded ids.",
+      util.Arrays.asList(walletBoxRegular2.box), actualBoxesByTypeWithExcludeJava)
+
+
+    // Test 3: test boxesBalance(type)
+    val balance = 100L
+    Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(classOf[RegularBox])).thenReturn(balance)
+
+    val actualBalance = sidechainWallet.boxesBalance(classOf[RegularBox])
+    assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
   }
 
   @Test
