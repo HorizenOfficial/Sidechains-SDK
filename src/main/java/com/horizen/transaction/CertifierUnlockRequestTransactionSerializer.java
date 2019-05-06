@@ -9,7 +9,7 @@ import scorex.core.serialization.Serializer;
 import java.util.HashMap;
 import java.util.List;
 
-class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction> implements TransactionSerializer<T>
+public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction> implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 

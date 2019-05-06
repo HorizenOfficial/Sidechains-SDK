@@ -7,6 +7,7 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposition> extends ScorexEncoding implements NoncedBox<PKP>
 {
@@ -63,7 +64,6 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, nonce: %d, value: %d)", this.getClass().toString(), encoder().encode(id()), _proposition, _nonce, _value);
     }
-
 }
 
 

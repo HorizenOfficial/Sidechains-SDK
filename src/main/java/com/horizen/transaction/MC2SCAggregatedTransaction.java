@@ -24,6 +24,7 @@ import java.util.*;
 
 public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
 {
+    public static final byte TRANSACTION_TYPE_ID = 2;
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
     private long _timestamp;
@@ -87,7 +88,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     @Override
     public byte transactionTypeId() {
-        return 2;
+        return TRANSACTION_TYPE_ID;
     }
 
     @Override

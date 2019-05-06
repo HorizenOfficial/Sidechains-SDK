@@ -189,10 +189,9 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
       else {
         val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
         obj.SCMap.get.foreach {
-          case (k, v) => {
-            stream.write(k.data())
+          case (k, v) =>
+            stream.write(k.data)
             stream.write(v)
-          }
         }
         stream.toByteArray
       }

@@ -1,28 +1,27 @@
-package com.horizen.secret;
+package com.horizen.customtypes;
 
 import com.google.common.primitives.Bytes;
-import com.horizen.proof.Signature25519;
+import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PublicKey25519Proposition;
-
+import com.horizen.secret.Secret;
+import com.horizen.secret.SecretCompanion;
+import com.horizen.secret.SecretSerializer;
 import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 
-
-public final class PrivateKey25519 implements Secret
+public class CustomPrivateKey implements Secret
 {
-    public static final int KEY_LENGTH = Curve25519.KeyLength();
-    public static final byte SECRET_TYPE_ID = 0;
+    public static final int KEY_LENGTH = 128;
+    public static final byte SECRET_TYPE_ID = 1;
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;
 
-    public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
+    public CustomPrivateKey(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
         if(privateKeyBytes.length != KEY_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH,
@@ -41,31 +40,41 @@ public final class PrivateKey25519 implements Secret
     }
 
     @Override
+    public ProofOfKnowledgeProposition publicImage() {
+        return new CustomPublicKeyProposition(_publicKeyBytes);
+    }
+
+    @Override
+    public SecretCompanion companion() {
+        return null;
+    }
+
+    @Override
     public byte[] bytes() {
         return Bytes.concat(_privateKeyBytes, _publicKeyBytes);
     }
 
     @Override
     public SecretSerializer serializer() {
-        return PrivateKey25519Serializer.getSerializer();
+        return CustomPrivateKeySerializer.getSerializer();
     }
 
     @Override
-    public PublicKey25519Proposition publicImage() {
-        return new PublicKey25519Proposition(_publicKeyBytes);
+    public boolean owns(ProofOfKnowledgeProposition proposition) {
+        return false;
     }
 
     @Override
-    public PrivateKey25519Companion companion() {
-        return PrivateKey25519Companion.getCompanion();
+    public ProofOfKnowledge sign(byte[] message) {
+        return null;
     }
 
-    public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
+    public static Try<CustomPrivateKey> parseBytes(byte[] bytes) {
         try {
             byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
             byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
-            PrivateKey25519 secret = new PrivateKey25519(privateKeyBytes, publicKeyBytes);
-            return new Success<PrivateKey25519>(secret);
+            CustomPrivateKey secret = new CustomPrivateKey(privateKeyBytes, publicKeyBytes);
+            return new Success<CustomPrivateKey>(secret);
         } catch (Exception e) {
             return new Failure(e);
         }
@@ -75,7 +84,7 @@ public final class PrivateKey25519 implements Secret
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PrivateKey25519 that = (PrivateKey25519) o;
+        CustomPrivateKey that = (CustomPrivateKey) o;
         return Arrays.equals(_privateKeyBytes, that._privateKeyBytes) &&
                 Arrays.equals(_publicKeyBytes, that._publicKeyBytes);
     }
@@ -88,18 +97,8 @@ public final class PrivateKey25519 implements Secret
     }
 
     @Override
-    public boolean owns(ProofOfKnowledgeProposition proposition) {
-        return publicImage().equals(proposition);
-    }
-
-    @Override
-    public Signature25519 sign(byte[] message) {
-        return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
-    }
-
-    @Override
     public String toString() {
-        return "PrivateKey25519{" +
+        return "CustomPrivateKey{" +
                 "_privateKeyBytes=" + BytesUtils.toHexString(_privateKeyBytes) +
                 ", _publicKeyBytes=" + BytesUtils.toHexString(_publicKeyBytes) +
                 '}';
