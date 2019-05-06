@@ -20,7 +20,7 @@ public class StorageTest {
         ByteArrayWrapper version1 = storageFixture.getVersion();
         List<Pair<ByteArrayWrapper,ByteArrayWrapper>> u1 = storageFixture.getKeyValueList(3);
 
-        s.update(version1, new ArrayList<ByteArrayWrapper>(), u1);
+        s.update(version1, u1, new ArrayList<ByteArrayWrapper>());
 
         assertEquals("Storage must contain 3 items.", 3, s.getAll().size());
         assertEquals("Storage must contain value for key - " + u1.get(0).getKey(), u1.get(0).getValue(), s.get(u1.get(0).getKey()).get());
@@ -35,7 +35,7 @@ public class StorageTest {
         for (Pair<ByteArrayWrapper,ByteArrayWrapper> i : u1)
             u2.add(new Pair<ByteArrayWrapper,ByteArrayWrapper>(i.getKey(), storageFixture.getValue()));
 
-        s.update(version2, new ArrayList<ByteArrayWrapper>(), u2);
+        s.update(version2, u2, new ArrayList<ByteArrayWrapper>());
 
         assertEquals("Storage must contain 3 items.", 3, s.getAll().size());
         assertEquals("Storage must contain value for key - " + u2.get(0).getKey(), u2.get(0).getValue(), s.get(u2.get(0).getKey()).get());
@@ -51,7 +51,7 @@ public class StorageTest {
         for (Pair<ByteArrayWrapper,ByteArrayWrapper> i : u2.subList(1,3))
             r.add(i.getKey());
 
-        s.update(version3, r, new ArrayList<Pair<ByteArrayWrapper,ByteArrayWrapper>>());
+        s.update(version3, new ArrayList<Pair<ByteArrayWrapper,ByteArrayWrapper>>(), r);
 
         assertEquals("Storage must contain 1 item.", 1, s.getAll().size());
         assertEquals("Storage must contain value for key - " + u2.get(0).getKey(), u2.get(0).getValue(), s.get(u2.get(0).getKey()).get());

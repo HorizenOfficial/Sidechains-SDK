@@ -64,8 +64,8 @@ class IODBStoreAdapter (store : Store)
       Optional.of(new ByteArrayWrapper(value.get))
   }
 
-  override def update(version: ByteArrayWrapper, toRemove: JList[ByteArrayWrapper],
-                      toUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]]): Unit = {
+  override def update(version: ByteArrayWrapper, toUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]],
+                      toRemove: JList[ByteArrayWrapper]): Unit = {
 
     val listToUpdate = new ArrayBuffer[Tuple2[ByteArrayWrapper,ByteArrayWrapper]]()
 

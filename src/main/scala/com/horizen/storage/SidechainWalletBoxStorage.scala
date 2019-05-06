@@ -125,8 +125,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
         new ByteArrayWrapper(_walletBoxSerializer.toBytes(wb))))
 
     storage.update(version,
-      removeList,
-      updateList)
+      updateList,
+      removeList)
 
     for (key <- removeList.asScala) {
       val btr = _walletBoxes.remove(key)
