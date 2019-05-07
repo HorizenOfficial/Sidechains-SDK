@@ -31,7 +31,7 @@ class IODBStoreAdapter (store : Store)
   }
 
   override def get(keys: JList[ByteArrayWrapper]): JList[Pair[ByteArrayWrapper, Optional[ByteArrayWrapper]]] = {
-    val keysList = new ArrayBuffer[ByteArrayWrapper]();
+    val keysList = new ArrayBuffer[ByteArrayWrapper]()
     val valList = store.get(keys.asScala)
     val values = new JArrayList[Pair[ByteArrayWrapper,Optional[ByteArrayWrapper]]]()
 
@@ -64,8 +64,8 @@ class IODBStoreAdapter (store : Store)
       Optional.of(new ByteArrayWrapper(value.get))
   }
 
-  override def update(version: ByteArrayWrapper, toRemove: JList[ByteArrayWrapper],
-                      toUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]]): Unit = {
+  override def update(version: ByteArrayWrapper, toUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]],
+                      toRemove: JList[ByteArrayWrapper]): Unit = {
 
     val listToUpdate = new ArrayBuffer[Tuple2[ByteArrayWrapper,ByteArrayWrapper]]()
 
@@ -82,7 +82,7 @@ class IODBStoreAdapter (store : Store)
 
   override def rollbackVersions(): JList[ByteArrayWrapper] = {
     val versions = store.rollbackVersions()
-    val value = new JArrayList[ByteArrayWrapper]();
+    val value = new JArrayList[ByteArrayWrapper]()
     for (v <- versions)
       value.add(new ByteArrayWrapper(v))
 

@@ -11,5 +11,6 @@ public interface ApplicationWallet {
 
     void onAddSecret(Secret secret);
     void onRemoveSecret(Proposition proposition);
-    void onChangeBoxes(List<Box> boxesToUpdate, List<byte[]> boxIdsToRemove);
+    void onChangeBoxes(byte[] version, List<Box> boxesToUpdate, List<byte[]> boxIdsToRemove);
+    void onRollback(byte[] version);
 }

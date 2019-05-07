@@ -19,7 +19,7 @@ trait SecretFixture {
   val pk7 = pkc.generateSecret("seed7".getBytes())
 
   def getSecret() : Secret = {
-    val seed = new Array[Byte](32);
+    val seed = new Array[Byte](32)
     Random.nextBytes(seed)
     pkc.generateSecret(seed)
   }
@@ -29,7 +29,7 @@ trait SecretFixture {
   }
 
   def getSecretList(count : Int) : JList[Secret] = {
-    val seed = new Array[Byte](32);
+    val seed = new Array[Byte](32)
     val keysList : JList[Secret] = new JArrayList[Secret]()
     for (i <- 1 to count) {
       Random.nextBytes(seed)

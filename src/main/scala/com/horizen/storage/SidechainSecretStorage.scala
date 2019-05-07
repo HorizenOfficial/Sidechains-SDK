@@ -1,14 +1,12 @@
 package com.horizen.storage
 
-import java.lang.{Exception => JException}
 import java.util.{ArrayList => JArrayList}
 
 import javafx.util.{Pair => JPair}
 import scorex.util.ScorexLogging
 
-import scala.util.{Success, Failure, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.secret._
 import com.horizen.proposition._
@@ -29,11 +27,13 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
   private val _secrets = new mutable.LinkedHashMap[ByteArrayWrapper, Secret]()
 
+  loadSecrets()
+
   def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
   }
 
-  private def loadSecrets : Unit = {
+  private def loadSecrets() : Unit = {
     _secrets.clear()
     for (s <- storage.getAll.asScala) {
       val secret = sidechainSecretsCompanion.parseBytes(s.getValue.data)
@@ -43,8 +43,6 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
         throw new RuntimeException("Error while secret key parsing.")
     }
   }
-
-  loadSecrets
 
   def get (proposition : ProofOfKnowledgeProposition[_ <: Secret]) : Option[Secret] = {
     _secrets.get(calculateKey(proposition))
@@ -71,16 +69,17 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     val version = new Array[Byte](32)
     val key = calculateKey(secret.publicImage())
 
-    require(!_secrets.contains(key), "Key alredy exists - " + secret)
+    require(!_secrets.contains(key), "Key already exists - " + secret)
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.put(key, secret)
     storage.update(new ByteArrayWrapper(version),
-      List[ByteArrayWrapper]().asJava,
-      List(new JPair(key, value)).asJava)
+      List(new JPair(key, value)).asJava,
+      List[ByteArrayWrapper]().asJava)
+
+    _secrets.put(key, secret)
 
     this
   }
@@ -101,8 +100,8 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     }
 
     storage.update(new ByteArrayWrapper(version),
-      List[ByteArrayWrapper]().asJava,
-      updateList)
+      updateList,
+      List[ByteArrayWrapper]().asJava)
 
     this
   }
@@ -114,10 +113,11 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.remove(key)
     storage.update(new ByteArrayWrapper(version),
-      List(key).asJava,
-      List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava)
+      List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
+      List(key).asJava)
+
+    _secrets.remove(key)
 
     this
   }
@@ -136,8 +136,8 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     }
 
     storage.update(new ByteArrayWrapper(version),
-      removeList,
-      List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava)
+      List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
+      removeList)
 
     this
   }

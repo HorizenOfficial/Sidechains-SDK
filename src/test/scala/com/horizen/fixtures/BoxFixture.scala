@@ -76,7 +76,8 @@ trait BoxFixture extends SecretFixture {
     boxClass match {
       case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
       case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
-      case _ => new WalletBox(getCustomBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case _ => null
     }
   }
 

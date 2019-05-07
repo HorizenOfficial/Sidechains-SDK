@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional => JOptional, Arrays => JArrays, List => JList, Map => JMap}
+import java.util.{Optional => JOptional, List => JList}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -10,20 +10,12 @@ import com.horizen.proposition.Proposition
 import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.storage.{SidechainSecretStorage, SidechainWalletBoxStorage}
-import com.horizen.transaction.{BoxTransaction, Transaction}
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.VersionTag
-import scorex.util.{bytesToId, idToBytes}
-
-import scala.collection.immutable
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
 
-
-// 2 stores: one for Boxes(WalletBoxes), another for secrets
-// TO DO: we need to wrap LSMStore
-
-// TO DO: put also SidechainSecretsCompanion and SidechainBoxesCompanion with a data provided by Sidechain developer
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
@@ -56,10 +48,10 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
 
   // 1) check for existence
-  // 2) try to store in SecretStoreusing SidechainSecretsCompanion
+  // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
     require(secret != null, "Secret must be NOT NULL.")
-    secretStorage.add(secret)
+    secretStorage.add(secret).get
     applicationWallet.onAddSecret(secret)
     this
   }
@@ -68,7 +60,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: ProofOfKnowledgeProposition[_ <: Secret]): Try[SidechainWallet] = Try {
     require(publicImage != null, "PublicImage must be NOT NULL.")
-    secretStorage.remove(publicImage)
+    secretStorage.remove(publicImage).get
     applicationWallet.onRemoveSecret(publicImage)
     this
   }
@@ -77,17 +69,14 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
     secretStorage.get(publicImage)
   }
 
-  // get all secrets, use SidechainSecretsCompanion to deserialize
   override def secrets(): Set[Secret] = {
     secretStorage.getAll.toSet
   }
 
-  // get all boxes as WalletBox object using SidechainBoxesCompanion
   override def boxes(): Seq[WalletBox] = {
-    walletBoxStorage.getAll.toSeq
+    walletBoxStorage.getAll
   }
 
-  // get all secrets using SidechainSecretsCompanion -> get .publicImage of each
   override def publicKeys(): Set[ProofOfKnowledgeProposition[_ <: Secret]] = {
     secretStorage.getAll.map(_.publicImage()).toSet
   }
@@ -102,6 +91,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // update boxes in BoxStore
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
     //require(modifier != null, "SidechainBlock must be NOT NULL.")
+    val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys().map(_.asInstanceOf[Proposition])
 
@@ -115,9 +105,9 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
-    walletBoxStorage.update(new ByteArrayWrapper(BytesUtils.fromHexString(modifier.id)), newBoxes.toList, boxIdsToRemove.toList).get
+    walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
-    applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
+    applicationWallet.onChangeBoxes(version, newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
       boxIdsToRemove.toList.asJava)
 
     this
@@ -126,13 +116,15 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
-    walletBoxStorage.rollback(new ByteArrayWrapper(BytesUtils.fromHexString(to)))
+    val version = BytesUtils.fromHexString(to)
+    walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
+    applicationWallet.onRollback(version)
     this
   }
 
   // Java NodeWallet interface definition
   override def allBoxes : JList[Box[_ <: Proposition]] = {
-    walletBoxStorage.getAll.map(_.box).toList.asJava
+    walletBoxStorage.getAll.map(_.box).asJava
   }
 
   override def allBoxes(boxIdsToExclude: JList[Array[Byte]]): JList[Box[_ <: Proposition]] = {

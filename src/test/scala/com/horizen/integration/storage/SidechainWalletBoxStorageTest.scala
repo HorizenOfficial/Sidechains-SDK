@@ -116,7 +116,7 @@ class SidechainWalletBoxStorageTest
   }
 
   @Test
-  def onUpdateExceptionResistence(): Unit = {
+  def onUpdateExceptionResistance(): Unit = {
     val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
     val walletBox1 = getWalletBox(classOf[RegularBox])
     sidechainWalletBoxStorage.update(getVersion, List(walletBox1), List[Array[Byte]]())
@@ -144,7 +144,6 @@ class SidechainWalletBoxStorageTest
 
     assertFalse("Exception NOT expected on non-existent item removals.", exceptionOccurred)
     assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
-
   }
 
 }

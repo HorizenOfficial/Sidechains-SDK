@@ -14,8 +14,8 @@ public interface Storage {
 
     Optional<ByteArrayWrapper> lastVersionID();
 
-    void update(ByteArrayWrapper version, List<ByteArrayWrapper> toRemove,
-                List<Pair<ByteArrayWrapper, ByteArrayWrapper>> toUpdate);
+    void update(ByteArrayWrapper version, List<Pair<ByteArrayWrapper, ByteArrayWrapper>> toUpdate,
+                List<ByteArrayWrapper> toRemove);
 
     void rollback(ByteArrayWrapper versionID);
 

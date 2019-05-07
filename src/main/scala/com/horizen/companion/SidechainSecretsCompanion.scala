@@ -15,14 +15,14 @@ case class SidechainSecretsCompanion(customSecretSerializers: Map[Byte, SecretSe
   val coreSecretSerializers: Map[Byte, SecretSerializer[_ <: Secret]] =
     Map(PrivateKey25519.SECRET_TYPE_ID ->  PrivateKey25519Serializer.getSerializer)
 
-  val customSecretType : Byte = Byte.MaxValue // TO DO: think about proper value
+  val CUSTOM_SECRET_TYPE : Byte = Byte.MaxValue // TO DO: think about proper value
 
   override def toBytes(secret: Secret): Array[Byte] = {
     secret match {
       case s: PrivateKey25519 => Bytes.concat(Array(s.secretTypeId()),
         PrivateKey25519Serializer.getSerializer.toBytes(s))
       case _ => customSecretSerializers.get(secret.secretTypeId()) match {
-        case Some(serializer) => Bytes.concat(Array(customSecretType), Array(secret.secretTypeId()),
+        case Some(serializer) => Bytes.concat(Array(CUSTOM_SECRET_TYPE), Array(secret.secretTypeId()),
           serializer.asInstanceOf[SecretSerializer[Secret]].toBytes(secret))
         case None => throw new IllegalArgumentException("Unknown secret type - " + secret)
       }
@@ -33,7 +33,7 @@ case class SidechainSecretsCompanion(customSecretSerializers: Map[Byte, SecretSe
   override def parseBytes(bytes: Array[Byte]): Try[Secret] = {
     val secretType = bytes(0)
     secretType match {
-      case `customSecretType` => customSecretSerializers.get(bytes(1)) match {
+      case `CUSTOM_SECRET_TYPE` => customSecretSerializers.get(bytes(1)) match {
         case Some(s) => s.parseBytes(bytes.drop(2))
         case None => Failure(new MatchError("Unknown custom secret type id"))
       }
