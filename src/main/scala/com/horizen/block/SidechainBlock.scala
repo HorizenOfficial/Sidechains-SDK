@@ -25,13 +25,13 @@ import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
 
 class SidechainBlock (
-                      override val parentId: ModifierId,
-                      override val timestamp: Block.Timestamp,
-                      val mainchainBlocks : Seq[MainchainBlock],
-                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
-                      val owner: PublicKey25519Proposition,
-                      val ownerSignature: Signature25519,
-                      companion: SidechainTransactionsCompanion
+                       override val parentId: ModifierId,
+                       override val timestamp: Block.Timestamp,
+                       val mainchainBlocks : Seq[MainchainBlockReference],
+                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+                       val owner: PublicKey25519Proposition,
+                       val ownerSignature: Signature25519,
+                       companion: SidechainTransactionsCompanion
                     ) extends Block[BoxTransaction[Proposition, Box[Proposition]]] {
 
   override type M = SidechainBlock
@@ -117,7 +117,7 @@ object SidechainBlock extends ScorexEncoding {
 
   def create(parentId: Block.BlockId,
              timestamp: Block.Timestamp,
-             mainchainBlocks : Seq[MainchainBlock],
+             mainchainBlocks : Seq[MainchainBlockReference],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
              ownerPrivateKey: PrivateKey25519,
              companion: SidechainTransactionsCompanion,
@@ -160,9 +160,9 @@ object SidechainBlock extends ScorexEncoding {
 
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends Serializer[SidechainBlock] {
-  private val _mcblocksSerializer: ListSerializer[MainchainBlock] = new ListSerializer[MainchainBlock](
-    new util.HashMap[Integer, Serializer[MainchainBlock]]() {
-      put(1, MainchainBlockSerializer)
+  private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
+    new util.HashMap[Integer, Serializer[MainchainBlockReference]]() {
+      put(1, MainchainBlockReferenceSerializer)
     },
     SidechainBlock.MAX_MC_BLOCKS_NUMBER)
 
@@ -204,7 +204,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val mcblocksSize = BytesUtils.getInt(bytes, offset)
     offset += 4
 
-    val mcblocks: Seq[MainchainBlock] = _mcblocksSerializer.parseBytes(bytes.slice(offset, offset + mcblocksSize)).get.asScala
+    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parseBytes(bytes.slice(offset, offset + mcblocksSize)).get.asScala
     offset += mcblocksSize
 
     // to do: parse SC txs

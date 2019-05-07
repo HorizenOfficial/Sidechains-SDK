@@ -1,7 +1,7 @@
 package com.horizen.transaction.mainchain;
 
 import com.horizen.block.MainchainTxForwardTransferOutput;
-import com.horizen.block.MainchainTxForwardTransferOutputSeializer;
+import com.horizen.block.MainchainTxForwardTransferOutputSerializer;
 import com.horizen.box.RegularBox;
 import scala.util.Success;
 import scala.util.Try;
@@ -32,7 +32,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
-        MainchainTxForwardTransferOutput output = MainchainTxForwardTransferOutputSeializer.parseBytes(bytes).get();
+        MainchainTxForwardTransferOutput output = MainchainTxForwardTransferOutputSerializer.parseBytes(bytes).get();
         return new Success<>(new ForwardTransfer(output));
     }
 
