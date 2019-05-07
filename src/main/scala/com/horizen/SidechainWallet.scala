@@ -117,7 +117,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
-    walletBoxStorage.rollback(new ByteArrayWrapper(version))
+    walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
     applicationWallet.onRollback(version)
     this
   }
