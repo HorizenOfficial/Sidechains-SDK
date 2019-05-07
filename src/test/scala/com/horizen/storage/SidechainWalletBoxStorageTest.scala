@@ -6,13 +6,13 @@ import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{List => JList}
 
 import org.junit.Assert._
 
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.ListBuffer
 import org.junit._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
@@ -20,7 +20,6 @@ import org.scalatest.mockito._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Map
 import org.mockito._
-import org.mockito.stubbing._
 import scorex.crypto.hash.Blake2b256
 
 import scala.util.Try
@@ -33,9 +32,9 @@ class SidechainWalletBoxStorageTest
     with MockitoSugar
 {
 
-  val mockedStorage : Storage = mock[IODBStoreAdapter]
-  val boxList = new ListBuffer[WalletBox]()
-  val storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+  var mockedStorage: Storage = mock[IODBStoreAdapter]
+  var boxList = new ListBuffer[WalletBox]()
+  var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
     Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
@@ -44,6 +43,9 @@ class SidechainWalletBoxStorageTest
 
   @Before
   def setUp() : Unit = {
+    mockedStorage= mock[IODBStoreAdapter]
+    boxList = new ListBuffer[WalletBox]()
+    storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
     boxList ++= getWalletBoxList(classOf[RegularBox], 5).asScala ++ getWalletBoxList(classOf[CertifierRightBox], 5).asScala ++
       getWalletBoxList(classOf[CustomBox], 5).asScala
@@ -150,6 +152,5 @@ class SidechainWalletBoxStorageTest
     assertTrue("Storage should contain WalletBox that was tried to remove.", walletBoxStorage.get(boxList(3).box.id()).isDefined)
     assertEquals("Storage should return existing WalletBox.", boxList(3), walletBoxStorage.get(boxList(3).box.id()).get)
    }
-
 
 }

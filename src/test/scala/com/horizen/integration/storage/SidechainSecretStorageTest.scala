@@ -11,6 +11,7 @@ import org.scalatest.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Map
+import scala.util.Try
 
 class SidechainSecretStorageTest
   extends JUnitSuite
@@ -27,10 +28,12 @@ class SidechainSecretStorageTest
     val sidechainSecretStorage = new SidechainSecretStorage(new IODBStoreAdapter(getStore()), sidechainSecretsCompanion)
     val secret = getSecret()
     val secretList = getSecretList(3).asScala.toList
+    var res: Try[SidechainSecretStorage] = null
 
 
     // Test 1: try to add single unique Secret
-    assertTrue("Add operation must be successful.", sidechainSecretStorage.add(secret).isSuccess)
+    res = sidechainSecretStorage.add(secret)
+    assertTrue("Add operation must be successful, instead failure occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     // verify changes
     val s = sidechainSecretStorage.get(secret.publicImage())
     assertTrue("Storage must contain added Secret.", s.isDefined)
@@ -43,7 +46,8 @@ class SidechainSecretStorageTest
 
 
     // Test 3: try to add a list of unique Secrets
-    assertTrue("Add operation must be successful.", sidechainSecretStorage.add(secretList).isSuccess)
+    res = sidechainSecretStorage.add(secretList)
+    assertTrue("Add operation must be successful, instead failure occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     // verify
     assertEquals("Storage must contain 4 secrets.",4, sidechainSecretStorage.getAll.size)
     assertEquals("Storage must contain all added keys.", secretList.size, sidechainSecretStorage.get(secretList.map(_.publicImage())).size)
@@ -57,23 +61,25 @@ class SidechainSecretStorageTest
 
 
     // Test 5: remove Secret, which exists in the Storage
-    sidechainSecretStorage.remove(secret.publicImage())
-
+    res = sidechainSecretStorage.remove(secret.publicImage())
+    assertTrue("Remove operation must be successful, instead failure occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     assertTrue("Storage must not contain Secret after remove operation.", sidechainSecretStorage.get(secret.publicImage()).isEmpty)
     assertEquals("Count of keys in storage must be - " + secretList.size, secretList.size, sidechainSecretStorage.getAll.size)
 
 
     // Test 6: remove list of Secrets, which exist in the Storage
-    sidechainSecretStorage.remove(secretList.map(_.publicImage()))
+    res = sidechainSecretStorage.remove(secretList.map(_.publicImage()))
+    assertTrue("Remove operation must be successful, instead failure occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     assertEquals("Storage must be empty.", 0, sidechainSecretStorage.getAll.size)
 
 
     // Test 7: try to add Secret again, which was present then removed from Storage.
-    assertTrue("Add operation must be successful.", sidechainSecretStorage.add(secret).isSuccess)
+    res = sidechainSecretStorage.add(secret)
+    assertTrue("Add operation must be successful, instead failure occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
 
     val s1 = sidechainSecretStorage.get(secret.publicImage())
     assertTrue("Storage must contain added Secret.", s1.isDefined)
-    assertEquals("Secret in storage must be the same as added.", s1.get, secret)
+    assertEquals("Secret in storage must be the same as added.", secret, s1.get)
     assertEquals("Storage must contain 1 secret.",1, sidechainSecretStorage.getAll.size)
 
 

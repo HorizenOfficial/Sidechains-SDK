@@ -90,11 +90,17 @@ class SidechainWalletTest
         ArgumentMatchers.anyList[ByteArrayWrapper]()))
       .thenAnswer(answer => {
         secretVersions.append(answer.getArgument(0))
-        for (s <- answer.getArgument(2).asInstanceOf[JList[ByteArrayWrapper]].asScala)
-          storedSecretList.remove(storedSecretList.indexWhere(p => p.getKey.equals(s)))
-        for (s <- answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
-          storedSecretList.remove(storedSecretList.indexWhere(p => p.getKey.equals(s.getKey)))
-        storedSecretList.appendAll(answer.getArgument(1))
+        for (s <- answer.getArgument(2).asInstanceOf[JList[ByteArrayWrapper]].asScala) {
+          val index = storedSecretList.indexWhere(p => p.getKey.equals(s))
+          if (index != -1)
+            storedSecretList.remove(index)
+        }
+        for (s <- answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala) {
+          val index = storedSecretList.indexWhere(p => p.getKey.equals(s.getKey))
+          if (index != -1)
+            storedSecretList.remove(index)
+        }
+        storedSecretList.appendAll(answer.getArgument(1).asInstanceOf[JList[Pair[ByteArrayWrapper,ByteArrayWrapper]]].asScala)
       })
 
 
@@ -393,15 +399,15 @@ class SidechainWalletTest
     assertEquals("Wallet must contain specified Secret.", secretList(0), sidechainWallet.secret(secretList(0).publicImage()).get)
 
     //TEST for - Wallet.removeSecret
-    sidechainWallet.removeSecret(secretList(0).publicImage())
-
+    var res = sidechainWallet.removeSecret(secretList(0).publicImage())
+    assertTrue("Wallet successful Secret remove expected, instead exception occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     assertTrue("Wallet must not contain specified Secret.", sidechainWallet.secret(secretList(0).publicImage()).isEmpty)
 
     //TEST for - Wallet.addSecret
     val s = getCustomSecret()
 
-    sidechainWallet.addSecret(s)
-
+    res = sidechainWallet.addSecret(s)
+    assertTrue("Wallet successful Secret add expected, instead exception occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
     assertEquals("Wallet must contain specified Secret.", s, sidechainWallet.secret(s.publicImage()).get)
 
     //TEST for - NodeWallet.secretsOfType

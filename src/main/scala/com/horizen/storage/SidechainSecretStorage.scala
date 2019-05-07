@@ -77,10 +77,11 @@ class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: Side
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.put(key, secret)
     storage.update(new ByteArrayWrapper(version),
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
+
+    _secrets.put(key, secret)
 
     this
   }
@@ -114,10 +115,11 @@ class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: Side
 
     scala.util.Random.nextBytes(version)
 
-    _secrets.remove(key)
     storage.update(new ByteArrayWrapper(version),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
+
+    _secrets.remove(key)
 
     this
   }
