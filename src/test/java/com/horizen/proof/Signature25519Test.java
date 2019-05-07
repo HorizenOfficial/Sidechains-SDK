@@ -2,7 +2,7 @@ package com.horizen.proof;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Companion;
+import com.horizen.secret.PrivateKey25519Creator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,7 +23,7 @@ public class Signature25519Test {
         byte[] seed = new byte[32];
         new Random().nextBytes(seed);
 
-        key = PrivateKey25519Companion.getCompanion().generateSecret(seed);
+        key = PrivateKey25519Creator.getInstance().generateSecret(seed);
         prp = key.publicImage();
         pr = key.sign(testMessage);
     }

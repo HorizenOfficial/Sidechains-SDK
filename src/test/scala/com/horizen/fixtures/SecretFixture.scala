@@ -7,7 +7,7 @@ import java.util.{List => JList, ArrayList => JArrayList}
 import scala.util.Random
 
 trait SecretFixture {
-  val pkc = PrivateKey25519Companion.getCompanion()
+  val pkc = PrivateKey25519Creator.getInstance()
 
   val pk1 = pkc.generateSecret("seed1".getBytes())
   val pk2 = pkc.generateSecret("seed2".getBytes())

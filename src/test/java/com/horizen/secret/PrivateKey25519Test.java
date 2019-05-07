@@ -2,7 +2,6 @@ package com.horizen.secret;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proof.Signature25519;
-import com.horizen.secret.PrivateKey25519Companion;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,7 +22,7 @@ public class PrivateKey25519Test {
         byte[] seed = new byte[32];
         new Random().nextBytes(seed);
 
-        key = PrivateKey25519Companion.getCompanion().generateSecret(seed);
+        key = PrivateKey25519Creator.getInstance().generateSecret(seed);
         prp = key.publicImage();
     }
 
@@ -48,6 +47,6 @@ public class PrivateKey25519Test {
     @Test
     public void verify() {
         pr = key.sign(testMessage);
-        assertTrue("Verification of the sign filed.", key.companion().verify(testMessage, prp, pr));
+        assertTrue("Verification of the sign filed.", pr.isValid(prp, testMessage));
     }
 }
