@@ -18,7 +18,7 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
     Map(RegularBox.BOX_TYPE_ID -> RegularBoxSerializer.getSerializer,
       CertifierRightBox.BOX_TYPE_ID -> CertifierRightBoxSerializer.getSerializer)
 
-  val customBoxType : Byte =  Byte.MaxValue
+  val CUSTOM_BOX_TYPE : Byte =  Byte.MaxValue
 
   override def toBytes(box: Box[_ <: Proposition]): Array[Byte] = {
     box match {
@@ -27,7 +27,7 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
       case b: CertifierRightBox => Bytes.concat(Array(b.boxTypeId()),
         CertifierRightBoxSerializer.getSerializer.toBytes(b))
       case _ => customBoxSerializers.get(box.boxTypeId()) match {
-        case Some(serializer) => Bytes.concat(Array(customBoxType), Array(box.boxTypeId()),
+        case Some(serializer) => Bytes.concat(Array(CUSTOM_BOX_TYPE), Array(box.boxTypeId()),
           serializer.asInstanceOf[Serializer[Box[_ <: Proposition]]].toBytes(box))
         case None => throw new IllegalArgumentException("Unknown box type - " + box)
       }
@@ -38,7 +38,7 @@ case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer
   override def parseBytes(bytes: Array[Byte]): Try[Box[_ <: Proposition]] = {
     val boxType = bytes(0)
     boxType match {
-      case `customBoxType` => customBoxSerializers.get(bytes(1)) match {
+      case `CUSTOM_BOX_TYPE` => customBoxSerializers.get(bytes(1)) match {
         case Some(b) => b.parseBytes(bytes.drop(2))
         case None => Failure(new MatchError("Unknown custom box type id"))
       }
