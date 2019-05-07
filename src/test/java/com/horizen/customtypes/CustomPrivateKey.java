@@ -4,7 +4,6 @@ import com.google.common.primitives.Bytes;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
-import com.horizen.secret.SecretCompanion;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
@@ -45,11 +44,6 @@ public class CustomPrivateKey implements Secret
     }
 
     @Override
-    public SecretCompanion companion() {
-        return null;
-    }
-
-    @Override
     public byte[] bytes() {
         return Bytes.concat(_privateKeyBytes, _publicKeyBytes);
     }
@@ -61,7 +55,7 @@ public class CustomPrivateKey implements Secret
 
     @Override
     public boolean owns(ProofOfKnowledgeProposition proposition) {
-        return false;
+        return  publicImage().equals(proposition);
     }
 
     @Override

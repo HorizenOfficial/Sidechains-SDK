@@ -10,8 +10,6 @@ public interface Secret extends scorex.core.serialization.BytesSerializable
 
     ProofOfKnowledgeProposition publicImage();
 
-    SecretCompanion companion();
-
     @Override
     byte[] bytes();
 

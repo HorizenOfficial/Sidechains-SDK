@@ -1,15 +1,12 @@
 package com.horizen.secret;
 
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PublicKey25519Proposition;
+
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Random;
 
 import static org.junit.Assert.*;
 
@@ -20,7 +17,7 @@ public class PrivateKey25519SerializerTest {
     @Before
     public void beforeEachTest() {
         // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_bytes"
-        key = PrivateKey25519Companion.getCompanion().generateSecret("12345".getBytes());
+        key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes());
     }
 
     @Test
