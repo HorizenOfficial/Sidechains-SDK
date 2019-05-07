@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util
 
-import scorex.core.bytesToId
+import scorex.core.{VersionTag, bytesToId}
 import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
@@ -215,13 +215,19 @@ class SidechainWalletTest
 
     // Prepare what we expect to receive for ApplicationWallet.onChangeBoxes
     Mockito.when(mockedApplicationWallet.onChangeBoxes(
+      ArgumentMatchers.any[Array[Byte]](),
       ArgumentMatchers.anyList[Box[_ <: Proposition]](),
       ArgumentMatchers.anyList[Array[Byte]]()))
       .thenAnswer(answer => {
-        val boxesToUpdate = answer.getArgument(0).asInstanceOf[JList[Box[_ <: Proposition]]]
-        val boxIdsToRemove = answer.getArgument(1).asInstanceOf[JList[Array[Byte]]].asScala.map(new ByteArrayWrapper(_)).toList.asJava
+        val version = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        val boxesToUpdate = answer.getArgument(1).asInstanceOf[JList[Box[_ <: Proposition]]]
+        val boxIdsToRemove = answer.getArgument(2).asInstanceOf[JList[Array[Byte]]].asScala.map(new ByteArrayWrapper(_)).toList.asJava
 
         // check
+        assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual version is wrong.",
+          new ByteArrayWrapper(blockId),
+          new ByteArrayWrapper(version))
+
         assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxesToUpdate list is wrong.", util.Arrays.asList(
           transaction2.newBoxes().get(0),
           transaction2.newBoxes().get(1)
@@ -238,6 +244,61 @@ class SidechainWalletTest
       })
 
     sidechainWallet.scanPersistent(mockedBlock)
+  }
+
+  @Test
+  def testRollback(): Unit = {
+    val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
+    val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+
+    val expectedException = new IllegalArgumentException("on rollback exception")
+    var rollbackEventOccurred = false
+
+    // Prepare block ID and corresponding version
+    val blockId = new Array[Byte](32)
+    Random.nextBytes(blockId)
+    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(blockId)
+
+    // Prepare what we expect to receive in WalletBoxStorage.rollback
+    Mockito.when(mockedWalletBoxStorage1.rollback(
+      ArgumentMatchers.any[ByteArrayWrapper]()))
+      // For Test 1:
+      .thenAnswer(answer => {
+        val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
+
+        assertEquals("Rollback on WalletBoxStorage.rollback(...) actual version is wrong.",
+          new ByteArrayWrapper(blockId),
+          version)
+      })
+      // For Test 2:
+        .thenAnswer(answer => throw expectedException)
+
+    // Prepare what we expect to receive in ApplicationWallet.onRollback
+    Mockito.when(mockedApplicationWallet.onRollback(
+      ArgumentMatchers.any[Array[Byte]]()))
+      // For Test 1:
+      .thenAnswer(answer => {
+        val version = answer.getArgument(0).asInstanceOf[Array[Byte]]
+
+        assertEquals("Rollback on ApplicationWallet.onRollback(...) actual version is wrong.",
+          new ByteArrayWrapper(blockId),
+          new ByteArrayWrapper(version))
+      })
+      // For Test 2:
+      .thenAnswer(answer => rollbackEventOccurred = true)
+
+
+    // Test 1: successful rollback
+    sidechainWallet.rollback(versionTag)
+
+
+    // Test 2: failed to rollback, WalletBoxStorage.rollback(...) threw an exception
+    val res = sidechainWallet.rollback(versionTag)
+    assertTrue("SidechainWallet failure expected during rollback.", res.isFailure)
+    assertEquals("SidechainWallet different exception expected during rollback.", expectedException, res.failed.get)
+    assertFalse("ApplicationWallet onRollback(...) event NOT expected.", rollbackEventOccurred)
   }
 
   @Test

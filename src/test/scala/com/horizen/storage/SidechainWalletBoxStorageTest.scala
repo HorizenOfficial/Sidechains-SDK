@@ -114,7 +114,7 @@ class SidechainWalletBoxStorageTest
   def testUpdate(): Unit = {
     val walletBoxStorage = new SidechainWalletBoxStorage(mockedStorage, sidechainBoxesCompanion)
     var tryRes: Try[SidechainWalletBoxStorage] = null
-    var expectedException = new IllegalArgumentException("on update exception")
+    val expectedException = new IllegalArgumentException("on update exception")
 
     val version = getVersion
     val toUpdate = java.util.Arrays.asList(storedList.head)

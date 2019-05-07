@@ -98,7 +98,7 @@ class SidechainSecretStorageTest
     val secretStorage = new SidechainSecretStorage(mockedStorage, sidechainSecretsCompanion)
 
     var tryRes: Try[SidechainSecretStorage] = null
-    var expectedException = new IllegalArgumentException("on add exception")
+    val expectedException = new IllegalArgumentException("on add exception")
 
     val newSecret = getSecret("new secret".getBytes())
     val key = new ByteArrayWrapper(Blake2b256.hash(newSecret.publicImage().bytes))
