@@ -13,7 +13,7 @@ import javafx.util.Pair
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Companion, Secret, SecretSerializer}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.wallet.ApplicationWallet
@@ -157,10 +157,10 @@ class SidechainWalletTest
     val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
 
     // Prepare list of transactions:
-    val secret1 = PrivateKey25519Companion.getCompanion.generateSecret("seed1".getBytes())
-    val secret2 = PrivateKey25519Companion.getCompanion.generateSecret("seed2".getBytes())
-    val secret3 = PrivateKey25519Companion.getCompanion.generateSecret("seed3".getBytes())
-    val secret4 = PrivateKey25519Companion.getCompanion.generateSecret("seed4".getBytes())
+    val secret1 = PrivateKey25519Creator.getInstance().generateSecret("seed1".getBytes())
+    val secret2 = PrivateKey25519Creator.getInstance.generateSecret("seed2".getBytes())
+    val secret3 = PrivateKey25519Creator.getInstance.generateSecret("seed3".getBytes())
+    val secret4 = PrivateKey25519Creator.getInstance.generateSecret("seed4".getBytes())
 
     val transaction1 = getRegularTransaction(Seq(secret1, secret2, secret3), Seq(secret4.publicImage()))
     val transaction2 = getRegularTransaction(Seq(secret1, secret2), Seq(secret1.publicImage(), secret3.publicImage()))
