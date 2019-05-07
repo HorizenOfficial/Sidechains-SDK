@@ -1,14 +1,12 @@
 package com.horizen.storage
 
-import java.lang.{Exception => JException}
 import java.util.{ArrayList => JArrayList}
 
 import javafx.util.{Pair => JPair}
 import scorex.util.ScorexLogging
 
-import scala.util.{Success, Failure, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.secret._
 import com.horizen.proposition._
@@ -18,7 +16,7 @@ import scorex.crypto.hash.Blake2b256
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
+class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends ScorexLogging
 {
   // Version - RandomBytes(32)
@@ -31,7 +29,7 @@ class SidechainSecretStorage (storage : Storage, sidechainSecretsCompanion: Side
 
   loadSecrets()
 
-  private def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
+  def calculateKey(proposition: ProofOfKnowledgeProposition[_ <: Secret]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
   }
 
