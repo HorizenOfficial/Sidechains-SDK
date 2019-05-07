@@ -19,7 +19,12 @@ public class CustomApplicationWallet implements ApplicationWallet {
     }
 
     @Override
-    public void onChangeBoxes(List<Box> boxesToUpdate, List<byte[]> boxIdsToRemove) {
+    public void onChangeBoxes(byte[] version, List<Box> boxesToUpdate, List<byte[]> boxIdsToRemove) {
+
+    }
+
+    @Override
+    public void onRollback(byte[] version) {
 
     }
 }

@@ -102,6 +102,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // update boxes in BoxStore
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
     //require(modifier != null, "SidechainBlock must be NOT NULL.")
+    val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys().map(_.asInstanceOf[Proposition])
 
@@ -115,9 +116,9 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
-    walletBoxStorage.update(new ByteArrayWrapper(BytesUtils.fromHexString(modifier.id)), newBoxes.toList, boxIdsToRemove.toList).get
+    walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
-    applicationWallet.onChangeBoxes(newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
+    applicationWallet.onChangeBoxes(version, newBoxes.map(_.box.asInstanceOf[Box[_ <: Proposition]]).toList.asJava,
       boxIdsToRemove.toList.asJava)
 
     this
@@ -126,7 +127,9 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   // rollback BoxStore only. SecretStore must not changed
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
-    walletBoxStorage.rollback(new ByteArrayWrapper(BytesUtils.fromHexString(to)))
+    val version = BytesUtils.fromHexString(to)
+    walletBoxStorage.rollback(new ByteArrayWrapper(version))
+    applicationWallet.onRollback(version)
     this
   }
 
