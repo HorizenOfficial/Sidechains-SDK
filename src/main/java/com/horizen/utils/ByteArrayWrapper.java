@@ -1,10 +1,7 @@
 package com.horizen.utils;
 
-import java.util.Arrays;
-
 // Wraps byte array without copying it and provides proper hashCode and compare methods implementation.
 public class ByteArrayWrapper extends io.iohk.iodb.ByteArrayWrapper {
-
     public ByteArrayWrapper(byte[] data) {
         super(data);
     }
@@ -16,5 +13,4 @@ public class ByteArrayWrapper extends io.iohk.iodb.ByteArrayWrapper {
     public ByteArrayWrapper(io.iohk.iodb.ByteArrayWrapper wrapper) {
         this(wrapper.data());
     }
-
 }

@@ -2,6 +2,8 @@ package com.horizen.utils;
 
 import org.junit.Test;
 
+import java.math.BigInteger;
+
 import static org.junit.Assert.*;
 
 public class UtilsTest {
@@ -14,7 +16,7 @@ public class UtilsTest {
         String expectedRes = "b7a065fdf1046168c2d1a0bcb36ef22b99c483bf6964f9be226ad4a723d933fc";
         byte[] res = Utils.doubleSHA256Hash(bytes);
 
-        assertEquals("Hash length expected to be 64", Utils.SHA256_LENGTH, res.length);
+        assertEquals("Hash length expected to be 32", Utils.SHA256_LENGTH, res.length);
         assertEquals("Different hash value expected", expectedRes, BytesUtils.toHexString(res));
     }
 
@@ -30,7 +32,15 @@ public class UtilsTest {
         String expectedRes = "82c7cc49eda25fa7203d24cbec9c2319fa3a3fea972debe908bb80af2c430230";
         byte[] res = Utils.doubleSHA256HashOfConcatenation(bytes1, bytes2);
 
-        assertEquals("Hash length expected to be 64", Utils.SHA256_LENGTH, res.length);
+        assertEquals("Hash length expected to be 32", Utils.SHA256_LENGTH, res.length);
         assertEquals("Different hash value expected", expectedRes, BytesUtils.toHexString(res));
+    }
+
+    @Test
+    public void UtilsTest_compactEncoding() throws Exception {
+        assertEquals(new BigInteger("1234560000", 16), Utils.decodeCompactBits(0x05123456L));
+        assertEquals(new BigInteger("c0de000000", 16), Utils.decodeCompactBits(0x0600c0de));
+        assertEquals(0x05123456L, Utils.encodeCompactBits(new BigInteger("1234560000", 16)));
+        assertEquals(0x0600c0deL, Utils.encodeCompactBits(new BigInteger("c0de000000", 16)));
     }
 }
