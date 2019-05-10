@@ -1,8 +1,11 @@
 package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
+import com.horizen.box.RegularBox;
+import com.horizen.box.RegularBoxSerializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
+import com.horizen.utils.SerializableCompanion;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
@@ -14,11 +17,14 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
     WithdrawalRequestTransactionSerializer() {
-        HashMap<Integer, Serializer<NoncedBox<Proposition>>> supportedBoxSerializers = new HashMap<Integer, Serializer<NoncedBox<Proposition>>>();
-        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
-        // TO DO: update supported serializers list
+        SerializableCompanion<NoncedBox<Proposition>, Serializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
+                new SerializableCompanion<>(
+                        new HashMap<Byte, Serializer<? extends NoncedBox<Proposition>>>() {{
+                            // put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer())
+                            // TO DO: update supported serializers list
+                        }}, new HashMap<>());
 
-        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxSerializers);
+        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
     @Override

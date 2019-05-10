@@ -10,7 +10,8 @@ import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import javafx.util.Pair
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{ArrayList => JArrayList, List => JList, HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
@@ -19,7 +20,7 @@ import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.ListBuffer
 import org.junit._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
@@ -48,13 +49,13 @@ class SidechainWalletTest
   val storedSecretList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val secretVersions = new ListBuffer[ByteArrayWrapper]()
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
-  val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
-  val customSecretSerializers: Map[Byte, SecretSerializer[_ <: Secret]] =
-    Map(CustomPrivateKey.SECRET_TYPE_ID ->  CustomPrivateKeySerializer.getSerializer)
-  val sidechainSecretsCompanion = new SidechainSecretsCompanion(customSecretSerializers)
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
   @Before
   def setUp() : Unit = {

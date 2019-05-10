@@ -1,7 +1,5 @@
 package com.horizen.companion
 
-import scala.collection.mutable._
-
 import org.scalatest.junit.JUnitSuite
 
 import org.junit.Test
@@ -10,58 +8,66 @@ import org.junit.Assert._
 import com.horizen.fixtures._
 import com.horizen.customtypes._
 import com.horizen.secret._
-import com.horizen.proposition._
+
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 class SidechainSecretsCompanionTest
   extends JUnitSuite
   with SecretFixture
 {
 
-  val customSecretSerializers: Map[Byte, SecretSerializer[_ <: Secret]] =
-    Map(CustomPrivateKey.SECRET_TYPE_ID ->  CustomPrivateKeySerializer.getSerializer)
-  val sidechainSecretsCompanion = new SidechainSecretsCompanion(customSecretSerializers)
-  val sidechainSecretsCompanionCore = new SidechainSecretsCompanion(Map())
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+  val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
 
   @Test def testCore(): Unit = {
-    val s = getSecret()
+    val secret = getSecret()
 
-    val sb = sidechainSecretsCompanion.toBytes(s)
+    val secretBytes = sidechainSecretsCompanion.toBytes(secret)
 
-    assertNotEquals("Secret must have core type.", sb(0), Byte.MaxValue)
-    assertEquals("Secret must have registered core typeId.", sb(0), s.secretTypeId())
-    assertEquals("Deserialization must return same Secret.", s, sidechainSecretsCompanion.parseBytes(sb).get)
+    assertNotEquals("Secret must have core type.", secretBytes(0), Byte.MaxValue)
+    assertEquals("Secret must have registered core typeId.", secretBytes(0), secret.secretTypeId())
+    assertEquals("Deserialization must return same Secret.", secret, sidechainSecretsCompanion.parseBytes(secretBytes).get)
   }
 
   @Test def testRegisteredCustom(): Unit = {
-    val s = getCustomSecret()
+    val customSecret = getCustomSecret()
 
-    val sb = sidechainSecretsCompanion.toBytes(s)
+    val customSecretBytes = sidechainSecretsCompanion.toBytes(customSecret)
 
-    assertEquals("Secret must have custom type.", sb(0), Byte.MaxValue)
-    assertEquals("Secret must have registered custom typeId.", sb(1), s.secretTypeId())
-    assertEquals("Deserialization must return same Secret.", s, sidechainSecretsCompanion.parseBytes(sb).get)
+    assertEquals("Secret must have custom type.", customSecretBytes(0), Byte.MaxValue)
+    assertEquals("Secret must have registered custom typeId.", customSecretBytes(1), customSecret.secretTypeId())
+    assertEquals("Deserialization must return same Secret.", customSecret, sidechainSecretsCompanion.parseBytes(customSecretBytes).get)
   }
 
   @Test def testUnregisteredCustom(): Unit = {
-    val s = getCustomSecret()
+    val customSecret = getCustomSecret()
     var exceptionThrown = false
 
+
+    // Test 1: try to serialize custom type Secret. Serialization exception expected, because of custom type is unregistered.
     try {
-      val sb = sidechainSecretsCompanionCore.toBytes(s)
+      sidechainSecretsCompanionCore.toBytes(customSecret)
     } catch {
       case _ : Throwable => exceptionThrown = true
     }
 
-    assertTrue("Exception during serialization for unregisterd type of Secret must be thrown.", exceptionThrown)
+    assertTrue("Exception during serialization for unregistered type of Secret must be thrown.", exceptionThrown)
 
-    val sb = sidechainSecretsCompanion.toBytes(s)
+
+    // Test 2: try to deserialize custom type Secret. Serialization exception expected, because of custom type is unregistered.
+    exceptionThrown = false
+    val customSecretBytes = sidechainSecretsCompanion.toBytes(customSecret)
 
     try {
-      val s1 = sidechainSecretsCompanionCore.parseBytes(sb)
+      sidechainSecretsCompanionCore.parseBytes(customSecretBytes)
     } catch {
       case _ : Throwable => exceptionThrown = true
     }
 
-    assertTrue("Exception during deserialization for unregisterd type of Secret must be thrown.", exceptionThrown)
+    assertTrue("Exception during deserialization for unregistered type of Secret must be thrown.", exceptionThrown)
   }
 }

@@ -21,6 +21,7 @@ import scorex.core.serialization.Serializer
 import scorex.crypto.hash.Blake2b256
 import scorex.core.{bytesToId, idToBytes}
 
+
 import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
 
@@ -29,8 +30,8 @@ class SidechainBlock (
                        override val timestamp: Block.Timestamp,
                        val mainchainBlocks : Seq[MainchainBlockReference],
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
-                       val owner: PublicKey25519Proposition,
-                       val ownerSignature: Signature25519,
+                       val forgerPublicKey: PublicKey25519Proposition,
+                       val signature: Signature25519,
                        companion: SidechainTransactionsCompanion
                     ) extends Block[BoxTransaction[Proposition, Box[Proposition]]] {
 
@@ -43,7 +44,7 @@ class SidechainBlock (
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
   override lazy val id: ModifierId =
-    bytesToId(Blake2b256(Bytes.concat(messageToSign, ownerSignature.bytes)))
+    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
     val txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
@@ -72,7 +73,7 @@ class SidechainBlock (
       Longs.toByteArray(timestamp),
       sidechainTransactionsStream.toByteArray,
       mainchainBlocksStream.toByteArray,
-      owner.bytes
+      forgerPublicKey.bytes
     )
   }
 
@@ -80,7 +81,7 @@ class SidechainBlock (
     if(parentId == null || parentId.length != 32
         || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
-        || owner == null || ownerSignature == null)
+        || forgerPublicKey == null || signature == null)
       return false
 
     // Check if timestamp is valid and not too far in the future
@@ -101,7 +102,7 @@ class SidechainBlock (
         return false
 
     // check, that signature is valid
-    if(!ownerSignature.isValid(owner, messageToSign))
+    if(!signature.isValid(forgerPublicKey, messageToSign))
       return false
 
     true
@@ -161,10 +162,9 @@ object SidechainBlock extends ScorexEncoding {
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends Serializer[SidechainBlock] {
   private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
-    new util.HashMap[Integer, Serializer[MainchainBlockReference]]() {
-      put(1, MainchainBlockReferenceSerializer)
-    },
-    SidechainBlock.MAX_MC_BLOCKS_NUMBER)
+    MainchainBlockReferenceSerializer,
+    SidechainBlock.MAX_MC_BLOCKS_NUMBER
+  )
 
   private val _sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
     companion,
@@ -184,8 +184,8 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
       mcblocksBytes,                                        // total size of all MC Blocks
       Ints.toByteArray(sidechainTransactionsBytes.length),  // 4 bytes
       sidechainTransactionsBytes,                           // total size of all MC Blocks
-      obj.owner.bytes,                                      // 32 bytes
-      obj.ownerSignature.bytes                              // 64 bytes
+      obj.forgerPublicKey.bytes,                                      // 32 bytes
+      obj.signature.bytes                              // 64 bytes
     )
   }
 

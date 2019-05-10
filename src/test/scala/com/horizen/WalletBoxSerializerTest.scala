@@ -9,15 +9,17 @@ import com.horizen.utils.BytesUtils
 import org.junit.{Before, Test}
 import org.junit.Assert._
 import org.scalatest.junit.JUnitSuite
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
-import scala.collection.mutable.Map
 import scala.util.Random
 
 class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
   @Test
   def WalletBoxSerializerTest_SerializationTest(): Unit = {
     val transactionIdBytes = new Array[Byte](32)
-    val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] = Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
+    var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
+    customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
     val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
     var serializer: WalletBoxSerializer = null

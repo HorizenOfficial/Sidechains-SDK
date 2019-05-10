@@ -10,8 +10,10 @@ import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Map
 import scala.util.Try
+
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 class SidechainSecretStorageTest
   extends JUnitSuite
@@ -19,10 +21,10 @@ class SidechainSecretStorageTest
   with IODBStoreFixture
 {
 
-  val customSecretSerializers: Map[Byte, SecretSerializer[_ <: Secret]] =
-    Map(CustomPrivateKey.SECRET_TYPE_ID ->  CustomPrivateKeySerializer.getSerializer)
-  val sidechainSecretsCompanion = new SidechainSecretsCompanion(customSecretSerializers)
-  val sidechainSecretsCompanionCore = new SidechainSecretsCompanion(Map())
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+  val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
 
   @Test def testCoreTypes(): Unit = {
     val sidechainSecretStorage = new SidechainSecretStorage(new IODBStoreAdapter(getStore()), sidechainSecretsCompanion)
