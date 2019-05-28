@@ -41,7 +41,7 @@ def getGenesisAddresses(nodeNumber):
 	return 0
 
 def createConfigs(nodeNumber, tmpdir):
-	with open('./template.conf','r') as templateFile:
+	with open('./resources/template.conf','r') as templateFile:
 		tmpConfig = templateFile.read()
 	configsData = []
 	for i in range(0, nodeNumber):
@@ -67,7 +67,7 @@ def createConfigs(nodeNumber, tmpdir):
 	return configsData
 
 def runScorexNodes(nodeNumber, tmpdir):
-	bashCmd = 'gnome-terminal -x java -cp twinsChain.jar examples.hybrid.HybridApp ' + tmpdir+'/sc_node%(NODE_NUMBER)s/node%(NODE_NUMBER)s.conf'
+	bashCmd = 'gnome-terminal -x java -cp ./resources/twinsChain.jar examples.hybrid.HybridApp ' + tmpdir+'/sc_node%(NODE_NUMBER)s/node%(NODE_NUMBER)s.conf'
 	for i in range(0, nodeNumber):
 		cmd = bashCmd % {'NODE_NUMBER' : i}
 		print(cmd)

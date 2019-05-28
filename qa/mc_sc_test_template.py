@@ -13,7 +13,7 @@ class MCSCTest(SidechainTestFramework):
         #MC network setup
         pass
     
-    def sc_setup_chain(self):
+    def sc_setup_chain(self, genesisData):
         #SC chain setup
         pass
     

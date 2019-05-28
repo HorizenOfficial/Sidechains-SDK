@@ -14,13 +14,12 @@ import time
 import random
 import string
 
-
-from authproxy import AuthServiceProxy
+from scorexauthproxy import ScorexAuthServiceProxy
 
 def sc_p2p_port(n):
-    return 8300 + n
+    return 8301 + n
 def sc_rpc_port(n):
-    return 8200 + n
+    return 8201 + n
 
 def sync_sc_blocks(rpc_connections, wait=1, p=False, limit_loop=0):
     """
@@ -39,10 +38,10 @@ def sync_sc_mempools(rpc_connections, wait=1):
 
 sidechainclient_processes = {}
 
-def initialize_sc_datadir(dirname, n):
+def initialize_sc_datadir(dirname, n, genesisData):
     #Put also genesis data in nodes configuration files. Configuration data must be automatically generated and different from the ones generated for the other nodes.
     apiAddress = "127.0.0.1"
-    with open('./template.conf','r') as templateFile:
+    with open('./HybridApp/resources/template.conf','r') as templateFile:
         tmpConfig = templateFile.read()
     configsData = []
     r = random.randint(0, n+1)
@@ -58,7 +57,8 @@ def initialize_sc_datadir(dirname, n):
         'API_PORT' : str(apiPort),
         'BIND_PORT' : str(bindPort),
         'KNOWN_PEERS' : "" if n == 0 else "\"" + apiAddress + ":" + str(bindPort-1) + "\"" ,
-        'OFFLINE_GENERATION' : "false"
+        'OFFLINE_GENERATION' : "false",
+        'GENESIS_DATA': "" if genesisData is None else str(genesisData)
         }
     configsData.append({
         "name" : "node" + str(n),
@@ -77,13 +77,13 @@ def initialize_sc_chain(test_dir):
     """
     pass
 
-def initialize_sc_chain_clean(test_dir, num_nodes):
+def initialize_sc_chain_clean(test_dir, num_nodes, genesisData):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i)
+        initialize_sc_datadir(test_dir, i, genesisData)
 
 
 def start_sc_node(i, dirname):
@@ -91,11 +91,11 @@ def start_sc_node(i, dirname):
     Start a SC node and returns API connection to it
     """
     datadir = os.path.join(dirname, "sc_node"+str(i))
-    bashcmd = 'gnome-terminal -x java -cp twinsChain.jar examples.hybrid.HybridApp ' +  (datadir + ('/node%s.conf' % i))
-    print(bashcmd)
-    sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=subprocess.PIPE) #Opening cmd for debug purposes, will be removed
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1', sc_rpc_port(i))
-    proxy = AuthServiceProxy(url)
+    bashcmd = 'java -cp ./HybridApp/resources/twinsChain.jar examples.hybrid.HybridApp ' +  (datadir + ('/node%s.conf' % i))
+    sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+    time.sleep(20) #Temporarily
+    url = "http://:@%s:%d" % ('127.0.0.1', sc_rpc_port(i))
+    proxy = ScorexAuthServiceProxy(url)
     proxy.url = url # store URL on proxy for info
     return proxy
 
@@ -110,13 +110,16 @@ def check_sc_node(i):
     return sidechainclient_processes[i].returncode
 
 def stop_sc_node(node, i):
-    node.stop()
-    sidechainclient_processes[i].wait()
+    #Must be changed with .stop() API Call
+    sidechainclient_processes[i].kill()
     del sidechainclient_processes[i]
 
 def stop_sc_nodes(nodes):
-    #could be reused if stop RPC call remains the same
-    pass
+    #Must be changed with .stop() API call
+    global sidechainclient_processes
+    for sc in sidechainclient_processes.values():
+        sc.kill()
+    del sidechainclient_processes
 
 def set_sc_node_times(nodes, t):
     #could be reused if setmocktime RPC call remains the same

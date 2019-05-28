@@ -3,7 +3,7 @@ from util import assert_true
 
 class MCNodeAlive(SidechainTestFramework):
     
-    def sc_setup_chain(self):
+    def sc_setup_chain(self, genesisData):
         #SC chain setup
         pass
     

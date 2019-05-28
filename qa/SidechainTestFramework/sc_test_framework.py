@@ -1,5 +1,6 @@
 from test_framework import BitcoinTestFramework
 from authproxy import JSONRPCException
+from scorexauthproxy import ScorexAuthServiceProxy
 from util import assert_true, check_json_precision, \
     initialize_chain, initialize_chain_clean, \
     start_nodes, stop_nodes, \
@@ -22,6 +23,9 @@ class SidechainTestFramework(BitcoinTestFramework):
     def setup_chain(self):
         print("Initializing test directory "+self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 1)
+        #must compute and return genesis data for SC somewhere here
+        genesisData = None
+        return genesisData
         
     def setup_network(self, split = False):
         self.nodes = self.setup_nodes() 
@@ -42,10 +46,10 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_add_options(self, parser):
         pass
     
-    def sc_setup_chain(self):
-        initialize_sc_chain_clean(self.options.tmpdir, 1)
+    def sc_setup_chain(self, genesisData):
+        initialize_sc_chain_clean(self.options.tmpdir, 1, genesisData)
     
-    def sc_setup_network(self, split = False):
+    def sc_setup_network(self, split = False, genesisData = None):
         self.sc_nodes = self.sc_setup_nodes()
     
     def sc_setup_nodes(self):
@@ -63,20 +67,20 @@ class SidechainTestFramework(BitcoinTestFramework):
         
     def run_test(self):
         i = 0
+        for node in self.nodes:
+            res = node.getinfo()
+            assert_true(res is not None, "MC node {0} not alive !".format(i))
+            print("MC node {0} alive\nResponse to getinfo RPC call: {1} !".format(i, res))
+            i = i + 1
+        i = 0
         '''Dummy (POST) call to check if SC node is alive. Note that Scorex API requires to specify a path to call a method. 
         It's not possible to do as MC node because slashes in a method name would result in a syntax error. So a workaround has been done.
         Hopefully, this will be removed in our SC SDK.'''
         for sc_node in self.sc_nodes:
-            sc_node.__service_name = "/utils/hash/blake2b"
-            assert_true(sc_node(json.dumps({"message":"Prova"})) is not None, "SC node {0} not alive !".format(i))
+            res = sc_node._utils_hash_blake2b("\"test\"")
+            assert_true(res is not None, "SC node {0} not alive !".format(i))
+            print("SC node {0} alive\nResponse to hashblake2b API call: {1}".format(i, res))
             i = i + 1
-        i = 0
-        for node in self.nodes:
-            assert_true(node.getinfo() is not None, "MC node {0} not alive !".format(i))
-            print("MC node {0} alive !".format(i))
-            i = i + 1
-
-
         
     def main(self):
         import optparse
@@ -110,11 +114,12 @@ class SidechainTestFramework(BitcoinTestFramework):
         try:
             if not os.path.isdir(self.options.tmpdir):
                 os.makedirs(self.options.tmpdir)
-            self.setup_chain()
+            
+            genesisData = self.setup_chain()
 
             self.setup_network()
             
-            self.sc_setup_chain()
+            self.sc_setup_chain(genesisData)
             
             self.sc_setup_network()
 
@@ -137,6 +142,7 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Stopping nodes")
             stop_nodes(self.nodes)
             wait_bitcoinds()
+            stop_sc_nodes(self.sc_nodes)
         else:
             print("Note: bitcoinds were not stopped and may still be running")
 
