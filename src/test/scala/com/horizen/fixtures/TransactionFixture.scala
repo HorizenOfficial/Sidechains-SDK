@@ -58,7 +58,7 @@ trait TransactionFixture extends BoxFixture {
 
     to.add(new JPair(pk7.publicImage(), 10L))
 
-    RegularTransaction.create(from, to, 10L, 1547798549470L)
+    RegularTransaction.create(from, to, 5L, 1547798549470L)
   }
 
   def getIncompatibleTransaction () : RegularTransaction = {
@@ -70,7 +70,7 @@ trait TransactionFixture extends BoxFixture {
 
     to.add(new JPair(pk7.publicImage(), 10L))
 
-    RegularTransaction.create(from, to, 10L, 1547798549470L)
+    RegularTransaction.create(from, to, 5L, 1547798549470L)
   }
 
 
