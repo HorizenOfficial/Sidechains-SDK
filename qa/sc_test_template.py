@@ -1,5 +1,5 @@
 from test_framework.test_framework import BitcoinTestFramework
-from test_framework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 
 class SCTest(SidechainTestFramework):
     def add_options(self, parser):

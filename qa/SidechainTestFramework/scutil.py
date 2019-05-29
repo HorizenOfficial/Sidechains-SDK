@@ -6,6 +6,7 @@ from base64 import b64encode
 from decimal import Decimal, ROUND_DOWN
 import json
 import random
+from sidechainauthproxy import SidechainAuthServiceProxy
 from util import check_json_precision, bytes_to_hex_str, hex_str_to_bytes, str_to_b64str, _rpchost_to_args, log_filename, \
                  assert_true, assert_false, assert_equal, assert_greater_than, assert_raises
 import shutil
@@ -14,18 +15,16 @@ import time
 import random
 import string
 
-from scorexauthproxy import ScorexAuthServiceProxy
-
+#How we should compute the port ? Like this or like the ones in BTF ?
 def sc_p2p_port(n):
-    return 8301 + n
+    return 8300 + n
 def sc_rpc_port(n):
-    return 8201 + n
+    return 8200 + n
 
 def sync_sc_blocks(rpc_connections, wait=1, p=False, limit_loop=0):
     """
     Wait until everybody has the same block count or a limit has been exceeded
     """
-    #could reuse the one in util if getblockcount RPC call name remains the same
     pass
 
 def sync_sc_mempools(rpc_connections, wait=1):
@@ -33,13 +32,13 @@ def sync_sc_mempools(rpc_connections, wait=1):
     Wait until everybody has the same transactions in their memory
     pools
     """
-    #could reuse the one in util if getrawmempool RPC call name remains the same
     pass
 
 sidechainclient_processes = {}
 
 def initialize_sc_datadir(dirname, n, genesisData):
-    #Put also genesis data in nodes configuration files. Configuration data must be automatically generated and different from the ones generated for the other nodes.
+    '''Put also genesis data in nodes configuration files. Configuration data must be automatically generated and different from 
+    the ones generated for the other nodes.'''
     apiAddress = "127.0.0.1"
     with open('./HybridApp/resources/template.conf','r') as templateFile:
         tmpConfig = templateFile.read()
@@ -52,6 +51,7 @@ def initialize_sc_datadir(dirname, n, genesisData):
         os.makedirs(datadir)
     config = tmpConfig % {
         'NODE_NUMBER' : n,
+        'DIRECTORY' : dirname,
         'WALLET_SEED' : ''.join([random.choice(string.ascii_letters + string.digits) for tmp in range(32)]),
         'API_ADDRESS' : "127.0.0.1",
         'API_PORT' : str(apiPort),
@@ -69,7 +69,7 @@ def initialize_sc_datadir(dirname, n, genesisData):
         configFile.write(config)
     return configsData
 
-def initialize_sc_chain(test_dir):
+def initialize_sc_chain(test_dir, genesisData):
     """
     Create (or copy from cache) a 200-block-long chain and
     4 wallets.
@@ -86,47 +86,47 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesisData):
         initialize_sc_datadir(test_dir, i, genesisData)
 
 
-def start_sc_node(i, dirname):
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
     """
     Start a SC node and returns API connection to it
     """
+    #Will we have binary and extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node"+str(i))
     bashcmd = 'java -cp ./HybridApp/resources/twinsChain.jar examples.hybrid.HybridApp ' +  (datadir + ('/node%s.conf' % i))
     sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
     time.sleep(20) #Temporarily
-    url = "http://:@%s:%d" % ('127.0.0.1', sc_rpc_port(i))
-    proxy = ScorexAuthServiceProxy(url)
+    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    proxy = SidechainAuthServiceProxy(url)
     proxy.url = url # store URL on proxy for info
     return proxy
 
-def start_sc_nodes(num_nodes, dirname):
+def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     """
     Start multiple SC clients, return connections to them
     """
-    return [ start_sc_node(i, dirname) for i in range(num_nodes) ]
+    return [ start_sc_node(i, dirname, extra_args, rpchost, binary) for i in range(num_nodes) ]
 
 def check_sc_node(i):
     sidechainclient_processes[i].poll()
     return sidechainclient_processes[i].returncode
 
 def stop_sc_node(node, i):
-    #Must be changed with .stop() API Call
+    #Must be changed with a sort of .stop() API Call
     sidechainclient_processes[i].kill()
     del sidechainclient_processes[i]
 
 def stop_sc_nodes(nodes):
-    #Must be changed with .stop() API call
+    #Must be changed with a sort of .stop() API call
     global sidechainclient_processes
     for sc in sidechainclient_processes.values():
         sc.kill()
     del sidechainclient_processes
 
 def set_sc_node_times(nodes, t):
-    #could be reused if setmocktime RPC call remains the same
     pass
 
 def wait_sidechainclients():
-    # Wait for all bitcoinds to cleanly exit
+    # Wait for all the processes to cleanly exit
     for sidechainclient in sidechainclient_processes.values():
         sidechainclient.wait()
     sidechainclient_processes.clear()

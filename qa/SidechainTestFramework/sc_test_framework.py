@@ -1,7 +1,6 @@
 from test_framework import BitcoinTestFramework
 from authproxy import JSONRPCException
-from scorexauthproxy import ScorexAuthServiceProxy
-from util import assert_true, check_json_precision, \
+from util import check_json_precision, \
     initialize_chain, initialize_chain_clean, \
     start_nodes, stop_nodes, \
     sync_blocks, sync_mempools, wait_bitcoinds
@@ -15,13 +14,14 @@ import traceback
 import sys
 import shutil
 
+#Default config, for the moment, just setup 1 MC node and 1 SC node
+
 class SidechainTestFramework(BitcoinTestFramework):
     
     def add_options(self, parser):
         pass
     
     def setup_chain(self):
-        print("Initializing test directory "+self.options.tmpdir)
         initialize_chain_clean(self.options.tmpdir, 1)
         #must compute and return genesis data for SC somewhere here
         genesisData = None
@@ -66,21 +66,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
         
     def run_test(self):
-        i = 0
-        for node in self.nodes:
-            res = node.getinfo()
-            assert_true(res is not None, "MC node {0} not alive !".format(i))
-            print("MC node {0} alive\nResponse to getinfo RPC call: {1} !".format(i, res))
-            i = i + 1
-        i = 0
-        '''Dummy (POST) call to check if SC node is alive. Note that Scorex API requires to specify a path to call a method. 
-        It's not possible to do as MC node because slashes in a method name would result in a syntax error. So a workaround has been done.
-        Hopefully, this will be removed in our SC SDK.'''
-        for sc_node in self.sc_nodes:
-            res = sc_node._utils_hash_blake2b("\"test\"")
-            assert_true(res is not None, "SC node {0} not alive !".format(i))
-            print("SC node {0} alive\nResponse to hashblake2b API call: {1}".format(i, res))
-            i = i + 1
+        pass
         
     def main(self):
         import optparse
@@ -115,6 +101,8 @@ class SidechainTestFramework(BitcoinTestFramework):
             if not os.path.isdir(self.options.tmpdir):
                 os.makedirs(self.options.tmpdir)
             
+            print("Initializing test directory "+self.options.tmpdir)
+            
             genesisData = self.setup_chain()
 
             self.setup_network()
@@ -137,21 +125,24 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
         
-        #add ifs for SC too
+        #In general STF could be used also for MC-only and SC-only tests
         if not self.options.noshutdown:
-            print("Stopping nodes")
-            stop_nodes(self.nodes)
-            wait_bitcoinds()
-            stop_sc_nodes(self.sc_nodes)
+            if hasattr(self, "nodes"):
+                print("Stopping MC nodes")
+                stop_nodes(self.nodes)
+                wait_bitcoinds()
+            if hasattr(self,"sc_nodes"):
+                print("Stopping SC nodes")
+                #stop_sc_nodes(self.sc_nodes)
         else:
-            print("Note: bitcoinds were not stopped and may still be running")
+            print("Note: client processes were not stopped and may still be running")
 
         if not self.options.nocleanup and not self.options.noshutdown:
             print("Cleaning up")
             shutil.rmtree(self.options.tmpdir)
 
         if success:
-            print("Tests successful")
+            print("Test successful")
             sys.exit(0)
         else:
             print("Failed")

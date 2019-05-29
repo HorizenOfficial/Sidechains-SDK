@@ -11,11 +11,11 @@ try:
 except ImportError:
     import urlparse
 
-USER_AGENT = "ScorexAuthServiceProxy/0.1"
+USER_AGENT = "SidechainAuthServiceProxy/0.1"
 
 HTTP_TIMEOUT = 6000000
 
-class ScorexAuthServiceProxy(object):
+class SidechainAuthServiceProxy(object):
     __id_count = 0
 
     def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
@@ -35,6 +35,7 @@ class ScorexAuthServiceProxy(object):
             passwd = passwd.encode('utf8')
         except AttributeError:
             pass
+        #Will we have authentication for SC API too ?
         authpair = user + b':' + passwd
         self.__auth_header = b'Basic ' + base64.b64encode(authpair)
 
@@ -55,19 +56,18 @@ class ScorexAuthServiceProxy(object):
             raise AttributeError
         if self.__service_name is not None:
             name = "%s.%s" % (self.__service_name, name)
-        return ScorexAuthServiceProxy(self.__service_url, name, connection=self.__conn)
+        return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
 
     def _request(self, method, path, postdata):
         '''
         Do a HTTP request, with retry if we get disconnected (e.g. due to a timeout).
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
         '''
-
-        headers = {'Host': self.__url.hostname+":"+str(self.__url.port),
+        
+        headers = {'Host': self.__url.hostname +":"+str(self.__url.port),
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
                    'Content-type': 'application/json'}
-        
         try:
             self.__conn.request(method, path, postdata, headers)
             return self._get_response()
@@ -85,9 +85,8 @@ class ScorexAuthServiceProxy(object):
                 raise
 
     def __call__(self, *args):
-        ScorexAuthServiceProxy.__id_count += 1
-        path = self.__service_url + self.__service_name.replace("_","/")
-        #log.debug("-%s-> %s %s"%(AuthServiceProxy.__id_count, self.__service_name, json.dumps(args, default=EncodeDecimal)))
+        SidechainAuthServiceProxy.__id_count += 1
+        path = self.__service_name.replace("_","/")
         postdata = args[0]
         response = self._request('POST', path, postdata)
         return response
@@ -98,7 +97,11 @@ class ScorexAuthServiceProxy(object):
             raise JSONRPCException({
                 'code': -342, 'message': 'missing HTTP response from server'})
         responsedata = http_response.read().decode('utf8')
-        if http_response.status is not 200:
+        if http_response.status is not 200: #For the moment we check for errors in this way
             raise Exception(responsedata)
         response = json.loads(responsedata, parse_float=decimal.Decimal)
         return response
+    
+    def _batch(self, api_call_list):
+        #Will the SC API support batch calls ?
+        pass
