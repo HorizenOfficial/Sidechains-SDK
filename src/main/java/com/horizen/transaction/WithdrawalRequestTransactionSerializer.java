@@ -1,11 +1,9 @@
 package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
-import com.horizen.box.RegularBoxSerializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
-import com.horizen.utils.SerializableCompanion;
+import com.horizen.utils.DynamicTypedSerializer;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
@@ -17,8 +15,8 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
     WithdrawalRequestTransactionSerializer() {
-        SerializableCompanion<NoncedBox<Proposition>, Serializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
-                new SerializableCompanion<>(
+        DynamicTypedSerializer<NoncedBox<Proposition>, Serializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
+                new DynamicTypedSerializer<>(
                         new HashMap<Byte, Serializer<? extends NoncedBox<Proposition>>>() {{
                             // put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer())
                             // TO DO: update supported serializers list

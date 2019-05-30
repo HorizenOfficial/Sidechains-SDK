@@ -31,7 +31,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
-            new SerializableCompanion<>(
+            new DynamicTypedSerializer<>(
                 new HashMap<Byte, Serializer<? extends SidechainRelatedMainchainOutput>>() {{
                     put((byte)1, (Serializer)ForwardTransferSerializer.getSerializer());
                     put((byte)2, (Serializer)CertifierLockSerializer.getSerializer());

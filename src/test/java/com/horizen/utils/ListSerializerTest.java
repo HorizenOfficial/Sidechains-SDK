@@ -150,7 +150,7 @@ public class ListSerializerTest {
         // Test 1: try to create ListSerializer with valid parameters and no limits
         boolean exceptionOccurred = false;
         try {
-            SerializableCompanion serializersCompanion = new SerializableCompanion<>(
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
                     new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
                         put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
                         put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
@@ -166,7 +166,7 @@ public class ListSerializerTest {
 
         // Test 2: try to create ListSerializer with valid parameters and with limits
         try {
-            SerializableCompanion serializersCompanion = new SerializableCompanion<>(
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
                     new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
                         put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
                         put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
@@ -182,7 +182,7 @@ public class ListSerializerTest {
 
         // Test 3: try to create ListSerializer with invalid parameters (serializers duplications)
         try {
-            SerializableCompanion serializersCompanion = new SerializableCompanion<>(
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
                     new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
                         put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
                         put((byte)2, (Serializer)new ListSerializerTestObjectASerializer());
@@ -222,7 +222,7 @@ public class ListSerializerTest {
 
     @Test
     public void ListSerializerTest_SerializationTestForMultipleTypes() {
-        SerializableCompanion serializersCompanion = new SerializableCompanion<>(
+        DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
                 new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
                     put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
                     put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
@@ -325,7 +325,7 @@ public class ListSerializerTest {
 
     @Test
     public void ListSerializerTest_FailureSerializationTestForMultipleTypes() {
-        SerializableCompanion serializersCompanion = new SerializableCompanion<>(
+        DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
                 new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
                     put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
                     put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());

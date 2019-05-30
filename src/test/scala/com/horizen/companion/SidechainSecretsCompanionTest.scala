@@ -63,7 +63,7 @@ class SidechainSecretsCompanionTest
     val customSecretBytes = sidechainSecretsCompanion.toBytes(customSecret)
 
     try {
-      sidechainSecretsCompanionCore.parseBytes(customSecretBytes)
+      sidechainSecretsCompanionCore.parseBytes(customSecretBytes).get
     } catch {
       case _ : Throwable => exceptionThrown = true
     }
