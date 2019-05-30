@@ -6,13 +6,32 @@ from util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds
 from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients
+    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generateGenesisData
 import tempfile
 import os
 import json
 import traceback
 import sys
 import shutil
+
+'''
+If you want to mantain default behaviour:
+For MC Test Only: Override sc_setup_chain, sc_setup_network, sc_add_options
+For SC Test Only: Override setup_chain, setup_network, add_options and sc_generate_genesis_data
+For MC&SC Tests: Don't override anything
+'''
+
+#2. Add modifications for multiple jars as a nested classes like ComparisonTestFramework
+#4. Create SC Node, create tx, check in memory pool, mine a block, check mempool empty, check block inclusion, check balance changing
+#5. Branch from ScorexFork/log_server, modify http hybrid core classes and commit and push
+#6 Find an API request that requires Authorization field and tests if it is effectively so. (separate test)
+#7 Start 3 SC node, connect them toghether and verify they are connected,
+# (GenesisAddresses 19 for miner node 1 & 2 and 9 for miner node 3 and 0 for the others non miner nodes) and checks if those addresses has a balance
+
+#FOR cache files deletion
+#git rm -r --cached
+#git add
+#git commit -am ""
 
 #Default config, for the moment, just setup 1 MC node and 1 SC node
 
@@ -23,9 +42,6 @@ class SidechainTestFramework(BitcoinTestFramework):
     
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, 1)
-        #must compute and return genesis data for SC somewhere here
-        genesisData = None
-        return genesisData
         
     def setup_network(self, split = False):
         self.nodes = self.setup_nodes() 
@@ -46,14 +62,21 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_add_options(self, parser):
         pass
     
-    def sc_setup_chain(self, genesisData):
+    #Must be overwritten if I wants to use SC only
+    def sc_generate_genesis_data(self):
+        return generateGenesisData(self.nodes[0]) #Maybe other parameters in future
+    
+    def sc_setup_chain(self):
+        genesisData = self.sc_generate_genesis_data() 
         initialize_sc_chain_clean(self.options.tmpdir, 1, genesisData)
     
-    def sc_setup_network(self, split = False, genesisData = None):
+    def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
     
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        num_sc_nodes = 1
+        #Must do like this because we have nothing to add to PATH like zend to use as default in sc_utils.start_node
+        return start_sc_nodes(num_sc_nodes, self.options.tmpdir, binary = [(self.options.scjarpath) for i in range(0, num_sc_nodes)])
         
     def sc_split_network(self):
         pass
@@ -78,11 +101,13 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
+        parser.add_option("--scjarpath", dest="scjarpath", default="resources/twinsChain.jar examples.hybrid.HybridApp", #New option
+                          help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
-        #Must add option for parsing SC src
+       
         self.add_options(parser)
         self.sc_add_options(parser)
         (self.options, self.args) = parser.parse_args()
@@ -92,7 +117,6 @@ class SidechainTestFramework(BitcoinTestFramework):
             logging.basicConfig(level=logging.DEBUG)
 
         os.environ['PATH'] = self.options.zendir+":"+os.environ['PATH']
-        #should we update path variable too for SC ?
         
         check_json_precision()
 
@@ -107,7 +131,7 @@ class SidechainTestFramework(BitcoinTestFramework):
 
             self.setup_network()
             
-            self.sc_setup_chain(genesisData)
+            self.sc_setup_chain()
             
             self.sc_setup_network()
 
@@ -125,7 +149,6 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
         
-        #In general STF could be used also for MC-only and SC-only tests
         if not self.options.noshutdown:
             if hasattr(self, "nodes"):
                 print("Stopping MC nodes")
@@ -133,7 +156,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                 wait_bitcoinds()
             if hasattr(self,"sc_nodes"):
                 print("Stopping SC nodes")
-                #stop_sc_nodes(self.sc_nodes)
+                stop_sc_nodes(self.sc_nodes)
         else:
             print("Note: client processes were not stopped and may still be running")
 
@@ -147,3 +170,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         else:
             print("Failed")
             sys.exit(1)
+    
+    '''Support for running MC & SC Nodes with different binaries'''
+    class SidechainComparisonTestFramework(SidechainTestFramework):
+        def __init__(self):
+            pass

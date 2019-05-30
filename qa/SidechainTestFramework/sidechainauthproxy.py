@@ -86,8 +86,10 @@ class SidechainAuthServiceProxy(object):
 
     def __call__(self, *args):
         SidechainAuthServiceProxy.__id_count += 1
-        path = self.__service_name.replace("_","/")
-        postdata = args[0]
+        path = "/" + self.__service_name.replace("_","/")
+        postdata = None
+        if len(args) != 0:
+            postdata = args[0]
         response = self._request('POST', path, postdata)
         return response
 
@@ -101,7 +103,3 @@ class SidechainAuthServiceProxy(object):
             raise Exception(responsedata)
         response = json.loads(responsedata, parse_float=decimal.Decimal)
         return response
-    
-    def _batch(self, api_call_list):
-        #Will the SC API support batch calls ?
-        pass

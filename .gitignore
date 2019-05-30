@@ -3,3 +3,5 @@ out/
 target/
 scorex.log
 scorex-errors.log
+*__pycache__
+*.pyc

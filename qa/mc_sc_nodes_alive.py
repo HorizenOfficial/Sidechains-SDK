@@ -15,7 +15,7 @@ class MCSCNodesAlive(SidechainTestFramework):
         and replace them with "/" later'''
         for sc_node in self.sc_nodes:
             input = "\"test\""
-            res = sc_node._utils_hash_blake2b(input)
+            res = sc_node.utils_hash_blake2b(input)
             assert_true(res is not None, "SC node {0} not alive !".format(i))
             print("SC node {0} alive !\nResponse to hashblake2b API call with input {1}: {2}".format(i, input , res))
             i = i + 1
