@@ -6,7 +6,8 @@ import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
-import java.util.{List => JList}
+import java.util.{List => JList, HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 import org.junit.Assert._
 import org.junit._
@@ -14,7 +15,7 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.ListBuffer
 import org.mockito._
 import scorex.crypto.hash.Blake2b256
 
@@ -27,14 +28,15 @@ class SidechainSecretStorageTest
     with MockitoSugar
 {
 
-  var mockedStorage: Storage = null
+  var mockedStorage: Storage = _
   var secretList = new ListBuffer[Secret]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-  val customSecretSerializers: Map[Byte, SecretSerializer[_ <: Secret]] =
-    Map(CustomPrivateKey.SECRET_TYPE_ID ->  CustomPrivateKeySerializer.getSerializer)
-  val sidechainSecretsCompanion = new SidechainSecretsCompanion(customSecretSerializers)
-  val sidechainSecretsCompanionCore = new SidechainSecretsCompanion(Map())
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+  val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
+
 
   @Before
   def setUp() : Unit = {
@@ -56,13 +58,13 @@ class SidechainSecretStorageTest
     //Mockito.when(mockedStorage.getAll).thenThrow(new Exception("Storage is not initialized."))
 
     Mockito.when(mockedStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
+      .thenAnswer(answer => {
         storedList.filter(_.getKey.equals(answer.getArgument(0)))
       })
 
     Mockito.when(mockedStorage.get(ArgumentMatchers.anyList[ByteArrayWrapper]()))
-      .thenAnswer((answer) => {
-        storedList.filter((p) => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
+      .thenAnswer(answer => {
+        storedList.filter(p => answer.getArgument(0).asInstanceOf[JList[ByteArrayWrapper]].contains(p.getKey))
       })
   }
 

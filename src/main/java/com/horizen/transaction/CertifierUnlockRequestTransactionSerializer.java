@@ -3,6 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
+import com.horizen.utils.DynamicTypedSerializer;
 import scala.util.Try;
 import scorex.core.serialization.Serializer;
 
@@ -14,11 +15,15 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
     CertifierUnlockRequestTransactionSerializer() {
-        HashMap<Integer, Serializer<NoncedBox<Proposition>>> supportedBoxSerializers = new HashMap<Integer, Serializer<NoncedBox<Proposition>>>();
-        //supportedBoxSerializers.put(1, new RegularBoxSerializer());
-        // TO DO: update supported serializers list
+        DynamicTypedSerializer<NoncedBox<Proposition>, Serializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
+                new DynamicTypedSerializer<>(
+                        new HashMap<Byte, Serializer<? extends NoncedBox<Proposition>>>() {{
+                            // put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer())
+                            // TO DO: update supported serializers list
+                        }}, new HashMap<>());
 
-        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxSerializers);
+
+        _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
     @Override

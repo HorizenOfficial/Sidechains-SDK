@@ -23,19 +23,19 @@ import scala.collection.JavaConverters._
 // Transaction counter  positive integer (number of transactions in block)      1-9 bytes
 // Transactions         the (non empty) list of transactions                    depends on <Transaction counter>
 
-class MainchainBlock(
+class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                    val SCMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
+                    val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
                     ) extends BytesSerializable {
 
   lazy val hash: Array[Byte] = header.hash
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
-  override type M = MainchainBlock
+  override type M = MainchainBlockReference
 
-  override def serializer: Serializer[MainchainBlock] = MainchainBlockSerializer
+  override def serializer: Serializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(header == null || !header.semanticValidity(params))
@@ -45,21 +45,21 @@ class MainchainBlock(
     if(header.version == MainchainHeader.SCMAP_BLOCK_VERSION) {
       if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
         // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
-        if (SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
+        if (sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
           return false
       }
       else {
-        if (SCMap.isEmpty)
+        if (sidechainsMerkleRootsMap.isEmpty)
           return false
 
         // verify SCMap Merkle root hash equals to one in the header.
-        val SCSeq = SCMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+        val SCSeq = sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
         val sidechainsMerkleRootsHashesList = SCSeq.map(_._2).toList.asJava
         val merkleTree: MerkleTree = MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList)
         if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
           return false
 
-        val sidechainMerkleRootHash = SCMap.get.get(new ByteArrayWrapper(params.sidechainId))
+        val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
         if (sidechainMerkleRootHash.isEmpty) {
           // there is no related outputs for current Sidechain, AggTx expected to be not defined.
           return sidechainRelatedAggregatedTransaction.isEmpty
@@ -76,7 +76,7 @@ class MainchainBlock(
     } else {
       // Old Block version has no SCMap and AggTx, also Header.hashSCMerkleRootsMap bytes should be zero
       if(!util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)
-          || SCMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
+          || sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
         return false
     }
 
@@ -85,28 +85,28 @@ class MainchainBlock(
 }
 
 
-object MainchainBlock {
+object MainchainBlockReference {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE = 2048 * 1024 //2048K
 
-  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlock] = { // TO DO: get sidechainId from some params object
+  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(params.sidechainId.length == 32)
 
-    val tryBlock: Try[MainchainBlock] = parseMainchainBlockBytes(mainchainBlockBytes) match {
+    val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, mainchainTxs)) =>
         header.version match {
           case MainchainHeader.SCMAP_BLOCK_VERSION => {
             // Calculate SCMap and verify it
             var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
             for (tx <- mainchainTxs)
-              scIds = scIds ++ tx.getRelatedSidechains()
+              scIds = scIds ++ tx.getRelatedSidechains
 
             var aggregatedTransactionsMap: Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
             for (id <- scIds) {
               var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
               for (tx <- mainchainTxs) {
-                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(params.sidechainId))
+                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(id))
                 // TO DO: put Certificate and FraudReports processing later.
               }
               aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
@@ -119,11 +119,11 @@ object MainchainBlock {
 
             val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
 
-            Success(new MainchainBlock(header, mc2scTransaction, Option(SCMap)))
+            Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap)))
           }
 
           case _ =>
-            Success(new MainchainBlock(header, None, None))
+            Success(new MainchainBlockReference(header, None, None))
 
         }
 
@@ -172,15 +172,17 @@ object MainchainBlock {
 
 
 
-object MainchainBlockSerializer extends Serializer[MainchainBlock] {
-  override def toBytes(obj: MainchainBlock): Array[Byte] = {
+object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockReference] {
+  val HASH_BYTES_LENGTH: Int = 32
+
+  override def toBytes(obj: MainchainBlockReference): Array[Byte] = {
     val mc2scAggregatedTransactionSize: Int = obj.sidechainRelatedAggregatedTransaction match {
       case Some(tx) => tx.bytes().length
       case _ => 0
     }
 
-    val SCMapSize: Int = obj.SCMap match {
-      case Some(scmap) => scmap.size * (32 + 32)
+    val SCMapSize: Int = obj.sidechainsMerkleRootsMap match {
+      case Some(scmap) => scmap.size * HASH_BYTES_LENGTH * 2
       case _ => 0
     }
     val SCMapBytes: Array[Byte] = {
@@ -188,7 +190,7 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
         Array[Byte]()
       else {
         val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-        obj.SCMap.get.foreach {
+        obj.sidechainsMerkleRootsMap.get.foreach {
           case (k, v) =>
             stream.write(k.data)
             stream.write(v)
@@ -207,7 +209,7 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
     )
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[MainchainBlock] = Try {
+  override def parseBytes(bytes: Array[Byte]): Try[MainchainBlockReference] = Try {
     if(bytes.length < 4 + MainchainHeader.MIN_HEADER_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
@@ -239,8 +241,8 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
       if(SCMapSize > 0) {
         val scmap = Map[ByteArrayWrapper, Array[Byte]]()
         while(offset < bytes.length) {
-          scmap.put(new ByteArrayWrapper(bytes.slice(offset, offset + 32)), bytes.slice(offset + 32, offset + 64))
-          offset += 64
+          scmap.put(new ByteArrayWrapper(bytes.slice(offset, offset + HASH_BYTES_LENGTH)), bytes.slice(offset + HASH_BYTES_LENGTH, offset + HASH_BYTES_LENGTH * 2))
+          offset += HASH_BYTES_LENGTH * 2
         }
         Some(scmap)
       }
@@ -248,6 +250,6 @@ object MainchainBlockSerializer extends Serializer[MainchainBlock] {
         None
     }
 
-    new MainchainBlock(header, mc2scTx, SCMap)
+    new MainchainBlockReference(header, mc2scTx, SCMap)
   }
 }

@@ -6,6 +6,7 @@ import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt}
 
 import scala.collection.mutable.ArrayBuffer
+import java.util.{List => JList, ArrayList => JArrayList}
 
 class MainchainTransaction(
                           transactionsBytes: Array[Byte],
@@ -14,7 +15,7 @@ class MainchainTransaction(
 
   private val PHGR_TX_VERSION: Int = 2
   private val GROTH_TX_VERSION: Int = 0xFFFFFFFD // -3
-  private val OUTPUTS_V2_TX_VERSION: Int = 0xFFFFFFFC // -4
+  private val CROSSCHAIN_OUTPUTS_TX_VERSION: Int = 0xFFFFFFFC // -4
 
   private var _size: Int = 0
   private var _version: Int = 0
@@ -24,6 +25,7 @@ class MainchainTransaction(
 //  private var _useSegwit: Boolean = false
   private var _inputs: ArrayBuffer[MainchainTxInput] = ArrayBuffer()
   private var _outputs: ArrayBuffer[MainchainTxOutput] = ArrayBuffer()
+  private var _crosschainOutputsMap: Map[ByteArrayWrapper, JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]] = Map() // key sidechainID
   private var _lockTime: Int = 0
 
   parse()
@@ -77,22 +79,26 @@ class MainchainTransaction(
     val outputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
     currentOffset += outputsNumber.size()
 
-    if(_version == OUTPUTS_V2_TX_VERSION) { // parse outputs as MainchainTxOutputsV2
-      // TO DO: implement
-    } else { // parse as MainchainTxOutputsV1
-      for (i <- 1 to outputsNumber.value().intValue()) {
-        val value: Long = BytesUtils.getReversedLong(transactionsBytes, currentOffset)
-        currentOffset += 8
+    for (i <- 1 to outputsNumber.value().intValue()) {
+      val value: Long = BytesUtils.getReversedLong(transactionsBytes, currentOffset)
+      currentOffset += 8
 
-        val scriptLength: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-        currentOffset += scriptLength.size()
+      val scriptLength: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      currentOffset += scriptLength.size()
 
-        val script: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
-        val scriptHex: String = BytesUtils.toHexString(script)
-        currentOffset += scriptLength.value().intValue()
+      val script: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
+      val scriptHex: String = BytesUtils.toHexString(script)
+      currentOffset += scriptLength.value().intValue()
 
-        _outputs = _outputs :+ new MainchainTxOutputV1(value, script)
-      }
+      _outputs = _outputs :+ MainchainTxOutput(value, script)
+    }
+
+    if(_version == CROSSCHAIN_OUTPUTS_TX_VERSION) {
+      // parse crosschain outputs
+      val crosschainOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      currentOffset += crosschainOutputsNumber.size()
+      // TO DO: implement parse into _crosschainOutputs
+
     }
 
 //    if(_marker == 0)
@@ -156,18 +162,12 @@ class MainchainTransaction(
     _size = currentOffset - offset
   }
 
-  def getRelatedSidechains(): Set[ByteArrayWrapper] = {
-    // TO DO: parse all outputs, detect New Outputs and extract all mentioned Sidechain Ids as a Set
-    _outputs.foreach {
-      case (output: MainchainTxForwardTransferOutput) =>
-        // TO DO
-    }
-    Set[ByteArrayWrapper]()
+  def getRelatedSidechains: Set[ByteArrayWrapper] = {
+    _crosschainOutputsMap.keySet
   }
 
-  def getSidechainRelatedOutputs(sidechainId: Array[Byte]): java.util.List[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
-    // TO DO: parse all outputs, detect
-    new java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]()
+  def getSidechainRelatedOutputs(sidechainId: ByteArrayWrapper): JList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
+    _crosschainOutputsMap.getOrElse(sidechainId, new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]())
   }
 
   // TO DO: implement later, when structure will be known
@@ -177,10 +177,9 @@ class MainchainTransaction(
 
 
 // Note: Witness data is ignored during parsing.
-class MainchainTxInput(
-                        val prevTxHash: Array[Byte],
-                        val prevTxOutIndex: Int,
-                        val txScript: Array[Byte],
-                        val sequence: Int
-                      ) {
-}
+case class MainchainTxInput(
+                        prevTxHash: Array[Byte],
+                        prevTxOutIndex: Int,
+                        txScript: Array[Byte],
+                        sequence: Int
+                      )

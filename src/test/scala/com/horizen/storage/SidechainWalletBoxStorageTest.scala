@@ -8,7 +8,8 @@ import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
-import java.util.{List => JList}
+import java.util.{List => JList, HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 import org.junit.Assert._
 
@@ -18,7 +19,6 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Map
 import org.mockito._
 import scorex.crypto.hash.Blake2b256
 
@@ -36,10 +36,10 @@ class SidechainWalletBoxStorageTest
   var boxList = new ListBuffer[WalletBox]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
-  val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = new SidechainBoxesCompanion(Map())
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 
   @Before
   def setUp() : Unit = {

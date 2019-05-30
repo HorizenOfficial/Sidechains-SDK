@@ -1,7 +1,5 @@
 package com.horizen.companion
 
-import scala.collection.mutable._
-
 import org.scalatest.junit.JUnitSuite
 
 import org.junit.Test
@@ -12,61 +10,71 @@ import com.horizen.customtypes._
 import com.horizen.box._
 import com.horizen.proposition._
 
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
+
 class SidechainBoxesCompanionTest
   extends JUnitSuite
     with BoxFixture
 {
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
-  val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = new SidechainBoxesCompanion(Map())
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 
   @Test def testCore(): Unit = {
-    //Test for RegularBox
-    val rb = getRegularBox()
+    // Test 1: RegularBox serialization/deserialization
+    val regulerBox = getRegularBox()
 
-    val rbb = sidechainBoxesCompanion.toBytes(rb)
+    val regularBoxBytes = sidechainBoxesCompanion.toBytes(regulerBox)
 
-    assertEquals("Type of serialized box must be RegularBox.", rb.boxTypeId(), rbb(0))
-    assertEquals("Deserialization must restore same box.", rb, sidechainBoxesCompanion.parseBytes(rbb).get)
+    assertEquals("Type of serialized box must be RegularBox.", regulerBox.boxTypeId(), regularBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", regulerBox, sidechainBoxesCompanion.parseBytes(regularBoxBytes).get)
 
-    //Test for CertifierRightBox
-    val crb = getCertifierRightBox()
 
-    val crbb = sidechainBoxesCompanion.toBytes(crb)
+    // Test 2: CertifierRightBox serialization/deserialization
+    val certifiedRightBox = getCertifierRightBox()
 
-    assertEquals("Type of serialized box must be CertifierRightBox.", crb.boxTypeId(), crbb(0))
-    assertEquals("Deserialization must restore same box.", crb, sidechainBoxesCompanion.parseBytes(crbb).get)
+    val certifiedRightBoxBytes = sidechainBoxesCompanion.toBytes(certifiedRightBox)
+
+    assertEquals("Type of serialized box must be CertifierRightBox.", certifiedRightBox.boxTypeId(), certifiedRightBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", certifiedRightBox, sidechainBoxesCompanion.parseBytes(certifiedRightBoxBytes).get)
   }
 
-  @Test def testCustom(): Unit = {
-    val cb = getCustomBox()
+  @Test def testRegisteredCustom(): Unit = {
+    val customBox = getCustomBox()
+
+    val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
+    assertEquals("Box type must be custom.", Byte.MaxValue, customBoxBytes(0))
+    assertEquals("Type of serialized box must be CustomBox.", customBox.boxTypeId(), customBoxBytes(1))
+    assertEquals("Deserialization must restore same box.", customBox, sidechainBoxesCompanion.parseBytes(customBoxBytes).get)
+  }
+
+  @Test def testUnregisteredCustom(): Unit = {
+    val customBox = getCustomBox()
     var exceptionThrown = false
 
-    //Test serialization exception if custom type is unregistered
+
+    // Test 1: try to serialize custom type Box. Serialization exception expected, because of custom type is unregistered.
     try {
-      val cbb = sidechainBoxesCompanionCore.toBytes(cb)
+      sidechainBoxesCompanionCore.toBytes(customBox)
     } catch {
-      case e : IllegalArgumentException => exceptionThrown = true
+      case _ : Throwable => exceptionThrown = true
     }
 
     assertTrue("Exception must be thrown for unregistered box type.", exceptionThrown)
 
-    //Test no exception if custom type is registered
+
+    // Test 2: try to deserialize custom type Box. Serialization exception expected, because of custom type is unregistered.
     exceptionThrown = false
+    val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
 
-    val cbb = sidechainBoxesCompanion.toBytes(cb)
-
-    assertEquals("Box type must be custom.", Byte.MaxValue, cbb(0))
-    assertEquals("Type of serialized box must be CustomBox.", cb.boxTypeId(), cbb(1))
-    assertEquals("Deserialization must restore same box.", cb, sidechainBoxesCompanion.parseBytes(cbb).get)
-
-    //Test serialization exception if custom type is unregistered
     try {
-      sidechainBoxesCompanionCore.parseBytes(cbb).get
+      sidechainBoxesCompanionCore.parseBytes(customBoxBytes).get
     } catch {
-      case e : MatchError => exceptionThrown = true
+      case _ : Throwable => exceptionThrown = true
     }
 
     assertTrue("Exception must be thrown for unregistered box type.", exceptionThrown)
