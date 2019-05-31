@@ -64,7 +64,7 @@ class SidechainAuthServiceProxy(object):
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
         '''
         
-        headers = {'Host': self.__url.hostname +":"+str(self.__url.port),
+        headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
                    'Content-type': 'application/json'}
@@ -88,9 +88,9 @@ class SidechainAuthServiceProxy(object):
         SidechainAuthServiceProxy.__id_count += 1
         path = "/" + self.__service_name.replace("_","/")
         postdata = None
-        if len(args) != 0:
+        if len(args) > 0:
             postdata = args[0]
-        response = self._request('POST', path, postdata)
+        response = self._request("POST", path, postdata)
         return response
 
     def _get_response(self):

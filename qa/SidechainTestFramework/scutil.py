@@ -17,27 +17,55 @@ import string
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid()%999
+
 def sc_rpc_port(n):
     return 8200 + n + os.getpid()%999
 
-def sync_sc_blocks(rpc_connections, wait=1, p=False, limit_loop=0):
+def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=0):
     """
     Wait until everybody has the same block count or a limit has been exceeded
     """
-    pass
+    loop_num = 0
+    while True:
+        if limit_loop > 0:
+            loop_num += 1
+            if loop_num > limit_loop:
+                break
+        counts = [ int(x.debug_info()["height"]) for x in api_connections ]
+        if p :
+            print (counts)
+        if counts == [ counts[0] ]*len(counts):
+            break
+        time.sleep(wait)
 
-def sync_sc_mempools(rpc_connections, wait=1):
+def sync_sc_mempools(api_connections, wait=1):
     """
     Wait until everybody has the same transactions in their memory
     pools
     """
-    pass
+    while True:
+        pool = set(api_connections[0].nodeView_pool()["transactions"])
+        num_match = 1
+        for i in range(1, len(api_connections)):
+            if set(api_connections[i].nodeView_pool()["transactions"]) == pool:
+                num_match = num_match+1
+        if num_match == len(api_connections):
+            break
+        time.sleep(wait)
 
 sidechainclient_processes = {}
 
 def generateGenesisData(node):
     #TO IMPLEMENT: Create sidechaindeclarationtx, mine a block, call getgenesisdata and return them
     return None
+
+#Just for hybrid app
+def getGenesisAddresses(nodeNumber):
+    if nodeNumber < 2:
+        return 19
+    elif nodeNumber == 2:
+        return 9
+    return 0
 
 #Maybe should we give the possibility to customize the configuration file by adding more fields ?
 def initialize_sc_datadir(dirname, n, genesisData):
@@ -47,7 +75,6 @@ def initialize_sc_datadir(dirname, n, genesisData):
     with open('./resources/template.conf','r') as templateFile: 
         tmpConfig = templateFile.read()
     configsData = []
-    r = random.randint(0, n+1)
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node"+str(n))
@@ -56,18 +83,16 @@ def initialize_sc_datadir(dirname, n, genesisData):
     config = tmpConfig % {
         'NODE_NUMBER' : n,
         'DIRECTORY' : dirname,
-        #'WALLET_SEED' : ''.join([random.choice(string.ascii_letters + string.digits) for tmp in range(32)]),
         'WALLET_SEED' : ("minerNode" + str(n+1)) if n < 3 else ("node" + str(n+1)),
         'API_ADDRESS' : "127.0.0.1",
         'API_PORT' : str(apiPort),
         'BIND_PORT' : str(bindPort),
-        'KNOWN_PEERS' : "" if n == 0 else "\"" + apiAddress + ":" + str(bindPort-1) + "\"" ,
         'OFFLINE_GENERATION' : "false",
         'GENESIS_DATA': "" if genesisData is None else str(genesisData)
         }
     configsData.append({
         "name" : "node" + str(n),
-        "genesisAddresses" : r*n,
+        "genesisAddresses" : getGenesisAddresses(n),
         "url" : "http://" + apiAddress + ":" + str(apiPort)
     })
     with open(os.path.join(datadir, "node"+str(n)+".conf"), 'w+') as configFile:
@@ -96,9 +121,11 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     #Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node"+str(i))
+    if binary is None:
+        binary = "resources/twinsChain.jar examples.hybrid.HybridApp"
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-    time.sleep(20) #Temporarily
+    time.sleep(15) #Temporarily
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url # store URL on proxy for info
@@ -138,7 +165,12 @@ def wait_sidechainclients():
     sidechainclient_processes.clear()
 
 def connect_sc_nodes(from_connection, node_num):
-    pass
+    ip_port = "\"127.0.0.1:"+str(sc_p2p_port(node_num))+"\""
+    from_connection.peers_connect(ip_port)
+    '''# poll until version handshake complete to avoid race conditions
+    # with transaction relaying
+    while any(peer['version'] == 0 for peer in from_connection.getpeerinfo()):
+        time.sleep(0.1)'''
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)

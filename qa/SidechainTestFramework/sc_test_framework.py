@@ -15,26 +15,21 @@ import sys
 import shutil
 
 '''
-If you want to mantain default behaviour:
+If you want to keep default behavior:
 For MC Test Only: Override sc_setup_chain, sc_setup_network, sc_add_options
 For SC Test Only: Override setup_chain, setup_network, add_options and sc_generate_genesis_data
 For MC&SC Tests: Don't override anything
 '''
-
-#2. Add modifications for multiple jars as a nested classes like ComparisonTestFramework
+#3Find a way to suppress logs
 #4. Create SC Node, create tx, check in memory pool, mine a block, check mempool empty, check block inclusion, check balance changing
-#5. Branch from ScorexFork/log_server, modify http hybrid core classes and commit and push
-#6 Find an API request that requires Authorization field and tests if it is effectively so. (separate test)
-#7 Start 3 SC node, connect them toghether and verify they are connected,
-# (GenesisAddresses 19 for miner node 1 & 2 and 9 for miner node 3 and 0 for the others non miner nodes) and checks if those addresses has a balance
+#5. Branch from ScorexFork/log_server commit and push
 
-#FOR cache files deletion
+#8. Remove cache files from repository. FOR cache files deletion
 #git rm -r --cached
 #git add
 #git commit -am ""
 
 #Default config, for the moment, just setup 1 MC node and 1 SC node
-
 class SidechainTestFramework(BitcoinTestFramework):
     
     def add_options(self, parser):
@@ -74,9 +69,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         self.sc_nodes = self.sc_setup_nodes()
     
     def sc_setup_nodes(self):
-        num_sc_nodes = 1
-        #Must do like this because we have nothing to add to PATH like zend to use as default in sc_utils.start_node
-        return start_sc_nodes(num_sc_nodes, self.options.tmpdir, binary = [(self.options.scjarpath) for i in range(0, num_sc_nodes)])
+        return start_sc_nodes(1, self.options.tmpdir)
         
     def sc_split_network(self):
         pass
@@ -171,7 +164,42 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Failed")
             sys.exit(1)
     
-    '''Support for running MC & SC Nodes with different binaries'''
-    class SidechainComparisonTestFramework(SidechainTestFramework):
-        def __init__(self):
-            pass
+'''Support for running MC & SC Nodes with different binaries. 
+For MC the implementation follows the one of BTF, for SC it is possible to specify multiple jars'''
+class SidechainComparisonTestFramework(SidechainTestFramework):
+    
+    def add_options(self, parser):
+        parser.add_option("--testbinary", dest="testbinary",
+                          default=os.getenv("BITCOIND", "zend"),
+                          help="zend binary to test")
+        parser.add_option("--refbinary", dest="refbinary",
+                          default=os.getenv("BITCOIND", "zend"),
+                          help="zend binary to use for reference nodes (if any)")
+
+    def setup_chain(self):
+        initialize_chain_clean(self.options.tmpdir, self.num_nodes)
+
+    def setup_network(self):
+        self.num_nodes = 2
+        self.nodes = start_nodes(self.num_nodes, self.options.tmpdir,
+                                    extra_args=[['-debug', '-whitelist=127.0.0.1']] * self.num_nodes,
+                                    binary=[self.options.testbinary] +
+                                           [self.options.refbinary]*(self.num_nodes-1))
+    
+    def sc_add_options(self, parser):
+        parser.add_option("--jarspathlist", dest="jarspathlist", type = "string", 
+                          actions = "callback", callback = self._get_comma_separated_args,
+                          default=["resources/twinsChain.jar examples.hybrid.HybridApp"],
+                          help="node jars to test, separated by comma")
+    
+    def _get_comma_separated_args(self, option, opt, value, parser):
+        setattr(parser.values, option.dest, value.split(','))
+        
+    def sc_setup_chain(self):
+        genesisData = self.sc_generate_genesis_data() 
+        initialize_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes, genesisData)
+        
+    def sc_setup_network(self):
+        jars = self.options.jarspathlist
+        self.num_sc_nodes = len(jars)
+        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = jars)    

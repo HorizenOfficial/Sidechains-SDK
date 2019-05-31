@@ -1,4 +1,3 @@
-from test_framework.test_framework import BitcoinTestFramework
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 
 class SCTest(SidechainTestFramework):
