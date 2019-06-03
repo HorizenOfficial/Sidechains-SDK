@@ -1,5 +1,6 @@
 from test_framework import BitcoinTestFramework
 from authproxy import JSONRPCException
+from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from util import check_json_precision, \
     initialize_chain, initialize_chain_clean, \
     start_nodes, stop_nodes, \
@@ -20,14 +21,9 @@ For MC Test Only: Override sc_setup_chain, sc_setup_network, sc_add_options
 For SC Test Only: Override setup_chain, setup_network, add_options and sc_generate_genesis_data
 For MC&SC Tests: Don't override anything
 '''
-#3Find a way to suppress logs
-#4. Create SC Node, create tx, check in memory pool, mine a block, check mempool empty, check block inclusion, check balance changing
-#5. Branch from ScorexFork/log_server commit and push
 
-#8. Remove cache files from repository. FOR cache files deletion
-#git rm -r --cached
-#git add
-#git commit -am ""
+
+#5. Branch from ScorexFork/log_server commit and push
 
 #Default config, for the moment, just setup 1 MC node and 1 SC node
 class SidechainTestFramework(BitcoinTestFramework):
@@ -135,6 +131,9 @@ class SidechainTestFramework(BitcoinTestFramework):
         except JSONRPCException as e:
             print("JSONRPC error: "+e.error['message'])
             traceback.print_tb(sys.exc_info()[2])
+        except SCAPIException as e:
+            print("SCAPI error: "+e.error)
+            traceback.print_tb(sys.exc_info()[2])
         except AssertionError as e:
             print("Assertion failed: "+e.message)
             traceback.print_tb(sys.exc_info()[2])
@@ -163,7 +162,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         else:
             print("Failed")
             sys.exit(1)
-    
+
+#Build simple test to see if it works
 '''Support for running MC & SC Nodes with different binaries. 
 For MC the implementation follows the one of BTF, for SC it is possible to specify multiple jars'''
 class SidechainComparisonTestFramework(SidechainTestFramework):
@@ -177,10 +177,10 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
                           help="zend binary to use for reference nodes (if any)")
 
     def setup_chain(self):
+        self.num_nodes = 2
         initialize_chain_clean(self.options.tmpdir, self.num_nodes)
 
     def setup_network(self):
-        self.num_nodes = 2
         self.nodes = start_nodes(self.num_nodes, self.options.tmpdir,
                                     extra_args=[['-debug', '-whitelist=127.0.0.1']] * self.num_nodes,
                                     binary=[self.options.testbinary] +
@@ -188,18 +188,17 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
     
     def sc_add_options(self, parser):
         parser.add_option("--jarspathlist", dest="jarspathlist", type = "string", 
-                          actions = "callback", callback = self._get_comma_separated_args,
-                          default=["resources/twinsChain.jar examples.hybrid.HybridApp"],
+                          action = "callback", callback = self._get_comma_separated_args,
+                          default=["resources/twinsChain.jar examples.hybrid.HybridApp", "resources/twinsChainOld.jar examples.hybrid.HybridApp"],
                           help="node jars to test, separated by comma")
     
     def _get_comma_separated_args(self, option, opt, value, parser):
         setattr(parser.values, option.dest, value.split(','))
         
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data() 
+        genesisData = self.sc_generate_genesis_data()
+        self.num_sc_nodes = len(self.options.jarspathlist)
         initialize_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes, genesisData)
         
     def sc_setup_network(self):
-        jars = self.options.jarspathlist
-        self.num_sc_nodes = len(jars)
-        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = jars)    
+        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)    

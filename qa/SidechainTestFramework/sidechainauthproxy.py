@@ -15,6 +15,11 @@ USER_AGENT = "SidechainAuthServiceProxy/0.1"
 
 HTTP_TIMEOUT = 6000000
 
+class SCAPIException(Exception):
+    def __init__(self, sc_api_error):
+        Exception.__init__(self)
+        self.error = sc_api_error
+
 class SidechainAuthServiceProxy(object):
     __id_count = 0
 
@@ -96,10 +101,9 @@ class SidechainAuthServiceProxy(object):
     def _get_response(self):
         http_response = self.__conn.getresponse()
         if http_response is None:
-            raise JSONRPCException({
-                'code': -342, 'message': 'missing HTTP response from server'})
+            raise SCAPIException("missing HTTP response from server")
         responsedata = http_response.read().decode('utf8')
         if http_response.status is not 200: #For the moment we check for errors in this way
-            raise Exception(responsedata)
+            raise SCAPIException(responsedata)
         response = json.loads(responsedata, parse_float=decimal.Decimal)
         return response

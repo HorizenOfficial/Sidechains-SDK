@@ -14,6 +14,9 @@ import subprocess
 import time
 import random
 import string
+import socket
+from contextlib import closing
+
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid()%999
@@ -21,7 +24,27 @@ def sc_p2p_port(n):
 def sc_rpc_port(n):
     return 8200 + n + os.getpid()%999
 
-def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=0):
+def wait_for_next_sc_blocks(node, toWait, wait = 1, limit_loop = 25):
+    old_height = int(node.debug_info()["height"])
+    loop_num = 0
+    while True:
+        if limit_loop > 0:
+            loop_num += 1
+            if loop_num > limit_loop:
+                print("Wait blocks: limit loop exceeded")
+                break
+        height = int(node.debug_info()["height"])
+        if  height >= (old_height + toWait):
+            break
+        time.sleep(wait)
+
+def wait_for_sc_node_initialization(nodes, wait = 1):
+    for i in range(len(nodes)):
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+            while not sock.connect_ex(("127.0.0.1", sc_rpc_port(i))) == 0:
+                time.sleep(wait)
+                
+def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=25):
     """
     Wait until everybody has the same block count or a limit has been exceeded
     """
@@ -30,6 +53,7 @@ def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=0):
         if limit_loop > 0:
             loop_num += 1
             if loop_num > limit_loop:
+                print("Sync blocks: limit loop exceeded")
                 break
         counts = [ int(x.debug_info()["height"]) for x in api_connections ]
         if p :
@@ -44,10 +68,10 @@ def sync_sc_mempools(api_connections, wait=1):
     pools
     """
     while True:
-        pool = set(api_connections[0].nodeView_pool()["transactions"])
+        pool = api_connections[0].nodeView_pool()["transactions"]
         num_match = 1
         for i in range(1, len(api_connections)):
-            if set(api_connections[i].nodeView_pool()["transactions"]) == pool:
+            if cmp(api_connections[i].nodeView_pool()["transactions"], pool) == 0:
                 num_match = num_match+1
         if num_match == len(api_connections):
             break
@@ -125,7 +149,6 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         binary = "resources/twinsChain.jar examples.hybrid.HybridApp"
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
-    time.sleep(15) #Temporarily
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url # store URL on proxy for info
@@ -137,7 +160,9 @@ def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary = N
     """
     if extra_args is None: extra_args = [ None for i in range(num_nodes) ]
     if binary is None: binary = [ None for i in range(num_nodes) ]
-    return [ start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes) ]
+    nodes =  [ start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes) ]
+    wait_for_sc_node_initialization(nodes)
+    return nodes
 
 def check_sc_node(i):
     sidechainclient_processes[i].poll()
@@ -164,13 +189,20 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
-def connect_sc_nodes(from_connection, node_num):
+def connect_sc_nodes(from_connection, node_num, wait = 1, limit_loop = 50):
     ip_port = "\"127.0.0.1:"+str(sc_p2p_port(node_num))+"\""
+    oldnum = len(from_connection.peers_connected())
     from_connection.peers_connect(ip_port)
-    '''# poll until version handshake complete to avoid race conditions
-    # with transaction relaying
-    while any(peer['version'] == 0 for peer in from_connection.getpeerinfo()):
-        time.sleep(0.1)'''
+    loop_num = 0
+    while True:
+        if limit_loop > 0:
+            loop_num += 1
+            if loop_num > limit_loop:
+                print("Can't connect to node{0}".format(node_num))
+                break
+        if len(from_connection.peers_connected()) == (oldnum + 1):
+            break
+        time.sleep(wait)
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)
