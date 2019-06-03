@@ -1,7 +1,6 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.block.MainchainTxCertifierLockOutput;
-import com.horizen.block.MainchainTxCertifierLockOutputSerializer;
+import com.horizen.block.MainchainTxCertifierLockCrosschainOutput;
 import com.horizen.box.CertifierRightBox;
 import scala.util.Success;
 import scala.util.Try;
@@ -10,9 +9,9 @@ import java.util.Arrays;
 
 public final class CertifierLock implements SidechainRelatedMainchainOutput<CertifierRightBox> {
 
-    private MainchainTxCertifierLockOutput _output;
+    private MainchainTxCertifierLockCrosschainOutput _output;
 
-    public CertifierLock(MainchainTxCertifierLockOutput output) {
+    public CertifierLock(MainchainTxCertifierLockCrosschainOutput output) {
         _output = output;
     }
     @Override
@@ -20,19 +19,20 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
         return _output.hash();
     }
 
-    // DO TO: detect SC related addresses (PublicKey25519Proposition) and values, create CertifierRightBox for them.
+    // DO TO: CertifierRightBox takes as a third parameter "activeFromWithdrawalEpoch" instead of "amount".
+    // Also it's not a CoinBox now. Need to discuss.
     @Override
-    public CertifierRightBox getBox() {
-        return null;
+    public CertifierRightBox getBox(long nonce) {
+        return new CertifierRightBox(_output.proposition(), nonce, _output.amount());
     }
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_output.bytes(), _output.bytes().length);
+        return Arrays.copyOf(_output.certifierLockOutputBytes(), _output.certifierLockOutputBytes().length);
     }
 
     public static Try<CertifierLock> parseBytes(byte[] bytes) {
-        MainchainTxCertifierLockOutput output = MainchainTxCertifierLockOutputSerializer.parseBytes(bytes).get();
+        MainchainTxCertifierLockCrosschainOutput output = MainchainTxCertifierLockCrosschainOutput.create(bytes, 0).get();
         return new Success<>(new CertifierLock(output));
     }
 

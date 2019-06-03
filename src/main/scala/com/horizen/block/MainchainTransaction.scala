@@ -2,11 +2,12 @@ package com.horizen.block
 
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
+import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt}
 
 import scala.collection.mutable.ArrayBuffer
-import java.util.{List => JList, ArrayList => JArrayList}
+
+import java.util.{ArrayList => JArrayList, List => JList}
 
 class MainchainTransaction(
                           transactionsBytes: Array[Byte],
@@ -25,7 +26,7 @@ class MainchainTransaction(
 //  private var _useSegwit: Boolean = false
   private var _inputs: ArrayBuffer[MainchainTxInput] = ArrayBuffer()
   private var _outputs: ArrayBuffer[MainchainTxOutput] = ArrayBuffer()
-  private var _crosschainOutputsMap: Map[ByteArrayWrapper, JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]] = Map() // key sidechainID
+  private var _sidechainRelatedMainchainOutputMap: Map[ByteArrayWrapper, JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]] = Map() // key sidechainID
   private var _lockTime: Int = 0
 
   parse()
@@ -72,7 +73,7 @@ class MainchainTransaction(
       val sequence: Int = BytesUtils.getInt(transactionsBytes, currentOffset)
       currentOffset += 4
 
-      _inputs += new MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
+      _inputs += MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
     }
 
     // parse outputs
@@ -97,8 +98,39 @@ class MainchainTransaction(
       // parse crosschain outputs
       val crosschainOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
       currentOffset += crosschainOutputsNumber.size()
-      // TO DO: implement parse into _crosschainOutputs
+      for (i <- 1 to crosschainOutputsNumber.value().intValue()) {
+        val outputType = transactionsBytes(currentOffset)
 
+        // Parse CrosschainOutput depend on outputType
+        val crosschainOutputData: Tuple2[ByteArrayWrapper, MainchainTxCrosschainOutput] = outputType match {
+          case MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE =>
+            val output = MainchainTxForwardTransferCrosschainOutput.create(transactionsBytes, currentOffset).get
+            currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
+            (new ByteArrayWrapper(output.sidechainId), output)
+
+          case MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE =>
+            val output = MainchainTxCertifierLockCrosschainOutput.create(transactionsBytes, currentOffset).get
+            currentOffset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE
+            (new ByteArrayWrapper(output.sidechainId), output)
+
+          case _ => throw new IllegalArgumentException("Input data corrupted. Unknown CrosschainOutput Type passed.")
+        }
+
+        // Add empty List for new SidechainId
+        if(!_sidechainRelatedMainchainOutputMap.contains(crosschainOutputData._1))
+          _sidechainRelatedMainchainOutputMap = _sidechainRelatedMainchainOutputMap + Tuple2(
+            crosschainOutputData._1,
+            new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]()
+          )
+
+
+        // Put SidechainRelatedOutput type for proper SidechainId
+        _sidechainRelatedMainchainOutputMap(crosschainOutputData._1).add(
+          crosschainOutputData._2 match {
+            case ft: MainchainTxForwardTransferCrosschainOutput => new ForwardTransfer(ft)
+            case cl: MainchainTxCertifierLockCrosschainOutput => new CertifierLock(cl)
+          })
+      }
     }
 
 //    if(_marker == 0)
@@ -163,11 +195,11 @@ class MainchainTransaction(
   }
 
   def getRelatedSidechains: Set[ByteArrayWrapper] = {
-    _crosschainOutputsMap.keySet
+    _sidechainRelatedMainchainOutputMap.keySet
   }
 
   def getSidechainRelatedOutputs(sidechainId: ByteArrayWrapper): JList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
-    _crosschainOutputsMap.getOrElse(sidechainId, new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]())
+    _sidechainRelatedMainchainOutputMap.getOrElse(sidechainId, new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]())
   }
 
   // TO DO: implement later, when structure will be known
@@ -183,3 +215,9 @@ case class MainchainTxInput(
                         txScript: Array[Byte],
                         sequence: Int
                       )
+
+
+case class MainchainTxOutput(
+                              value: Long,
+                              script: Array[Byte]
+                            )
