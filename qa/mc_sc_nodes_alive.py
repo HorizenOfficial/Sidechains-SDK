@@ -1,5 +1,7 @@
+#!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from util import assert_true
+import time
 
 class MCSCNodesAlive(SidechainTestFramework):
     def run_test(self):

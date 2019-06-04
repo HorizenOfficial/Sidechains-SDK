@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainComparisonTestFramework
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from util import assert_true, assert_raises

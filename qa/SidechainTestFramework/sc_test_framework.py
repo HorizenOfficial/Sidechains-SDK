@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 from test_framework import BitcoinTestFramework
 from authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -21,9 +22,6 @@ For MC Test Only: Override sc_setup_chain, sc_setup_network, sc_add_options
 For SC Test Only: Override setup_chain, setup_network, add_options and sc_generate_genesis_data
 For MC&SC Tests: Don't override anything
 '''
-
-
-#5. Branch from ScorexFork/log_server commit and push
 
 #Default config, for the moment, just setup 1 MC node and 1 SC node
 class SidechainTestFramework(BitcoinTestFramework):
