@@ -43,7 +43,7 @@ trait BoxFixture extends SecretFixture {
   }
 
   def getCertifierRightBox () : CertifierRightBox = {
-    new CertifierRightBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+    new CertifierRightBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100), Random.nextInt(100))
   }
 
   def getCretifierRightBoxList (count : Int) : JList[CertifierRightBox] = {

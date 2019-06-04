@@ -5,12 +5,13 @@ import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.Try
 
-// TO DO: look into CertifierLock. How "activeFromWithdrawalEpoch" in CertifierRightBox applies on current CCTP
+
 class MainchainTxCertifierLockCrosschainOutput(
                                       val certifierLockOutputBytes: Array[Byte],
                                       override val amount: Long,
                                       override val proposition: PublicKey25519Proposition,
-                                      override val sidechainId: Array[Byte]
+                                      override val sidechainId: Array[Byte],
+                                      val activeFromWithdrawalEpoch: Long
                                     ) extends MainchainTxCrosschainOutput {
   override val outputType: Byte = MainchainTxCertifierLockCrosschainOutput.OUTPUT_TYPE
 
@@ -19,7 +20,7 @@ class MainchainTxCertifierLockCrosschainOutput(
 
 object MainchainTxCertifierLockCrosschainOutput {
   val OUTPUT_TYPE: Byte = 2.toByte
-  val CERTIFIER_LOCK_OUTPUT_SIZE = 73 // 1 + 8 + 32 + 32
+  val CERTIFIER_LOCK_OUTPUT_SIZE = 81 // 1 + 8 + 32 + 32 + 8
 
   def create(certifierLockOutputBytes: Array[Byte], offset: Int): Try[MainchainTxCertifierLockCrosschainOutput] = Try {
     if(offset < 0 || certifierLockOutputBytes.length - offset < CERTIFIER_LOCK_OUTPUT_SIZE)
@@ -41,7 +42,10 @@ object MainchainTxCertifierLockCrosschainOutput {
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(certifierLockOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, proposition, sidechainId)
+    val activeFromWithdrawalEpoch: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
+    currentOffset += 8
+
+    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, proposition, sidechainId, activeFromWithdrawalEpoch)
   }
 }
 

@@ -19,11 +19,9 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
         return _output.hash();
     }
 
-    // DO TO: CertifierRightBox takes as a third parameter "activeFromWithdrawalEpoch" instead of "amount".
-    // Also it's not a CoinBox now. Need to discuss.
     @Override
     public CertifierRightBox getBox(long nonce) {
-        return new CertifierRightBox(_output.proposition(), nonce, _output.amount());
+        return new CertifierRightBox(_output.proposition(), nonce, _output.amount(), _output.activeFromWithdrawalEpoch());
     }
 
     @Override
