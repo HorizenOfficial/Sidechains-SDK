@@ -7,3 +7,6 @@
 [submodule "./qa/Scorex"]
 	path = ./qa/Scorex
 	url = https://github.com/i-Alex/Scorex.git
+[submodule "ZenCore"]
+	path = ZenCore
+	url = https://github.com/ZencashOfficial/zen.git
