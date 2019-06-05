@@ -9,6 +9,8 @@ import scorex.core.{VersionTag, idToVersion}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
+
 
 class LSMStore
 
@@ -105,33 +107,31 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
 
 }
 
-
 object SidechainState {
   def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
-  def changes(mod: SidechainBlock)
-    : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
+  def changes(mod: SidechainBlock) : Try[BoxStateChanges[Proposition, Box[Proposition]]] = Try {
+    val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
 
-    val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = Seq()
+    val (toRemove: Seq[Array[Byte]], toAdd: Seq[Box[Proposition]], reward) =
+      mod.transactions.foldLeft(initial){ case ((sr, sa, f), tx) =>
+        (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
+      }
 
-    Try {
-      val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
+    // calculate list of ID of unlokers' boxes -> toRemove
+    // calculate list of new boxes -> toAppend
+    // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
+    @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
+    val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
+      toRemove.map(id => Removal[Proposition, Box[Proposition]](scorex.crypto.authds.ADKey(id))) ++
+      toAdd.map(b => Insertion[Proposition, Box[Proposition]](b))
 
-      // calculate list of ID of unlokers' boxes -> toRemove
-      // calculate list of new boxes -> toAppend
-      // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
+    BoxStateChanges[Proposition, Box[Proposition]](ops)
 
-      @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
-      val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
-        initial._1.map(id => Removal[Proposition, Box[Proposition]](scorex.crypto.authds.ADKey(id))) ++
-          initial._2.map(b => Insertion[Proposition, Box[Proposition]](b))
-      BoxStateChanges[Proposition, Box[Proposition]](ops)
-
-      // Q: Do we need to call some static method of ApplicationState?
-      // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
-      // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
-    }
+    // Q: Do we need to call some static method of ApplicationState?
+    // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
+    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 }

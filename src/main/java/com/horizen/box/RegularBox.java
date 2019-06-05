@@ -11,6 +11,9 @@ import java.util.Arrays;
 
 public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Proposition> implements CoinsBox<PublicKey25519Proposition>
 {
+
+    public static final byte BOX_TYPE_ID = 1;
+
     public RegularBox(PublicKey25519Proposition proposition,
                long nonce,
                long value)
@@ -20,12 +23,22 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
 
     @Override
     public byte boxTypeId() {
-        return 0;
+        return BOX_TYPE_ID;
     }
 
     @Override
     public byte[] bytes() {
         return Bytes.concat(_proposition.bytes(), Longs.toByteArray(_nonce), Longs.toByteArray(_value));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
     }
 
     @Override
@@ -44,4 +57,5 @@ public final class RegularBox extends PublicKey25519NoncedBox<PublicKey25519Prop
             return new Failure<>(e);
         }
     }
+
 }

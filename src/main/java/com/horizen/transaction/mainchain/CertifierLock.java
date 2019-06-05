@@ -1,7 +1,7 @@
 package com.horizen.transaction.mainchain;
 
 import com.horizen.block.MainchainTxCertifierLockOutput;
-import com.horizen.block.MainchainTxCertifierLockOutputSeializer;
+import com.horizen.block.MainchainTxCertifierLockOutputSerializer;
 import com.horizen.box.CertifierRightBox;
 import scala.util.Success;
 import scala.util.Try;
@@ -32,7 +32,7 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
     }
 
     public static Try<CertifierLock> parseBytes(byte[] bytes) {
-        MainchainTxCertifierLockOutput output = MainchainTxCertifierLockOutputSeializer.parseBytes(bytes).get();
+        MainchainTxCertifierLockOutput output = MainchainTxCertifierLockOutputSerializer.parseBytes(bytes).get();
         return new Success<>(new CertifierLock(output));
     }
 

@@ -5,7 +5,7 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import javafx.util.Pair;
 
-import java.util.List;
+import java.util.*;
 
 public interface NodeWallet {
 
@@ -19,7 +19,9 @@ public interface NodeWallet {
 
     List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude);
 
-    Secret secretByPublicImage(ProofOfKnowledgeProposition publicImage);
+    Long boxesBalance(Class<? extends Box> type);
+
+    Optional<Secret> secretByPublicKey(ProofOfKnowledgeProposition publicKey);
 
     List<Secret> allSecrets();
 

@@ -17,7 +17,6 @@ import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
 import scorex.crypto.hash.Blake2b256;
 import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
@@ -25,6 +24,9 @@ import java.util.*;
 
 public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
 {
+
+    public static final byte TRANSACTION_TYPE_ID = 1;
+
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
     private List<Signature25519> _signatures;
@@ -37,15 +39,12 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
     private List<BoxUnlocker<PublicKey25519Proposition>> _unlockers;
 
     // Serializers definition
-    private static ListSerializer<RegularBox> _boxSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<RegularBox>>() {{
-            put(1, RegularBoxSerializer.getSerializer());
-        }}, MAX_TRANSACTION_UNLOCKERS);
-    private static ListSerializer<PublicKey25519Proposition> _propositionSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<PublicKey25519Proposition>>() {{
-            put(1, PublicKey25519PropositionSerializer.getSerializer());
-        }}, MAX_TRANSACTION_NEW_BOXES);
-    private static ListSerializer<Signature25519> _signaturesSerializer = new ListSerializer<>( new HashMap<Integer, Serializer<Signature25519>>() {{
-            put(1, Signature25519Serializer.getSerializer());
-        }}, MAX_TRANSACTION_UNLOCKERS);
+    private static ListSerializer<RegularBox> _boxSerializer =
+            new ListSerializer<>(RegularBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
+    private static ListSerializer<PublicKey25519Proposition> _propositionSerializer =
+            new ListSerializer<>(PublicKey25519PropositionSerializer.getSerializer(), MAX_TRANSACTION_NEW_BOXES);
+    private static ListSerializer<Signature25519> _signaturesSerializer =
+            new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
     private RegularTransaction(List<RegularBox> inputs,
                                List<Pair<PublicKey25519Proposition, Long>> outputs,
@@ -133,7 +132,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
 
     @Override
     public byte transactionTypeId() {
-        return 1;
+        return TRANSACTION_TYPE_ID;
     }
 
     private synchronized byte[] hashWithoutNonce() {

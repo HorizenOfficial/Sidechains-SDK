@@ -17,4 +17,15 @@ public class VarInt {
     public int size() {
         return _size;
     }
+
+    public static int getVarIntSize(long value) {
+        int res;
+        if(value >> 32 != 0)
+            return 9;
+        if(value >> 16 != 0)
+            return 5;
+        if(value >> 8 != 0)
+            return 3;
+        return 1;
+    }
 }

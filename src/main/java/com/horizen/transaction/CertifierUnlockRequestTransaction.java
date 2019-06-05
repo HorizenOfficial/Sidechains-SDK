@@ -9,6 +9,9 @@ import java.util.List;
 
 public final class CertifierUnlockRequestTransaction extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
+
+    public static final byte TRANSACTION_TYPE_ID = 5;
+
     @Override
     public CertifierUnlockRequestTransactionSerializer serializer() {
         return new CertifierUnlockRequestTransactionSerializer();
@@ -40,7 +43,7 @@ public final class CertifierUnlockRequestTransaction extends SidechainTransactio
 
     @Override
     public byte transactionTypeId() {
-        return 5; // scorex.core.ModifierTypeId @@ 5.toByte
+        return TRANSACTION_TYPE_ID; // scorex.core.ModifierTypeId @@ 5.toByte
     }
 
     @Override

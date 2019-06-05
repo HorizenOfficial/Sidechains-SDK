@@ -1,24 +1,14 @@
 package com.horizen.companion
 
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Serializer, Secret, SecretSerializer}
-import scorex.core.ModifierTypeId
-import scorex.core.serialization.Serializer
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
-import scala.util.Try
+import com.horizen.utils.DynamicTypedSerializer
 
-/*
-case class SidechainSecretsCompanion(customSecretSerializers: Map[scorex.core.ModifierTypeId, SecretSerializer[_ <: Secret]])
-  extends Serializer[Secret] {
-
-  val coreSecretSerializers: Map[scorex.core.ModifierTypeId.Raw , SecretSerializer[_ <: Secret]] =
-    Map(new PrivateKey25519(null, null).secretTypeId() -> new PrivateKey25519Serializer())
-
-  val customSecretId = ModifierTypeId @@ Byte.MaxValue // TO DO: think about proper value
-
-  // TO DO: do like in SidechainTransactionsCompanion
-  override def toBytes(obj: Secret): Array[Byte] = ???
-
-  override def parseBytes(bytes: Array[Byte]): Try[Secret] = ???
-}
-*/
-
+case class SidechainSecretsCompanion(customSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]])
+  extends DynamicTypedSerializer[Secret, SecretSerializer[_ <: Secret]](
+    new JHashMap[JByte, SecretSerializer[_ <: Secret]]() {{
+      put(PrivateKey25519.SECRET_TYPE_ID, PrivateKey25519Serializer.getSerializer)
+    }},
+    customSerializers)

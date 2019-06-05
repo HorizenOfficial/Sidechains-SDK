@@ -1,11 +1,9 @@
 package com.horizen.transaction;
 
-import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Companion;
+import com.horizen.secret.PrivateKey25519Creator;
 import javafx.util.Pair;
 import org.junit.Test;
 
@@ -19,13 +17,13 @@ public class DefaultTransactionIncompatibilityCheckerTest {
     public void DefaultTransactionIncompatibilityCheckerTest_IncompatibilityTest() {
         long fee = 10;
         long timestamp = 1547798549470L;
-        PrivateKey25519Companion companion = PrivateKey25519Companion.getCompanion();
-        PrivateKey25519 pk1 = companion.generateSecret("test_seed1".getBytes());
-        PrivateKey25519 pk2 = companion.generateSecret("test_seed2".getBytes());
-        PrivateKey25519 pk3 = companion.generateSecret("test_seed3".getBytes());
-        PrivateKey25519 pk4 = companion.generateSecret("test_seed4".getBytes());
-        PrivateKey25519 pk5 = companion.generateSecret("test_seed5".getBytes());
-        PrivateKey25519 pk6 = companion.generateSecret("test_seed6".getBytes());
+        PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
+        PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
+        PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
+        PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
+        PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
+        PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
+        PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
 
 
         // Set inputs for 'newTx'
@@ -50,7 +48,7 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
 
         // Set outputs, the same for all transactions
-        PrivateKey25519 pk7 = companion.generateSecret("test_seed7".getBytes());
+        PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
         ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add(new Pair<>(pk7.publicImage(), 10L));
 
