@@ -120,11 +120,11 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("Generating new blocks...")
         print("-->MC Node 2 generates a block...")
         assert_equal(len(self.nodes[2].generate(1)), 1, "MC Node2 couldn't generate a block")
-        sync_blocks(self.nodes)
+        self.sync_all()
         print("-->SC Node 2 generates a block...")
         assert_equal(str(self.sc_nodes[2].debug_startMining()["response"]), "ok", "SC Node 2 couldn't start mining")
         wait_for_next_sc_blocks(self.sc_nodes[2], 2, wait = 2)
-        sync_sc_blocks(self.sc_nodes)
+        self.sc_sync_all()
         print("OK\n")
         
         print("Checking block inclusion...")

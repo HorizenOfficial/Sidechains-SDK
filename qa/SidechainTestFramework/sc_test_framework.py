@@ -51,7 +51,6 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_add_options(self, parser):
         pass
     
-    #Must be overwritten if I wants to use SC only
     def sc_generate_genesis_data(self):
         return generateGenesisData(self.nodes[0]) #Maybe other parameters in future
     
