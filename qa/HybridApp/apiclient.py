@@ -62,7 +62,6 @@ class APIClient(object):
 	def peersBlacklisted(self):
 		return requests.get(self.url + "/peers/blacklisted")
 
-
 	def peersConnect(self, addressJson):
 		return requests.post(self.url + "/peers/connect", json = addressJson)
 
@@ -79,7 +78,6 @@ class APIClient(object):
 	# Wallet #
 	def walletBalances(self):
 		return requests.get(self.url + "/wallet/balances")
-
 
 	def walletTransfer(self, amount, recipient, fee):
 		return requests.post(self.url + "/wallet/transfer", json = {"amount" : amount, "recipient" : recipient, "fee" : fee})

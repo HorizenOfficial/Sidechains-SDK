@@ -40,8 +40,9 @@ def wait_for_next_sc_blocks(node, toWait, wait = 1, limit_loop = 25):
 
 def wait_for_sc_node_initialization(nodes, wait = 1):
     for i in range(len(nodes)):
+        rpc_port = sc_rpc_port(i)
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-            while not sock.connect_ex(("127.0.0.1", sc_rpc_port(i))) == 0:
+            while not sock.connect_ex(("127.0.0.1", rpc_port)) == 0:
                 time.sleep(wait)
                 
 def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=25):
@@ -62,13 +63,19 @@ def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=25):
             break
         time.sleep(wait)
 
-def sync_sc_mempools(api_connections, wait=1):
+def sync_sc_mempools(api_connections, wait=1, limit_loop = 25):
     """
     Wait until everybody has the same transactions in their memory
     pools
     """
+    loop_num = 0
     while True:
         pool = api_connections[0].nodeView_pool()["transactions"]
+        if limit_loop > 0:
+            loop_num += 1
+            if loop_num > limit_loop:
+                print("Sync mempools: limit loop exceeded")
+                break
         num_match = 1
         for i in range(1, len(api_connections)):
             if cmp(api_connections[i].nodeView_pool()["transactions"], pool) == 0:

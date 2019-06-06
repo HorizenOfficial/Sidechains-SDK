@@ -31,4 +31,3 @@ class SCTest(SidechainTestFramework):
         
 if __name__ == "__main__":
     SCTest().main()
-    
