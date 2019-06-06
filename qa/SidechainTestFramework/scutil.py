@@ -17,6 +17,12 @@ import string
 import socket
 from contextlib import closing
 
+WAIT_CONST = 1
+
+class TimeoutException(Exception):
+    def __init__(self, operation):
+        Exception.__init__(self)
+        self.operation = operation
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid()%999
@@ -24,65 +30,58 @@ def sc_p2p_port(n):
 def sc_rpc_port(n):
     return 8200 + n + os.getpid()%999
 
-def wait_for_next_sc_blocks(node, toWait, wait = 1, limit_loop = 25):
-    old_height = int(node.debug_info()["height"])
-    loop_num = 0
+def wait_for_next_sc_blocks(node, expected_height, wait_for = 25):
+    start = time.time()
     while True:
-        if limit_loop > 0:
-            loop_num += 1
-            if loop_num > limit_loop:
-                print("Wait blocks: limit loop exceeded")
-                break
+        if time.time() - start >= wait_for:
+            raise TimeoutException("Wait blocks")
         height = int(node.debug_info()["height"])
-        if  height >= (old_height + toWait):
+        if  height >= expected_height:
             break
-        time.sleep(wait)
+        time.sleep(WAIT_CONST)
 
-def wait_for_sc_node_initialization(nodes, wait = 1):
+def wait_for_sc_node_initialization(nodes):
     for i in range(len(nodes)):
         rpc_port = sc_rpc_port(i)
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
             while not sock.connect_ex(("127.0.0.1", rpc_port)) == 0:
-                time.sleep(wait)
+                time.sleep(WAIT_CONST)
                 
-def sync_sc_blocks(api_connections, wait=1, p=False, limit_loop=25):
+def sync_sc_blocks(api_connections, wait_for=25, p=False):
     """
     Wait until everybody has the same block count or a limit has been exceeded
     """
-    loop_num = 0
+    start = time.time()
     while True:
-        if limit_loop > 0:
-            loop_num += 1
-            if loop_num > limit_loop:
-                print("Sync blocks: limit loop exceeded")
-                break
+        if time.time() - start >= wait_for:
+            raise TimeoutException("Sync blocks")
         counts = [ int(x.debug_info()["height"]) for x in api_connections ]
         if p :
             print (counts)
         if counts == [ counts[0] ]*len(counts):
             break
-        time.sleep(wait)
+        time.sleep(WAIT_CONST)
 
-def sync_sc_mempools(api_connections, wait=1, limit_loop = 25):
+def sync_sc_mempools(api_connections, wait_for=25):
     """
     Wait until everybody has the same transactions in their memory
     pools
     """
-    loop_num = 0
+    start = time.time()
     while True:
-        pool = api_connections[0].nodeView_pool()["transactions"]
-        if limit_loop > 0:
-            loop_num += 1
-            if loop_num > limit_loop:
-                print("Sync mempools: limit loop exceeded")
-                break
+        refpool = api_connections[0].nodeView_pool()["transactions"]
+        print("RefPool: ", refpool)
+        if time.time() - start >= wait_for:
+            raise TimeoutException("Sync mempools")
         num_match = 1
         for i in range(1, len(api_connections)):
-            if cmp(api_connections[i].nodeView_pool()["transactions"], pool) == 0:
+            nodepool = api_connections[i].nodeView_pool()["transactions"]
+            print("node"+str(i)+" pool: ", nodepool)
+            if cmp(nodepool, refpool) == 0:
                 num_match = num_match+1
         if num_match == len(api_connections):
             break
-        time.sleep(wait)
+        time.sleep(WAIT_CONST)
 
 sidechainclient_processes = {}
 
@@ -196,20 +195,17 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
-def connect_sc_nodes(from_connection, node_num, wait = 1, limit_loop = 50):
+def connect_sc_nodes(from_connection, node_num, wait_for = 25):
     ip_port = "\"127.0.0.1:"+str(sc_p2p_port(node_num))+"\""
     oldnum = len(from_connection.peers_connected())
     from_connection.peers_connect(ip_port)
-    loop_num = 0
+    start = time.time()
     while True:
-        if limit_loop > 0:
-            loop_num += 1
-            if loop_num > limit_loop:
-                print("Can't connect to node{0}".format(node_num))
-                break
+        if time.time() - start >= wait_for:
+            raise(TimeoutException("Trying to connect to node{0}".format(node_num)))
         if len(from_connection.peers_connected()) == (oldnum + 1):
             break
-        time.sleep(wait)
+        time.sleep(WAIT_CONST)
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)

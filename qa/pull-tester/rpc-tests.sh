@@ -15,8 +15,8 @@ testScripts=(
     'mc_node_alive.py'
     'mc_sc_nodes_alive.py'
     'multipleclientstest.py'
-    'mc_sc_nodes_generation.py'
     'sc_nodes_connect.py'
+    'mc_sc_nodes_generation.py'
     'sc_node_generation.py'
 );
 testScriptsExt=(

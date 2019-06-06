@@ -8,7 +8,7 @@ from util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds
 from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generateGenesisData
+    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generateGenesisData, TimeoutException
 import tempfile
 import os
 import json
@@ -42,7 +42,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def sync_all(self):
-        sync_blocks(self.nodes)
+        sync_blocks(self.nodes, p = True)
         sync_mempools(self.nodes)
 
     def join_network(self):
@@ -68,7 +68,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def sc_sync_all(self):
-        sync_sc_blocks(self.sc_nodes)
+        sync_sc_blocks(self.sc_nodes, p = True)
         sync_sc_mempools(self.sc_nodes)
 
     def sc_join_network(self):
@@ -130,6 +130,9 @@ class SidechainTestFramework(BitcoinTestFramework):
             traceback.print_tb(sys.exc_info()[2])
         except SCAPIException as e:
             print("SCAPI error: "+e.error)
+            traceback.print_tb(sys.exc_info()[2])
+        except TimeoutException as e:
+            print("Timeout while: " + e.operation)
             traceback.print_tb(sys.exc_info()[2])
         except AssertionError as e:
             print("Assertion failed: "+e.message)
