@@ -52,6 +52,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
   override def addSecret(secret: Secret): Try[SidechainWallet] = Try {
     require(secret != null, "Secret must be NOT NULL.")
     secretStorage.add(secret).get
+    //TODO (Alberto) should we catch user exception here (and don't return it outside)???
     applicationWallet.onAddSecret(secret)
     this
   }
