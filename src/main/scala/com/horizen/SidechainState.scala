@@ -93,7 +93,8 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
         closedBox(u.closedBoxId()) match {
           case Some(box) => {
             val boxKey = u.boxKey().asInstanceOf[Proof[Proposition]]
-            boxKey.isValid(box.proposition(), tx.messageToSign())
+            if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
+              throw new Exception("Signature is invalid.")
             if (box.isInstanceOf[CoinsBox[_ <: Proposition]])
               closedCoinsBoxesAmount += box.value()
           }
