@@ -91,7 +91,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         #Node 2 generates a block, then checking that block appeared in chain and synchronize everything
         print("Generating new blocks...")
         print("-->SC Node 2 generates a block...")
-        assert_equal(str(self.sc_nodes[2].debug_startMining()["response"]), "ok", "SC Node 2 couldn't start mining")
+        assert_equal("ok", str(self.sc_nodes[2].debug_startMining()["response"]), "SC Node 2 couldn't start mining")
         wait_for_next_sc_blocks(self.sc_nodes[2], 4, wait_for = 60)
         print("Synchronizing everything...")
         self.sc_sync_all()
@@ -106,9 +106,9 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         
         #Check that tx isn't in nodes' mempools anymore
         print("Checking mempools empty...")
-        assert_equal(self.sc_nodes[0].nodeView_pool()["size"], 0)
-        assert_equal(self.sc_nodes[1].nodeView_pool()["size"], 0)
-        assert_equal(self.sc_nodes[2].nodeView_pool()["size"], 0)
+        assert_equal(0, self.sc_nodes[0].nodeView_pool()["size"])
+        assert_equal(0, self.sc_nodes[1].nodeView_pool()["size"])
+        assert_equal(0, self.sc_nodes[2].nodeView_pool()["size"])
         print("OK\n")
         
         #Checking that node0 balance has decreased by amount-fee, node1 balance has increased by amount and node2 balance has increased of blockreward+txfee
@@ -117,9 +117,9 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         node0newbalance = int(self.sc_nodes[0].wallet_balances()["totalBalance"])
         node1newbalance = int(self.sc_nodes[1].wallet_balances()["totalBalance"])
         node2newbalance = int(self.sc_nodes[2].wallet_balances()["totalBalance"])
-        assert_equal(node0newbalance, scnode0balance - (sc_amount+sc_fee), "Coins sent/total sc_amount mismatch for Node0")
-        assert_equal(node1newbalance, scnode1balance + sc_amount, "Coins received/total sc_amount mismatch for Node1")
-        assert_equal(node2newbalance, scnode2balance + sc_fee + scblockreward, "Coins received/total sc_amount mismatch for Node2")
+        assert_equal(scnode0balance - (sc_amount+sc_fee), node0newbalance, "Coins sent/total sc_amount mismatch for Node0")
+        assert_equal(scnode1balance + sc_amount, node1newbalance, "Coins received/total sc_amount mismatch for Node1")
+        assert_equal(scnode2balance + sc_fee + scblockreward, node2newbalance, "Coins received/total sc_amount mismatch for Node2")
         print("-->Node 0 new balance: {0}".format(node0newbalance))
         print("-->Node 1 new balance: {0}".format(node1newbalance))
         print("-->Node 2 new balance: {0}".format(node2newbalance))

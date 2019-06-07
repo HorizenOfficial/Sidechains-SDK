@@ -82,15 +82,16 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         assert_true(txid in tx_list, "Transaction {0} not in mempool for SC {1}".format(str(txid), nodename))
     
     def run_test(self):
-        #Ensuring MC nodes 0 and 1 have their coinbases in their active balance
-        print("Generate coinbase for MC Nodes...")
-        self.nodes[0].generate(100)
+        #Generate 1-block coinbase for nodes 0 and 1 for simple test
+        print("Generate 1-block coinbase for MC Nodes 0 and 1...")
+        self.nodes[0].generate(1)
         self.sync_all()
-        self.nodes[1].generate(100)
+        self.nodes[1].generate(1)
         self.sync_all()
-        self.nodes[2].generate(200)
+        self.nodes[2].generate(100)
         self.sync_all()
         print("OK\n")
+        
         #Saving MC Nodes information and setting tx amount
         print("Nodes initialization...")
         mcnode0name = "node0"
@@ -101,7 +102,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         mcnode1balance = self.nodes[1].getbalance()
         print("-->MC Node 0 balance: {0}".format(mcnode0balance))
         print("-->MC Node 1 balance: {0}".format(mcnode1balance))
-        mc_amount = Decimal("100.00000000")
+        mc_amount = Decimal("5.00000000")
         
         #Saving SC Nodes information and setting tx amount and fee
         scnode0name = "node0"
@@ -143,7 +144,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         assert_equal(len(blocks), 1, "MC Node2 couldn't generate a block")
         self.sync_all()
         print("-->SC Node 2 generates a block...")
-        assert_equal(str(self.sc_nodes[2].debug_startMining()["response"]), "ok", "SC Node 2 couldn't start mining")
+        assert_equal("ok", str(self.sc_nodes[2].debug_startMining()["response"]), "SC Node 2 couldn't start mining")
         '''We wait for the new blocks to appear in Node 2 block count. This is not necessary in zend because the generate call is
         synchronous with respect to the effective block generation, while in Hybrid App, and also with our modification, it's not.'''
         wait_for_next_sc_blocks(self.sc_nodes[2], 4) 
@@ -161,12 +162,12 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("OK\n")
         
         print("Checking mempools empty...")
-        assert_equal(self.nodes[0].getmempoolinfo()["size"], 0)
-        assert_equal(self.nodes[1].getmempoolinfo()["size"], 0)
-        assert_equal(self.nodes[2].getmempoolinfo()["size"], 0)
-        assert_equal(self.sc_nodes[0].nodeView_pool()["size"], 0)
-        assert_equal(self.sc_nodes[1].nodeView_pool()["size"], 0)
-        assert_equal(self.sc_nodes[2].nodeView_pool()["size"], 0)
+        assert_equal(0, self.nodes[0].getmempoolinfo()["size"])
+        assert_equal(0, self.nodes[1].getmempoolinfo()["size"])
+        assert_equal(0, self.nodes[2].getmempoolinfo()["size"])
+        assert_equal(0, self.sc_nodes[0].nodeView_pool()["size"])
+        assert_equal(0, self.sc_nodes[1].nodeView_pool()["size"])
+        assert_equal(0, self.sc_nodes[2].nodeView_pool()["size"])
         print("OK\n")
         
         #Checking that MC Node0 balance has decreased by amount-fee and that MC Node1 balance has increased of amount. Do the same for SC nodes 0 and 1
@@ -174,15 +175,15 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         mcnode0newbalance = self.nodes[0].getbalance()
         mcnode1newbalance = self.nodes[1].getbalance()
         mc_fee = self.nodes[0].gettransaction(mctxid)["fee"]
-        assert_equal(mcnode0newbalance, mcnode0balance - (mc_amount-mc_fee), "Coins sent/total amount mismatch for MC Node0")
-        assert_equal(mcnode1newbalance, mcnode1balance + mc_amount, "Coins received/total amount mismatch for MC Node1")
+        assert_equal(mcnode0balance - (mc_amount-mc_fee), mcnode0newbalance, "Coins sent/total amount mismatch for MC Node0")
+        assert_equal(mcnode1balance + mc_amount, mcnode1newbalance, "Coins received/total amount mismatch for MC Node1")
         print("-->MC Node 0 new balance: {0}".format(mcnode0newbalance))
         print("-->MC Node 1 new balance: {0}".format(mcnode1newbalance))
         
         node0newbalance = int(self.sc_nodes[0].wallet_balances()["totalBalance"])
         node1newbalance = int(self.sc_nodes[1].wallet_balances()["totalBalance"])
-        assert_equal(node0newbalance, scnode0balance - (sc_amount+sc_fee), "Coins sent/total sc_amount mismatch for Node0")
-        assert_equal(node1newbalance, scnode1balance + sc_amount, "Coins received/total sc_amount mismatch for Node1")
+        assert_equal(scnode0balance - (sc_amount+sc_fee), node0newbalance, "Coins sent/total sc_amount mismatch for Node0")
+        assert_equal(scnode1balance + sc_amount, node1newbalance, "Coins received/total sc_amount mismatch for Node1")
         print("-->SC Node 0 new balance: {0}".format(node0newbalance))
         print("-->SC Node 1 new balance: {0}".format(node1newbalance))
         print("OK\n")

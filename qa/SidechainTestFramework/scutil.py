@@ -7,8 +7,6 @@ from decimal import Decimal, ROUND_DOWN
 import json
 import random
 from sidechainauthproxy import SidechainAuthServiceProxy
-from util import check_json_precision, bytes_to_hex_str, hex_str_to_bytes, str_to_b64str, _rpchost_to_args, log_filename, \
-                 assert_true, assert_false, assert_equal, assert_greater_than, assert_raises
 import shutil
 import subprocess
 import time
