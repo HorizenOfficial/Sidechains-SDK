@@ -4,7 +4,7 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from util import assert_true, assert_raises
 
 """
-    Show correctness of Comparison Test Framework. Setup different MC & SC nodes with different zends/jars respectively and check that all nodes are alive
+    Show correctness of Comparison Test Framework. Setup different MC & SC nodes with different zends/jars respectively and check that all nodes are alive.
 """
 class MultipleClientsTest(SidechainComparisonTestFramework):
     def run_test(self):
@@ -21,6 +21,8 @@ class MultipleClientsTest(SidechainComparisonTestFramework):
                 assert_true(res is not None, "SC node {0} not alive !".format(i))
                 print("SC node {0} alive !\nResponse to debuginfo API call: {1}".format(i, res))
             if i == 1:
+                '''SC Node 1 has been initialized using a jar in which POST methods are not supported, that's why we expect an exception
+                to assess that Node1 has been effectively initialized with this jar and works correctly'''
                 assert_raises(SCAPIException, sc_node.debug_info, "SC node {0} not alive !".format(i))
                 print("SC node {0} is alive and raised an exception as expected".format(i))
             i = i + 1

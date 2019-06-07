@@ -86,7 +86,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Leave bitcoinds and test.* datadir on exit or error")
         parser.add_option("--noshutdown", dest="noshutdown", default=False, action="store_true",
                           help="Don't stop bitcoinds after the test execution")
-        parser.add_option("--zendir", dest="zendir", default="../ZenCore/src",
+        parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         parser.add_option("--scjarpath", dest="scjarpath", default="resources/twinsChain.jar examples.hybrid.HybridApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")

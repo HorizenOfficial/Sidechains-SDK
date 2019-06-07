@@ -42,7 +42,6 @@ def wait_for_next_sc_blocks(node, expected_height, wait_for = 25):
         if  height >= expected_height:
             break
         time.sleep(WAIT_CONST)
-    print("Elapsed time for block generation: ", time.time() - start)
 
 def wait_for_sc_node_initialization(nodes):
     """
@@ -68,7 +67,6 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
         if counts == [ counts[0] ]*len(counts):
             break
         time.sleep(WAIT_CONST)
-    print("Elapsed time for block synchronization: ", time.time() - start)
 
 def sync_sc_mempools(api_connections, wait_for=25):
     """
@@ -87,7 +85,6 @@ def sync_sc_mempools(api_connections, wait_for=25):
         if num_match == len(api_connections):
             break
         time.sleep(WAIT_CONST)
-    print("Elapsed time for mempool synchronization: ", time.time() - start)
     
 sidechainclient_processes = {}
 
@@ -190,7 +187,7 @@ def stop_sc_nodes(nodes):
     global sidechainclient_processes
     for sc in sidechainclient_processes.values():
         sc.kill()
-    del sidechainclient_processes
+    del nodes[:]
 
 def set_sc_node_times(nodes, t):
     pass

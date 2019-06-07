@@ -23,11 +23,14 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         initialize_chain_clean(self.options.tmpdir, 3)
         
     def setup_network(self, split = False):
+        print("Initializing Mainchain nodes...")
         self.nodes = self.setup_nodes()
+        print("OK\n")
         print("Connecting mainchain nodes node0, node1 and node2...")
         connect_nodes_bi(self.nodes, 0, 1)
         connect_nodes_bi(self.nodes, 0, 2)
         connect_nodes_bi(self.nodes, 1, 2)
+        print("OK\n")
         
     def setup_nodes(self):
         return start_nodes(3, self.options.tmpdir)
@@ -36,11 +39,14 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         initialize_sc_chain_clean(self.options.tmpdir, 3, None)
         
     def sc_setup_network(self, split = False):
+        print("Initializing Sidechain nodes...")
         self.sc_nodes = self.sc_setup_nodes()
+        print("OK\n")
         print("Connecting sidechain nodes node0, node1 and node2...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         connect_sc_nodes(self.sc_nodes[0], 2)
         connect_sc_nodes(self.sc_nodes[1], 2)
+        print("OK\n")
     
     def sc_setup_nodes(self):
         return start_sc_nodes(3, self.options.tmpdir)
@@ -77,10 +83,14 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
     
     def run_test(self):
         #Ensuring MC nodes 0 and 1 have their coinbases in their active balance
+        print("Generate coinbase for MC Nodes...")
         self.nodes[0].generate(100)
-        self.nodes[1].generate(100)
-        self.nodes[2].generate(101)
         self.sync_all()
+        self.nodes[1].generate(100)
+        self.sync_all()
+        self.nodes[2].generate(200)
+        self.sync_all()
+        print("OK\n")
         #Saving MC Nodes information and setting tx amount
         print("Nodes initialization...")
         mcnode0name = "node0"
@@ -91,7 +101,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         mcnode1balance = self.nodes[1].getbalance()
         print("-->MC Node 0 balance: {0}".format(mcnode0balance))
         print("-->MC Node 1 balance: {0}".format(mcnode1balance))
-        mc_amount = random.randint(1, round(mcnode0balance))
+        mc_amount = Decimal("100.00000000")
         
         #Saving SC Nodes information and setting tx amount and fee
         scnode0name = "node0"
@@ -134,7 +144,9 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         self.sync_all()
         print("-->SC Node 2 generates a block...")
         assert_equal(str(self.sc_nodes[2].debug_startMining()["response"]), "ok", "SC Node 2 couldn't start mining")
-        wait_for_next_sc_blocks(self.sc_nodes[2], 2, wait_for = 60) #We wait for the newly created blocks to appear in Node2 Blockchain. This is not necessary for zend.
+        '''We wait for the new blocks to appear in Node 2 block count. This is not necessary in zend because the generate call is
+        synchronous with respect to the effective block generation, while in Hybrid App, and also with our modification, it's not.'''
+        wait_for_next_sc_blocks(self.sc_nodes[2], 4) 
         self.sc_sync_all()
         print("OK\n")
         
@@ -171,8 +183,8 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         node1newbalance = int(self.sc_nodes[1].wallet_balances()["totalBalance"])
         assert_equal(node0newbalance, scnode0balance - (sc_amount+sc_fee), "Coins sent/total sc_amount mismatch for Node0")
         assert_equal(node1newbalance, scnode1balance + sc_amount, "Coins received/total sc_amount mismatch for Node1")
-        print("-->Node 0 new balance: {0}".format(node0newbalance))
-        print("-->Node 1 new balance: {0}".format(node1newbalance))
+        print("-->SC Node 0 new balance: {0}".format(node0newbalance))
+        print("-->SC Node 1 new balance: {0}".format(node1newbalance))
         print("OK\n")
         
 if __name__ == "__main__":
