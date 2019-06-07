@@ -1,14 +1,20 @@
 /* Proof that two others specific proof were verified
  * based on general broad "recursive verification" (previous) example
  *
+ * Given a P1 proof that given x and y prove that x*x = y
+ * Given a P2 proof that given x and z prove that x*2 = z
+ * "x" is witness, "y" and "z" are public input for P1 and P2
+ *
  * Infopulse Horizen 2019
  * written by Vadym Fedyukovych
  */
 
-template <typename ppT, typename FieldT>
-void make_basic_proof(const libsnark::protoboard<FieldT>& pb,
-                      libsnark::r1cs_ppzksnark_keypair<ppT>& keypair,
-                      const std::string& annotation="Basic proof");
+template <typename FieldT, typename ppTA, typename ppT_B>
+void make_primary_input(const libsnark::protoboard<FieldT>& pbA,
+                        libff::bit_vector& input_as_bits,
+                        std::shared_ptr<libsnark::r1cs_ppzksnark_verification_key_variable<ppT_B>> vk,
+                        std::shared_ptr<libsnark::r1cs_ppzksnark_proof_variable<ppT_B>> proof,
+                        const std::string& annotation="Basic proof");
 
 template<typename FieldT>
 class jproof_two_proofs {
@@ -60,10 +66,6 @@ public:
     this->pb.val(vy) = y;
     assert(this->pb.is_satisfied());
   };
-
-  void makeproof() {
-    make_basic_proof<ppT, FieldT>(this->pb, keypair, "Square");
-  };
 };
 
 template<typename ppT, typename FieldT>
@@ -95,16 +97,17 @@ public:
     this->pb.val(vz) = z;
     assert(this->pb.is_satisfied());
   };
-
-  void makeproof() {
-    make_basic_proof<ppT, FieldT>(this->pb, keypair, "Mult-2");
-  };
 };
 
-template<typename ppT, typename FieldT>
+template<typename ppT, typename FieldT, typename FieldTsimple, typename ppTsimple>
 class jproof_compliance_gadget : libsnark::gadget<FieldT> {
 private:
-  //  libsnark::pb_variable<FieldT> a;
+  std::shared_ptr<libsnark::r1cs_ppzksnark_verifier_gadget<ppT>> verifier1, verifier2;
+  std::shared_ptr<libsnark::r1cs_ppzksnark_proof_variable<ppT>> proof1, proof2;
+  std::shared_ptr<libsnark::r1cs_ppzksnark_verification_key_variable<ppT>> vk1, vk2;
+  libsnark::pb_variable<FieldT> result1, result2;
+  libsnark::pb_variable_array<FieldT> vk1_bits, vk2_bits;
+  libsnark::pb_variable_array<FieldT> primary_input1_bits, primary_input2_bits;
 
 public:
   jproof_compliance_gadget(libsnark::protoboard<FieldT>& pb,
@@ -117,74 +120,53 @@ public:
     const size_t vk_size_in_bits =
       libsnark::r1cs_ppzksnark_verification_key_variable<ppT>::size_in_bits(primary_input_size);
 
-    libsnark::pb_variable_array<FieldT> vk1_bits, vk2_bits;
     vk1_bits.allocate(pb, vk_size_in_bits, "vk1_bits");
     vk2_bits.allocate(pb, vk_size_in_bits, "vk2_bits");
 
-    libsnark::pb_variable_array<FieldT> primary_input1_bits, primary_input2_bits;
     primary_input1_bits.allocate(pb, primary_input_size_in_bits, "primary_input1_bits");
     primary_input2_bits.allocate(pb, primary_input_size_in_bits, "primary_input2_bits");
 
-    libsnark::r1cs_ppzksnark_proof_variable<ppT> proof1(pb, "proof-1");
-    libsnark::r1cs_ppzksnark_proof_variable<ppT> proof2(pb, "proof-2");
+    proof1.reset(new libsnark::r1cs_ppzksnark_proof_variable<ppT>(pb, "proof-1"));
+    proof2.reset(new libsnark::r1cs_ppzksnark_proof_variable<ppT>(pb, "proof-2"));
 
-    libsnark::r1cs_ppzksnark_verification_key_variable<ppT> vk1(pb, vk1_bits, primary_input_size, "vk-1");
-    libsnark::r1cs_ppzksnark_verification_key_variable<ppT> vk2(pb, vk2_bits, primary_input_size, "vk-2");
+    vk1.reset(new libsnark::r1cs_ppzksnark_verification_key_variable<ppT>(pb, vk1_bits, primary_input_size, "vk-1"));
+    vk2.reset(new libsnark::r1cs_ppzksnark_verification_key_variable<ppT>(pb, vk2_bits, primary_input_size, "vk-2"));
 
-    libsnark::pb_variable<FieldT> result1, result2;
     result1.allocate(pb, "result-1");
     result2.allocate(pb, "result-2");
 
-    libsnark::r1cs_ppzksnark_verifier_gadget<ppT> verifier1(pb, vk1, primary_input1_bits, elt_size, proof1, result1, "verifier-1"),
-                                                  verifier2(pb, vk2, primary_input2_bits, elt_size, proof2, result2, "verifier-2");
+    verifier1.reset(new libsnark::r1cs_ppzksnark_verifier_gadget<ppT>(pb,
+                      *vk1, primary_input1_bits, elt_size, *proof1, result1,
+                      FMT(annotation_prefix, " verifier-1")));
+    verifier2.reset(new libsnark::r1cs_ppzksnark_verifier_gadget<ppT>(pb,
+                      *vk2, primary_input2_bits, elt_size, *proof2, result2,
+                      FMT(annotation_prefix, " verifier-2")));
+
   };
 
   void generate_r1cs_constraints() {
-  /*
-    this->pb.add_r1cs_constraint(
-            libsnark::r1cs_constraint<FieldT>(, , ),
-            FMT(this->annotation_prefix, " "));
-
-    proof1.generate_r1cs_constraints();
-    proof2.generate_r1cs_constraints();
-    verifier1.generate_r1cs_constraints();
-    verifier2.generate_r1cs_constraints();
-  */
+    this->proof1->generate_r1cs_constraints();
+    this->proof2->generate_r1cs_constraints();
+    this->verifier1->generate_r1cs_constraints();
+    this->verifier2->generate_r1cs_constraints();
   };
 
-  void generate_r1cs_witness() {
-  /*
-    this->pb.val(vz) = z;
+  void generate_r1cs_witness(const libsnark::protoboard<FieldTsimple>& pbA1,
+			     const libsnark::protoboard<FieldTsimple>& pbA2) {
+
+    libff::bit_vector input1_as_bits, input2_as_bits;
+    const size_t elt_size = FieldTsimple::size_in_bits();
+
+    make_primary_input<FieldTsimple, ppTsimple, ppT>(pbA1, input1_as_bits, this->vk1, this->proof1, "Square");
+    this->primary_input1_bits.fill_with_bits(this->pb, input1_as_bits);
+
+    make_primary_input<FieldTsimple, ppTsimple, ppT>(pbA2, input2_as_bits, this->vk2, this->proof2, "Mult-2");
+    this->primary_input2_bits.fill_with_bits(this->pb, input2_as_bits);
+
+    this->verifier1->generate_r1cs_witness();
+    this->verifier2->generate_r1cs_witness();
+    this->pb.val(result1) = FieldT::one();
+    this->pb.val(result2) = FieldT::one();
     assert(this->pb.is_satisfied());
-
-  std::cout << "Bits-1 input size " << pbA1.primary_input().size() << std::endl;
-  libff::bit_vector input1_as_bits;
-  for (const FieldT_A &el : pbA1.primary_input()) {
-    libff::bit_vector v = libff::convert_field_element_to_bit_vector<FieldT_A>(el, elt_size);
-    input1_as_bits.insert(input1_as_bits.end(), v.begin(), v.end());
-    std::cout << el << std::endl;
-  }
-  primary_input1_bits.fill_with_bits(pb, input1_as_bits);
-
-  std::cout << "Bits-2 input size " << pbA2.primary_input().size() << std::endl;
-  libff::bit_vector input2_as_bits;
-  for (const FieldT_A &el : pbA2.primary_input()) {
-    libff::bit_vector v = libff::convert_field_element_to_bit_vector<FieldT_A>(el, elt_size);
-    input2_as_bits.insert(input2_as_bits.end(), v.begin(), v.end());
-    std::cout << el << std::endl;
-  }
-  primary_input2_bits.fill_with_bits(pb, input2_as_bits);
-
-  vk1.generate_r1cs_witness(keypair1.vk);
-  vk2.generate_r1cs_witness(keypair2.vk);
-  proof1.generate_r1cs_witness(pi1);
-  proof2.generate_r1cs_witness(pi2);
-  verifier1.generate_r1cs_witness();
-  verifier2.generate_r1cs_witness();
-  pb.val(result1) = FieldT_B::one();
-  pb.val(result2) = FieldT_B::one();
-
-  assert(pb.is_satisfied());
-  */
   };
 };
