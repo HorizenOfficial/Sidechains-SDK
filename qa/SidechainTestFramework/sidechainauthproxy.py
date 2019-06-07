@@ -15,10 +15,20 @@ USER_AGENT = "SidechainAuthServiceProxy/0.1"
 
 HTTP_TIMEOUT = 6000000
 
+
 class SCAPIException(Exception):
     def __init__(self, sc_api_error):
         Exception.__init__(self)
         self.error = sc_api_error
+        
+"""
+   Adaption of AuthServiceProxy class from BTF for Scorex REST API. Differences are very minimal:
+   1) Method names follows a path-like style. Therefore method names are passed to __call__ method with underscores
+      and the method will replace them with slashes;
+   2) Auth header must be a string that hashes to the field "api-key-hash" specified in each SC node conf file. If
+      no string is specified or authentication is disabled by default, this field could be omitted;
+   3) In case of errors, instead of JSONRPCException we use SCAPIException
+"""
 
 class SidechainAuthServiceProxy(object):
     __id_count = 0
@@ -40,7 +50,7 @@ class SidechainAuthServiceProxy(object):
             passwd = passwd.encode('utf8')
         except AttributeError:
             pass
-        #Will we have authentication for SC API too ?
+        #Still to identify which kind of authentication we will have
         authpair = user + b':' + passwd
         self.__auth_header = b'Basic ' + base64.b64encode(authpair)
 
@@ -91,7 +101,7 @@ class SidechainAuthServiceProxy(object):
 
     def __call__(self, *args):
         SidechainAuthServiceProxy.__id_count += 1
-        path = "/" + self.__service_name.replace("_","/")
+        path = "/" + self.__service_name.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
         if len(args) > 0:
             postdata = args[0]

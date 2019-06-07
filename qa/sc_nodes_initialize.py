@@ -5,7 +5,12 @@ from SidechainTestFramework.scutil import connect_sc_nodes, sc_p2p_port, initial
 import time
 import json
 
-class SidechainNodesConnectionTest(SidechainTestFramework):
+"""
+    Setup 3 SC Nodes and connect them togheter. Check that each node is connected to the other and that their initial keys/boxes/balances are
+    coherent with the default initialization
+"""
+
+class SidechainNodesInitializationTest(SidechainTestFramework):
     def add_options(self, parser):
         #empty implementation
         pass
@@ -63,22 +68,25 @@ class SidechainNodesConnectionTest(SidechainTestFramework):
         print("OK\n")
     
     def run_test(self):
+        #Connect nodes togheter
         print("Connecting node0, node1 and node2...")
-        connect_sc_nodes(self.sc_nodes[0], 1) #In Scorex, it is just needed to call connect on one of the two
-        connect_sc_nodes(self.sc_nodes[1], 2)
-        connect_sc_nodes(self.sc_nodes[0], 2)
+        connect_sc_nodes(self.sc_nodes, 0, 1) #In Scorex, it is just needed to call connect on one of the two
+        connect_sc_nodes(self.sc_nodes, 1, 2)
+        connect_sc_nodes(self.sc_nodes, 0, 2)
         node0name = "node0"
         node1name = "node1"
         node2name = "node2"
         
+        #Check that each node is connected to all the others
         self.check_connections(self.sc_nodes[0], node0name, [node1name, node2name])
         self.check_connections(self.sc_nodes[1], node1name, [node0name, node2name])
         self.check_connections(self.sc_nodes[2], node2name, [node0name, node1name])
         
+        #Check default initialization success. That is: check that each public key of each node has a box and a positive balance associated with it
         self.check_genesis_balances(self.sc_nodes[0], node0name, 0)
         self.check_genesis_balances(self.sc_nodes[1], node1name, 1)
         self.check_genesis_balances(self.sc_nodes[2], node2name, 2)
 
         
 if __name__ == "__main__":
-    SidechainNodesConnectionTest().main()
+    SidechainNodesInitializationTest().main()

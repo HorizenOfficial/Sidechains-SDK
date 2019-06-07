@@ -42,7 +42,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def sync_all(self):
-        sync_blocks(self.nodes, p = True)
+        sync_blocks(self.nodes)
         sync_mempools(self.nodes)
 
     def join_network(self):
@@ -55,7 +55,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         return generateGenesisData(self.nodes[0]) #Maybe other parameters in future
     
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data() 
+        genesisData = self.sc_generate_genesis_data() #Should interact with mainchain in order to generate Genesis Data for SC Nodes
         initialize_sc_chain_clean(self.options.tmpdir, 1, genesisData)
     
     def sc_setup_network(self, split = False):
@@ -68,7 +68,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         pass
 
     def sc_sync_all(self):
-        sync_sc_blocks(self.sc_nodes, p = True)
+        sync_sc_blocks(self.sc_nodes)
         sync_sc_mempools(self.sc_nodes)
 
     def sc_join_network(self):
@@ -87,7 +87,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
-        parser.add_option("--scjarpath", dest="scjarpath", default="resources/twinsChain.jar examples.hybrid.HybridApp", #New option
+        parser.add_option("--scjarpath", dest="scjarpath", default="resources/twinsChain.jar examples.hybrid.HybridApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
                           help="Root directory for datadirs")
@@ -113,7 +113,7 @@ class SidechainTestFramework(BitcoinTestFramework):
             
             print("Initializing test directory "+self.options.tmpdir)
             
-            genesisData = self.setup_chain()
+            self.setup_chain()
 
             self.setup_network()
             
@@ -128,11 +128,11 @@ class SidechainTestFramework(BitcoinTestFramework):
         except JSONRPCException as e:
             print("JSONRPC error: "+e.error['message'])
             traceback.print_tb(sys.exc_info()[2])
-        except SCAPIException as e:
+        except SCAPIException as e: #New exception for SC API
             print("SCAPI error: "+e.error)
             traceback.print_tb(sys.exc_info()[2])
         except TimeoutException as e:
-            print("Timeout while: " + e.operation)
+            print("Timeout while: " + e.operation) #Timeout for SC Operations
             traceback.print_tb(sys.exc_info()[2])
         except AssertionError as e:
             print("Assertion failed: "+e.message)
@@ -141,7 +141,7 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
         
-        if not self.options.noshutdown:
+        if not self.options.noshutdown: #Support for tests with MC only, SC only, MC/SC
             if hasattr(self, "nodes"):
                 print("Stopping MC nodes")
                 stop_nodes(self.nodes)
@@ -163,7 +163,6 @@ class SidechainTestFramework(BitcoinTestFramework):
             print("Failed")
             sys.exit(1)
 
-#Build simple test to see if it works
 '''Support for running MC & SC Nodes with different binaries. 
 For MC the implementation follows the one of BTF, for SC it is possible to specify multiple jars'''
 class SidechainComparisonTestFramework(SidechainTestFramework):
@@ -187,13 +186,17 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
                                            [self.options.refbinary]*(self.num_nodes-1))
     
     def sc_add_options(self, parser):
-        parser.add_option("--jarspathlist", dest="jarspathlist", type = "string", 
-                          action = "callback", callback = self._get_comma_separated_args,
+        #Warning: Console will consider spaces as end of argument. In the future, when we won't need to specify the main class path, this will work
+        parser.add_option("--jarspathlist", dest="jarspathlist", type = "string", nargs = 3,
+                          action = "callback", callback = self._get_args,
                           default=["resources/twinsChain.jar examples.hybrid.HybridApp", "resources/twinsChainOld.jar examples.hybrid.HybridApp"],
-                          help="node jars to test, separated by comma")
+                          help="node jars to test in the format: <jar1>,<jar2>,...")
     
-    def _get_comma_separated_args(self, option, opt, value, parser):
-        setattr(parser.values, option.dest, value.split(','))
+    def _get_args(self, option, opt, value, parser):
+        str = ""
+        for s in value:
+            str = str + " " + s
+        setattr(parser.values, option.dest, str.split(','))
         
     def sc_setup_chain(self):
         genesisData = self.sc_generate_genesis_data()

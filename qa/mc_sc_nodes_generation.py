@@ -8,6 +8,11 @@ import random
 import shutil
 from decimal import Decimal
 
+"""
+    Setup 3 MC Nodes and connect them togheter. Let Node0 transfer some coins to Node1 and Node2 mine the new block. 
+    Check that everything is consistent. Do the same for 3 SC Nodes.
+"""
+
 class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
     
     def add_options(self, parser):
@@ -71,11 +76,12 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         assert_true(txid in tx_list, "Transaction {0} not in mempool for SC {1}".format(str(txid), nodename))
     
     def run_test(self):
-        #Ensuring nodes 0 and 1 have their coinbases in their active balance
+        #Ensuring MC nodes 0 and 1 have their coinbases in their active balance
         self.nodes[0].generate(100)
         self.nodes[1].generate(100)
         self.nodes[2].generate(101)
         self.sync_all()
+        #Saving MC Nodes information and setting tx amount
         print("Nodes initialization...")
         mcnode0name = "node0"
         mcnode1name = "node1"
@@ -87,6 +93,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->MC Node 1 balance: {0}".format(mcnode1balance))
         mc_amount = random.randint(1, round(mcnode0balance))
         
+        #Saving SC Nodes information and setting tx amount and fee
         scnode0name = "node0"
         scnode1name = "node1"
         scnode2name = "node2"
@@ -99,6 +106,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         sc_fee = random.randint(1, 99)
         print("OK\n")
         
+        #MC Node0 sends tx to MC Node1. The same happens in SC side
         print("Sending transactions...")
         print("-->MC Node 0 sends to MC Node 1 address {0}, {1} coins...".format(str(mcnode1address), mc_amount))
         mctxid = self.create_mc_tx(self.nodes[0], mcnode1address, mc_amount)
@@ -106,6 +114,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         sctxid = self.create_sc_tx(self.sc_nodes[0], scnode1address, sc_amount, sc_fee)
         print("OK\n")
         
+        #Synchronizing MC nodes mempools and checks that the new transaction is in all of them. Do the same for SC nodes
         print("Synchronizing nodes' mempools and check tx is in all of them...")
         sync_mempools(self.nodes)
         self.check_tx_in_mc_mempool(self.nodes[0], mcnode0name, mctxid)
@@ -117,6 +126,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         self.check_tx_in_sc_mempool(self.sc_nodes[2], scnode2name, sctxid)
         print("OK\n")
         
+        #MC Node2 generate a new block, then sync all the nodes. Do the same for SC Node2.
         print("Generating new blocks...")
         print("-->MC Node 2 generates a block...")
         blocks = self.nodes[2].generate(1)
@@ -124,10 +134,11 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         self.sync_all()
         print("-->SC Node 2 generates a block...")
         assert_equal(str(self.sc_nodes[2].debug_startMining()["response"]), "ok", "SC Node 2 couldn't start mining")
-        wait_for_next_sc_blocks(self.sc_nodes[2], 2, wait_for = 60)
+        wait_for_next_sc_blocks(self.sc_nodes[2], 2, wait_for = 60) #We wait for the newly created blocks to appear in Node2 Blockchain. This is not necessary for zend.
         self.sc_sync_all()
         print("OK\n")
         
+        #Checking that the tx is in the newly created block for both MC and SC
         print("Checking block inclusion...")
         self.check_tx_in_mc_block(self.nodes[0], mcnode0name, mctxid)
         self.check_tx_in_mc_block(self.nodes[1], mcnode1name, mctxid)
@@ -146,6 +157,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         assert_equal(self.sc_nodes[2].nodeView_pool()["size"], 0)
         print("OK\n")
         
+        #Checking that MC Node0 balance has decreased by amount-fee and that MC Node1 balance has increased of amount. Do the same for SC nodes 0 and 1
         print("Checking balance changed for MC & SC Nodes 0 and 1...")
         mcnode0newbalance = self.nodes[0].getbalance()
         mcnode1newbalance = self.nodes[1].getbalance()

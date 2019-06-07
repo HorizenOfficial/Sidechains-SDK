@@ -3,7 +3,9 @@ from SidechainTestFramework.sc_test_framework import SidechainComparisonTestFram
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from util import assert_true, assert_raises
 
-'''SC Node 1 uses an old twinsChain.jar in which there are GET calls. We call one of that method by using POST instead, so we expect an exception'''
+"""
+    Show correctness of Comparison Test Framework. Setup different MC & SC nodes with different zends/jars respectively and check that all nodes are alive
+"""
 class MultipleClientsTest(SidechainComparisonTestFramework):
     def run_test(self):
         i = 0

@@ -2,6 +2,10 @@
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from util import assert_true
 
+"""
+    Setup a single MC node and verify that it's fully on by checking that it sends a valid response to a RPC call
+"""
+
 class MCNodeAlive(SidechainTestFramework):
     
     def sc_setup_chain(self):
