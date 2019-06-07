@@ -91,7 +91,7 @@ def sync_sc_mempools(api_connections, wait_for=25):
     
 sidechainclient_processes = {}
 
-def generateGenesisData(node):
+def generate_genesis_data(node):
     #TO IMPLEMENT: Create sidechaindeclarationtx, mine a block, call getgenesisdata and return them
     return None
 

@@ -68,11 +68,11 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         print("OK\n")
     
     def run_test(self):
-        #Connect nodes togheter
+        #Connect nodes toghether
         print("Connecting node0, node1 and node2...")
-        connect_sc_nodes(self.sc_nodes, 0, 1) #In Scorex, it is just needed to call connect on one of the two
-        connect_sc_nodes(self.sc_nodes, 1, 2)
-        connect_sc_nodes(self.sc_nodes, 0, 2)
+        connect_sc_nodes(self.sc_nodes[0], 1) #In Scorex, it is just needed to call connect on one of the two
+        connect_sc_nodes(self.sc_nodes[1], 2)
+        connect_sc_nodes(self.sc_nodes[0], 2)
         node0name = "node0"
         node1name = "node1"
         node2name = "node2"

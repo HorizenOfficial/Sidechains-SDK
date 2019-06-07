@@ -8,7 +8,7 @@ from util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds
 from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generateGenesisData, TimeoutException
+    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException
 import tempfile
 import os
 import json
@@ -51,8 +51,9 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_add_options(self, parser):
         pass
     
+    #For now it's not active. scutil.generateGenesisData will return None
     def sc_generate_genesis_data(self):
-        return generateGenesisData(self.nodes[0]) #Maybe other parameters in future
+        return generate_genesis_data(self.nodes[0]) #Maybe other parameters in future
     
     def sc_setup_chain(self):
         genesisData = self.sc_generate_genesis_data() #Should interact with mainchain in order to generate Genesis Data for SC Nodes
@@ -85,7 +86,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Leave bitcoinds and test.* datadir on exit or error")
         parser.add_option("--noshutdown", dest="noshutdown", default=False, action="store_true",
                           help="Don't stop bitcoinds after the test execution")
-        parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
+        parser.add_option("--zendir", dest="zendir", default="../ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
         parser.add_option("--scjarpath", dest="scjarpath", default="resources/twinsChain.jar examples.hybrid.HybridApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
@@ -186,16 +187,12 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
                                            [self.options.refbinary]*(self.num_nodes-1))
     
     def sc_add_options(self, parser):
-        #Warning: Console will consider spaces as end of argument. In the future, when we won't need to specify the main class path, this will work
-        parser.add_option("--jarspathlist", dest="jarspathlist", type = "string", nargs = 3,
+        parser.add_option("--jarspathlist", dest="jarspathlist", type = "string",
                           action = "callback", callback = self._get_args,
                           default=["resources/twinsChain.jar examples.hybrid.HybridApp", "resources/twinsChainOld.jar examples.hybrid.HybridApp"],
-                          help="node jars to test in the format: <jar1>,<jar2>,...")
+                          help="node jars to test in the format: \"<jar1>,<jar2>,...\"")
     
     def _get_args(self, option, opt, value, parser):
-        str = ""
-        for s in value:
-            str = str + " " + s
         setattr(parser.values, option.dest, str.split(','))
         
     def sc_setup_chain(self):

@@ -7,7 +7,7 @@ CURDIR=$(cd $(dirname "$0"); pwd)
 
 export BITCOINCLI=${BUILDDIR}/qa/pull-tester/run-bitcoin-cli
 export BITCOIND=${REAL_BITCOIND}
-export PYTHONPATH=${BUILDDIR}/qa/ZenCore/qa/rpc-tests/test_framework
+export PYTHONPATH=${BUILDDIR}/ZenCore/qa/rpc-tests/test_framework
 
 #Run the tests
 
