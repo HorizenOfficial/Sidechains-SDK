@@ -3,7 +3,9 @@
  *
  * Given a P1 proof that given x and y prove that x*x = y
  * Given a P2 proof that given x and z prove that x*2 = z
- * "x" is witness, "y" and "z" are public input for P1 and P2
+ * "x" and "y" are public input for P1
+ * "x" and "z" are public input for P2
+ * no witness
  *
  * Infopulse Horizen 2019
  * written by Vadym Fedyukovych
@@ -44,7 +46,7 @@ private:
   libsnark::r1cs_ppzksnark_keypair<ppT> keypair;
 
 public:
-  const int public_input_size = 1; // primary_input_size
+  const int public_input_size = 2; // primary_input_size
 
   jproof_square_gadget(libsnark::protoboard<FieldT>& pb,
                        const std::string& annotation_prefix="jproof_square"):
@@ -75,7 +77,7 @@ private:
   libsnark::r1cs_ppzksnark_keypair<ppT> keypair;
 
 public:
-  const int public_input_size = 1; // primary_input_size
+  const int public_input_size = 2; // primary_input_size
 
   jproof_mult2_gadget(libsnark::protoboard<FieldT>& pb,
                       const std::string& annotation_prefix="jproof_multiply_2"):

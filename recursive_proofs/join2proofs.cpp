@@ -1,5 +1,4 @@
 /* Proof that two others specific proof were verified
- * based on general broad "recursive verification" (previous) example
  *
  * Infopulse Horizen 2019
  * written by Vadym Fedyukovych
@@ -21,6 +20,7 @@ void make_primary_input(const libsnark::protoboard<FieldT>& pbA,
                         const std::string& annotation) {
   const size_t elt_size = FieldT::size_in_bits();
 
+  assert(pbA.primary_input().size() == 2);
   const libsnark::r1cs_ppzksnark_keypair<ppTA> keypair
     = libsnark::r1cs_ppzksnark_generator<ppTA>(pbA.get_constraint_system());
   const libsnark::r1cs_ppzksnark_proof<ppTA> pi
@@ -63,7 +63,13 @@ void run2proofs() {
 
   // circuit/gadget verifying two proofs above
   libsnark::protoboard<FieldT_B> pbB;
-  jproof_compliance_gadget<ppT_B, FieldT_B, FieldT_A, ppT_A> complg(pbB, FieldT_A::size_in_bits(), 1);
+  jproof_compliance_gadget<ppT_B, FieldT_B, FieldT_A, ppT_A> complg(pbB, FieldT_A::size_in_bits(), 2);
+  std::cout << "P3 aux input size = "
+  //          << pbB.num_variables()
+  //          << pbB.primary_input().size()
+            << pbB.auxiliary_input().size()
+            << std::endl;
+
   complg.generate_r1cs_constraints();
   complg.generate_r1cs_witness(pbA1, pbA2);
 
