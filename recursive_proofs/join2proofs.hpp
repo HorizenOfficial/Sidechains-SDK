@@ -153,6 +153,13 @@ public:
     this->verifier2->generate_r1cs_constraints();
   };
 
+  void generate_r1cs_witness(const FieldTsimple& x,
+                             const FieldTsimple& y,
+                             const FieldTsimple& z,
+                             const libsnark::r1cs_ppzksnark_proof<ppTsimple>& pi_square,
+                             const libsnark::r1cs_ppzksnark_proof<ppTsimple>& pi_mult) {
+  };
+
   void generate_r1cs_witness(const libsnark::protoboard<FieldTsimple>& pbA1,
 			     const libsnark::protoboard<FieldTsimple>& pbA2) {
 
