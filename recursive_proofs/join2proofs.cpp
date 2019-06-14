@@ -63,7 +63,10 @@ void run2proofs() {
 
   // circuit/gadget verifying two proofs above
   libsnark::protoboard<FieldT_B> pbB;
-  jproof_compliance_gadget<ppT_B, FieldT_B, FieldT_A, ppT_A> complg(pbB, FieldT_A::size_in_bits(), 2);
+  libsnark::r1cs_ppzksnark_verification_key<ppT_A> vk_square, vk_mult;
+  jproof_compliance_gadget<ppT_B, FieldT_B, FieldT_A, ppT_A> complg(pbB, FieldT_A::size_in_bits(), 2,
+                                                                    rndP1P2.get_y(), rndP1P2.get_z(),
+                                                                    vk_square, vk_mult);
   std::cout << "P3 aux input size = "
   //          << pbB.num_variables()
   //          << pbB.primary_input().size()
@@ -72,6 +75,9 @@ void run2proofs() {
 
   complg.generate_r1cs_constraints();
   complg.generate_r1cs_witness(pbA1, pbA2);
+
+  libsnark::r1cs_ppzksnark_proof<ppT_A> pi_square, pi_mult;
+  complg.generate_r1cs_witness(rndP1P2.get_x(), pi_square, pi_mult);
 
   libsnark::r1cs_ppzksnark_keypair<ppT_B> keypair_about
     = libsnark::r1cs_ppzksnark_generator<ppT_B>(pbB.get_constraint_system());

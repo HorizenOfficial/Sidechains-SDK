@@ -10,7 +10,11 @@
  * Infopulse Horizen 2019
  * written by Vadym Fedyukovych
  */
-
+/* Todo
+ * Add constraints to the circuit verifying that the bit vector used to verify P1 is the valid bit vector representation starting from X and Y
+ * Add constraints to the circuit verifying that the bit vector used to verify P2 is the valid bit vector representation starting from X and Z
+ * The only public inputs are Y and Z.
+ */
 template <typename FieldT, typename ppTA, typename ppT_B>
 void make_primary_input(const libsnark::protoboard<FieldT>& pbA,
                         libff::bit_vector& input_as_bits,
@@ -114,7 +118,11 @@ private:
 public:
   jproof_compliance_gadget(libsnark::protoboard<FieldT>& pb,
                            const size_t elt_size, //  = FieldT_A::size_in_bits();
-			   const size_t primary_input_size,
+                           const size_t primary_input_size,
+                           const FieldTsimple& y,
+                           const FieldTsimple& z,
+                           const libsnark::r1cs_ppzksnark_verification_key<ppTsimple> vk_square,
+                           const libsnark::r1cs_ppzksnark_verification_key<ppTsimple> vk_mult,
                            const std::string& annotation_prefix="jproof_compliance"):
     libsnark::gadget<FieldT>(pb, annotation_prefix)
   {
@@ -154,8 +162,6 @@ public:
   };
 
   void generate_r1cs_witness(const FieldTsimple& x,
-                             const FieldTsimple& y,
-                             const FieldTsimple& z,
                              const libsnark::r1cs_ppzksnark_proof<ppTsimple>& pi_square,
                              const libsnark::r1cs_ppzksnark_proof<ppTsimple>& pi_mult) {
   };
