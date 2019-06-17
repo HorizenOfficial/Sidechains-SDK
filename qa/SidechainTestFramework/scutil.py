@@ -28,6 +28,7 @@ def sc_p2p_port(n):
 def sc_rpc_port(n):
     return 8200 + n + os.getpid()%999
 
+#To be removed
 def wait_for_next_sc_blocks(node, expected_height, wait_for = 25):
     """
     Wait until blockchain height won't reach the expected_height, for wait_for seconds
@@ -90,14 +91,6 @@ def generate_genesis_data(node):
     #TO IMPLEMENT: Create sidechaindeclarationtx, mine a block, call getgenesisdata and return them
     return None
 
-#Just for hybrid app, will be removed
-def getGenesisAddresses(nodeNumber):
-    if nodeNumber < 2:
-        return 19
-    elif nodeNumber == 2:
-        return 9
-    return 0
-
 #Maybe should we give the possibility to customize the configuration file by adding more fields ?
 def initialize_sc_datadir(dirname, n, genesisData):
     """Create directories for each node and configuration files inside them.
@@ -125,7 +118,6 @@ def initialize_sc_datadir(dirname, n, genesisData):
         }
     configsData.append({
         "name" : "node" + str(n),
-        "genesisAddresses" : getGenesisAddresses(n),
         "url" : "http://" + apiAddress + ":" + str(apiPort)
     })
     with open(os.path.join(datadir, "node"+str(n)+".conf"), 'w+') as configFile:

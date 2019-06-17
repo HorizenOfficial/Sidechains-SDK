@@ -10,3 +10,6 @@
 [submodule "ZenCore"]
 	path = ZenCore
 	url = https://github.com/ZencashOfficial/zen.git
+[submodule "./qa/ZenCore"]
+	path = ./qa/ZenCore
+	url = https://github.com/ZencashOfficial/zen.git

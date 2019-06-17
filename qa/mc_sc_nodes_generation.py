@@ -46,6 +46,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         connect_sc_nodes(self.sc_nodes[0], 1)
         connect_sc_nodes(self.sc_nodes[0], 2)
         connect_sc_nodes(self.sc_nodes[1], 2)
+        self.sc_sync_all()
         print("OK\n")
     
     def sc_setup_nodes(self):

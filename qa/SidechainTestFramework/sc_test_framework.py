@@ -34,6 +34,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         
     def setup_network(self, split = False):
         self.nodes = self.setup_nodes() 
+        self.sync_all()
     
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
@@ -61,6 +62,7 @@ class SidechainTestFramework(BitcoinTestFramework):
     
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
+        self.sc_sync_all()
     
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)

@@ -99,12 +99,16 @@ class SidechainAuthServiceProxy(object):
             else:
                 raise
 
-    def __call__(self, *args):
+    #For backward compatibility with pre-exisistent Hybrid App APIs, the method accept *args too. 
+    #In the new SC APIs there will be only **kwargs.
+    def __call__(self, *args, **kwargs):
         SidechainAuthServiceProxy.__id_count += 1
         path = "/" + self.__service_name.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
         if len(args) > 0:
             postdata = args[0]
+        if len(kwargs) > 0:
+            postdata = json.dumps(kwargs)
         response = self._request("POST", path, postdata)
         return response
 

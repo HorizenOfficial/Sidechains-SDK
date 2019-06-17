@@ -31,9 +31,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         connect_sc_nodes(self.sc_nodes[0], 1)
         connect_sc_nodes(self.sc_nodes[0], 2)
         connect_sc_nodes(self.sc_nodes[1], 2)
-        print("Connections for node0: ", self.sc_nodes[0].peers_connected())
-        print("Connections for node1: ", self.sc_nodes[1].peers_connected())
-        print("Connections for node2: ", self.sc_nodes[2].peers_connected())
+        self.sc_sync_all()
     
     def sc_setup_nodes(self):
         return start_sc_nodes(3, self.options.tmpdir)
@@ -124,6 +122,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->Node 1 new balance: {0}".format(node1newbalance))
         print("-->Node 2 new balance: {0}".format(node2newbalance))
         print("OK\n")
+        
         
         
 if __name__ == "__main__":
