@@ -2,6 +2,7 @@ package com.horizen.state;
 
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.proposition.Proposition;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public interface ApplicationState {
     // also if not yet opened.
     // For example this list can contains Ballots that happened in a past epoch or some other box that cannot be used anymore
 
-    Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] version, List<Box> newBoxes, List<byte[]> boxIdsToRemove);
+    Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] version, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
     Try<ApplicationState> onRollback(byte[] version); // return Try[...]
 }

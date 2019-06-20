@@ -10,7 +10,7 @@ import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import scorex.core.{VersionTag, idToVersion}
+import scorex.core.{VersionTag, idToVersion, bytesToVersion}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
 
@@ -20,11 +20,12 @@ import scala.collection.JavaConverters._
 
 case class SidechainState(store: SidechainStateStorage, override val version: VersionTag, applicationState: ApplicationState)
   extends
-    BoxMinimalState[Proposition,
-                    Box[_ <: Proposition],
-                    BoxTransaction[_ <: Proposition, Box[_ <: Proposition]],
+    BoxMinimalState[SidechainTypes#P,
+                    SidechainTypes#B,
+                    SidechainTypes#BT,
                     SidechainBlock,
                     SidechainState]
+  with SidechainTypes
   with SidechainStateReader
   with ScorexLogging
 {
@@ -35,26 +36,25 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   override type NVCT = SidechainState
   //type HPMOD = SidechainBlock
 
-
   // Note: emit tx.semanticValidity for each tx
-  override def semanticValidity(tx: BoxTransaction[_ <: Proposition, Box[_ <: Proposition]]): Try[Unit] = Try {
+  override def semanticValidity(tx: BT): Try[Unit] = Try {
     if (!tx.semanticValidity())
       throw new Exception("Transaction is semanticaly invalid.")
   }
 
   // get closed box from State storage
-  override def closedBox(boxId: Array[Byte]): Option[Box[_ <: Proposition]] = {
+  override def closedBox(boxId: Array[Byte]): Option[B] = {
     store.get(boxId)
   }
 
-  override def getClosedBox(boxId: Array[Byte]): Optional[Box[Proposition]] = {
+  override def getClosedBox(boxId: Array[Byte]): Optional[B] = {
     Optional.ofNullable(closedBox(boxId).orNull)
   }
   // get boxes for given proposition from state storage
-  override def boxesOf(proposition: Proposition): Seq[Box[Proposition]] = ???
+  override def boxesOf(proposition: P): Seq[B] = ???
 
   // Note: aggregate New boxes and spent boxes for Block
-  override def changes(mod: SidechainBlock) : Try[BoxStateChanges[Proposition, Box[_ <: Proposition]]] = {
+  override def changes(mod: SidechainBlock) : Try[BoxStateChanges[P, B]] = {
     SidechainState.changes(mod)
   }
 
@@ -66,7 +66,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
       s"${version} expected")
     //TODO (Alberto) Do we really need to check semanticValidity for block (and transaction) here???
     //mod.semanticValidity()
-    mod.transactions.foreach(tx => validate(tx.asInstanceOf[BoxTransaction[_ <: Proposition, Box[_ <: Proposition]]]).get)
+    mod.transactions.foreach(tx => validate(tx).get)
     //TODO Try as result of validate?
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
@@ -83,7 +83,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
   // TO DO check logic in Hybrid.BoxMinimalState.validate
   // TO DO TBD
-  override def validate(tx: BoxTransaction[_ <: Proposition, Box[_ <: Proposition]]): Try[Unit] = Try {
+  override def validate(tx: BT): Try[Unit] = Try {
     var closedCoinsBoxesAmount : Long = 0L
     var newCoinsBoxesAmount : Long = 0L
 
@@ -92,7 +92,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
       for (u <- tx.unlockers().asScala) {
         closedBox(u.closedBoxId()) match {
           case Some(box) => {
-            val boxKey = u.boxKey().asInstanceOf[Proof[Proposition]]
+            val boxKey = u.boxKey()
             if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
               throw new Exception("Signature is invalid.")
             if (box.isInstanceOf[CoinsBox[_ <: Proposition]])
@@ -126,7 +126,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[Proposition, Box[_ <: Proposition]], newVersion: VersionTag): Try[SidechainState] = Try {
+  override def applyChanges(changes: BoxStateChanges[P, B], newVersion: VersionTag): Try[SidechainState] = Try {
     val version = BytesUtils.fromHexString(newVersion)
 //    val boxesToAppend =
 //    val boxIdsToRemove =
@@ -136,7 +136,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
       case Success(appState) =>
         SidechainState(store.update(new ByteArrayWrapper(version), changes.toAppend.map(_.box).toSet,
                                     changes.toRemove.map(_.boxId.array).toSet).get,
-                       newVersion, appState)
+                       newVersion, applicationState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -161,16 +161,19 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   }
 }
 
-object SidechainState {
+object SidechainState
+  extends SidechainTypes
+{
+
   //TODO should it be the same as in class?
-  def semanticValidity(tx: BoxTransaction[_ <: Proposition, Box[_ <: Proposition]]): Try[Unit] = ???
+  def semanticValidity(tx: SidechainTypes#BT): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
-  def changes(mod: SidechainBlock) : Try[BoxStateChanges[Proposition, Box[_ <: Proposition]]] = Try {
-    val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[_ <: Proposition]], 0L)
+  def changes(mod: SidechainBlock) : Try[BoxStateChanges[P, B]] = Try {
+    val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[B], 0L)
 
-    val (toRemove: Seq[Array[Byte]], toAdd: Seq[Box[_ <: Proposition]], reward) =
+    val (toRemove: Seq[Array[Byte]], toAdd: Seq[B], reward) =
       mod.transactions.foldLeft(initial){ case ((sr, sa, f), tx) =>
         (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
       }
@@ -179,14 +182,22 @@ object SidechainState {
     // calculate list of new boxes -> toAppend
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
-    val ops: Seq[BoxStateChangeOperation[Proposition, Box[_ <: Proposition]]] =
-      toRemove.map(id => Removal[Proposition, Box[_ <: Proposition]](scorex.crypto.authds.ADKey(id))) ++
-      toAdd.map(b => Insertion[Proposition, Box[_ <: Proposition]](b))
+    val ops: Seq[BoxStateChangeOperation[P, B]] =
+    toRemove.map(id => Removal[P, B](scorex.crypto.authds.ADKey(id))) ++
+      toAdd.map(b => Insertion[P, B](b))
 
-    BoxStateChanges[Proposition, Box[_ <: Proposition]](ops)
+    BoxStateChanges[P, B](ops)
 
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
+  }
+
+  def readOrGenerate(store: SidechainStateStorage, applicationState: ApplicationState) : Try[SidechainState] = Try {
+    store.lastVersionId match {
+      case Some(version) => SidechainState(store, bytesToVersion(version.data), applicationState)
+      //TODO Initial version for empty storage???
+      case None => SidechainState(store, null, applicationState)
+    }
   }
 }

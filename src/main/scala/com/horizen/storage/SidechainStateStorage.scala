@@ -1,12 +1,13 @@
 package com.horizen.storage
 
 import java.util.Optional
-import java.util.{List => JList, ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, List => JList}
+
+import com.horizen.SidechainTypes
 import javafx.util.{Pair => JPair}
 
 import scala.util._
 import scala.collection.JavaConverters._
-
 import com.horizen.box.Box
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.proposition.Proposition
@@ -16,6 +17,7 @@ import scorex.util.ScorexLogging
 
 class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
+  with SidechainTypes
 {
   // Version - block Id
   // Key - byte array box Id
@@ -27,11 +29,11 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def get(boxId : Array[Byte]) : Option[Box[_ <: Proposition]] = {
+  def get(boxId : Array[Byte]) : Option[B] = {
     storage.get(calculateKey(boxId)) match {
       case v if v.isPresent => {
         sidechainBoxesCompanion.parseBytes(v.get().data) match {
-          case Success(box) => Option(box)
+          case Success(box) => Option(box.asInstanceOf[B])
           case Failure(exception) => {
             log.error("Error while WalletBox parsing.", exception)
             Option.empty
@@ -42,9 +44,9 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  def get(proposition : Proposition) : Seq[Box[Proposition]] = ???
+  def get(proposition : P) : Seq[B] = ???
 
-  def update(version : ByteArrayWrapper, boxUpdateList : Set[Box[_ <: Proposition]],
+  def update(version : ByteArrayWrapper, boxUpdateList : Set[B],
              boxIdsRemoveList : Set[Array[Byte]]) : Try[SidechainStateStorage] = Try {
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -68,8 +70,12 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     this
   }
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  def lastVersionId : Option[ByteArrayWrapper] = {
+    val lastVersion = storage.lastVersionID()
+    if (lastVersion.isPresent)
+      Some(lastVersion.get())
+    else
+      None
   }
 
   def rollbackVersions : Seq[ByteArrayWrapper] = {
