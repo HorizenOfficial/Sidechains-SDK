@@ -10,7 +10,7 @@ import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import scorex.core.{VersionTag, idToVersion, bytesToVersion}
+import scorex.core.{VersionTag, idToVersion, bytesToVersion, versionToBytes, idToBytes}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
 
@@ -30,9 +30,6 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   with ScorexLogging
 {
 
-  //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
-  //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")
-
   override type NVCT = SidechainState
   //type HPMOD = SidechainBlock
 
@@ -50,6 +47,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   override def getClosedBox(boxId: Array[Byte]): Optional[B] = {
     Optional.ofNullable(closedBox(boxId).orNull)
   }
+
   // get boxes for given proposition from state storage
   override def boxesOf(proposition: P): Seq[B] = ???
 
@@ -62,7 +60,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   //TODO add call of applicationState.validate(Block)
   //TODO see validate method in Hybrid (tx validation also)
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
-    require(mod.parentId == version, s"Incorrect state version!: ${mod.parentId} found, " +
+    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
       s"${version} expected")
     //TODO (Alberto) Do we really need to check semanticValidity for block (and transaction) here???
     //mod.semanticValidity()
@@ -104,8 +102,9 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
 
       newCoinsBoxesAmount = tx.newBoxes().asScala.filter(_.isInstanceOf[CoinsBox[_ <: Proposition]]).map(_.value()).sum
 
-      if (closedCoinsBoxesAmount + tx.fee() != newCoinsBoxesAmount)
-        throw new Exception("Amounts sum of CoinsBoxes is incorrect.");
+      if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
+        throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
+          s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}");
 
     }
 
@@ -127,7 +126,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
   override def applyChanges(changes: BoxStateChanges[P, B], newVersion: VersionTag): Try[SidechainState] = Try {
-    val version = BytesUtils.fromHexString(newVersion)
+    val version = versionToBytes(newVersion)
 //    val boxesToAppend =
 //    val boxIdsToRemove =
     applicationState.onApplyChanges(this, version,
@@ -191,13 +190,5 @@ object SidechainState
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
-  }
-
-  def readOrGenerate(store: SidechainStateStorage, applicationState: ApplicationState) : Try[SidechainState] = Try {
-    store.lastVersionId match {
-      case Some(version) => SidechainState(store, bytesToVersion(version.data), applicationState)
-      //TODO Initial version for empty storage???
-      case None => SidechainState(store, null, applicationState)
-    }
   }
 }

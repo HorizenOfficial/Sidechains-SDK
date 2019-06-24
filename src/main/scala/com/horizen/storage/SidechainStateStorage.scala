@@ -44,7 +44,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  def get(proposition : P) : Seq[B] = ???
+  //def get(proposition : P) : Seq[B] = ???
 
   def update(version : ByteArrayWrapper, boxUpdateList : Set[B],
              boxIdsRemoveList : Set[Array[Byte]]) : Try[SidechainStateStorage] = Try {
