@@ -30,7 +30,7 @@ class MainchainTxForwardTransferCrosschainOutputTest extends JUnitSuite with Mai
     assertTrue("Forward Transfer crosschain output expected to be parsed.", output.isSuccess)
     assertEquals("Output Hash is different.", hash, BytesUtils.toHexString(output.get.hash))
     assertEquals("Output amount is different.", amount, output.get.amount)
-    assertEquals("Output proposition is different.", proposition, output.get.proposition)
+    assertEquals("Output proposition bytes are different.", proposition, new PublicKey25519Proposition(output.get.propositionBytes))
     assertEquals("Output sidechainId is different.", BytesUtils.toHexString(sidechainId), BytesUtils.toHexString(output.get.sidechainId))
 
 

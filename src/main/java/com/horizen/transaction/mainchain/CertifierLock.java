@@ -2,6 +2,7 @@ package com.horizen.transaction.mainchain;
 
 import com.horizen.block.MainchainTxCertifierLockCrosschainOutput;
 import com.horizen.box.CertifierRightBox;
+import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -21,7 +22,7 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
 
     @Override
     public CertifierRightBox getBox(long nonce) {
-        return new CertifierRightBox(_output.proposition(), nonce, _output.amount(), _output.activeFromWithdrawalEpoch());
+        return new CertifierRightBox(new PublicKey25519Proposition(_output.propositionBytes()), nonce, _output.amount(), _output.activeFromWithdrawalEpoch());
     }
 
     @Override

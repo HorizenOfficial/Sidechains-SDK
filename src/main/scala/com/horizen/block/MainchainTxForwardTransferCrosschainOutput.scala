@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.Try
@@ -8,7 +7,7 @@ import scala.util.Try
 class MainchainTxForwardTransferCrosschainOutput(
                                         val forwardTransferOutputBytes: Array[Byte],
                                         override val amount: Long,
-                                        override val proposition: PublicKey25519Proposition,
+                                        override val propositionBytes: Array[Byte],
                                         override val sidechainId: Array[Byte]
                                       ) extends MainchainTxCrosschainOutput {
   override val outputType: Byte = MainchainTxForwardTransferCrosschainOutput.OUTPUT_TYPE
@@ -35,13 +34,13 @@ object MainchainTxForwardTransferCrosschainOutput {
     val amount: Long = BytesUtils.getReversedLong(forwardTransferOutputBytes, currentOffset)
     currentOffset += 8
 
-    val proposition: PublicKey25519Proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(forwardTransferOutputBytes.slice(currentOffset, currentOffset + 32)))
+    val propositionBytes: Array[Byte] = BytesUtils.reverseBytes(forwardTransferOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(forwardTransferOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    new MainchainTxForwardTransferCrosschainOutput(forwardTransferOutputBytes.slice(offset, currentOffset), amount, proposition, sidechainId)
+    new MainchainTxForwardTransferCrosschainOutput(forwardTransferOutputBytes.slice(offset, currentOffset), amount, propositionBytes, sidechainId)
   }
 }
 

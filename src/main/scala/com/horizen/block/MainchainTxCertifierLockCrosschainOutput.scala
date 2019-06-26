@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.Try
@@ -9,7 +8,7 @@ import scala.util.Try
 class MainchainTxCertifierLockCrosschainOutput(
                                       val certifierLockOutputBytes: Array[Byte],
                                       override val amount: Long,
-                                      override val proposition: PublicKey25519Proposition,
+                                      override val propositionBytes: Array[Byte],
                                       override val sidechainId: Array[Byte],
                                       val activeFromWithdrawalEpoch: Long
                                     ) extends MainchainTxCrosschainOutput {
@@ -36,7 +35,7 @@ object MainchainTxCertifierLockCrosschainOutput {
     val amount: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
     currentOffset += 8
 
-    val proposition: PublicKey25519Proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(certifierLockOutputBytes.slice(currentOffset, currentOffset + 32)))
+    val propositionBytes: Array[Byte] = BytesUtils.reverseBytes(certifierLockOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(certifierLockOutputBytes.slice(currentOffset, currentOffset + 32))
@@ -45,7 +44,7 @@ object MainchainTxCertifierLockCrosschainOutput {
     val activeFromWithdrawalEpoch: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
     currentOffset += 8
 
-    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, proposition, sidechainId, activeFromWithdrawalEpoch)
+    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, propositionBytes, sidechainId, activeFromWithdrawalEpoch)
   }
 }
 

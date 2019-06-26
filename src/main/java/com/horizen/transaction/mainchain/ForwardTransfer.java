@@ -2,6 +2,7 @@ package com.horizen.transaction.mainchain;
 
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.box.RegularBox;
+import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -19,10 +20,9 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         return _output.hash();
     }
 
-    // DO TO: detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
     @Override
     public RegularBox getBox(long nonce) {
-        return new RegularBox(_output.proposition(), nonce, _output.amount());
+        return new RegularBox(new PublicKey25519Proposition(_output.propositionBytes()), nonce, _output.amount());
     }
 
     @Override
