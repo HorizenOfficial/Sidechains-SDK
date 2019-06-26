@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -20,6 +21,8 @@ public class RegularTransactionTest {
     long timestamp;
     ArrayList<Pair<RegularBox, PrivateKey25519>> from;
     ArrayList<Pair<PublicKey25519Proposition, Long>> to;
+
+    ArrayList<Long> expectedNonces;
 
     @Before
     public void BeforeEachTest() {
@@ -43,6 +46,12 @@ public class RegularTransactionTest {
         to.add(new Pair<>(pk4.publicImage(), 10L));
         to.add(new Pair<>(pk5.publicImage(), 20L));
         to.add(new Pair<>(pk6.publicImage(), 90L));
+
+        expectedNonces = new ArrayList<>(Arrays.asList(
+                3911136990993187881L,
+                -2589583342552885352L,
+                -6555861982699909223L)
+        );
     }
 
     @Test
@@ -72,6 +81,15 @@ public class RegularTransactionTest {
         }
 
         assertEquals("Transaction should be semantically valid.", true, transaction.semanticValidity());
+    }
+
+    @Test
+    public void newBoxesNonceEnforcingAlgorithmRegressionTest() {
+        RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
+        List<RegularBox> newBoxes = transaction.newBoxes();
+        for(int i = 0; i < newBoxes.size(); i++)
+            assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different.", i),
+                    expectedNonces.get(i).longValue(), newBoxes.get(i).nonce());
     }
 
     // TO DO: extend FailureCreationTest with other cases. Look into semantic validity in SimpleBoxTransaction.

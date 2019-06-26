@@ -37,7 +37,7 @@ public final class CertifierUnlockRequestTransaction extends SidechainTransactio
     }
 
     @Override
-    public boolean semanticValidity() {
+    public boolean transactionSemanticValidity() {
         return false;
     }
 

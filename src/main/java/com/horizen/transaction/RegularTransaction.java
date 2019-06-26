@@ -17,7 +17,6 @@ import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.crypto.hash.Blake2b256;
 import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
@@ -33,8 +32,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
     private long _fee;
     private long _timestamp;
 
-    // We don't need to calculate the next values each time, because transaction is immutable.
-    private byte[] _hashWithoutNonce;
+
     private List<RegularBox> _newBoxes;
     private List<BoxUnlocker<PublicKey25519Proposition>> _unlockers;
 
@@ -92,9 +90,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         if(_newBoxes == null) {
             _newBoxes = new ArrayList<>();
             for (int i = 0; i < _outputs.size(); i++) {
-                byte[] hash = Blake2b256.hash(Bytes.concat(_outputs.get(i).getKey().pubKeyBytes(), hashWithoutNonce(), Ints.toByteArray(i)));
-                long nonce = BytesUtils.getLong(hash, 0);
-                _newBoxes.add(new RegularBox(_outputs.get(i).getKey(), nonce, _outputs.get(i).getValue()));
+                _newBoxes.add(new RegularBox(_outputs.get(i).getKey(), getNewBoxNonce(_outputs.get(i).getKey(), i), _outputs.get(i).getValue()));
             }
         }
         return Collections.unmodifiableList(_newBoxes);
@@ -111,7 +107,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
     }
 
     @Override
-    public boolean semanticValidity() {
+    public boolean transactionSemanticValidity() {
         if(_fee < 0 || _timestamp < 0)
             return false;
 
@@ -133,26 +129,6 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
     @Override
     public byte transactionTypeId() {
         return TRANSACTION_TYPE_ID;
-    }
-
-    private synchronized byte[] hashWithoutNonce() {
-        if(_hashWithoutNonce == null) {
-            ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
-            for (BoxUnlocker<PublicKey25519Proposition> u : unlockers())
-                unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
-
-            ByteArrayOutputStream newBoxesStream = new ByteArrayOutputStream();
-            for (Pair<PublicKey25519Proposition, Long> output : _outputs)
-                newBoxesStream.write(output.getKey().pubKeyBytes(), 0, output.getKey().pubKeyBytes().length);
-
-
-            _hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
-                    newBoxesStream.toByteArray(),
-                    Longs.toByteArray(_timestamp),
-                    Longs.toByteArray(_fee));
-
-        }
-        return _hashWithoutNonce;
     }
 
     @Override
