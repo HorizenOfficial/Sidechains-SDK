@@ -21,8 +21,8 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
     }
 
     @Override
-    public CertifierRightBox getBox(long nonce) {
-        return new CertifierRightBox(new PublicKey25519Proposition(_output.propositionBytes()), nonce, _output.amount(), _output.activeFromWithdrawalEpoch());
+    public CertifierRightBox getBox() {
+        return new CertifierRightBox(new PublicKey25519Proposition(_output.propositionBytes()),  _output.nonce(), _output.amount(), _output.activeFromWithdrawalEpoch());
     }
 
     @Override

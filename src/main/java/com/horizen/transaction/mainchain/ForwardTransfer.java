@@ -21,8 +21,8 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     @Override
-    public RegularBox getBox(long nonce) {
-        return new RegularBox(new PublicKey25519Proposition(_output.propositionBytes()), nonce, _output.amount());
+    public RegularBox getBox() {
+        return new RegularBox(new PublicKey25519Proposition(_output.propositionBytes()), _output.nonce(), _output.amount());
     }
 
     @Override

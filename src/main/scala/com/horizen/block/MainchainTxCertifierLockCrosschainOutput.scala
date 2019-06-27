@@ -8,6 +8,7 @@ import scala.util.Try
 class MainchainTxCertifierLockCrosschainOutput(
                                       val certifierLockOutputBytes: Array[Byte],
                                       override val amount: Long,
+                                      override val nonce: Long,
                                       override val propositionBytes: Array[Byte],
                                       override val sidechainId: Array[Byte],
                                       val activeFromWithdrawalEpoch: Long
@@ -19,7 +20,7 @@ class MainchainTxCertifierLockCrosschainOutput(
 
 object MainchainTxCertifierLockCrosschainOutput {
   val OUTPUT_TYPE: Byte = 2.toByte
-  val CERTIFIER_LOCK_OUTPUT_SIZE = 81 // 1 + 8 + 32 + 32 + 8
+  val CERTIFIER_LOCK_OUTPUT_SIZE = 88 // 8 + 8 + 32 + 32 + 8
 
   def create(certifierLockOutputBytes: Array[Byte], offset: Int): Try[MainchainTxCertifierLockCrosschainOutput] = Try {
     if(offset < 0 || certifierLockOutputBytes.length - offset < CERTIFIER_LOCK_OUTPUT_SIZE)
@@ -27,12 +28,10 @@ object MainchainTxCertifierLockCrosschainOutput {
 
     var currentOffset: Int = offset
 
-    val outputType: Byte = certifierLockOutputBytes(currentOffset)
-    currentOffset += 1
-    if(outputType != OUTPUT_TYPE)
-      throw new IllegalArgumentException("Input data corrupted. Different CrosschainOutput Type passed.")
-
     val amount: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
+    currentOffset += 8
+
+    val nonce: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
     currentOffset += 8
 
     val propositionBytes: Array[Byte] = BytesUtils.reverseBytes(certifierLockOutputBytes.slice(currentOffset, currentOffset + 32))
@@ -44,7 +43,7 @@ object MainchainTxCertifierLockCrosschainOutput {
     val activeFromWithdrawalEpoch: Long = BytesUtils.getReversedLong(certifierLockOutputBytes, currentOffset)
     currentOffset += 8
 
-    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, propositionBytes, sidechainId, activeFromWithdrawalEpoch)
+    new MainchainTxCertifierLockCrosschainOutput(certifierLockOutputBytes.slice(offset, currentOffset), amount, nonce, propositionBytes, sidechainId, activeFromWithdrawalEpoch)
   }
 }
 

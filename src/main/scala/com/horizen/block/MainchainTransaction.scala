@@ -95,38 +95,39 @@ class MainchainTransaction(
     }
 
     if(_version == CROSSCHAIN_OUTPUTS_TX_VERSION) {
-      // parse crosschain outputs
-      val crosschainOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-      currentOffset += crosschainOutputsNumber.size()
-      for (i <- 1 to crosschainOutputsNumber.value().intValue()) {
-        val outputType = transactionsBytes(currentOffset)
+      var crosschainOutputDataList: Seq[Tuple2[ByteArrayWrapper, MainchainTxCrosschainOutput]] = Seq()
 
-        // Parse CrosschainOutput depend on outputType
-        val crosschainOutputData: Tuple2[ByteArrayWrapper, MainchainTxCrosschainOutput] = outputType match {
-          case MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE =>
-            val output = MainchainTxForwardTransferCrosschainOutput.create(transactionsBytes, currentOffset).get
-            currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
-            (new ByteArrayWrapper(output.sidechainId), output)
+      // parse Forward Transfer outputs
+      val forwardTransferOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      currentOffset += forwardTransferOutputsNumber.size()
+      for (i <- 1 to forwardTransferOutputsNumber.value().intValue()) {
+        val output = MainchainTxForwardTransferCrosschainOutput.create(transactionsBytes, currentOffset).get
+        currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
+        crosschainOutputDataList = crosschainOutputDataList :+ Tuple2(new ByteArrayWrapper(output.sidechainId), output)
+      }
 
-          case MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE =>
-            val output = MainchainTxCertifierLockCrosschainOutput.create(transactionsBytes, currentOffset).get
-            currentOffset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE
-            (new ByteArrayWrapper(output.sidechainId), output)
+      // parse Certifier Lock outputs
+      val certifierLockOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      currentOffset += certifierLockOutputsNumber.size()
+      for (i <- 1 to certifierLockOutputsNumber.value().intValue()) {
+        val output = MainchainTxCertifierLockCrosschainOutput.create(transactionsBytes, currentOffset).get
+        currentOffset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE
+        crosschainOutputDataList = crosschainOutputDataList :+ Tuple2(new ByteArrayWrapper(output.sidechainId), output)
+      }
 
-          case _ => throw new IllegalArgumentException("Input data corrupted. Unknown CrosschainOutput Type passed.")
-        }
-
+      // put data into _sidechainRelatedMainchainOutputMap
+      for(crosschainOutputOutputData <- crosschainOutputDataList) {
         // Add empty List for new SidechainId
-        if(!_sidechainRelatedMainchainOutputMap.contains(crosschainOutputData._1))
+        if(!_sidechainRelatedMainchainOutputMap.contains(crosschainOutputOutputData._1))
           _sidechainRelatedMainchainOutputMap = _sidechainRelatedMainchainOutputMap + Tuple2(
-            crosschainOutputData._1,
+            crosschainOutputOutputData._1,
             new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]()
           )
 
 
         // Put SidechainRelatedOutput type for proper SidechainId
-        _sidechainRelatedMainchainOutputMap(crosschainOutputData._1).add(
-          crosschainOutputData._2 match {
+        _sidechainRelatedMainchainOutputMap(crosschainOutputOutputData._1).add(
+          crosschainOutputOutputData._2 match {
             case ft: MainchainTxForwardTransferCrosschainOutput => new ForwardTransfer(ft)
             case cl: MainchainTxCertifierLockCrosschainOutput => new CertifierLock(cl)
           })

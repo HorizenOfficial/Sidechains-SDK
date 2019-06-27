@@ -71,7 +71,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         if (_newBoxes == null) {
             _newBoxes = new ArrayList<>();
             for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
-                _newBoxes.add(t.getBox(0)); // TO DO: replace with proper nonce, according to nonce selection algorithm.
+                _newBoxes.add(t.getBox());
         }
         return Collections.unmodifiableList(_newBoxes);
     }
