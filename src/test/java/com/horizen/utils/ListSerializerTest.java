@@ -150,10 +150,13 @@ public class ListSerializerTest {
         // Test 1: try to create ListSerializer with valid parameters and no limits
         boolean exceptionOccurred = false;
         try {
-            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
-            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
-            serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
-            new ListSerializer<>(serializers);
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
+                    new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
+                        put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
+                        }}, new HashMap<>()
+            );
+            new ListSerializer<>(serializersCompanion);
         }
         catch (Exception e) {
             exceptionOccurred = true;
@@ -163,10 +166,13 @@ public class ListSerializerTest {
 
         // Test 2: try to create ListSerializer with valid parameters and with limits
         try {
-            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
-            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
-            serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
-            new ListSerializer<>(serializers, 10);
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
+                    new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
+                        put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
+                    }}, new HashMap<>()
+            );
+            new ListSerializer<>(serializersCompanion, 10);
         }
         catch (Exception e) {
             exceptionOccurred = true;
@@ -176,10 +182,13 @@ public class ListSerializerTest {
 
         // Test 3: try to create ListSerializer with invalid parameters (serializers duplications)
         try {
-            HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
-            serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
-            serializers.put(2, (Serializer)new ListSerializerTestObjectASerializer());
-            new ListSerializer<>(serializers, 10);
+            DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
+                    new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
+                        put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (Serializer)new ListSerializerTestObjectASerializer());
+                    }}, new HashMap<>()
+            );
+            new ListSerializer<>(serializersCompanion, 10);
         }
         catch (Exception e) {
             exceptionOccurred = true;
@@ -213,10 +222,13 @@ public class ListSerializerTest {
 
     @Test
     public void ListSerializerTest_SerializationTestForMultipleTypes() {
-        HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
-        serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
-        serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
-        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializers);
+        DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
+                new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
+                    put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
+                    put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
+                }}, new HashMap<>()
+        );
+        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializersCompanion);
 
         // Test 1: empty list serialization test
         byte[] bytes = listSerializer.toBytes(new ArrayList<>());
@@ -313,11 +325,14 @@ public class ListSerializerTest {
 
     @Test
     public void ListSerializerTest_FailureSerializationTestForMultipleTypes() {
-        HashMap<Integer, Serializer<BytesSerializable>> serializers = new HashMap<>();
-        serializers.put(1, (Serializer)new ListSerializerTestObjectASerializer());
-        serializers.put(2, (Serializer)new ListSerializerTestObjectBSerializer());
+        DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
+                new HashMap<Byte, Serializer<? extends BytesSerializable>>() {{
+                    put((byte)1, (Serializer)new ListSerializerTestObjectASerializer());
+                    put((byte)2, (Serializer)new ListSerializerTestObjectBSerializer());
+                }}, new HashMap<>()
+        );
 
-        ListSerializer<BytesSerializable> listSerializerWithLimits = new ListSerializer<>(serializers, 2);
+        ListSerializer<BytesSerializable> listSerializerWithLimits = new ListSerializer<>(serializersCompanion, 2);
 
         ArrayList<BytesSerializable> data = new ArrayList<>();
         data.add(new ListSerializerTestObjectA("test1"));
@@ -360,7 +375,7 @@ public class ListSerializerTest {
 
 
         // Test 4: broken bytes: some bytes in the end were cut
-        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializers);
+        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializersCompanion);
         bytes = listSerializer.toBytes(data);
         bytes = Arrays.copyOfRange(bytes, 0, bytes.length - 1);
         exceptionOccurred = false;

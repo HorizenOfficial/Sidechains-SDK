@@ -10,24 +10,24 @@ import org.scalatest.junit.JUnitSuite
 import scala.io.Source
 import scala.util.Try
 
-class MainchainBlockTest extends JUnitSuite {
+class MainchainBlockReferenceTest extends JUnitSuite {
 
   @Test
-  def MainchainBlockTest_SuccessCreationTest(): Unit = {
+  def successCreationTest(): Unit = {
     var mcBlockHex: String = null
     var mcBlockBytes: Array[Byte] = null
-    var block: Try[MainchainBlock] = null
+    var block: Try[MainchainBlockReference] = null
 
 
     // Test 1: Block #473173
     // mcblock473173 data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660
     mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
     mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    block = MainchainBlock.create(mcBlockBytes, MainNetParams)
+    block = MainchainBlockReference.create(mcBlockBytes, MainNetParams)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.hashHex)
-    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.SCMap.isDefined)
+    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000009572f35ecc6e319216b29046fdb6695ad93b3e5d77053285df4af03", BytesUtils.toHexString(block.get.header.hashPrevBlock))
@@ -46,11 +46,11 @@ class MainchainBlockTest extends JUnitSuite {
     // mcblock501173 data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0
     mcBlockHex = Source.fromResource("mcblock501173").getLines().next()
     mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    block = MainchainBlock.create(mcBlockBytes, MainNetParams)
+    block = MainchainBlockReference.create(mcBlockBytes, MainNetParams)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.hashHex)
-    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.SCMap.isDefined)
+    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582", BytesUtils.toHexString(block.get.header.hashPrevBlock))
@@ -68,11 +68,11 @@ class MainchainBlockTest extends JUnitSuite {
     // mcblock273173 data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07
     mcBlockHex = Source.fromResource("mcblock273173").getLines().next()
     mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    block = MainchainBlock.create(mcBlockBytes, MainNetParams)
+    block = MainchainBlockReference.create(mcBlockBytes, MainNetParams)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.hashHex)
-    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.SCMap.isDefined)
+    assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000071076828a1d738dfde576b21ac4e28998ae7a026f631e57d7561a28b", BytesUtils.toHexString(block.get.header.hashPrevBlock))

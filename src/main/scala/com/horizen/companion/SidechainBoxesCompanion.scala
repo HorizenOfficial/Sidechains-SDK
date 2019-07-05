@@ -2,51 +2,17 @@ package com.horizen.companion
 
 import com.horizen.box._
 import com.horizen.proposition._
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
-import scorex.core.serialization.Serializer
+import com.horizen.utils.DynamicTypedSerializer
 
-import scala.util.{Failure, Try}
-import com.google.common.primitives.Bytes
 
-import scala.collection.mutable.{Map, HashMap}
-
-case class SidechainBoxesCompanion(customBoxSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]])
-    extends Serializer[Box[_ <: Proposition]]
-{
-
-  val coreBoxSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(RegularBox.BOX_TYPE_ID -> RegularBoxSerializer.getSerializer,
-      CertifierRightBox.BOX_TYPE_ID -> CertifierRightBoxSerializer.getSerializer)
-
-  val CUSTOM_BOX_TYPE : Byte =  Byte.MaxValue
-
-  override def toBytes(box: Box[_ <: Proposition]): Array[Byte] = {
-    box match {
-      case b: RegularBox => Bytes.concat(Array(b.boxTypeId()),
-        RegularBoxSerializer.getSerializer.toBytes(b))
-      case b: CertifierRightBox => Bytes.concat(Array(b.boxTypeId()),
-        CertifierRightBoxSerializer.getSerializer.toBytes(b))
-      case _ => customBoxSerializers.get(box.boxTypeId()) match {
-        case Some(serializer) => Bytes.concat(Array(CUSTOM_BOX_TYPE), Array(box.boxTypeId()),
-          serializer.asInstanceOf[Serializer[Box[_ <: Proposition]]].toBytes(box))
-        case None => throw new IllegalArgumentException("Unknown box type - " + box)
-      }
-    }
-  }
-
-  // TO DO: do like in SidechainTransactionsCompanion
-  override def parseBytes(bytes: Array[Byte]): Try[Box[_ <: Proposition]] = {
-    val boxType = bytes(0)
-    boxType match {
-      case `CUSTOM_BOX_TYPE` => customBoxSerializers.get(bytes(1)) match {
-        case Some(b) => b.parseBytes(bytes.drop(2))
-        case None => Failure(new MatchError("Unknown custom box type id"))
-      }
-      case _ => coreBoxSerializers.get(boxType) match {
-        case Some(b) => b.parseBytes(bytes.drop(1))
-        case None => Failure(new MatchError("Unknown core box type id"))
-      }
-    }
-  }
-}
+case class SidechainBoxesCompanion(customSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]])
+  extends DynamicTypedSerializer[Box[_ <: Proposition], BoxSerializer[_ <: Box[_ <: Proposition]]](
+    new JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]]() {{
+        put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer)
+        put(CertifierRightBox.BOX_TYPE_ID, CertifierRightBoxSerializer.getSerializer)
+      }},
+    customSerializers)
 

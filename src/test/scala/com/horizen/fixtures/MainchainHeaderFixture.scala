@@ -5,9 +5,9 @@ import com.horizen.block.MainchainHeader
 import com.horizen.utils.{BytesUtils, VarInt}
 
 // Just for PoW verification testing
-case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: Array[Byte]
-                                    ) extends MainchainHeader(null, 0, null,
-  null, null, null, 0, bits, null, null) {
+case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: Array[Byte], override val hashPrevBlock: Array[Byte] = null, override val time: Int = 0
+                                    ) extends MainchainHeader(null, 0, hashPrevBlock,
+  null, null, null, time, bits, null, null) {
   override lazy val hash = precalculatedHash
 }
 

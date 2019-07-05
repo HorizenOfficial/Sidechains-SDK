@@ -9,10 +9,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.ListSerializer;
-import com.horizen.utils.MerkleTree;
-import com.horizen.utils.Utils;
+import com.horizen.utils.*;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -33,10 +30,13 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     private List<Box<Proposition>> _newBoxes;
 
     // Serializers definition
-    private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(new HashMap<Integer, Serializer<SidechainRelatedMainchainOutput>>() {{
-        put(1, (Serializer)ForwardTransferSerializer.getSerializer());
-        put(2, (Serializer)CertifierLockSerializer.getSerializer());
-    }});
+    private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
+            new DynamicTypedSerializer<>(
+                new HashMap<Byte, Serializer<? extends SidechainRelatedMainchainOutput>>() {{
+                    put((byte)1, (Serializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)2, (Serializer)CertifierLockSerializer.getSerializer());
+                }}, new HashMap<>()
+            ));
 
     private MC2SCAggregatedTransaction(byte[] mc2scTransactionsMerkleRootHash, List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
         _mc2scTransactionsMerkleRootHash = Arrays.copyOf(mc2scTransactionsMerkleRootHash, mc2scTransactionsMerkleRootHash.length);

@@ -12,7 +12,8 @@ import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.Map
+import java.util.{HashMap => JHashMap}
+import java.lang.{Byte => JByte}
 
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
@@ -20,10 +21,10 @@ class SidechainWalletBoxStorageTest
     with IODBStoreFixture
 {
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
-  val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
-  val sidechainBoxesCompanionCore = new SidechainBoxesCompanion(Map())
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 
   @Test
   def mainWorkflow() : Unit = {

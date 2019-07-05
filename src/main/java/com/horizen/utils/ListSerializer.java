@@ -1,7 +1,6 @@
 package com.horizen.utils;
 
 import com.google.common.primitives.Ints;
-import javafx.util.Pair;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -12,10 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 public class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
-    private boolean _ignoreSerializerID;
-    private HashMap<Integer, Serializer<T>> _serializers; // unique key : serializer
-    private HashMap<Class, Integer> _serializersClasses; // serializer class : unique key
-    private Serializer<T> _singleSerializer;    // used if ignoreSerializerID == true
+    private Serializer<T> _serializer;
     private int _maxListLength; // Used during parsing bytes. Not positive value for unlimited lists support.
 
     public ListSerializer(Serializer<T> serializer) {
@@ -23,26 +19,8 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
     }
 
     public ListSerializer(Serializer<T> serializer, int maxListLength) {
-        _ignoreSerializerID = true;
         _maxListLength = maxListLength;
-        _singleSerializer = serializer;
-    }
-
-    public ListSerializer(HashMap<Integer, Serializer<T>> serializers) {
-        this(serializers, 0);
-    }
-
-    public ListSerializer(HashMap<Integer, Serializer<T>> serializers, int maxListLength)
-     {
-         _ignoreSerializerID = false;
-         _maxListLength = maxListLength;
-         _serializers = serializers;
-         _serializersClasses = new HashMap<>();
-         for(Map.Entry<Integer, Serializer<T>> entry : _serializers.entrySet()){
-             _serializersClasses.put(entry.getValue().getClass(), entry.getKey());
-         }
-         if(_serializers.size() != _serializersClasses.size())
-             throw new IllegalArgumentException("Serializers class types expected to be unique.");
+        _serializer = serializer;
     }
 
     @Override
@@ -52,35 +30,15 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
         // Array with objects length                        4 bytes multiplied by value above
         // Array with objects                               rest of bytes
 
-        // Each object in array has the next structure:
-        // Serializer ID                                    4 bytes, if _ignoreSerializerID == false, 0 - otherwise
-        // Object itself                                    rest of bytes
-
         List<Integer> lengthList = new ArrayList<>();
 
         ByteArrayOutputStream res = new ByteArrayOutputStream();
         ByteArrayOutputStream entireRes = new ByteArrayOutputStream();
         for (T t : obj) {
-            if(_ignoreSerializerID) {
-                // We have single serializer defined, so we don't need to store Serializer ID.
-                byte[] tBytes = _singleSerializer.toBytes(t);
-                lengthList.add(tBytes.length); // size of serialized T object
-                entireRes.write(tBytes, 0, tBytes.length);
-            } else {
-                // get proper Serializer or return nothing
-                int idOfSerializer = 0;
-                boolean serializerFound = _serializersClasses.containsKey(t.serializer().getClass());
-
-                if (serializerFound)
-                    idOfSerializer = _serializersClasses.get(t.serializer().getClass());
-                else
-                    throw new IllegalArgumentException("Object without defined serializer occurred.");
-
-                byte[] tBytes = t.bytes();
-                lengthList.add(4 + tBytes.length); // size of Int + size of serialized T object
-                entireRes.write(Ints.toByteArray(idOfSerializer), 0, 4);
-                entireRes.write(tBytes, 0, tBytes.length);
-            }
+            // We have single serializer defined, so we don't need to store Serializer ID.
+            byte[] tBytes = _serializer.toBytes(t);
+            lengthList.add(tBytes.length); // size of serialized T object
+            entireRes.write(tBytes, 0, tBytes.length);
         }
 
         res.write(Ints.toByteArray(lengthList.size()), 0, 4);
@@ -121,33 +79,12 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
                 throw new IllegalArgumentException("Input data corrupted.");
 
             ArrayList<T> res = new ArrayList<>();
-            if(_ignoreSerializerID) {
-                // We have single serializer defined, so we don't need to parse 4 bytes for Serializer ID.
-                for(int length : lengthList) {
-                    Try<T> t =_singleSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + length));
-                    if (t.isFailure())
-                        throw new IllegalArgumentException("Input data corrupted.");
-                    res.add(t.get());
-                    offset += length;
-                }
-            } else {
-                // Pair <serializer id : bytes>
-                ArrayList<Pair<Integer, byte[]>> objects = new ArrayList<>();
-                for (int length : lengthList) {
-                    int serializerId = BytesUtils.getInt(bytes, offset);
-                    offset += 4;
-                    objects.add(new Pair<>(serializerId, Arrays.copyOfRange(bytes, offset, offset + length - 4)));
-                    offset += length - 4;
-                }
-
-                for (Pair<Integer, byte[]> obj : objects) {
-                    if (!_serializers.containsKey(obj.getKey()))
-                        throw new IllegalArgumentException("Input data corrupted.");
-                    Try<T> t = _serializers.get(obj.getKey()).parseBytes(obj.getValue());
-                    if (t.isFailure())
-                        throw new IllegalArgumentException("Input data corrupted.");
-                    res.add(t.get());
-                }
+            for(int length : lengthList) {
+                Try<T> t = _serializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + length));
+                if (t.isFailure())
+                    throw new IllegalArgumentException("Input data corrupted.");
+                res.add(t.get());
+                offset += length;
             }
 
             return new Success<>(res);

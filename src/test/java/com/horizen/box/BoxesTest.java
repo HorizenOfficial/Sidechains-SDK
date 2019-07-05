@@ -21,7 +21,7 @@ public class BoxesTest {
 
         // Boxes has the same proposition, nonce and value (value if any CertifierRightBox is 0)
         RegularBox regularBox = new RegularBox(proposition, nonce, value);
-        CertifierRightBox certifierRightBox = new CertifierRightBox(proposition, nonce, minimumWithdrawalEpoch);
+        CertifierRightBox certifierRightBox = new CertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch);
 
         assertEquals("Boxes expected to have different type ids", false, regularBox.boxTypeId() == certifierRightBox.boxTypeId());
         assertEquals("Boxes expected to have the same hash", regularBox.hashCode(), certifierRightBox.hashCode());
