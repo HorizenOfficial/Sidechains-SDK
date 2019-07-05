@@ -1,8 +1,8 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.block.MainchainTxForwardTransferOutput;
-import com.horizen.block.MainchainTxForwardTransferOutputSerializer;
+import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.box.RegularBox;
+import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -10,9 +10,9 @@ import java.util.Arrays;
 
 public final class ForwardTransfer implements SidechainRelatedMainchainOutput<RegularBox> {
 
-    private MainchainTxForwardTransferOutput _output;
+    private MainchainTxForwardTransferCrosschainOutput _output;
 
-    public ForwardTransfer(MainchainTxForwardTransferOutput output) {
+    public ForwardTransfer(MainchainTxForwardTransferCrosschainOutput output) {
         _output = output;
     }
     @Override
@@ -20,19 +20,18 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         return _output.hash();
     }
 
-    // DO TO: detect SC related addresses (PublicKey25519Proposition) and values, create RegularBoxes for them.
     @Override
     public RegularBox getBox() {
-        return null;
+        return new RegularBox(new PublicKey25519Proposition(_output.propositionBytes()), _output.nonce(), _output.amount());
     }
 
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(_output.bytes(), _output.bytes().length);
+        return Arrays.copyOf(_output.forwardTransferOutputBytes(), _output.forwardTransferOutputBytes().length);
     }
 
     public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
-        MainchainTxForwardTransferOutput output = MainchainTxForwardTransferOutputSerializer.parseBytes(bytes).get();
+        MainchainTxForwardTransferCrosschainOutput output = MainchainTxForwardTransferCrosschainOutput.create(bytes, 0).get();
         return new Success<>(new ForwardTransfer(output));
     }
 

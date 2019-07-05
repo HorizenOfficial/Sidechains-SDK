@@ -6,7 +6,7 @@ import java.util
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.ScorexEncoding
-import com.horizen.box.Box
+import com.horizen.box.{Box, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
@@ -29,7 +29,7 @@ class SidechainBlock (
                        override val parentId: ModifierId,
                        override val timestamp: Block.Timestamp,
                        val mainchainBlocks : Seq[MainchainBlockReference],
-                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                        val forgerPublicKey: PublicKey25519Proposition,
                        val signature: Signature25519,
                        companion: SidechainTransactionsCompanion
@@ -47,14 +47,16 @@ class SidechainBlock (
     bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
-    val txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
+    var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
 
     for(b <- mainchainBlocks) {
       if (b.sidechainRelatedAggregatedTransaction.isDefined) {
-        txs :+ b.sidechainRelatedAggregatedTransaction.get
+        txs = txs :+ b.sidechainRelatedAggregatedTransaction.get
       }
     }
-    txs ++ sidechainTransactions
+    for(tx <- sidechainTransactions)
+      txs = txs :+ tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]
+    txs
   }
 
   lazy val messageToSign: Array[Byte] = {
@@ -119,7 +121,7 @@ object SidechainBlock extends ScorexEncoding {
   def create(parentId: Block.BlockId,
              timestamp: Block.Timestamp,
              mainchainBlocks : Seq[MainchainBlockReference],
-             sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+             sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
              ownerPrivateKey: PrivateKey25519,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams
@@ -211,10 +213,10 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val sidechainTransactionsSize = BytesUtils.getInt(bytes, offset)
     offset += 4
 
-    val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
+    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
       _sidechainTransactionsSerializer.parseBytes(bytes.slice(offset, offset + mcblocksSize)).get
         .asScala
-        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]])
+        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
     offset += sidechainTransactionsSize
 
     val owner = new PublicKey25519Proposition(bytes.slice(offset, offset + PublicKey25519Proposition.KEY_LENGTH))

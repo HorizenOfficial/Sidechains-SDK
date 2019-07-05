@@ -36,7 +36,7 @@ public final class WithdrawalRequestTransaction extends SidechainTransaction<Pro
     }
 
     @Override
-    public boolean semanticValidity() {
+    public boolean transactionSemanticValidity() {
         return false;
     }
 

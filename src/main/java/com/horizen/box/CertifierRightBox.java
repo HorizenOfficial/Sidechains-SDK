@@ -8,7 +8,7 @@ import scala.util.Success;
 import scala.util.Try;
 import java.util.Arrays;
 
-
+// CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
 public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25519Proposition>
 {
 
@@ -16,12 +16,12 @@ public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25
     // CertifierRightBox can be opened starting from specified Withdrawal epoch.
     private long _activeFromWithdrawalEpoch;
 
-    // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
     public CertifierRightBox(PublicKey25519Proposition proposition,
                              long nonce,
+                             long value,
                              long activeFromWithdrawalEpoch)
     {
-        super(proposition, nonce, 0);
+        super(proposition, nonce, value);
         _activeFromWithdrawalEpoch = activeFromWithdrawalEpoch;
     }
 
@@ -54,7 +54,7 @@ public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25
 
     @Override
     public byte[] bytes() {
-        return Bytes.concat(_proposition.bytes(), Longs.toByteArray(_nonce), Longs.toByteArray(_activeFromWithdrawalEpoch));
+        return Bytes.concat(_proposition.bytes(), Longs.toByteArray(_nonce), Longs.toByteArray(_value), Longs.toByteArray(_activeFromWithdrawalEpoch));
     }
 
     @Override
@@ -66,8 +66,9 @@ public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25
         try {
             Try<PublicKey25519Proposition> t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
             long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
-            long minimumWithdrawalEpoch = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 8, PublicKey25519Proposition.getLength() + 16));
-            CertifierRightBox box = new CertifierRightBox(t.get(), nonce, minimumWithdrawalEpoch);
+            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength()+ 8, PublicKey25519Proposition.getLength() + 16));
+            long minimumWithdrawalEpoch = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 16, PublicKey25519Proposition.getLength() + 24));
+            CertifierRightBox box = new CertifierRightBox(t.get(), nonce, value, minimumWithdrawalEpoch);
             return new Success<>(box);
         } catch (Exception e) {
             return new Failure<>(e);
