@@ -14,4 +14,5 @@ object MainNetParams extends NetworkParams {
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
 
   override val sidechainId: Array[Byte] = new Array[Byte](32) // TO DO: in future MainNetParams will be a class, where specific sidechainId will be set
+  override val sidechainGenesisBlockId: Array[Byte] = new Array[Byte](32) // TO DO: in future MainNetParams will be a class, where specific genesis block id will be set
 }

@@ -5,7 +5,7 @@ import com.horizen.SidechainHistory
 trait SidechainHistoryFixture {
 
   def getSidechainHistory : SidechainHistory = {
-    new SidechainHistory()
+    null//new SidechainHistory()
   }
 
 }

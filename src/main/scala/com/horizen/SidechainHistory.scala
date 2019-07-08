@@ -1,44 +1,191 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlock
-import com.horizen.box.Box
-import com.horizen.proposition.ProofOfKnowledgeProposition
-import com.horizen.secret.Secret
-import com.horizen.transaction.BoxTransaction
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.params.NetworkParams
+import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import scorex.core.NodeViewModifier
 import scorex.util.ModifierId
-import scorex.core.block.Block
-import scorex.core.consensus.History.ModifierIds
+import scorex.core.consensus.History.{ModifierIds, ProgressInfo}
 import scorex.core.consensus.{History, ModifierSemanticValidity, SyncInfo}
+import scorex.core.validation.RecoverableModifierError
+import scorex.util.idToBytes
 
-import scala.util.Try
-
-// TO DO: implement it like in HybridHistory
-// TO DO: think about additional methods (consensus related?)
+import scala.util.{Success, Failure, Try}
 
 
-class SidechainHistory
+class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkParams)
   extends scorex.core.consensus.History[
       SidechainBlock,
       SyncInfo,
-      SidechainHistory] {
+      SidechainHistory] with scorex.core.utils.ScorexEncoding {
 
   override type NVCT = SidechainHistory
 
-  override def append(modifier: SidechainBlock): Try[(SidechainHistory, History.ProgressInfo[SidechainBlock])] = ???
+  require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
+
+  val height: Long = storage.height
+  val bestBlockId: ModifierId = storage.bestBlockId
+  val bestBlock: SidechainBlock = storage.bestBlock // note: maybe make it lazy?
+
+
+  // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
+  override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
+    // TO DO: validate using Validators.
+    // TO DO: validate against Praos consensus rules.
+    if(!block.semanticValidity(params))
+      throw new IllegalArgumentException("Semantic validation failed for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
+    if(!ProofOfWorkVerifier.checkNextWorkRequired(block, this, params))
+      throw new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
+
+    val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
+      if(isGenesisBlock(block.id)) {
+        (
+          storage.update(block, 1L, isBest = true),
+          ProgressInfo(None, Seq(), Seq(block), Seq())
+        )
+      }
+      else {
+        storage.heightOf(block.parentId) match {
+          case Some(parentHeight) =>
+            val chainScore: Long = calculateChainScore(block, parentHeight)
+            // Check if we retrieved the next block of best chain
+            if(block.parentId.equals(bestBlockId)) {
+              (
+                storage.update(block, chainScore, isBest = true),
+                ProgressInfo(None, Seq(), Seq(block), Seq())
+              )
+            } else {
+              // Check if retrieved block is the best one, but from another chain
+              if(isBestBlock(block, parentHeight)) {
+                (
+                  storage.update(block, chainScore, isBest = true),
+                  bestForkChanges(block) // get info to switch to another chain
+                )
+              } else {
+                // We retrieved block from another chain that is not the best one
+                (
+                  storage,
+                  ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+                )
+              }
+            }
+          case None =>
+            // Parent is not present inside history
+            // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
+            // TO DO: do we need to save it to history storage to prevent double downloading ot it's cached somewhere?
+            (
+              storage,
+              ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+            )
+        }
+      }
+    }
+    (new SidechainHistory(newStorage.get, params), progressInfo)
+  }
+
+  def isGenesisBlock(blockId: ModifierId): Boolean = {
+    blockId.equals(params.sidechainGenesisBlockId)
+  }
+
+  def isBestBlock(block: SidechainBlock, parentHeight: Long): Boolean = {
+    val currentScore = storage.chainScoreFor(bestBlockId).get
+    val newScore = calculateChainScore(block, parentHeight)
+    newScore > currentScore
+  }
+
+  // TO DO: define algorithm for Block score computation
+  def calculateChainScore(block: SidechainBlock, parentHeight: Long): Long = {
+    storage.chainScoreFor(block.parentId).get + 1L
+  }
+
+  // Note: do we need to check validity of newChainSuffix blocks like in HybridApp?
+  def bestForkChanges(block: SidechainBlock): ProgressInfo[SidechainBlock] = {
+    val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
+
+    val rollbackPoint = newChainSuffix.headOption
+    val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
+    val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
+
+    require(toRemove.nonEmpty)
+    require(toApply.nonEmpty)
+
+    ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
+  }
+
+  // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
+  // Returns last common block and then variant blocks for two chains.
+  def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
+    val currentChain = chainBack(bestBlockId, isGenesisBlock, params.maxHistoryRewritingLength).get
+
+    def inCurrentChain(blockId: ModifierId): Boolean = currentChain.contains(blockId)
+    val newBestChain = chainBack(forkBlock.id, inCurrentChain, params.maxHistoryRewritingLength).get
+
+    val i = currentChain.indexWhere { id =>
+      newBestChain.headOption match {
+        case None => false
+        case Some(newBestChainHead) => id == newBestChainHead
+      }
+    }
+    (newBestChain, currentChain.takeRight(currentChain.length - i))
+  } ensuring { res =>
+    // verify, that both sequences starts from common block
+    res._1.head == res._2.head
+  }
+
+  // Go back though chain and get block ids until condition 'until' or reaching the limit
+  // None if parent block is not in chain
+  // TO DO: look up through block ids without parsing the whole block (store parent id separately or parse only first 32 bytes of SC block in ScHisStorage)
+  private def chainBack(blockId: ModifierId,
+                        until: ModifierId => Boolean,
+                        limit: Int,
+                        acc: Seq[ModifierId] = Seq()): Option[Seq[ModifierId]] = {
+    val sum: Seq[ ModifierId] = blockId +: acc
+
+    if (limit <= 0 || until(blockId)) {
+      Some(sum)
+    } else {
+      storage.parentBlockId(blockId) match {
+        case Some(parentId) => chainBack(parentId, until, limit - 1, sum)
+        case _ =>
+          //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
+          None
+      }
+    }
+  }
 
   override def reportModifierIsValid(modifier: SidechainBlock): SidechainHistory = ???
 
   override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = ???
 
-  override def isEmpty: Boolean = ???
+  override def isEmpty: Boolean = height <= 0
 
-  override def applicableTry(modifier: SidechainBlock): Try[Unit] = ???
+  override def applicableTry(block: SidechainBlock): Try[Unit] = {
+    if (!contains(block.parentId))
+      Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    else
+      Success()
+  }
 
-  override def modifierById(modifierId: ModifierId): Option[SidechainBlock] = ???
+  override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
 
-  override def isSemanticallyValid(modifierId: ModifierId): ModifierSemanticValidity = ???
+  override def isSemanticallyValid(blockId: ModifierId): ModifierSemanticValidity = {
+    modifierById(blockId) match {
+      case Some(block) =>
+        if(block.semanticValidity(params))
+          ModifierSemanticValidity.Valid
+        else
+          ModifierSemanticValidity.Invalid
+      case None => ModifierSemanticValidity.Absent
+    }
+  }
 
-  override def openSurfaceIds(): Seq[ModifierId] = ???
+  override def openSurfaceIds(): Seq[ModifierId] = {
+    if(isEmpty)
+      Seq()
+    else
+      Seq(bestBlockId)
+  }
 
   override def continuationIds(info: SyncInfo, size: Int): Option[ModifierIds] = ???
 

@@ -95,17 +95,20 @@ class SidechainBlock (
     if(blockSize > SidechainBlock.MAX_BLOCK_SIZE)
       return false
 
-    // check blocks and txs validity
-    for(b <- mainchainBlocks)
-      if(!b.semanticValidity(params))
-        return false
-    for(tx <- sidechainTransactions)
-      if(!tx.semanticValidity())
-        return false
-
     // check, that signature is valid
     if(!signature.isValid(forgerPublicKey, messageToSign))
       return false
+
+    // Check MainchainBlockReferences order in current block
+    for(i <- 1 until mainchainBlocks.size) {
+      if(!mainchainBlocks(i).header.hashPrevBlock.sameElements(mainchainBlocks(i-1).hash))
+        return false
+    }
+
+    // check MainchainBlockReferences validity
+    for(b <- mainchainBlocks)
+      if(!b.semanticValidity(params))
+        return false
 
     true
   }
