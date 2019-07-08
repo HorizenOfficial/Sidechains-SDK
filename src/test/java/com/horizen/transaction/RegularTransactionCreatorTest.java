@@ -4,6 +4,7 @@ import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
 import com.horizen.node.NodeWallet;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -21,7 +22,7 @@ import static org.junit.Assert.*;
 
 class TransactionCreatorNodeWallet implements NodeWallet {
 
-    List<Box> _boxesOrderedBytCreationTime;
+    List<Box<Proposition>> _boxesOrderedBytCreationTime;
     List<Secret> _secrets;
     public TransactionCreatorNodeWallet(List<Pair<Box, Long>> boxesWithCreationTime, List<Secret> secrets) {
         List<Pair<Box, Long>> _boxesWithCreationTime = new ArrayList<>(boxesWithCreationTime);
@@ -33,13 +34,13 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Box> allBoxes() {
+    public List<Box<Proposition>> allBoxes() {
         return _boxesOrderedBytCreationTime;
     }
 
     @Override
-    public List<Box> allBoxes(List<byte[]> boxIdsToExclude) {
-        List<Box> filteredBoxes = new ArrayList<>();
+    public List<Box<Proposition>> allBoxes(List<byte[]> boxIdsToExclude) {
+        List<Box<Proposition>> filteredBoxes = new ArrayList<>();
         for(Box box : _boxesOrderedBytCreationTime) {
             boolean acceptable = true;
             for(byte[] idToExclude : boxIdsToExclude)
@@ -54,8 +55,8 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Box> boxesOfType(Class<? extends Box> type) {
-        List<Box> filteredBoxes = new ArrayList<>();
+    public List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type) {
+        List<Box<Proposition>> filteredBoxes = new ArrayList<>();
         for(Box box : _boxesOrderedBytCreationTime) {
             if(box.getClass().equals(type))
                 filteredBoxes.add(box);
@@ -64,8 +65,8 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude) {
-        List<Box> filteredBoxes = new ArrayList<>();
+    public List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type, List<byte[]> boxIdsToExclude) {
+        List<Box<Proposition>> filteredBoxes = new ArrayList<>();
         for(Box box : _boxesOrderedBytCreationTime) {
             if(!box.getClass().equals(type))
                 continue;
@@ -83,12 +84,12 @@ class TransactionCreatorNodeWallet implements NodeWallet {
 
     //TODO Implement
     @Override
-    public Long boxesBalance(Class<? extends Box> type) {
+    public Long boxesBalance(Class<? extends Box<? extends Proposition>> type) {
         return 0L;
     }
 
     @Override
-    public Optional<Secret> secretByPublicKey(ProofOfKnowledgeProposition publicImage) {
+    public Optional<Secret> secretByPublicKey(Proposition publicImage) {
         for(Secret s : _secrets)
         {
             if(s.publicImage().equals(publicImage))

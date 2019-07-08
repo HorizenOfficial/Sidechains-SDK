@@ -40,7 +40,7 @@ class SidechainStateTest
   val mockedBoxStorage : SidechainStateStorage = mock[SidechainStateStorage]
   val mockedApplicationState : ApplicationState = mock[ApplicationState]
 
-  val boxList = new ListBuffer[B]()
+  val boxList = new ListBuffer[SidechainTypes#SCB]()
   val boxVersion = new ListBuffer[ByteArrayWrapper]()
   val transactionList = new ListBuffer[RegularTransaction]()
 
@@ -88,7 +88,7 @@ class SidechainStateTest
     secretList ++= getSecretList(5).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getRegularBoxList(secretList.asJava).asScala.map(_.asInstanceOf[B])
+    boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
     boxVersion.clear()
     boxVersion += getVersion
     transactionList.clear()
@@ -114,7 +114,7 @@ class SidechainStateTest
       boxList.head, sidechainState.getClosedBox(boxList.head.id()).get)
 
     //Test semanticValidity
-    val mockedTransaction = mock[BT]
+    val mockedTransaction = mock[SidechainTypes#SCBT]
 
     Mockito.when(mockedTransaction.semanticValidity())
       .thenReturn(true)
@@ -136,7 +136,7 @@ class SidechainStateTest
       exceptionThrown)
 
     //Test validate(Transaction)
-    val tryValidate = sidechainState.validate(transactionList.head.asInstanceOf[BT])
+    val tryValidate = sidechainState.validate(transactionList.head)
     assertTrue("Transaction validation must be successful.",
       tryValidate.isSuccess)
 
@@ -144,7 +144,7 @@ class SidechainStateTest
     val mockedBlock = mock[SidechainBlock]
 
     Mockito.when(mockedBlock.transactions)
-      .thenReturn(transactionList.map(_.asInstanceOf[BT]))
+      .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(boxVersion.last.data))
@@ -194,14 +194,15 @@ class SidechainStateTest
     secretList ++= getSecretList(5).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getRegularBoxList(secretList.asJava).asScala.map(_.asInstanceOf[B])
+    boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
     boxVersion.clear()
     boxVersion += getVersion
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
     // Mock get and update methods of BoxStorage
-    Mockito.when(mockedBoxStorage.lastVersionId).thenReturn(Some(boxVersion.last))
+    Mockito.when(mockedBoxStorage.lastVersionId)
+        .thenAnswer(answer => {Some(boxVersion.last)})
 
     Mockito.when(mockedBoxStorage.get(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
@@ -210,11 +211,11 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedBoxStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
-      ArgumentMatchers.any[Set[B]](),
+      ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[Array[Byte]]]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
-        val boxToUpdate = answer.getArgument[Set[B]](1)
+        val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](1)
         val boxToRemove = answer.getArgument[Set[Array[Byte]]](2)
 
         boxVersion += version
@@ -238,7 +239,7 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedBlock.transactions)
-      .thenReturn(transactionList.map(_.asInstanceOf[BT]))
+      .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(boxVersion.last.data))
@@ -251,7 +252,7 @@ class SidechainStateTest
 
     Mockito.when(mockedApplicationState.onApplyChanges(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[Array[Byte]](),
-      ArgumentMatchers.any[JList[B]](),
+      ArgumentMatchers.any[JList[SidechainTypes#SCB]](),
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 

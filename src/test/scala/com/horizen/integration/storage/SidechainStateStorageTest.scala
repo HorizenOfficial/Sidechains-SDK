@@ -1,5 +1,7 @@
 package com.horizen.integration.storage
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 import com.horizen._
 import com.horizen.box._
 import com.horizen.companion._
@@ -21,16 +23,16 @@ class SidechainStateStorageTest
     with SidechainTypes
 {
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
+  val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
 
   @Test
   def mainFlowTest() : Unit = {
     val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
 
-    val bList1 = getRegularBoxList(5).asScala.toSet
-    val bList2 = getCustomBoxList(3).asScala.toSet
+    val bList1 : List[SidechainTypes#SCB] = getRegularBoxList(5).asScala.toList
+    val bList2 : List[SidechainTypes#SCB] = getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB]).toList
     val version1 = getVersion
     val version2 = getVersion
 
@@ -42,7 +44,7 @@ class SidechainStateStorageTest
 
     //Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, (bList1 ++ bList2).asInstanceOf[Set[B]], Set()).isSuccess)
+      sidechainStateStorage.update(version1, (bList1 ++ bList2).toSet, Set()).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
@@ -56,7 +58,7 @@ class SidechainStateStorageTest
 
     //Test delete operation
     assertTrue("Update(delete) operation must be successful.",
-      sidechainStateStorage.update(version2, Set(), bList1.slice(0, 1).map(_.id()) ++ bList2.slice(0, 1).map(_.id())).isSuccess)
+      sidechainStateStorage.update(version2, Set(), bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version2, sidechainStateStorage.lastVersionId.get)

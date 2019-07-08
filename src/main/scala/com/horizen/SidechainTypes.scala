@@ -1,33 +1,39 @@
 package com.horizen
 
 import language.implicitConversions
-import com.horizen.box.{Box, RegularBox}
+
+import java.util.{List => JList}
+
+import com.horizen.box.{Box, CertifierRightBox, RegularBox}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
-import com.horizen.transaction.BoxTransaction
+import com.horizen.transaction.{BoxTransaction, RegularTransaction}
+import com.horizen.proposition.ProofOfKnowledgeProposition
 
 trait SidechainTypes {
 
-  type S = Secret
-  type P = Proposition
-  type B = Box[P]
-  type BT = BoxTransaction[P,B]
+  type SCS = Secret
+  type SCP = Proposition
+  type SCB = Box[SCP]
+  type SCBT = BoxTransaction[SCP, SCB]
 
-  type SX <: Secret
-  type PX <: Proposition
-  type BX <: Box[PX]
-  type BTX <: BoxTransaction[PX,BX]
+  //implicit def ponpToSCP(p : ProofOfKnowledgeProposition[_ <: Secret]) : SCP = p.asInstanceOf[SCP]
 
-  implicit def propositionToExt(p : P) : PX = p.asInstanceOf[PX]
-  implicit def extToProposition(px : PX) : P = px.asInstanceOf[P]
+  implicit def regulartxToScbt(t : RegularTransaction) : SCBT = t.asInstanceOf[SCBT]
 
-  implicit def boxToExt(b : B) : BX = b.asInstanceOf[BX]
-  implicit def extToBox(bx : BX) : B = bx.asInstanceOf[B]
+  implicit def regulartxlToScbtl(tl : List[RegularTransaction]) : List[SCBT] = tl.asInstanceOf[List[SCBT]]
 
-  implicit def transactionToExt(bt : BT) : BTX = bt.asInstanceOf[BTX]
-  implicit def extToTransaction(btx : BTX) : BT = btx.asInstanceOf[BT]
+  implicit def regularboxToScb(b : RegularBox) : SCB = b.asInstanceOf[SCB]
+  implicit def certifierrightboxToScb(b : CertifierRightBox) : SCB = b.asInstanceOf[SCB]
 
-  implicit def rbToBox(rb : RegularBox) : B = rb.asInstanceOf[B]
-  implicit def boxToRb(b : B) : RegularBox = b.asInstanceOf[RegularBox]
+  implicit def regularboxjlToScbtjl(bl : JList[RegularBox]) : JList[SCB] = bl.asInstanceOf[JList[SCB]]
+  implicit def regularboxlToScbtL(bl : List[RegularBox]) : List[SCB] = bl.asInstanceOf[List[SCB]]
+
+  implicit def certifierrightboxjlToScbtjl(bl : JList[CertifierRightBox]) : JList[SCB] = bl.asInstanceOf[JList[SCB]]
+  implicit def certifierrightboxlToScbtL(bl : List[CertifierRightBox]) : List[SCB] = bl.asInstanceOf[List[SCB]]
+
+  implicit def regularboxsToScbs(bs : Set[RegularBox]) : Set[SCB] = bs.asInstanceOf[Set[SCB]]
+  implicit def certifierrightboxsToScbs(bs : Set[CertifierRightBox]) : Set[SCB] = bs.asInstanceOf[Set[SCB]]
+
 
 }

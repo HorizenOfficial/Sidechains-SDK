@@ -6,9 +6,10 @@ import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
-import java.util.{List => JList, HashMap => JHashMap}
+import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 
+import com.horizen.SidechainTypes
 import org.junit.Assert._
 import org.junit._
 import org.scalatest.junit.JUnitSuite
@@ -23,17 +24,18 @@ import scala.util.Try
 
 class SidechainSecretStorageTest
   extends JUnitSuite
-    with SecretFixture
-    with IODBStoreFixture
-    with MockitoSugar
+  with SecretFixture
+  with IODBStoreFixture
+  with MockitoSugar
+  with SidechainTypes
 {
 
   var mockedStorage: Storage = _
-  var secretList = new ListBuffer[Secret]()
+  var secretList = new ListBuffer[SidechainTypes#SCS]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
-  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
 

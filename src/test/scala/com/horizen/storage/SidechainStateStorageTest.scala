@@ -1,6 +1,7 @@
 package com.horizen.storage
 
-import java.util.{List => JList, Optional => JOptional}
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap, Optional => JOptional}
 
 import scala.collection.JavaConverters._
 import com.horizen.{SidechainTypes, WalletBoxSerializer}
@@ -33,19 +34,19 @@ class SidechainStateStorageTest
 {
   val mockedBoxStorage : Storage = mock[IODBStoreAdapter]
 
-  val boxList = new ListBuffer[B]()
+  val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-  val customBoxesSerializers: Map[Byte, BoxSerializer[_ <: Box[_ <: Proposition]]] =
-    Map(CustomBox.BOX_TYPE_ID -> CustomBoxSerializer.getSerializer)
+  val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
 
   @Before
   def setUp() : Unit = {
 
-    boxList ++= getRegularBoxList(5).asScala.map(_.asInstanceOf[B]) ++
-      getCretifierRightBoxList(5).asScala.map(_.asInstanceOf[B]) ++
-      getCustomBoxList( 5).asScala.map(_.asInstanceOf[B])
+    boxList ++= getRegularBoxList(5).asScala.toList
+    boxList ++= getCretifierRightBoxList(5).asScala.toList
+    boxList ++= getCustomBoxList( 5).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
 
     for (b <- boxList) {
       storedBoxList.append({

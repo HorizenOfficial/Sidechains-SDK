@@ -1,6 +1,6 @@
 package com.horizen.storage
 
-import com.horizen.{WalletBox, WalletBoxSerializer}
+import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
@@ -8,7 +8,7 @@ import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
-import java.util.{List => JList, HashMap => JHashMap}
+import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 
 import org.junit.Assert._
@@ -27,17 +27,18 @@ import scala.util.Try
 
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
-    with BoxFixture
-    with IODBStoreFixture
-    with MockitoSugar
+  with BoxFixture
+  with IODBStoreFixture
+  with MockitoSugar
+  with SidechainTypes
 {
 
   var mockedStorage: Storage = mock[IODBStoreAdapter]
   var boxList = new ListBuffer[WalletBox]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
-  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
   val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 

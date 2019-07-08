@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
 trait SidechainMemoryPoolFixture {
 
   def getSidechainMemoryPool () : SidechainMemoryPool = {
-    new SidechainMemoryPool(new TrieMap[String, SidechainTypes#BT]())
+    new SidechainMemoryPool(new TrieMap[String, SidechainTypes#SCBT]())
   }
 
 }

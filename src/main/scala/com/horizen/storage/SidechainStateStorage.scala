@@ -29,11 +29,11 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def get(boxId : Array[Byte]) : Option[B] = {
+  def get(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
     storage.get(calculateKey(boxId)) match {
       case v if v.isPresent => {
         sidechainBoxesCompanion.parseBytes(v.get().data) match {
-          case Success(box) => Option(box.asInstanceOf[B])
+          case Success(box) => Option(box)
           case Failure(exception) => {
             log.error("Error while WalletBox parsing.", exception)
             Option.empty
@@ -44,9 +44,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  //def get(proposition : P) : Seq[B] = ???
-
-  def update(version : ByteArrayWrapper, boxUpdateList : Set[B],
+  def update(version : ByteArrayWrapper, boxUpdateList : Set[SidechainTypes#SCB],
              boxIdsRemoveList : Set[Array[Byte]]) : Try[SidechainStateStorage] = Try {
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")

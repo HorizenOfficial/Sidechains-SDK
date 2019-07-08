@@ -1,25 +1,25 @@
 package com.horizen.companion
 
 import org.scalatest.junit.JUnitSuite
-
 import org.junit.Test
 import org.junit.Assert._
-
 import com.horizen.fixtures._
 import com.horizen.customtypes._
 import com.horizen.box._
 import com.horizen.proposition._
-
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 
+import com.horizen.SidechainTypes
+
 class SidechainBoxesCompanionTest
   extends JUnitSuite
-    with BoxFixture
+  with BoxFixture
+  with SidechainTypes
 {
 
-  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
-  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
 
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
   val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
@@ -44,7 +44,7 @@ class SidechainBoxesCompanionTest
   }
 
   @Test def testRegisteredCustom(): Unit = {
-    val customBox = getCustomBox()
+    val customBox = getCustomBox().asInstanceOf[SidechainTypes#SCB]
 
     val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
     assertEquals("Box type must be custom.", Byte.MaxValue, customBoxBytes(0))
@@ -53,7 +53,7 @@ class SidechainBoxesCompanionTest
   }
 
   @Test def testUnregisteredCustom(): Unit = {
-    val customBox = getCustomBox()
+    val customBox = getCustomBox().asInstanceOf[SidechainTypes#SCB]
     var exceptionThrown = false
 
 

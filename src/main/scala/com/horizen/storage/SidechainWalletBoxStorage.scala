@@ -4,7 +4,7 @@ import java.util.{Optional, ArrayList => JArrayList}
 
 import javafx.util.{Pair => JPair}
 import com.horizen.utils.ByteArrayWrapper
-import com.horizen.{WalletBox, WalletBoxSerializer}
+import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -16,20 +16,21 @@ import scala.collection.mutable
 import scala.util.Try
 
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
-  extends ScorexLogging
+  extends SidechainTypes
+  with ScorexLogging
 {
   // Version - block Id
   // Key - byte array box Id
   // No remove operation
 
-  type BoxClass = Class[_ <: Box[_ <: Proposition]]
+  //type BoxClass = Class[BX]
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
   private val _walletBoxes = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
-  private val _walletBoxesByType = new mutable.LinkedHashMap[BoxClass, mutable.Map[ByteArrayWrapper, WalletBox]]()
-  private val _walletBoxesBalances = new mutable.LinkedHashMap[BoxClass, Long]()
+  private val _walletBoxesByType = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], mutable.Map[ByteArrayWrapper, WalletBox]]()
+  private val _walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
   loadWalletBoxes()
@@ -97,14 +98,14 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     _walletBoxes.values.toList
   }
 
-  def getByType (boxType: BoxClass) : List[WalletBox] = {
+  def getByType (boxType: Class[_ <: Box[_ <: Proposition]]) : List[WalletBox] = {
     _walletBoxesByType.get(boxType) match {
       case Some(v) => v.values.toList
       case None => List[WalletBox]()
     }
   }
 
-  def getBoxesBalance (boxType: BoxClass): Long = {
+  def getBoxesBalance (boxType: Class[_ <: Box[_ <: Proposition]]): Long = {
     _walletBoxesBalances.getOrElse(boxType, 0L)
   }
 
