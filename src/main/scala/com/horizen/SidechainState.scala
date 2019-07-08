@@ -172,6 +172,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
 }
 
 object SidechainState
+  extends ScorexLogging
 {
 
   //TODO should it be the same as in class?
@@ -202,9 +203,8 @@ object SidechainState
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  def restoreState (sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                    applicationState: ApplicationState) : SidechainState = {
-
+  private def openStore(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion) :
+    Try[(SidechainStateStorage, VersionTag)] = Try {
     val stateStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")
     stateStoragePath.mkdirs()
     val stateDiskStorage = new IODBStoreAdapter(new LSMStore(stateStoragePath, 32))
@@ -221,6 +221,34 @@ object SidechainState
       case None => bytesToVersion(Array.emptyByteArray)
     }
 
-    new SidechainState(stateStorage, version, applicationState)
+    (stateStorage, version)
+  }
+
+  def restoreState(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
+                   applicationState: ApplicationState) : Try[SidechainState] = Try {
+
+    openStore(sidechainSettings, sidechainBoxesCompanion) match {
+      case Success((stateStorage, version)) => new SidechainState(stateStorage, version, applicationState)
+      case Failure(exception) => throw exception
+    }
+  }.recoverWith { case exception =>
+    log.error("Exception was thrown during SidechainState restore.", exception)
+    Failure(exception)
+  }
+
+  def genesisState(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
+                   applicationState: ApplicationState, genesisBlocks : Seq[SidechainBlock]) : Try[SidechainState] = Try {
+
+    openStore(sidechainSettings, sidechainBoxesCompanion) match {
+      case Success((stateStorage, version)) =>
+        var state = new SidechainState(stateStorage, version, applicationState)
+        for (block <- genesisBlocks)
+          state = state.applyModifier(block).get
+        state
+      case Failure(exception) => throw exception
+    }
+  }.recoverWith { case exception =>
+    log.error ("Exception was thrown during SidechainState genesis initialization.", exception)
+    Failure (exception)
   }
 }

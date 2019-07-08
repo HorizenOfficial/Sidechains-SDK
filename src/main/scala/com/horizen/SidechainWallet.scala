@@ -9,15 +9,15 @@ import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.proposition.Proposition
-import com.horizen.proposition.ProofOfKnowledgeProposition
 import com.horizen.secret.Secret
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
 import scorex.core.VersionTag
+import scorex.util.ScorexLogging
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
@@ -174,9 +174,10 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
 }
 
 object SidechainWallet
+  extends ScorexLogging
 {
-  def restoreWallet(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                    sidechainSecretsCompanion: SidechainSecretsCompanion, applicationWallet: ApplicationWallet) : SidechainWallet = {
+  private def openBoxStore(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion) :
+    Try[SidechainWalletBoxStorage] = Try {
 
     val walletStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")
     walletStoragePath.mkdirs()
@@ -188,6 +189,12 @@ object SidechainWallet
       }
     })
 
+    new SidechainWalletBoxStorage(walletDiskStorage, sidechainBoxesCompanion)
+  }
+
+  private def openSecretStore(sidechainSettings : SidechainSettings, sidechainSecretsCompanion: SidechainSecretsCompanion) :
+    Try[SidechainSecretStorage] = Try {
+
     val secretStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")
     secretStoragePath.mkdirs()
     val secretDiskStorage = new IODBStoreAdapter(new LSMStore(secretStoragePath, 32))
@@ -198,9 +205,51 @@ object SidechainWallet
       }
     })
 
-    val walletBoxStorage = new SidechainWalletBoxStorage(walletDiskStorage, sidechainBoxesCompanion)
-    val secretStorage = new SidechainSecretStorage(secretDiskStorage, sidechainSecretsCompanion)
+    new SidechainSecretStorage(secretDiskStorage, sidechainSecretsCompanion)
+  }
+
+  def restoreWallet(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
+                    sidechainSecretsCompanion: SidechainSecretsCompanion, applicationWallet: ApplicationWallet) :
+    Try[SidechainWallet] = Try {
+
+    val walletBoxStorage = openBoxStore(sidechainSettings, sidechainBoxesCompanion) match {
+      case Success(wbs) => wbs
+      case Failure(exception) => throw exception
+    }
+
+    val secretStorage = openSecretStore(sidechainSettings, sidechainSecretsCompanion) match {
+      case Success(ss) => ss
+      case Failure(exception) => throw exception
+    }
 
     new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet)
+  }.recoverWith { case exception =>
+    log.error ("Exception was thrown during SidechainWallet initialization.", exception)
+    Failure (exception)
+  }
+
+  def genesisWallet(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
+                    sidechainSecretsCompanion: SidechainSecretsCompanion, applicationWallet: ApplicationWallet,
+                    genesisBlocks : Seq[SidechainBlock]) :
+    Try[SidechainWallet] =  Try {
+    val walletBoxStorage = openBoxStore(sidechainSettings, sidechainBoxesCompanion) match {
+      case Success(wbs) => wbs
+      case Failure(exception) => throw exception
+    }
+
+    val secretStorage = openSecretStore(sidechainSettings, sidechainSecretsCompanion) match {
+      case Success(ss) => ss
+      case Failure(exception) => throw exception
+    }
+
+    var sidechainWallet = new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet)
+
+    for (block <- genesisBlocks)
+      sidechainWallet = sidechainWallet.scanPersistent(block)
+
+    sidechainWallet
+  }.recoverWith { case exception =>
+    log.error ("Exception was thrown during SidechainWallet genesis initialization.", exception)
+    Failure (exception)
   }
 }
