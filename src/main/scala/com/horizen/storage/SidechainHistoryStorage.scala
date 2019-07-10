@@ -25,8 +25,24 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
 
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
+  private def blockParentIdKey(blockId:ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"parentIdFor$blockId"))
+
+  private def validityKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"validity$blockId"))
+
+  private def blockHeightKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"height$blockId"))
+
+  private def chainScoreKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"chainScore$blockId"))
+
+  private def nextVersion: Array[Byte] = {
+    val version = new Array[Byte](32)
+    Random.nextBytes(version)
+    version
+  }
+
 
   def height: Long = heightOf(bestBlockId).getOrElse(0L)
+
+  def heightOf(blockId: ModifierId): Option[Long] =  storage.get(blockHeightKey(blockId)).asScala.map(b => BytesUtils.getLong(b.data, 0))
 
   def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(bytesToId(params.sidechainGenesisBlockId))
 
@@ -46,20 +62,12 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
     }
   }
 
-  private def blockParentIdKey(blockId:ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"parentIdFor$blockId"))
-
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = {
     storage.get(blockParentIdKey(blockId)).asScala match {
       case Some(baw) => Some(bytesToId(baw.data))
       case _ => None
     }
   }
-
-  private def blockHeightKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"height$blockId"))
-
-  def heightOf(blockId: ModifierId): Option[Long] =  storage.get(blockHeightKey(blockId)).asScala.map(b => BytesUtils.getLong(b.data, 0))
-
-  private def chainScoreKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"chainScore$blockId"))
 
   def chainScoreFor(blockId: ModifierId): Option[Long] =  storage.get(chainScoreKey(blockId)).asScala.map(b => BytesUtils.getLong(b.data, 0))
 
@@ -78,25 +86,45 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
     // add chain new score
     toUpdate.add(new JPair(chainScoreKey(block.id), new ByteArrayWrapper(Longs.toByteArray(chainScore))))
 
-
     // add parent block Id. Used when we want to loop though chain ids without extracting and parsing the whole block
     toUpdate.add(new JPair(blockParentIdKey(block.id), new ByteArrayWrapper(idToBytes(block.parentId))))
 
     // add block
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-
     storage.update(
-      new ByteArrayWrapper(version),
+      new ByteArrayWrapper(nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
 
     this
   }
 
-  def semanticValidity(id: ModifierId): ModifierSemanticValidity = ???
+  def semanticValidity(id: ModifierId): ModifierSemanticValidity = {
+      storage.get(validityKey(id)).asScala match {
+        case Some(baw) =>
+          if(baw.data.length != 1)
+            ModifierSemanticValidity.Unknown
+          ModifierSemanticValidity.restoreFromCode(baw.data.head)
+        case _ => ModifierSemanticValidity.Absent
+      }
+  }
 
-  def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = ???
+  def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
+    storage.update(
+      new ByteArrayWrapper(nextVersion),
+      java.util.Arrays.asList(new JPair(validityKey(block.id), new ByteArrayWrapper(Array(status.code)))),
+      new JArrayList()
+    )
+    this
+  }
+
+  def updateBestBlock(block: SidechainBlock): Try[SidechainHistoryStorage] = Try {
+    storage.update(
+      new ByteArrayWrapper(nextVersion),
+      java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
+      new JArrayList()
+    )
+    this
+  }
 }

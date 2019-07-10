@@ -3,7 +3,7 @@ package com.horizen
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.util.ModifierId
 import scorex.core.consensus.History.{ModifierIds, ProgressInfo}
@@ -11,7 +11,7 @@ import scorex.core.consensus.{History, ModifierSemanticValidity, SyncInfo}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 
 class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkParams)
@@ -81,7 +81,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
         }
       }
     }
-    (new SidechainHistory(newStorage.get, params), progressInfo)
+    new SidechainHistory(newStorage.get, params) -> progressInfo
   }
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
@@ -103,14 +103,22 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   def bestForkChanges(block: SidechainBlock): ProgressInfo[SidechainBlock] = {
     val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
 
-    val rollbackPoint = newChainSuffix.headOption
-    val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
-    val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
+    val newChainSuffixValidity: Boolean = !newChainSuffix.drop(1).map(storage.semanticValidity)
+      .contains(ModifierSemanticValidity.Invalid)
 
-    require(toRemove.nonEmpty)
-    require(toApply.nonEmpty)
+    if(newChainSuffixValidity) {
+      val rollbackPoint = newChainSuffix.headOption
+      val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
+      val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
 
-    ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
+      require(toRemove.nonEmpty)
+      require(toApply.nonEmpty)
+
+      ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
+    } else {
+      //log.info(s"Orphaned block $block from invalid suffix")
+      ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+    }
   }
 
   // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
@@ -154,9 +162,33 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     }
   }
 
-  override def reportModifierIsValid(modifier: SidechainBlock): SidechainHistory = ???
+  override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
+    Try {
+      var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
+      newStorage = newStorage.updateBestBlock(block).get
+      new SidechainHistory(newStorage, params)
+    } match {
+      case Success(newHistory) => newHistory
+      case Failure(e) => {
+        //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
+        new SidechainHistory(storage, params)
+      }
+    }
+  }
 
-  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = ???
+  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = {
+    val newHistory: SidechainHistory = Try {
+      val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
+      new SidechainHistory(newStorage, params)
+    } match {
+      case Success(history) => history
+      case Failure(e) => {
+        //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
+        new SidechainHistory(storage, params)
+      }
+    }
+    newHistory -> ProgressInfo(None, Seq(), Seq(), Seq())
+  }
 
   override def isEmpty: Boolean = height <= 0
 
