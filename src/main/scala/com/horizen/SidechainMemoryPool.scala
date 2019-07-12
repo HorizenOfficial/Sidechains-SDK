@@ -15,6 +15,7 @@ import scala.collection.JavaConverters._
 
 class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
+  with SidechainTypes
 {
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]

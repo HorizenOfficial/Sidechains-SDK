@@ -187,7 +187,7 @@ class SidechainStateTest
   }
 
   @Test
-  def testApplyModifier: Unit = {
+  def testApplyModifier(): Unit = {
 
     // Set base Secrets data
     secretList.clear()

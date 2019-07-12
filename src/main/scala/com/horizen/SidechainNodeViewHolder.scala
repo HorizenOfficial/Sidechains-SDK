@@ -3,16 +3,13 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.block.Block
-import scorex.core.serialization.Serializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
@@ -94,21 +91,19 @@ object SidechainNodeViewHolder
   }
 }
 
-/*
-object SDKNodeViewHolderRef {
-  def props(settings: SDKSettings,
+object SidechainNodeViewHolderRef {
+  def props(settings: SidechainSettings,
             timeProvider: NetworkTimeProvider): Props =
-    Props(new SDKNodeViewHolder(settings, timeProvider))
+    Props(new SidechainNodeViewHolder(settings, timeProvider))
 
-  def apply(settings: SDKSettings,
+  def apply(settings: SidechainSettings,
             timeProvider: NetworkTimeProvider)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(settings, timeProvider))
 
   def apply(name: String,
-            settings: SDKSettings,
+            settings: SidechainSettings,
             timeProvider: NetworkTimeProvider)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(settings, timeProvider), name)
 }
-*/

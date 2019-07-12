@@ -28,7 +28,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
                     SidechainTypes#SCBT,
                     SidechainBlock,
                     SidechainState]
-//  with SidechainTypes
+  with SidechainTypes
   with SidechainStateReader
   with ScorexLogging
 {
