@@ -50,11 +50,11 @@ public class RegularTransactionSerializerTest {
         TransactionSerializer serializer = transaction.serializer();
         byte[] bytes = serializer.toBytes(transaction);
 
-        Try<RegularTransaction> t = serializer.parseBytes(bytes);
+        Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
         assertEquals("Deserialized transactions expected to be equal", true, transaction.id().equals(t.get().id()));
 
-        boolean failureExpected = serializer.parseBytes("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
     }
 
@@ -72,7 +72,7 @@ public class RegularTransactionSerializerTest {
         }
 
         TransactionSerializer serializer = transaction.serializer();
-        Try<RegularTransaction> t = serializer.parseBytes(bytes);
+        Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();

@@ -30,7 +30,7 @@ class SidechainSecretsCompanionTest
 
     assertNotEquals("Secret must have core type.", secretBytes(0), Byte.MaxValue)
     assertEquals("Secret must have registered core typeId.", secretBytes(0), secret.secretTypeId())
-    assertEquals("Deserialization must return same Secret.", secret, sidechainSecretsCompanion.parseBytes(secretBytes).get)
+    assertEquals("Deserialization must return same Secret.", secret, sidechainSecretsCompanion.parseBytesTry(secretBytes).get)
   }
 
   @Test def testRegisteredCustom(): Unit = {
@@ -40,7 +40,7 @@ class SidechainSecretsCompanionTest
 
     assertEquals("Secret must have custom type.", customSecretBytes(0), Byte.MaxValue)
     assertEquals("Secret must have registered custom typeId.", customSecretBytes(1), customSecret.secretTypeId())
-    assertEquals("Deserialization must return same Secret.", customSecret, sidechainSecretsCompanion.parseBytes(customSecretBytes).get)
+    assertEquals("Deserialization must return same Secret.", customSecret, sidechainSecretsCompanion.parseBytesTry(customSecretBytes).get)
   }
 
   @Test def testUnregisteredCustom(): Unit = {
@@ -63,7 +63,7 @@ class SidechainSecretsCompanionTest
     val customSecretBytes = sidechainSecretsCompanion.toBytes(customSecret)
 
     try {
-      sidechainSecretsCompanionCore.parseBytes(customSecretBytes).get
+      sidechainSecretsCompanionCore.parseBytesTry(customSecretBytes).get
     } catch {
       case _ : Throwable => exceptionThrown = true
     }

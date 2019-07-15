@@ -30,10 +30,10 @@ public class PublicKey25519PropositionSerializerTest {
         PropositionSerializer serializer = proposition.serializer();
         byte[] bytes = serializer.toBytes(proposition);
 
-        Try<PublicKey25519Proposition> t = serializer.parseBytes(bytes);
+        Try<PublicKey25519Proposition> t = serializer.parseBytesTry(bytes);
         assertEquals("Propositions expected to be equal", proposition, ((Try) t).get());
 
-        boolean failureExpected = serializer.parseBytes("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
 
     }
@@ -52,7 +52,7 @@ public class PublicKey25519PropositionSerializerTest {
         }
 
         PropositionSerializer serializer = proposition.serializer();
-        Try<PublicKey25519Proposition> t = serializer.parseBytes(bytes);
+        Try<PublicKey25519Proposition> t = serializer.parseBytesTry(bytes);
         assertEquals("Proposition serialization failed.", true, t.isSuccess());
 
         PublicKey25519Proposition parsedProposition = t.get();

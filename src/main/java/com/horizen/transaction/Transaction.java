@@ -1,3 +1,4 @@
+/*
 package com.horizen.transaction;
 
 
@@ -23,3 +24,4 @@ public abstract class Transaction implements scorex.core.transaction.Transaction
 
     public abstract byte transactionTypeId();
 }
+*/

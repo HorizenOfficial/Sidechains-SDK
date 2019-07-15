@@ -33,7 +33,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
       10000)
     serializer = walletBoxWithRegularBox.serializer(sidechainBoxesCompanion)
     bytes = serializer.toBytes(walletBoxWithRegularBox)
-    val parsedWalletBoxWithRegularBox = serializer.parseBytes(bytes).get
+    val parsedWalletBoxWithRegularBox = serializer.parseBytesTry(bytes).get
     assertEquals("Core WalletBoxes expected to be equal.", walletBoxWithRegularBox, parsedWalletBoxWithRegularBox)
 
 
@@ -45,12 +45,12 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
       20000)
     serializer = walletBoxWithCustomBox.serializer(sidechainBoxesCompanion)
     bytes = serializer.toBytes(walletBoxWithCustomBox)
-    val parsedWalletBoxWithCustomBox = serializer.parseBytes(bytes).get
+    val parsedWalletBoxWithCustomBox = serializer.parseBytesTry(bytes).get
     assertEquals("Custom WalletBoxes expected to be equal.", walletBoxWithCustomBox, parsedWalletBoxWithCustomBox)
 
 
     // Test 3: try parse of broken bytes
-    val failureExpected: Boolean = new WalletBoxSerializer(sidechainBoxesCompanion).parseBytes("broken bytes".getBytes).isFailure
+    val failureExpected: Boolean = new WalletBoxSerializer(sidechainBoxesCompanion).parseBytesTry("broken bytes".getBytes).isFailure
     assertEquals("Failure during parsing expected.", true, failureExpected)
 
   }

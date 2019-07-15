@@ -29,11 +29,11 @@ public class RegularBoxSerializerTest
         BoxSerializer<RegularBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
 
-        RegularBox box2 = serializer.parseBytes(bytes).get();
+        RegularBox box2 = serializer.parseBytesTry(bytes).get();
         assertEquals("Boxes expected to be equal", true, box.equals(box2));
 
 
-        boolean failureExpected = serializer.parseBytes("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
 
     }
@@ -52,7 +52,7 @@ public class RegularBoxSerializerTest
         }
 
         BoxSerializer<RegularBox> serializer = box.serializer();
-        Try<RegularBox> t = serializer.parseBytes(bytes);
+        Try<RegularBox> t = serializer.parseBytesTry(bytes);
         assertEquals("Box serialization failed.", true, t.isSuccess());
 
         RegularBox parsedBox = t.get();

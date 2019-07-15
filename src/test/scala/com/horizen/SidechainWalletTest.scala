@@ -197,8 +197,8 @@ class SidechainWalletTest
         // check
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual version is wrong.", new ByteArrayWrapper(blockId), version)
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual walletBoxUpdateList is wrong.", List(
-          new WalletBox(transaction2.newBoxes().get(0), transaction2.id(), transaction2.timestamp()),
-          new WalletBox(transaction2.newBoxes().get(1), transaction2.id(), transaction2.timestamp())
+          new WalletBox(transaction2.newBoxes().get(0), transaction2.id, transaction2.timestamp()),
+          new WalletBox(transaction2.newBoxes().get(1), transaction2.id, transaction2.timestamp())
         ), walletBoxUpdateList)
 
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual boxIdsRemoveList is wrong.", List(

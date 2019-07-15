@@ -71,7 +71,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
     if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.asJava)) {
-      unconfirmed.put(tx.id(), tx)
+      unconfirmed.put(tx.id, tx)
       Success[SidechainMemoryPool](this)
     }
     else
@@ -94,7 +94,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     }
 
     for (t <- txs)
-      unconfirmed.put(t.id(), t)
+      unconfirmed.put(t.id, t)
 
     new Success[SidechainMemoryPool](this)
   }
@@ -113,7 +113,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     }
 
     for (t <- txs)
-      unconfirmed.put(t.id(), t)
+      unconfirmed.put(t.id, t)
 
     this
   }
