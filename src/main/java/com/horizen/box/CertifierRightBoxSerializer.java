@@ -1,6 +1,8 @@
 package com.horizen.box;
 
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRightBox>
 {
@@ -26,7 +28,17 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
     }
 
     @Override
-    public Try<CertifierRightBox> parseBytes(byte[] bytes) {
+    public Try<CertifierRightBox> parseBytesTry(byte[] bytes) {
         return CertifierRightBox.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(CertifierRightBox obj, Writer writer) {
+
+    }
+
+    @Override
+    public CertifierRightBox parse(Reader reader) {
+        return null;
     }
 }

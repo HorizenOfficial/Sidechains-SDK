@@ -1,6 +1,8 @@
 package com.horizen.transaction;
 
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 
 public class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
@@ -25,8 +27,18 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
     }
 
     @Override
-    public Try<RegularTransaction> parseBytes(byte[] bytes) {
+    public Try<RegularTransaction> parseBytesTry(byte[] bytes) {
         return RegularTransaction.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(RegularTransaction obj, Writer writer) {
+
+    }
+
+    @Override
+    public RegularTransaction parse(Reader reader) {
+        return null;
     }
 }
 

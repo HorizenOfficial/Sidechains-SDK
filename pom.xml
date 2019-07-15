@@ -67,9 +67,9 @@
         <dependency>
             <groupId>org.scorexfoundation</groupId>
             <artifactId>scorex-core_2.12</artifactId>
-            <version>2.0.0-RC3</version>
+            <version>2.0.0-RC4</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/src/main/resources/scorex-core_2.12.jar</systemPath>
+            <systemPath>${project.basedir}/src/main/resources/scorex-core_2.12-RC-4.jar</systemPath>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-util -->
@@ -85,7 +85,7 @@
         <dependency>
             <groupId>org.scorexfoundation</groupId>
             <artifactId>scorex-util_2.12</artifactId>
-            <version>0.1.1</version>
+            <version>0.1.4</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scrypto -->

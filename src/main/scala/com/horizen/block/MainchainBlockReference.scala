@@ -10,7 +10,8 @@ import com.horizen.proposition.Proposition
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils._
-import scorex.core.serialization.{BytesSerializable, Serializer}
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.mutable.Map
@@ -35,7 +36,7 @@ class MainchainBlockReference(
 
   override type M = MainchainBlockReference
 
-  override def serializer: Serializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
+  override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(header == null || !header.semanticValidity(params))
@@ -172,7 +173,7 @@ object MainchainBlockReference {
 
 
 
-object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockReference] {
+object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlockReference] {
   val HASH_BYTES_LENGTH: Int = 32
 
   override def toBytes(obj: MainchainBlockReference): Array[Byte] = {
@@ -209,7 +210,7 @@ object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockRefere
     )
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[MainchainBlockReference] = Try {
+  override def parseBytesTry(bytes: Array[Byte]): Try[MainchainBlockReference] = Try {
     if(bytes.length < 4 + MainchainHeader.MIN_HEADER_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
@@ -217,7 +218,7 @@ object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockRefere
     val headerSize: Int = BytesUtils.getInt(bytes, offset)
     offset += 4
 
-    val header: MainchainHeader = MainchainHeaderSerializer.parseBytes(bytes.slice(offset, headerSize + offset)).get
+    val header: MainchainHeader = MainchainHeaderSerializer.parseBytesTry(bytes.slice(offset, headerSize + offset)).get
     offset += headerSize
 
     val mc2scAggregatedTransactionSize: Int = BytesUtils.getInt(bytes, offset)
@@ -225,7 +226,7 @@ object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockRefere
 
     val mc2scTx: Option[MC2SCAggregatedTransaction] = {
       if (mc2scAggregatedTransactionSize > 0)
-        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(bytes.slice(offset, offset + mc2scAggregatedTransactionSize)).get)
+        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytesTry(bytes.slice(offset, offset + mc2scAggregatedTransactionSize)).get)
       else
         None
     }
@@ -252,4 +253,8 @@ object MainchainBlockReferenceSerializer extends Serializer[MainchainBlockRefere
 
     new MainchainBlockReference(header, mc2scTx, SCMap)
   }
+
+  override def serialize(obj: MainchainBlockReference, w: Writer): Unit = ???
+
+  override def parse(r: Reader): MainchainBlockReference = ???
 }

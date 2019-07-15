@@ -4,13 +4,15 @@ import com.google.common.primitives.Bytes;
 import scala.util.Failure;
 import scala.util.Try;
 import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DynamicTypedSerializer<T extends BytesSerializable, S extends Serializer<? extends T>> implements Serializer<T> {
+public class DynamicTypedSerializer<T extends BytesSerializable, S extends ScorexSerializer<? extends T>> implements ScorexSerializer<T> {
     protected HashMap<Byte, S> _coreSerializers; // unique core key : core serializer
     protected HashMap<Class, Byte> _coreSerializersClasses; // core serializer class : unique core key
 
@@ -61,7 +63,17 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Seria
     }
 
     @Override
-    public Try<T> parseBytes(byte[] bytes) {
+    public void serialize(T obj, Writer writer) {
+
+    }
+
+    @Override
+    public T parse(Reader reader) {
+        return null;
+    }
+
+    @Override
+    public Try<T> parseBytesTry(byte[] bytes) {
         try {
             if (bytes == null || bytes.length < 1)
                 throw new IllegalArgumentException("Unknown custom type id.");

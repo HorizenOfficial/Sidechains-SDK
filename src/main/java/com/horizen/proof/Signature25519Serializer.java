@@ -1,6 +1,8 @@
 package com.horizen.proof;
 
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public final class Signature25519Serializer implements ProofSerializer<Signature25519> {
 
@@ -24,7 +26,17 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
     }
 
     @Override
-    public Try<Signature25519> parseBytes(byte[] bytes) {
+    public Try<Signature25519> parseBytesTry(byte[] bytes) {
         return Signature25519.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(Signature25519 obj, Writer writer) {
+
+    }
+
+    @Override
+    public Signature25519 parse(Reader reader) {
+        return null;
     }
 }

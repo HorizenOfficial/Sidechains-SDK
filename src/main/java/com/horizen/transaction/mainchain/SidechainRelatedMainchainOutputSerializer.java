@@ -1,13 +1,13 @@
 package com.horizen.transaction.mainchain;
 
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
 
-public interface SidechainRelatedMainchainOutputSerializer<T extends SidechainRelatedMainchainOutput> extends Serializer<T>
+public interface SidechainRelatedMainchainOutputSerializer<T extends SidechainRelatedMainchainOutput> extends ScorexSerializer<T>
 {
     @Override
     byte[] toBytes(T obj);
 
     @Override
-    Try<T> parseBytes(byte[] bytes);
+    Try<T> parseBytesTry(byte[] bytes);
 }

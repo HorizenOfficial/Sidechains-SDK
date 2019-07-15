@@ -3,6 +3,8 @@ package com.horizen.proposition;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
 {
@@ -26,7 +28,17 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
     }
 
     @Override
-    public Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
+    public Try<PublicKey25519Proposition> parseBytesTry(byte[] bytes) {
         return PublicKey25519Proposition.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(PublicKey25519Proposition obj, Writer writer) {
+
+    }
+
+    @Override
+    public PublicKey25519Proposition parse(Reader reader) {
+        return null;
     }
 }

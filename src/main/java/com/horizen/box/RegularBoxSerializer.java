@@ -6,6 +6,8 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 import java.util.Arrays;
 
@@ -33,7 +35,17 @@ public final class RegularBoxSerializer implements BoxSerializer<RegularBox>
     }
 
     @Override
-    public Try<RegularBox> parseBytes(byte[] bytes) {
+    public Try<RegularBox> parseBytesTry(byte[] bytes) {
         return RegularBox.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(RegularBox obj, Writer writer) {
+
+    }
+
+    @Override
+    public RegularBox parse(Reader reader) {
+        return null;
     }
 }

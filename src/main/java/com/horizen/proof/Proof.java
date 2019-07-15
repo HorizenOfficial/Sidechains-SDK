@@ -3,7 +3,7 @@ package com.horizen.proof;
 import com.horizen.proposition.Proposition;
 
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
 
 /*
 trait Proof[P <: Proposition] extends BytesSerializable {

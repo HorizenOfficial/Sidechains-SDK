@@ -40,7 +40,7 @@ class SidechainHistory
 
   override def openSurfaceIds(): Seq[ModifierId] = ???
 
-  override def continuationIds(info: SyncInfo, size: Int): Option[ModifierIds] = ???
+  override def continuationIds(info: SyncInfo, size: Int): ModifierIds = ???
 
   override def syncInfo: SyncInfo = ???
 

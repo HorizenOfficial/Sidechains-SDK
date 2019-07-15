@@ -7,8 +7,9 @@ import com.horizen.box.Box
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.proposition.Proposition
 import com.horizen.utils.BytesUtils
-import scorex.core.serialization.Serializer
+import scorex.core.serialization.ScorexSerializer
 import scorex.core.{NodeViewModifier, idToBytes}
+import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 
@@ -35,20 +36,24 @@ class WalletBox(val box: SidechainTypes#SCB, val transactionId: String, val crea
 }
 
 class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
-  extends Serializer[WalletBox]
+  extends ScorexSerializer[WalletBox]
 {
   override def toBytes(walletBox: WalletBox): Array[Byte] = {
     Bytes.concat(BytesUtils.fromHexString(walletBox.transactionId), Longs.toByteArray(walletBox.createdAt),
       sidechainBoxesCompanion.toBytes(walletBox.box))
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[WalletBox] = Try {
+  override def parseBytesTry(bytes: Array[Byte]): Try[WalletBox] = Try {
     val txIdBytes = bytes.slice(0, NodeViewModifier.ModifierIdSize)
     val createdAt = Longs.fromByteArray(bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
     val boxBytes = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
-    sidechainBoxesCompanion.parseBytes(boxBytes) match {
+    sidechainBoxesCompanion.parseBytesTry(boxBytes) match {
       case Success(box) => new WalletBox(box, BytesUtils.toHexString(txIdBytes), createdAt)
       case Failure(exception) => throw new Exception(exception)
     }
   }
+
+  override def serialize(obj: WalletBox, w: Writer): Unit = ???
+
+  override def parse(r: Reader): WalletBox = ???
 }

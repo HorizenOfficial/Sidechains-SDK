@@ -5,20 +5,23 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Serializer;
+import scorex.util.serialization.Writer;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-public class ListSerializer<T extends BytesSerializable> implements Serializer<List<T>> {
-    private Serializer<T> _serializer;
+public class ListSerializer<T extends BytesSerializable> implements ScorexSerializer<List<T>> {
+    private ScorexSerializer<T> _serializer;
     private int _maxListLength; // Used during parsing bytes. Not positive value for unlimited lists support.
 
-    public ListSerializer(Serializer<T> serializer) {
+    public ListSerializer(ScorexSerializer<T> serializer) {
         this(serializer, 0);
     }
 
-    public ListSerializer(Serializer<T> serializer, int maxListLength) {
+    public ListSerializer(ScorexSerializer<T> serializer, int maxListLength) {
         _maxListLength = maxListLength;
         _serializer = serializer;
     }
@@ -52,7 +55,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
     }
 
     @Override
-    public Try<List<T>> parseBytes(byte[] bytes) {
+    public Try<List<T>> parseBytesTry(byte[] bytes) {
         try {
             int offset = 0;
 
@@ -80,7 +83,7 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
 
             ArrayList<T> res = new ArrayList<>();
             for(int length : lengthList) {
-                Try<T> t = _serializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + length));
+                Try<T> t = _serializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + length));
                 if (t.isFailure())
                     throw new IllegalArgumentException("Input data corrupted.");
                 res.add(t.get());
@@ -92,5 +95,15 @@ public class ListSerializer<T extends BytesSerializable> implements Serializer<L
         catch(IllegalArgumentException e) {
             return new Failure<>(e);
         }
+    }
+
+    @Override
+    public void serialize(List<T> obj, Writer writer) {
+
+    }
+
+    @Override
+    public List<T> parse(Reader reader) {
+        return null;
     }
 }

@@ -17,10 +17,10 @@ import com.horizen.utils.{BytesUtils, ListSerializer}
 import scorex.core.block.Block
 import scorex.core.ModifierTypeId
 import scorex.util.ModifierId
-import scorex.core.serialization.Serializer
+import scorex.core.serialization.ScorexSerializer
 import scorex.crypto.hash.Blake2b256
 import scorex.core.{bytesToId, idToBytes}
-
+import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
@@ -162,7 +162,7 @@ object SidechainBlock extends ScorexEncoding {
 
 
 
-class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends Serializer[SidechainBlock] {
+class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] {
   private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
     MainchainBlockReferenceSerializer,
     SidechainBlock.MAX_MC_BLOCKS_NUMBER
@@ -191,7 +191,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     )
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[SidechainBlock] = Try {
+  override def parseBytesTry(bytes: Array[Byte]): Try[SidechainBlock] = Try {
     require(bytes.length <= SidechainBlock.MAX_BLOCK_SIZE)
     require(bytes.length > 32 + 8 + 4 + 4 + 32 + 64) // size of empty block
 
@@ -206,7 +206,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val mcblocksSize = BytesUtils.getInt(bytes, offset)
     offset += 4
 
-    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parseBytes(bytes.slice(offset, offset + mcblocksSize)).get.asScala
+    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parseBytesTry(bytes.slice(offset, offset + mcblocksSize)).get.asScala
     offset += mcblocksSize
 
     // to do: parse SC txs
@@ -214,7 +214,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     offset += 4
 
     val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-      _sidechainTransactionsSerializer.parseBytes(bytes.slice(offset, offset + mcblocksSize)).get
+      _sidechainTransactionsSerializer.parseBytesTry(bytes.slice(offset, offset + mcblocksSize)).get
         .asScala
         .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
     offset += sidechainTransactionsSize
@@ -238,4 +238,8 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     )
 
   }
+
+  override def serialize(obj: SidechainBlock, w: Writer): Unit = ???
+
+  override def parse(r: Reader): SidechainBlock = ???
 }

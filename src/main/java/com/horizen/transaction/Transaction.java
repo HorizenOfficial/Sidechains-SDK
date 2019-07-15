@@ -4,12 +4,8 @@ package com.horizen.transaction;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
-public abstract class Transaction extends scorex.core.transaction.Transaction
+public abstract class Transaction implements scorex.core.transaction.Transaction
 {
-    @Override
-    public final byte modifierTypeId() {
-        return super.modifierTypeId();
-    }
 
     @Override
     public String id() {

@@ -76,7 +76,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     _walletBoxes.clear()
     _walletBoxesByType.clear()
     for (wb <- storage.getAll.asScala){
-      val walletBox = _walletBoxSerializer.parseBytes(wb.getValue.data)
+      val walletBox = _walletBoxSerializer.parseBytesTry(wb.getValue.data)
       if (walletBox.isSuccess) {
         _walletBoxes.put(calculateKey(walletBox.get.box.id()), walletBox.get)
         addWalletBoxByType(walletBox.get)

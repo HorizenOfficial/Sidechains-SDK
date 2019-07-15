@@ -1,12 +1,13 @@
 package com.horizen.block
 
 import com.horizen.utils.{BytesUtils, Utils}
-import scorex.core.serialization.{BytesSerializable, Serializer}
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 
 import scala.util.Try
 import java.time.Instant
 
 import com.horizen.params.NetworkParams
+import scorex.util.serialization.{Reader, Writer}
 
 //
 // Representation of MC header
@@ -36,7 +37,7 @@ class MainchainHeader(
 
   override type M = MainchainHeader
 
-  override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer
+  override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(hashPrevBlock == null || hashPrevBlock.length != 32
@@ -116,8 +117,12 @@ object MainchainHeader {
   }
 }
 
-object MainchainHeaderSerializer extends Serializer[MainchainHeader] {
+object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
   override def toBytes(obj: MainchainHeader): Array[Byte] = obj.mainchainHeaderBytes
 
-  override def parseBytes(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes, 0)
+  override def parseBytesTry(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes, 0)
+
+  override def serialize(obj: MainchainHeader, w: Writer): Unit = ???
+
+  override def parse(r: Reader): MainchainHeader = ???
 }

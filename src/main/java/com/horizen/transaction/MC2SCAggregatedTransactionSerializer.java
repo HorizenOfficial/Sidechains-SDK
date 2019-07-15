@@ -1,6 +1,8 @@
 package com.horizen.transaction;
 
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public final class MC2SCAggregatedTransactionSerializer implements TransactionSerializer<MC2SCAggregatedTransaction>
 {
@@ -24,8 +26,18 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
     }
 
     @Override
-    public Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
+    public Try<MC2SCAggregatedTransaction> parseBytesTry(byte[] bytes) {
         return MC2SCAggregatedTransaction.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(MC2SCAggregatedTransaction obj, Writer writer) {
+
+    }
+
+    @Override
+    public MC2SCAggregatedTransaction parse(Reader reader) {
+        return null;
     }
 }
 

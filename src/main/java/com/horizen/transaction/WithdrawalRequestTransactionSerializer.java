@@ -5,7 +5,9 @@ import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.DynamicTypedSerializer;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,9 +17,9 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
     WithdrawalRequestTransactionSerializer() {
-        DynamicTypedSerializer<NoncedBox<Proposition>, Serializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
+        DynamicTypedSerializer<NoncedBox<Proposition>, ScorexSerializer<? extends NoncedBox<Proposition>>> supportedBoxCompanion =
                 new DynamicTypedSerializer<>(
-                        new HashMap<Byte, Serializer<? extends NoncedBox<Proposition>>>() {{
+                        new HashMap<Byte, ScorexSerializer<? extends NoncedBox<Proposition>>>() {{
                             // put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer())
                             // TO DO: update supported serializers list
                         }}, new HashMap<>());
@@ -31,8 +33,18 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
     }
 
     @Override
-    public Try<T> parseBytes(byte[] bytes) {
-        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytes(bytes).get();
+    public Try<T> parseBytesTry(byte[] bytes) {
+        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(bytes).get();
+        return null;
+    }
+
+    @Override
+    public void serialize(T obj, Writer writer) {
+
+    }
+
+    @Override
+    public T parse(Reader reader) {
         return null;
     }
 }

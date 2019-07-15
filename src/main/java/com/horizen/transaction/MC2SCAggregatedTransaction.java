@@ -13,7 +13,8 @@ import com.horizen.utils.*;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
@@ -32,9 +33,9 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
-                new HashMap<Byte, Serializer<? extends SidechainRelatedMainchainOutput>>() {{
-                    put((byte)1, (Serializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)2, (Serializer)CertifierLockSerializer.getSerializer());
+                new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
+                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
                 }}, new HashMap<>()
             ));
 
@@ -97,6 +98,11 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     }
 
     @Override
+    public String encodedId() {
+        return super.encodedId();
+    }
+
+    @Override
     public byte[] messageToSign() {
         throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
     }
@@ -148,7 +154,7 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
             int batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
-            List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+            List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
 
             return new Success<>(new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp));
         } catch (Exception e) {
@@ -173,4 +179,10 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
             throw new IllegalArgumentException("Created transaction is semantically invalid. Proposed merkle root not equal to calculated one.");
         return transaction;
     }
+
+    @Override
+    public ScorexEncoder encoder() {
+        return null;
+    }
+
 }

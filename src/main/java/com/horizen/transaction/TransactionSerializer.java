@@ -1,14 +1,14 @@
 package com.horizen.transaction;
 
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
 
-public interface TransactionSerializer<T extends Transaction> extends Serializer<T>
+public interface TransactionSerializer<T extends Transaction> extends ScorexSerializer<T>
 {
     @Override
     byte[] toBytes(T obj);
 
     @Override
-    Try<T> parseBytes(byte[] bytes);
+    Try<T> parseBytesTry(byte[] bytes);
 }
 

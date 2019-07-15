@@ -1,6 +1,8 @@
 package com.horizen.transaction.mainchain;
 
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public final class CertifierLockSerializer implements SidechainRelatedMainchainOutputSerializer<CertifierLock>
 {
@@ -24,7 +26,17 @@ public final class CertifierLockSerializer implements SidechainRelatedMainchainO
     }
 
     @Override
-    public Try<CertifierLock> parseBytes(byte[] bytes) {
+    public Try<CertifierLock> parseBytesTry(byte[] bytes) {
         return CertifierLock.parseBytes(bytes);
+    }
+
+    @Override
+    public void serialize(CertifierLock obj, Writer writer) {
+
+    }
+
+    @Override
+    public CertifierLock parse(Reader reader) {
+        return null;
     }
 }

@@ -18,6 +18,8 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import javafx.util.Pair;
+import scorex.core.utils.ScorexEncoder;
+
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
@@ -175,12 +177,12 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
 
             int batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
-            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+            List<RegularBox> inputs = _boxSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             batchSize = BytesUtils.getInt(bytes, offset);
             offset += 4;
-            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
             offset += batchSize;
 
             List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
@@ -193,7 +195,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
             offset += 4;
             if(bytes.length != offset + batchSize)
                 throw new IllegalArgumentException("Input data corrupted.");
-            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+            List<Signature25519> signatures = _signaturesSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
 
             return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
         } catch (Exception e) {
@@ -231,5 +233,15 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         if(!transaction.semanticValidity())
             throw new IllegalArgumentException("Created transaction is semantically invalid.");
         return transaction;
+    }
+
+    @Override
+    public String encodedId() {
+        return super.encodedId();
+    }
+
+    @Override
+    public ScorexEncoder encoder() {
+        return null;
     }
 }
