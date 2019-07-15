@@ -148,7 +148,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
                         until: ModifierId => Boolean,
                         limit: Int,
                         acc: Seq[ModifierId] = Seq()): Option[Seq[ModifierId]] = {
-    val sum: Seq[ ModifierId] = blockId +: acc
+    val sum: Seq[ModifierId] = blockId +: acc
 
     if (limit <= 0 || until(blockId)) {
       Some(sum)
@@ -233,21 +233,60 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     }
   }
 
-  // TO DO: return seq like in Bitcoin with increasing step between block, until genesis is reached.
-  private def lastKnownBlocks(count: Int): Seq[ModifierId] = {
-    if(isEmpty)
+  // see https://en.bitcoin.it/wiki/Protocol_documentation#getblocks
+  private def knownBlockIndexesToSync(): Seq[Long] = {
+    if (isEmpty)
+      return Seq()
+
+    var indexes: Seq[Long] = Seq()
+
+    var step: Long = 1L
+    // Start at the top of the chain and work backwards.
+    var index: Long = height
+    while (index > 0) {
+      indexes = indexes :+ index
+      // Push top 10 indexes first, then back off exponentially.
+      if(indexes.size >= 10)
+        step *= 2
+      index -= step
+    }
+    // Push the genesis block index.
+    indexes :+ 0L
+  }
+
+  // return a sequence of block ids for given indexes (blocks height) backward starting from blockId
+  private def blockIdsToSync(indexesToSync: Seq[Long], blockId: ModifierId, blockHeight: Long, acc: Seq[ModifierId] = Seq()): Seq[ModifierId] = {
+    if(indexesToSync.isEmpty)
+      acc
+
+    if(   indexesToSync.head < 0 // indexesToSync contains invalid data
+          || blockHeight < indexesToSync.head) // something is wrong, we skipped head index.
       Seq()
+
+    val (sum: Seq[ModifierId], indexes: Seq[Long]) = {
+      if (blockHeight == indexesToSync.head)
+        acc :+ blockId -> indexesToSync.tail
+      else
+        acc -> indexesToSync
+    }
+
+    if(blockHeight == 0)
+      sum
     else {
-      chainBack(bestBlockId, isGenesisBlock, count) match {
-        case Some(seq) => seq
-        case None => Seq()
+      storage.parentBlockId(blockId) match {
+        case Some(parentId) =>
+          blockIdsToSync(indexes, parentId, blockHeight - 1, sum)
+        case _ =>
+          //log.warn(s"Parent block for ${encoder.encode(block.id)} not found.")
+          Seq()
       }
     }
   }
 
   override def syncInfo: SidechainSyncInfo = {
+    // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
-      lastKnownBlocks(params.maxHistoryRewritingLength)
+      blockIdsToSync(knownBlockIndexesToSync(), bestBlockId, height)
     )
 
   }
