@@ -6,8 +6,8 @@ import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.util.ModifierId
-import scorex.core.consensus.History.{ModifierIds, ProgressInfo}
-import scorex.core.consensus.{History, ModifierSemanticValidity, SyncInfo}
+import scorex.core.consensus.History._
+import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
 
@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkParams)
   extends scorex.core.consensus.History[
       SidechainBlock,
-      SyncInfo,
+      SidechainSyncInfo,
       SidechainHistory] with scorex.core.utils.ScorexEncoding {
 
   override type NVCT = SidechainHistory
@@ -182,10 +182,9 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       new SidechainHistory(newStorage, params)
     } match {
       case Success(history) => history
-      case Failure(e) => {
+      case Failure(e) =>
         //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
         new SidechainHistory(storage, params)
-      }
     }
     newHistory -> ProgressInfo(None, Seq(), Seq(), Seq())
   }
@@ -219,9 +218,90 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       Seq(bestBlockId)
   }
 
-  override def continuationIds(info: SyncInfo, size: Int): Option[ModifierIds] = ???
+  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = {
+    def inInfoKnownBlocks(id: ModifierId): Boolean = info.knownBlockIds.contains(id) || isGenesisBlock(id)
 
-  override def syncInfo: SyncInfo = ???
+    chainBack(bestBlockId, inInfoKnownBlocks, Int.MaxValue) match {
+      case Some(chain) =>
+        if(chain.exists(id => info.knownBlockIds.contains(id)))
+          Some(chain.take(size).map(id => (SidechainBlock.ModifierTypeId, id)))
+        else {
+          //log.warn("Found chain without ids from remote")
+          None
+        }
+      case _ => None
+    }
+  }
 
-  override def compare(other: SyncInfo): History.HistoryComparisonResult = ???
+  // TO DO: return seq like in Bitcoin with increasing step between block, until genesis is reached.
+  private def lastKnownBlocks(count: Int): Seq[ModifierId] = {
+    if(isEmpty)
+      Seq()
+    else {
+      chainBack(bestBlockId, isGenesisBlock, count) match {
+        case Some(seq) => seq
+        case None => Seq()
+      }
+    }
+  }
+
+  override def syncInfo: SidechainSyncInfo = {
+    SidechainSyncInfo(
+      lastKnownBlocks(params.maxHistoryRewritingLength)
+    )
+
+  }
+
+  // get divergent suffix until we reach the end of otherBlocks or known block in otherBlocks.
+  // return last common block + divergent suffix.
+  // Note: otherKnownBlockIds ordered from most recent to oldest block
+  private def divergentSuffix(otherKnownBlockIds: Seq[ModifierId],
+                              suffixFound: Seq[ModifierId] = Seq()): Seq[ModifierId] = {
+    if(otherKnownBlockIds.isEmpty)
+      Seq()
+    else {
+      val head = otherKnownBlockIds.head
+      val newSuffix = suffixFound :+ head
+      modifierById(head) match {
+        case Some(_) =>
+          newSuffix
+        case None => if (otherKnownBlockIds.length <= 1) {
+          Seq()
+        } else {
+          val otherKnownBlockIdsTail = otherKnownBlockIds.tail
+          divergentSuffix(otherKnownBlockIdsTail, newSuffix)
+        }
+      }
+    }
+  }
+
+  /** From Scorex History:
+    * Whether another's node syncinfo shows that another node is ahead or behind ours
+    *
+    * @param other other's node sync info
+    * @return Equal if nodes have the same history, Younger if another node is behind, Older if a new node is ahead
+    */
+  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = {
+    val dSuffix = divergentSuffix(other.knownBlockIds.reverse)
+
+    dSuffix.size match {
+      case 0 =>
+        // log.warn(Nonsence situation..._)
+        Nonsense
+      case 1 =>
+        if(dSuffix.head.equals(bestBlockId))
+          Equal
+        else
+          Younger
+      case _ =>
+        val localSuffixLength = storage.heightOf(bestBlockId).get - storage.heightOf(dSuffix.last).get
+        val otherSuffixLength = dSuffix.length
+        if (localSuffixLength < otherSuffixLength)
+          Older
+        else if (localSuffixLength == otherSuffixLength)
+          Equal // TO DO: should be a fork? Look for RC4
+        else
+          Younger
+    }
+  }
 }
