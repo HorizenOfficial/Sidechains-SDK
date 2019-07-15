@@ -262,7 +262,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     else {
       val head = otherKnownBlockIds.head
       val newSuffix = suffixFound :+ head
-      modifierById(head) match {
+      modifierById(head) match { // TO DO: optimize, just check for existence without retrieving
         case Some(_) =>
           newSuffix
         case None => if (otherKnownBlockIds.length <= 1) {

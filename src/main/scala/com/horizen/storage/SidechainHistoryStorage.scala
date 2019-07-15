@@ -16,12 +16,24 @@ import javafx.util.{Pair => JPair}
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Try}
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
+
+
 class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
+
+  // Set a limited cache for block parent Ids storing.
+  private val parendIdCache = CacheBuilder.newBuilder().maximumSize(10000).build(
+    new CacheLoader[ModifierId, Option[ByteArrayWrapper]]() {
+      override def load(blockId: ModifierId): Option[ByteArrayWrapper] = {
+        storage.get(blockParentIdKey(blockId)).asScala
+      }
+    }
+  )
 
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
@@ -63,7 +75,7 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
   }
 
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = {
-    storage.get(blockParentIdKey(blockId)).asScala match {
+    parendIdCache.get(blockId) match {
       case Some(baw) => Some(bytesToId(baw.data))
       case _ => None
     }
