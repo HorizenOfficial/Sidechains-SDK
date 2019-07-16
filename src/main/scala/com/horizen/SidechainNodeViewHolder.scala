@@ -2,6 +2,7 @@ package com.horizen
 
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeView, NodeViewHolder, NodeWallet}
 import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.block.Block
@@ -11,7 +12,7 @@ import scorex.core.utils.NetworkTimeProvider
 
 class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
-  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock]
+  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock] with NodeViewHolder
 {
   override type SI = scorex.core.consensus.SyncInfo
   override type HIS = SidechainHistory
@@ -31,13 +32,27 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
   override val modifierSerializers: Map[Byte, Serializer[_ <: NodeViewModifier]] =
     Map(new RegularTransaction().modifierTypeId() -> new SidechainTransactionsCompanion(customTransactionSerializers))
   */
+
+
+  override def getCurrentNodeView: node.NodeView = {
+    new CurrentView(history(), minimalState(), memoryPool(), vault())
+  }
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   def generateGenesisState(hybridSettings: SidechainSettings,
                            timeProvider: NetworkTimeProvider): Unit = ??? // TO DO: change later
-}
 
+}
+class CurrentView(history:NodeHistory, state:NodeState, memPool:NodeMemoryPool, wallet:NodeWallet) extends NodeView {
+  override def getNodeHistory: NodeHistory = history
+
+  override def getNodeState: NodeState = state
+
+  override def getNodeMemoryPool: NodeMemoryPool = memPool
+
+  override def getNodeWallet: NodeWallet = wallet
+}
 /*
 object SDKNodeViewHolderRef {
   def props(settings: SDKSettings,

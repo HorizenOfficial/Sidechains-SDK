@@ -12,10 +12,11 @@ import scorex.core.transaction.MempoolReader
 import scala.collection.concurrent.TrieMap
 import scala.util.{Try, Success, Failure}
 import scala.collection.JavaConverters._
+import com.horizen.node.NodeMemoryPool
 
 class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   extends scorex.core.transaction.MemoryPool[SidechainTypes#BT, SidechainMemoryPool]
-{
+ with NodeMemoryPool {
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
 

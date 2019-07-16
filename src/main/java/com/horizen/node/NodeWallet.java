@@ -3,7 +3,6 @@ package com.horizen.node;
 import com.horizen.box.Box;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
-import javafx.util.Pair;
 
 import java.util.*;
 

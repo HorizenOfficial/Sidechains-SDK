@@ -10,6 +10,7 @@ import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, 
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
+import com.horizen.node.NodeState
 
 
 class LSMStore
@@ -19,7 +20,7 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
                     Box[Proposition],
                     BoxTransaction[Proposition, Box[Proposition]],
                     SidechainBlock,
-                    SidechainState]{
+                    SidechainState] with NodeState {
 
   //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
   //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")

@@ -11,6 +11,7 @@ import scorex.core.consensus.History.ModifierIds
 import scorex.core.consensus.{History, ModifierSemanticValidity, SyncInfo}
 
 import scala.util.Try
+import com.horizen.node.NodeHistory
 
 // TO DO: implement it like in HybridHistory
 // TO DO: think about additional methods (consensus related?)
@@ -20,7 +21,7 @@ class SidechainHistory
   extends scorex.core.consensus.History[
       SidechainBlock,
       SyncInfo,
-      SidechainHistory] {
+      SidechainHistory] with NodeHistory {
 
   override type NVCT = SidechainHistory
 

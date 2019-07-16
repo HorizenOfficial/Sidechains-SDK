@@ -3,3 +3,6 @@ out/
 target/
 scorex.log
 scorex-errors.log
+./classpath
+./settings
+./project
