@@ -143,23 +143,23 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
 
   // Go back though chain and get block ids until condition 'until' or reaching the limit
   // None if parent block is not in chain
-  // TO DO: look up through block ids without parsing the whole block (store parent id separately or parse only first 32 bytes of SC block in ScHisStorage)
   private def chainBack(blockId: ModifierId,
                         until: ModifierId => Boolean,
-                        limit: Int,
-                        acc: Seq[ModifierId] = Seq()): Option[Seq[ModifierId]] = {
-    val sum: Seq[ModifierId] = blockId +: acc
+                        limit: Int): Option[Seq[ModifierId]] = {
+    var acc: Seq[ModifierId] = Seq(blockId)
+    var id = blockId
 
-    if (limit <= 0 || until(blockId)) {
-      Some(sum)
-    } else {
-      storage.parentBlockId(blockId) match {
-        case Some(parentId) => chainBack(parentId, until, limit - 1, sum)
+    while(acc.size < limit && !until(id)) {
+      storage.parentBlockId(id) match {
+        case Some(parentId) =>
+          acc = parentId +: acc
+          id = parentId
         case _ =>
           //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
-          None
+          return None
       }
     }
+    Some(acc)
   }
 
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
@@ -169,10 +169,9 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       new SidechainHistory(newStorage, params)
     } match {
       case Success(newHistory) => newHistory
-      case Failure(e) => {
+      case Failure(e) =>
         //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
         new SidechainHistory(storage, params)
-      }
     }
   }
 
@@ -255,63 +254,61 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   }
 
   // return a sequence of block ids for given indexes (blocks height) backward starting from blockId
-  private def blockIdsToSync(indexesToSync: Seq[Long], blockId: ModifierId, blockHeight: Long, acc: Seq[ModifierId] = Seq()): Seq[ModifierId] = {
-    if(indexesToSync.isEmpty)
-      acc
+  private def blockIdsToSync(): Seq[ModifierId] = {
+    var indexesToSync = knownBlockIndexesToSync()
+    var acc = Seq[ModifierId]()
+    var blockId = bestBlockId
+    var blockHeight = height
 
-    if(   indexesToSync.head < 0 // indexesToSync contains invalid data
-          || blockHeight < indexesToSync.head) // something is wrong, we skipped head index.
-      Seq()
-
-    val (sum: Seq[ModifierId], indexes: Seq[Long]) = {
-      if (blockHeight == indexesToSync.head)
-        acc :+ blockId -> indexesToSync.tail
-      else
-        acc -> indexesToSync
-    }
-
-    if(blockHeight == 0)
-      sum
-    else {
-      storage.parentBlockId(blockId) match {
-        case Some(parentId) =>
-          blockIdsToSync(indexes, parentId, blockHeight - 1, sum)
-        case _ =>
-          //log.warn(s"Parent block for ${encoder.encode(block.id)} not found.")
-          Seq()
+    while(indexesToSync.nonEmpty && blockHeight >= 0) {
+      if(indexesToSync.head > blockHeight) { // something is wrong, we skipped head index.
+        // log.warn(...)
+        return Seq()
+      } else if (indexesToSync.head == blockHeight) {
+        acc = acc :+ blockId
+        indexesToSync = indexesToSync.tail
       }
+      if (blockHeight > 0) {
+        storage.parentBlockId(blockId) match {
+          case Some(parentId) =>
+            blockId = parentId
+          case _ =>
+            //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
+            return Seq()
+        }
+      }
+      blockHeight -= 1
     }
+    acc
   }
 
   override def syncInfo: SidechainSyncInfo = {
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
-      blockIdsToSync(knownBlockIndexesToSync(), bestBlockId, height)
+      blockIdsToSync()
     )
 
   }
 
-  // get divergent suffix until we reach the end of otherBlocks or known block in otherBlocks.
-  // return last common block + divergent suffix.
-  // Note: otherKnownBlockIds ordered from most recent to oldest block
-  private def divergentSuffix(otherKnownBlockIds: Seq[ModifierId],
-                              suffixFound: Seq[ModifierId] = Seq()): Seq[ModifierId] = {
-    if(otherKnownBlockIds.isEmpty)
-      Seq()
-    else {
-      val head = otherKnownBlockIds.head
-      val newSuffix = suffixFound :+ head
-      modifierById(head) match { // TO DO: optimize, just check for existence without retrieving
+  // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlocks.
+  // return last common block + divergent suffix
+  // Note: otherBlockIds ordered from most recent to oldest block
+  private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = {
+    var suffix = Seq[ModifierId]()
+    var blockId: ModifierId = null
+    var restOfOtherBlockIds = otherBlockIds
+
+    while(restOfOtherBlockIds.size > 1) {
+      blockId = restOfOtherBlockIds.head
+      restOfOtherBlockIds = restOfOtherBlockIds.tail
+      suffix = suffix :+ blockId
+
+      modifierById(blockId) match { // TO DO: optimize, just check for existence without retrieving
         case Some(_) =>
-          newSuffix
-        case None => if (otherKnownBlockIds.length <= 1) {
-          Seq()
-        } else {
-          val otherKnownBlockIdsTail = otherKnownBlockIds.tail
-          divergentSuffix(otherKnownBlockIdsTail, newSuffix)
-        }
+          return suffix
       }
     }
+    Seq() // we didn't find common block (except genesis one) -> we have totally different chains.
   }
 
   /** From Scorex History:
