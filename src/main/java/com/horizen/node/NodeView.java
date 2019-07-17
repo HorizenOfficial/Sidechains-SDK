@@ -1,12 +1,12 @@
 package com.horizen.node;
 
-public interface NodeView {
+public interface NodeView <H extends NodeHistory, S extends NodeState, W extends NodeWallet, M extends NodeMemoryPool> {
 
-    NodeHistory getNodeHistory();
+    H getNodeHistory();
 
-    NodeState getNodeState();
+    S getNodeState();
 
-    NodeMemoryPool getNodeMemoryPool();
+    M getNodeMemoryPool();
 
-    NodeWallet getNodeWallet();
+    W getNodeWallet();
 }

@@ -1,5 +1,7 @@
 package com.horizen
 
+import java.util.Optional
+
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeView, NodeViewHolder, NodeWallet}
@@ -12,7 +14,7 @@ import scorex.core.utils.NetworkTimeProvider
 
 class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
-  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock] with NodeViewHolder
+  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock] with NodeViewHolder[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool]
 {
   override type SI = scorex.core.consensus.SyncInfo
   override type HIS = SidechainHistory
@@ -34,7 +36,10 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
   */
 
 
-  override def getCurrentNodeView: node.NodeView = {
+  override def updateNodeView(updatedHistory: Optional[SidechainHistory], updatedState: Optional[SidechainState],
+                              updatedWallet: Optional[SidechainWallet], updatedMempool: Optional[SidechainMemoryPool]): Unit = ???
+
+  override def getCurrentNodeView: node.NodeView[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool] = {
     new CurrentView(history(), minimalState(), memoryPool(), vault())
   }
 }
@@ -44,7 +49,8 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
                            timeProvider: NetworkTimeProvider): Unit = ??? // TO DO: change later
 
 }
-class CurrentView(history:NodeHistory, state:NodeState, memPool:NodeMemoryPool, wallet:NodeWallet) extends NodeView {
+class CurrentView(history:NodeHistory, state:NodeState, memPool:NodeMemoryPool, wallet:NodeWallet)
+    extends NodeView[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool] {
   override def getNodeHistory: NodeHistory = history
 
   override def getNodeState: NodeState = state
