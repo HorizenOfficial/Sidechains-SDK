@@ -22,7 +22,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   with ScorexLogging
   with SidechainTypes
 {
-  override type SI = scorex.core.consensus.SyncInfo
+  override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet

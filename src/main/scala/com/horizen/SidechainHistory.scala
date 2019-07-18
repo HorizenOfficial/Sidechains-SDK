@@ -19,7 +19,7 @@ import scala.util.Try
 class SidechainHistory
   extends scorex.core.consensus.History[
       SidechainBlock,
-      SyncInfo,
+      SidechainSyncInfo,
       SidechainHistory] {
 
   override type NVCT = SidechainHistory
@@ -40,9 +40,9 @@ class SidechainHistory
 
   override def openSurfaceIds(): Seq[ModifierId] = ???
 
-  override def continuationIds(info: SyncInfo, size: Int): ModifierIds = ???
+  override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = ???
 
-  override def syncInfo: SyncInfo = ???
+  override def syncInfo: SidechainSyncInfo = ???
 
-  override def compare(other: SyncInfo): History.HistoryComparisonResult = ???
+  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = ???
 }

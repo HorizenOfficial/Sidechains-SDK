@@ -2,20 +2,17 @@ package com.horizen
 
 import scala.collection.immutable.Map
 import akka.actor.ActorRef
-
 import com.horizen.block.SidechainBlock
-
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute, UtilsApiRoute}
 import scorex.core.app.Application
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
-import scorex.core.network.message.MessageSpec
+import scorex.core.network.message.{MessageSpec, SyncInfoMessageSpec}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import scorex.util.ScorexLogging
 
-class SidechainApp(val settingsFilename: String) {}
-/*
+class SidechainApp(val settingsFilename: String)
   extends Application
   with ScorexLogging
 {
@@ -26,6 +23,7 @@ class SidechainApp(val settingsFilename: String) {}
   private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
   override implicit val settings: ScorexSettings = sidechainSettings.scorexSettings
 
+  System.out.println(s"Starting application with settings \n$sidechainSettings")
   log.debug(s"Starting application with settings \n$sidechainSettings")
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
@@ -49,8 +47,8 @@ class SidechainApp(val settingsFilename: String) {}
     actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
       SidechainBlock, SidechainHistory, SidechainMemoryPool]
       (networkControllerRef, nodeViewHolderRef,
-       SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-       Map[ModifierTypeId, Serializer[_ <: NodeViewModifier]]() //TODO Must be specified
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
+       Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]]() //TODO Must be specified
       ))
 
   override val swaggerConfig: String = ""
@@ -62,4 +60,3 @@ object SidechainApp extends App {
   private val settingsFilename = args.headOption.getOrElse("settings.conf")
   new SidechainApp(settingsFilename).run()
 }
-*/

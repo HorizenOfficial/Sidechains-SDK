@@ -58,10 +58,17 @@
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-testkit_2.12</artifactId>
-            <version>2.5.20</version>
+			<version>2.5.23</version>
             <scope>test</scope>
         </dependency>
 
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-testkit -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-http-testkit_2.12</artifactId>
+			<version>10.1.8</version>
+			<scope>test</scope>
+		</dependency>
 
         <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
         <dependency>
@@ -102,13 +109,6 @@
             <version>1.4</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor -->
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_2.12</artifactId>
-            <version>2.5.20</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/com.iheart/ficus -->
         <dependency>
             <groupId>com.iheart</groupId>
@@ -136,6 +136,54 @@
             <version>2.27.0</version>
         </dependency>
 
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-actor_2.12</artifactId>
+			<version>2.5.23</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-stream_2.12</artifactId>
+			<version>2.5.23</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-http_2.12</artifactId>
+			<version>10.1.8</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
+		<dependency>
+			<groupId>io.circe</groupId>
+			<artifactId>circe-core_2.12</artifactId>
+			<version>0.11.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/io.circe/circe-generic -->
+		<dependency>
+			<groupId>io.circe</groupId>
+			<artifactId>circe-generic_2.12</artifactId>
+			<version>0.11.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/io.circe/circe-parser -->
+		<dependency>
+			<groupId>io.circe</groupId>
+			<artifactId>circe-parser_2.12</artifactId>
+			<version>0.11.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/de.heikoseeberger/akka-http-circe -->
+		<dependency>
+			<groupId>de.heikoseeberger</groupId>
+			<artifactId>akka-http-circe_2.12</artifactId>
+			<version>1.27.0</version>
+		</dependency>
 
     </dependencies>
 
@@ -196,15 +244,24 @@
                     <include>regulartransaction_bytes</include>
                     <include>regularbox_bytes</include>
                     <include>certifierrightbox_bytes</include>
-                    <include>mcblock473173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
-                    <include>mcblock501173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
-                    <include>mcblock273173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07 -->
-                    <include>mcheader300001</include>       <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000058f40e90e203ceae655ae4d8a5c27d72732698e0c7959700c2787a01 -->
-                    <include>mcheader503014</include>       <!-- from https://explorer.zen-solutions.io/api/rawblock/000000001918f6d26d0b128dd4a6e6fce71f3cd96694470d4e24ddaf0dc0404f -->
-                    <include>mctx_v1</include>              <!-- from https://explorer.zen-solutions.io/api/rawtx/6054f092033e5bb352d46ddb837b10da91eb43b40da46656e46140e3ce938db9 -->
-                    <include>mctx_v1_coinbase</include>     <!-- from https://explorer.zen-solutions.io/api/rawtx/e2f681e0431bc5f77299373632350ac493211fa8f3d0491a2d6c5e0284f5d377 -->
-                    <include>mctx_v2</include>              <!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
-                    <include>mctx_v-3</include>             <!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
+					<include>mcblock473173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
+					<include>mcblock501173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
+					<include>mcblock273173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07 -->
+					<include>mcheader300001</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000058f40e90e203ceae655ae4d8a5c27d72732698e0c7959700c2787a01 -->
+					<include>mcheader503014</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/000000001918f6d26d0b128dd4a6e6fce71f3cd96694470d4e24ddaf0dc0404f -->
+					<include>mctx_v1</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/6054f092033e5bb352d46ddb837b10da91eb43b40da46656e46140e3ce938db9 -->
+					<include>mctx_v1_coinbase</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/e2f681e0431bc5f77299373632350ac493211fa8f3d0491a2d6c5e0284f5d377 -->
+					<include>mctx_v2</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
+					<include>mctx_v-3</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
                 </includes>
             </testResource>
         </testResources>
