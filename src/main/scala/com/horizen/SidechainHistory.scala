@@ -229,23 +229,18 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       Seq(bestBlockId)
   }
 
-  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = { // to do
-    def inInfoKnownBlocks(id: ModifierId): Boolean = info.knownBlockIds.contains(id) || isGenesisBlock(id)
-
-    chainBack(bestBlockId, inInfoKnownBlocks, Int.MaxValue) match {
-      case Some(chain) =>
-        if(chain.exists(id => info.knownBlockIds.contains(id)))
-          Some(chain.take(size).map(id => (SidechainBlock.ModifierTypeId, id)))
-        else {
-          //log.warn("Found chain without ids from remote")
-          None
-        }
-      case _ => None
+  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = {
+    info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
+      case Some(commonBlockId) =>
+        Some(storage.activeChainFrom(commonBlockId).take(size).map(id => (SidechainBlock.ModifierTypeId, id)))
+      case None =>
+        //log.warn("Found chain without common block ids from remote")
+        None
     }
   }
 
   // see https://en.bitcoin.it/wiki/Protocol_documentation#getblocks
-  private def knownBlockIndexesToSync(): Seq[Int] = { // to do: check
+  private def knownBlocksHeightToSync(): Seq[Int] = {
     if (isEmpty)
       return Seq()
 
@@ -254,7 +249,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     var step: Int = 1
     // Start at the top of the chain and work backwards.
     var index: Int = height
-    while (index > 0) {
+    while (index > 1) {
       indexes = indexes :+ index
       // Push top 10 indexes first, then back off exponentially.
       if(indexes.size >= 10)
@@ -262,42 +257,14 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       index -= step
     }
     // Push the genesis block index.
-    indexes :+ 0
+    indexes :+ 1
   }
 
-  // return a sequence of block ids for given indexes (blocks height) backward starting from blockId
-  private def blockIdsToSync(): Seq[ModifierId] = { // to do
-    var indexesToSync = knownBlockIndexesToSync()
-    var acc = Seq[ModifierId]()
-    var blockId = bestBlockId
-    var blockHeight = height
-
-    while(indexesToSync.nonEmpty && blockHeight >= 0) {
-      if(indexesToSync.head > blockHeight) { // something is wrong, we skipped head index.
-        // log.warn(...)
-        return Seq()
-      } else if (indexesToSync.head == blockHeight) {
-        acc = acc :+ blockId
-        indexesToSync = indexesToSync.tail
-      }
-      if (blockHeight > 0) {
-        storage.parentBlockId(blockId) match {
-          case Some(parentId) =>
-            blockId = parentId
-          case _ =>
-            //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
-            return Seq()
-        }
-      }
-      blockHeight -= 1
-    }
-    acc
-  }
-
-  override def syncInfo: SidechainSyncInfo = { // to do
+  override def syncInfo: SidechainSyncInfo = {
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
-      blockIdsToSync()
+      // return a sequence of block ids for given blocks height backward starting from blockId
+      knownBlocksHeightToSync().map(height => storage.activeChainBlockId(height).get)
     )
 
   }

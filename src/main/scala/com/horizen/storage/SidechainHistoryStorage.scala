@@ -111,6 +111,8 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
 
   def isInActiveChain(blockId: ModifierId): Boolean = activeChain.contains(blockId)
 
+  def activeChainBlockId(height: Int): Option[ModifierId] = activeChain.getBlockId(height)
+
   def activeChainFrom(blockId: ModifierId): Seq[ModifierId] = activeChain.chainFrom(blockId)
 
   def update(block: SidechainBlock, chainScore: Long): Try[SidechainHistoryStorage] = Try {

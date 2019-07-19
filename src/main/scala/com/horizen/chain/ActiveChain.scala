@@ -74,6 +74,15 @@ class ActiveChain private (private var tipId: Option[ModifierId], private var bl
     else
       Some(blockInfos(blockHeight - 1))
   }
+
+  def getBlockId(blockHeight: Int): Option[ModifierId] = {
+    if(blockHeight > height())
+      None
+    else if(blockHeight == height())
+      tip()
+    else
+      Some(getBlockInfo(blockHeight + 1).get.parentId)
+  }
 }
 
 

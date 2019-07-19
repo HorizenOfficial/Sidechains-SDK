@@ -12,6 +12,7 @@ import scorex.util.{idToBytes, bytesToId}
 
 import scala.util.Try
 
+// knownBlockIds ordered backward most recent one to oldest
 case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
   override type M = SidechainSyncInfo
 
