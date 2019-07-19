@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
@@ -24,14 +25,13 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
 
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
-  val height: Long = storage.height
+  val height: Int = storage.height
   val bestBlockId: ModifierId = storage.bestBlockId
   val bestBlock: SidechainBlock = storage.bestBlock // note: maybe make it lazy?
 
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
-    // TO DO: validate using Validators.
     // TO DO: validate against Praos consensus rules.
     if(!block.semanticValidity(params))
       throw new IllegalArgumentException("Semantic validation failed for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
@@ -41,31 +41,43 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          storage.update(block, 1L, isBest = true),
+          // to do: do we need to set genesis as best one? do it here or outside by calling reportModifierIsValid
+          storage.update(block, 1L), // to do: change according to new score algorithm
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
       else {
-        storage.heightOf(block.parentId) match {
-          case Some(parentHeight) =>
-            val chainScore: Long = calculateChainScore(block, parentHeight)
+        storage.blockInfoById(block.parentId) match {
+          case Some(parentBlockInfo) =>
+            val chainScore: Long = calculateChainScore(block, parentBlockInfo.score)
             // Check if we retrieved the next block of best chain
             if(block.parentId.equals(bestBlockId)) {
               (
-                storage.update(block, chainScore, isBest = true),
+                storage.update(block, chainScore),
                 ProgressInfo(None, Seq(), Seq(block), Seq())
               )
             } else {
               // Check if retrieved block is the best one, but from another chain
-              if(isBestBlock(block, parentHeight)) {
-                (
-                  storage.update(block, chainScore, isBest = true),
-                  bestForkChanges(block) // get info to switch to another chain
-                )
+              if(isBestBlock(block, parentBlockInfo.score)) {
+                  bestForkChanges(block) match { // get info to switch to another chain
+                    case Success(progInfo) =>
+                      (
+                        storage.update(block, chainScore),
+                        progInfo
+                      )
+                    case Failure(e) =>
+                      //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+                      (
+                        storage.update(block, chainScore),
+                        // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
+                        ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+                      )
+
+                  }
               } else {
                 // We retrieved block from another chain that is not the best one
                 (
-                  storage,
+                  storage.update(block, chainScore),
                   ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
                 )
               }
@@ -73,7 +85,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
           case None =>
             // Parent is not present inside history
             // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
-            // TO DO: do we need to save it to history storage to prevent double downloading ot it's cached somewhere?
+            // TO DO: do we need to save it to history storage to prevent double downloading or it's cached somewhere?
             (
               storage,
               ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
@@ -88,22 +100,25 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     blockId.equals(params.sidechainGenesisBlockId)
   }
 
-  def isBestBlock(block: SidechainBlock, parentHeight: Long): Boolean = {
+  def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
-    val newScore = calculateChainScore(block, parentHeight)
+    val newScore = calculateChainScore(block, parentScore)
     newScore > currentScore
   }
 
-  // TO DO: define algorithm for Block score computation
-  def calculateChainScore(block: SidechainBlock, parentHeight: Long): Long = {
-    storage.chainScoreFor(block.parentId).get + 1L
+  // score is a long value, where
+  // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
+  // last 4 bytes contain heights of passed block
+  def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
+    parentScore + block.mainchainBlocks.size << 4 + 1
   }
 
-  // Note: do we need to check validity of newChainSuffix blocks like in HybridApp?
-  def bestForkChanges(block: SidechainBlock): ProgressInfo[SidechainBlock] = {
+  def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
     val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
+    if(newChainSuffix.isEmpty && currentChainSuffix.isEmpty)
+      throw new IllegalArgumentException("Cannot retrieve fork changes. Fork length is more than params.maxHistoryRewritingLength")
 
-    val newChainSuffixValidity: Boolean = !newChainSuffix.drop(1).map(storage.semanticValidity)
+    val newChainSuffixValidity: Boolean = !newChainSuffix.tail.map(isSemanticallyValid)
       .contains(ModifierSemanticValidity.Invalid)
 
     if(newChainSuffixValidity) {
@@ -124,28 +139,30 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
   // Returns last common block and then variant blocks for two chains.
   def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
-    val currentChain = chainBack(bestBlockId, isGenesisBlock, params.maxHistoryRewritingLength).get
+    def inCurrentChain(blockId: ModifierId): Boolean = storage.isInActiveChain(blockId)
 
-    def inCurrentChain(blockId: ModifierId): Boolean = currentChain.contains(blockId)
-    val newBestChain = chainBack(forkBlock.id, inCurrentChain, params.maxHistoryRewritingLength).get
+    chainBack(forkBlock.id, inCurrentChain, Int.MaxValue) match {
+      case Some(newBestChain) =>
+        val commonBlockHeight = storage.blockInfoById(newBestChain.head).get.height
+        if(height - commonBlockHeight > params.maxHistoryRewritingLength)
+          // fork length is more than params.maxHistoryRewritingLength
+          (Seq[ModifierId](), Seq[ModifierId]())
+        else
+          (newBestChain, storage.activeChainFrom(newBestChain.head))
 
-    val i = currentChain.indexWhere { id =>
-      newBestChain.headOption match {
-        case None => false
-        case Some(newBestChainHead) => id == newBestChainHead
-      }
+      case None => (Seq[ModifierId](), Seq[ModifierId]())
     }
-    (newBestChain, currentChain.takeRight(currentChain.length - i))
   } ensuring { res =>
     // verify, that both sequences starts from common block
-    res._1.head == res._2.head
+    (res._1.isEmpty && res._2.isEmpty) || res._1.head == res._2.head
   }
 
   // Go back though chain and get block ids until condition 'until' or reaching the limit
   // None if parent block is not in chain
+  // Note: work faster for active chain back (looks inside memory) and slower for fork chain (looks inside disk)
   private def chainBack(blockId: ModifierId,
                         until: ModifierId => Boolean,
-                        limit: Int): Option[Seq[ModifierId]] = {
+                        limit: Int): Option[Seq[ModifierId]] = { // to do
     var acc: Seq[ModifierId] = Seq(blockId)
     var id = blockId
 
@@ -165,7 +182,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
     Try {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
-      newStorage = newStorage.updateBestBlock(block).get
+      newStorage = newStorage.updateBestBlock(block, storage.blockInfoById(block.id).get).get
       new SidechainHistory(newStorage, params)
     } match {
       case Success(newHistory) => newHistory
@@ -175,7 +192,9 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     }
   }
 
-  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = {
+  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
+    // TO DO: in case when we want to continue active chain, it works ok, we will stay on the same "stay"
+    // in case when we are applying some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
     val newHistory: SidechainHistory = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
       new SidechainHistory(newStorage, params)
@@ -200,14 +219,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
 
   override def isSemanticallyValid(blockId: ModifierId): ModifierSemanticValidity = {
-    modifierById(blockId) match {
-      case Some(block) =>
-        if(block.semanticValidity(params))
-          ModifierSemanticValidity.Valid
-        else
-          ModifierSemanticValidity.Invalid
-      case None => ModifierSemanticValidity.Absent
-    }
+    storage.semanticValidity(blockId)
   }
 
   override def openSurfaceIds(): Seq[ModifierId] = {
@@ -217,7 +229,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       Seq(bestBlockId)
   }
 
-  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = {
+  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = { // to do
     def inInfoKnownBlocks(id: ModifierId): Boolean = info.knownBlockIds.contains(id) || isGenesisBlock(id)
 
     chainBack(bestBlockId, inInfoKnownBlocks, Int.MaxValue) match {
@@ -233,15 +245,15 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   }
 
   // see https://en.bitcoin.it/wiki/Protocol_documentation#getblocks
-  private def knownBlockIndexesToSync(): Seq[Long] = {
+  private def knownBlockIndexesToSync(): Seq[Int] = { // to do: check
     if (isEmpty)
       return Seq()
 
-    var indexes: Seq[Long] = Seq()
+    var indexes: Seq[Int] = Seq()
 
-    var step: Long = 1L
+    var step: Int = 1
     // Start at the top of the chain and work backwards.
-    var index: Long = height
+    var index: Int = height
     while (index > 0) {
       indexes = indexes :+ index
       // Push top 10 indexes first, then back off exponentially.
@@ -250,11 +262,11 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       index -= step
     }
     // Push the genesis block index.
-    indexes :+ 0L
+    indexes :+ 0
   }
 
   // return a sequence of block ids for given indexes (blocks height) backward starting from blockId
-  private def blockIdsToSync(): Seq[ModifierId] = {
+  private def blockIdsToSync(): Seq[ModifierId] = { // to do
     var indexesToSync = knownBlockIndexesToSync()
     var acc = Seq[ModifierId]()
     var blockId = bestBlockId
@@ -282,7 +294,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     acc
   }
 
-  override def syncInfo: SidechainSyncInfo = {
+  override def syncInfo: SidechainSyncInfo = { // to do
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
       blockIdsToSync()
@@ -293,7 +305,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlocks.
   // return last common block + divergent suffix
   // Note: otherBlockIds ordered from most recent to oldest block
-  private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = {
+  private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = { // to do
     var suffix = Seq[ModifierId]()
     var blockId: ModifierId = null
     var restOfOtherBlockIds = otherBlockIds
@@ -317,7 +329,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     * @param other other's node sync info
     * @return Equal if nodes have the same history, Younger if another node is behind, Older if a new node is ahead
     */
-  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = {
+  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = { // to do
     val dSuffix = divergentSuffix(other.knownBlockIds.reverse)
 
     dSuffix.size match {

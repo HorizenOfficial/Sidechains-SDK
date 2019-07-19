@@ -1,12 +1,11 @@
 package com.horizen.storage
 
-import java.util.{List => JList, ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.google.common.primitives.Longs
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.ByteArrayWrapper
 import scorex.util.{bytesToId, idToBytes}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
@@ -14,9 +13,10 @@ import scorex.util.{ModifierId, ScorexLogging}
 import javafx.util.{Pair => JPair}
 
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Random, Try}
+import scala.util.{Failure, Random, Success, Try}
+import com.horizen.chain.{ActiveChain, SidechainBlockInfo, SidechainBlockInfoSerializer}
 
-import com.google.common.cache.{CacheBuilder, CacheLoader}
+import scala.collection.mutable.ArrayBuffer
 
 
 class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
@@ -26,24 +26,26 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
 
-  // Set a limited cache for block parent Ids storing.
-  private val parendIdCache = CacheBuilder.newBuilder().maximumSize(10000).build(
-    new CacheLoader[ModifierId, Option[ByteArrayWrapper]]() {
-      override def load(blockId: ModifierId): Option[ByteArrayWrapper] = {
-        storage.get(blockParentIdKey(blockId)).asScala
-      }
+  private val activeChain: ActiveChain = loadActiveChain()
+
+  private def loadActiveChain(): ActiveChain = {
+    if(height == 0)
+      return ActiveChain()
+    val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer(height)
+    activeChainBlocksInfo(height - 1) = (bestBlockId, blockInfoById(bestBlockId).get)
+
+    for(i <- height - 2 to 0 by -1) {
+      val id = activeChainBlocksInfo(i+1)._2.parentId
+      activeChainBlocksInfo(i) = (id, blockInfoById(id).get)
     }
-  )
+    ActiveChain(activeChainBlocksInfo)
+  }
 
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
-  private def blockParentIdKey(blockId:ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"parentIdFor$blockId"))
-
   private def validityKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"validity$blockId"))
 
-  private def blockHeightKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"height$blockId"))
-
-  private def chainScoreKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"chainScore$blockId"))
+  private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
   private def nextVersion: Array[Byte] = {
     val version = new Array[Byte](32)
@@ -52,14 +54,19 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
   }
 
 
-  def height: Long = heightOf(bestBlockId).getOrElse(0L)
+  def height: Int = heightOf(bestBlockId).getOrElse(0)
 
-  def heightOf(blockId: ModifierId): Option[Long] =  storage.get(blockHeightKey(blockId)).asScala.map(b => BytesUtils.getLong(b.data, 0))
+  def heightOf(blockId: ModifierId): Option[Int] = {
+    blockInfoById(blockId) match {
+      case Some(info) => Some(info.height)
+      case None => None
+    }
+  }
 
   def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(bytesToId(params.sidechainGenesisBlockId))
 
   def bestBlock: SidechainBlock = {
-    require(height > 0, "SidechainHistory is empty. Cannot retrieve best block.")
+    require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
     blockById(bestBlockId).get
   }
 
@@ -74,32 +81,51 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
     }
   }
 
-  def parentBlockId(blockId: ModifierId): Option[ModifierId] = {
-    parendIdCache.get(blockId) match {
-      case Some(baw) => Some(bytesToId(baw.data))
-      case _ => None
+  def blockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = {
+    if(activeChain.contains(blockId))
+      return activeChain.getBlockInfo(blockId)
+    storage.get(blockInfoKey(blockId)).asScala match {
+      case Some(baw) => SidechainBlockInfoSerializer.parseBytes(baw.data) match {
+        case Failure(e) =>
+          log.warn("SidechainHistoryStorage: Failed to parse block info bytes from storage.", e)
+          None
+        case Success(blockInfo) => Some(blockInfo)
+      }
+      case None => None
     }
   }
 
-  def chainScoreFor(blockId: ModifierId): Option[Long] =  storage.get(chainScoreKey(blockId)).asScala.map(b => BytesUtils.getLong(b.data, 0))
+  def parentBlockId(blockId: ModifierId): Option[ModifierId] = {
+    blockInfoById(blockId) match {
+      case Some(info) => Some(info.parentId)
+      case None => None
+    }
+  }
 
-  def update(block: SidechainBlock, chainScore: Long, isBest: Boolean): Try[SidechainHistoryStorage] = Try {
+  def chainScoreFor(blockId: ModifierId): Option[Long] = {
+    blockInfoById(blockId) match {
+      case Some(info) => Some(info.score)
+      case None => None
+    }
+  }
+
+  def isInActiveChain(blockId: ModifierId): Boolean = activeChain.contains(blockId)
+
+  def activeChainFrom(blockId: ModifierId): Seq[ModifierId] = activeChain.chainFrom(blockId)
+
+  def update(block: SidechainBlock, chainScore: Long): Try[SidechainHistoryStorage] = Try {
     require(block != null, "SidechainBlock must be NOT NULL.")
 
     val toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList()
 
-    // add block height data
-    toUpdate.add(new JPair(blockHeightKey(block.id), new ByteArrayWrapper(Longs.toByteArray(heightOf(block.parentId).getOrElse(0L) + 1))))
-
-    // if best, add best block data
-    if(isBest)
-      toUpdate.add(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id))))
-
-    // add chain new score
-    toUpdate.add(new JPair(chainScoreKey(block.id), new ByteArrayWrapper(Longs.toByteArray(chainScore))))
-
-    // add parent block Id. Used when we want to loop though chain ids without extracting and parsing the whole block
-    toUpdate.add(new JPair(blockParentIdKey(block.id), new ByteArrayWrapper(idToBytes(block.parentId))))
+    // add short block info
+    val blockInfo: SidechainBlockInfo = SidechainBlockInfo(
+      heightOf(block.parentId).getOrElse(0) + 1, // to do: check, what for orphan blocks?
+      chainScore,
+      block.parentId,
+      ModifierSemanticValidity.Unknown
+    )
+    toUpdate.add(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes)))
 
     // add block
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
@@ -109,34 +135,39 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
 
+
     this
   }
 
-  def semanticValidity(id: ModifierId): ModifierSemanticValidity = {
-      storage.get(validityKey(id)).asScala match {
-        case Some(baw) =>
-          if(baw.data.length != 1)
-            ModifierSemanticValidity.Unknown
-          ModifierSemanticValidity.restoreFromCode(baw.data.head)
-        case _ => ModifierSemanticValidity.Absent
-      }
+  def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
+    blockInfoById(blockId) match {
+      case Some(info) => info.semanticValidity
+      case None => ModifierSemanticValidity.Absent
+    }
   }
 
   def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
+    val blockInfo: SidechainBlockInfo = activeChain.updateSemanticValidity(block.id, status).getOrElse( {
+      // if it's not a part of active chain, retrieve previous info from disk storage
+      val oldInfo: SidechainBlockInfo = blockInfoById(block.id).get
+      SidechainBlockInfo(oldInfo.height, oldInfo.score, oldInfo.parentId, status)
+    })
+
     storage.update(
       new ByteArrayWrapper(nextVersion),
-      java.util.Arrays.asList(new JPair(validityKey(block.id), new ByteArrayWrapper(Array(status.code)))),
+      java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
     this
   }
 
-  def updateBestBlock(block: SidechainBlock): Try[SidechainHistoryStorage] = Try {
+  def updateBestBlock(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
     storage.update(
       new ByteArrayWrapper(nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
+    activeChain.updateTip(block.id, blockInfo)
     this
   }
 }
