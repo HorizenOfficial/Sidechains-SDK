@@ -2,13 +2,15 @@ package com.horizen.proposition;
 
 import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public interface PropositionSerializer<P extends Proposition> extends ScorexSerializer<P>
 {
     @Override
-    byte[] toBytes(P obj);
+    void serialize(P proposition, Writer writer);
 
     @Override
-    Try<P> parseBytesTry(byte[] bytes);
+    P parse(Reader reader);
 }
 

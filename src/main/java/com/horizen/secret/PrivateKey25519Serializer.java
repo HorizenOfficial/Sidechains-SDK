@@ -28,22 +28,12 @@ public final class PrivateKey25519Serializer implements SecretSerializer<Private
     }
 
     @Override
-    public byte[] toBytes(PrivateKey25519 secret) {
-        return secret.bytes();
-    }
-
-    @Override
-    public Try<PrivateKey25519> parseBytesTry(byte[] bytes) {
-        return PrivateKey25519.parseBytes(bytes);
-    }
-
-    @Override
-    public void serialize(PrivateKey25519 obj, Writer writer) {
-
+    public void serialize(PrivateKey25519 secret, Writer writer) {
+        writer.putBytes(secret.bytes());
     }
 
     @Override
     public PrivateKey25519 parse(Reader reader) {
-        return null;
+        return PrivateKey25519.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

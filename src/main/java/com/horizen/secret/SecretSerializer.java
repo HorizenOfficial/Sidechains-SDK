@@ -2,12 +2,14 @@ package com.horizen.secret;
 
 import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public interface SecretSerializer<S extends Secret> extends ScorexSerializer<S>
 {
     @Override
-    byte[] toBytes(S obj);
+    void serialize(S secret, Writer writer);
 
     @Override
-    Try<S> parseBytesTry(byte[] bytes);
+    S parse(Reader reader);
 }

@@ -29,6 +29,7 @@ public final class RegularBoxSerializer implements BoxSerializer<RegularBox>
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(RegularBox box) {
         return box.bytes();
@@ -38,14 +39,15 @@ public final class RegularBoxSerializer implements BoxSerializer<RegularBox>
     public Try<RegularBox> parseBytesTry(byte[] bytes) {
         return RegularBox.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(RegularBox obj, Writer writer) {
-
+    public void serialize(RegularBox box, Writer writer) {
+        writer.putBytes(box.bytes());
     }
 
     @Override
     public RegularBox parse(Reader reader) {
-        return null;
+        return RegularBox.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

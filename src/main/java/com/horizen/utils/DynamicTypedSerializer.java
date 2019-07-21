@@ -41,6 +41,7 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Score
             throw new IllegalArgumentException("Custom Serializers class types expected to be unique.");
     }
 
+    /*
     @Override
     public byte[] toBytes(T obj) {
         // Core serializer found
@@ -61,17 +62,51 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Score
         else
             throw new IllegalArgumentException("Object without defined serializer occurred.");
     }
+    */
 
     @Override
     public void serialize(T obj, Writer writer) {
-
+        // Core serializer found
+        if(_coreSerializersClasses.containsKey(obj.serializer().getClass())) {
+            byte idOfSerializer = _coreSerializersClasses.get(obj.serializer().getClass());
+            writer.put(idOfSerializer);
+            writer.putBytes(obj.serializer().toBytes(obj));
+        }
+        else if(_customSerializersClasses.containsKey(obj.serializer().getClass())) {
+            byte idOfSerializer = _customSerializersClasses.get(obj.serializer().getClass());
+            writer.put(CUSTOM_SERIALIZER_TYPE);
+            writer.put(idOfSerializer);
+            writer.putBytes(obj.serializer().toBytes(obj));
+        }
+        else
+            throw new IllegalArgumentException("Object without defined serializer occurred.");
     }
 
     @Override
     public T parse(Reader reader) {
-        return null;
+        if (reader.remaining() < 1)
+            throw new IllegalArgumentException("Unknown custom type id.");
+
+        byte[] bytes = reader.getBytes(reader.remaining());
+
+        if (bytes[0] == CUSTOM_SERIALIZER_TYPE) {
+            // try parse using custom serializers
+            S serializer = _customSerializers.get(bytes[1]);
+            if (serializer != null)
+                return serializer.parseBytes(Arrays.copyOfRange(bytes, 2, bytes.length));
+            else
+                throw new IllegalArgumentException("Unknown custom type id.");
+        } else {
+            // try parse using core serializers
+            S serializer = _coreSerializers.get(bytes[0]);
+            if (serializer != null)
+                return serializer.parseBytes(Arrays.copyOfRange(bytes, 1, bytes.length));
+            else
+                throw new IllegalArgumentException("Unknown core type id.");
+        }
     }
 
+    /*
     @Override
     public Try<T> parseBytesTry(byte[] bytes) {
         try {
@@ -96,4 +131,5 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Score
             return new Failure<>(e);
         }
     }
+    */
 }

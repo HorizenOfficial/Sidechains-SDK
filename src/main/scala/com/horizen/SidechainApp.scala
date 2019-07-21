@@ -21,7 +21,7 @@ class SidechainApp(val settingsFilename: String)
   override type NVHT = SidechainNodeViewHolder
 
   private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
-  override implicit val settings: ScorexSettings = sidechainSettings.scorexSettings
+  override implicit lazy val settings: ScorexSettings = SidechainSettings.read(Some(settingsFilename)).scorexSettings
 
   System.out.println(s"Starting application with settings \n$sidechainSettings")
   log.debug(s"Starting application with settings \n$sidechainSettings")
@@ -37,9 +37,9 @@ class SidechainApp(val settingsFilename: String)
     PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
-  override protected val features: Seq[PeerFeature] = Seq()
+  override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  override protected val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq()
+  override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq()
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, timeProvider)
 
@@ -58,5 +58,6 @@ class SidechainApp(val settingsFilename: String)
 
 object SidechainApp extends App {
   private val settingsFilename = args.headOption.getOrElse("settings.conf")
-  new SidechainApp(settingsFilename).run()
+  val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
+  val  app = new SidechainApp(settingsFilename)
 }

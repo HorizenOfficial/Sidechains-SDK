@@ -15,13 +15,13 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
 
     private CertifierRightBoxSerializer() {
         super();
-
     }
 
     public static CertifierRightBoxSerializer getSerializer() {
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(CertifierRightBox box) {
         return box.bytes();
@@ -31,14 +31,15 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
     public Try<CertifierRightBox> parseBytesTry(byte[] bytes) {
         return CertifierRightBox.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(CertifierRightBox obj, Writer writer) {
-
+    public void serialize(CertifierRightBox box, Writer writer) {
+        writer.putBytes(box.bytes());
     }
 
     @Override
     public CertifierRightBox parse(Reader reader) {
-        return null;
+        return CertifierRightBox.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

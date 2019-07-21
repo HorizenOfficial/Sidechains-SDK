@@ -22,22 +22,12 @@ public class CustomPublicKeyPropositionSerializer implements PropositionSerializ
     }
 
     @Override
-    public byte[] toBytes(CustomPublicKeyProposition obj) {
-        return obj.bytes();
-    }
-
-    @Override
-    public Try<CustomPublicKeyProposition> parseBytesTry(byte[] bytes) {
-        return CustomPublicKeyProposition.parseBytes(bytes);
-    }
-
-    @Override
-    public void serialize(CustomPublicKeyProposition obj, Writer writer) {
-
+    public void serialize(CustomPublicKeyProposition proposition, Writer writer) {
+        writer.putBytes(proposition.bytes());
     }
 
     @Override
     public CustomPublicKeyProposition parse(Reader reader) {
-        return null;
+        return CustomPublicKeyProposition.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

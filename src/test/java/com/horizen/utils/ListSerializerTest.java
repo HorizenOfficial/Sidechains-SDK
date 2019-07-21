@@ -55,27 +55,13 @@ class ListSerializerTestObjectA implements BytesSerializable {
 class ListSerializerTestObjectASerializer implements ScorexSerializer<ListSerializerTestObjectA> {
 
     @Override
-    public byte[] toBytes(ListSerializerTestObjectA obj) {
-        return (obj._testData).getBytes();
-    }
-
-    @Override
-    public Try<ListSerializerTestObjectA> parseBytesTry(byte[] bytes) {
-        try {
-            return new Success<>(new ListSerializerTestObjectA(Strings.fromByteArray(bytes)));
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
-    }
-
-    @Override
     public void serialize(ListSerializerTestObjectA obj, Writer writer) {
-
+        writer.putBytes(obj._testData.getBytes());
     }
 
     @Override
     public ListSerializerTestObjectA parse(Reader reader) {
-        return null;
+        return new ListSerializerTestObjectA(Strings.fromByteArray(reader.getBytes(reader.remaining())));
     }
 }
 
@@ -115,6 +101,7 @@ class ListSerializerTestObjectB implements BytesSerializable {
 
 class ListSerializerTestObjectBSerializer implements ScorexSerializer<ListSerializerTestObjectB> {
 
+    /*
     @Override
     public byte[] toBytes(ListSerializerTestObjectB obj) {
         return Ints.toByteArray(obj._testData);
@@ -128,15 +115,16 @@ class ListSerializerTestObjectBSerializer implements ScorexSerializer<ListSerial
             return new Failure<>(e);
         }
     }
+    */
 
     @Override
     public void serialize(ListSerializerTestObjectB obj, Writer writer) {
-
+        writer.putBytes(Ints.toByteArray(obj._testData));
     }
 
     @Override
     public ListSerializerTestObjectB parse(Reader reader) {
-        return null;
+        return new ListSerializerTestObjectB(Ints.fromByteArray(reader.getBytes(reader.remaining())));
     }
 }
 

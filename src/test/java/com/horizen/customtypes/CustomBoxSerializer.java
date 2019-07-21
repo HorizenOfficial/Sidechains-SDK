@@ -23,22 +23,12 @@ public class CustomBoxSerializer implements BoxSerializer<CustomBox>
     }
 
     @Override
-    public byte[] toBytes(CustomBox box) {
-        return box.bytes();
-    }
-
-    @Override
-    public Try<CustomBox> parseBytesTry(byte[] bytes) {
-        return CustomBox.parseBytes(bytes);
-    }
-
-    @Override
-    public void serialize(CustomBox obj, Writer writer) {
-
+    public void serialize(CustomBox box, Writer writer) {
+        writer.putBytes(box.bytes());
     }
 
     @Override
     public CustomBox parse(Reader reader) {
-        return null;
+        return CustomBox.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

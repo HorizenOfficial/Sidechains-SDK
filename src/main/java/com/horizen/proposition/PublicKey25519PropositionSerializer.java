@@ -33,12 +33,12 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
     }
 
     @Override
-    public void serialize(PublicKey25519Proposition obj, Writer writer) {
-
+    public void serialize(PublicKey25519Proposition proposition, Writer writer) {
+        writer.putBytes(proposition.bytes());
     }
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return null;
+        return PublicKey25519Proposition.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

@@ -23,22 +23,12 @@ public class CustomPrivateKeySerializer implements SecretSerializer<CustomPrivat
     }
 
     @Override
-    public byte[] toBytes(CustomPrivateKey secret) {
-        return secret.bytes();
-    }
-
-    @Override
-    public Try<CustomPrivateKey> parseBytesTry(byte[] bytes) {
-        return CustomPrivateKey.parseBytes(bytes);
-    }
-
-    @Override
-    public void serialize(CustomPrivateKey obj, Writer writer) {
-
+    public void serialize(CustomPrivateKey secret, Writer writer) {
+        writer.putBytes(secret.bytes());
     }
 
     @Override
     public CustomPrivateKey parse(Reader reader) {
-        return null;
+        return CustomPrivateKey.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

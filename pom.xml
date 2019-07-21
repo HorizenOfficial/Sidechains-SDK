@@ -1,45 +1,45 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.horizen</groupId>
-    <artifactId>Sidechains-SDK</artifactId>
-    <version>0.1-SNAPSHOT</version>
-    <inceptionYear>2018</inceptionYear>
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <scala.version>2.12.8</scala.version>
-    </properties>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.horizen</groupId>
+	<artifactId>Sidechains-SDK</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<inceptionYear>2018</inceptionYear>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<scala.version>2.12.8</scala.version>
+	</properties>
 
-    <repositories>
-        <repository>
-            <id>scala-tools.org</id>
-            <name>Scala-Tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </repository>
-    </repositories>
+	<repositories>
+		<repository>
+			<id>scala-tools.org</id>
+			<name>Scala-Tools Maven2 Repository</name>
+			<url>http://scala-tools.org/repo-releases</url>
+		</repository>
+	</repositories>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>scala-tools.org</id>
-            <name>Scala-Tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </pluginRepository>
-    </pluginRepositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>scala-tools.org</id>
+			<name>Scala-Tools Maven2 Repository</name>
+			<url>http://scala-tools.org/repo-releases</url>
+		</pluginRepository>
+	</pluginRepositories>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-        <!--
+	<dependencies>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>${scala.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<!--
         <dependency>
             <groupId>org.specs</groupId>
             <artifactId>specs</artifactId>
@@ -47,20 +47,20 @@
             <scope>test</scope>
         </dependency>
         -->
-        <!-- https://mvnrepository.com/artifact/org.scalatest/scalatest -->
-        <dependency>
-            <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_2.12</artifactId>
-            <version>3.0.5</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-testkit -->
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-testkit_2.12</artifactId>
+		<!-- https://mvnrepository.com/artifact/org.scalatest/scalatest -->
+		<dependency>
+			<groupId>org.scalatest</groupId>
+			<artifactId>scalatest_2.12</artifactId>
+			<version>3.0.5</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-testkit -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-testkit_2.12</artifactId>
 			<version>2.5.23</version>
-            <scope>test</scope>
-        </dependency>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-testkit -->
 		<dependency>
@@ -70,17 +70,17 @@
 			<scope>test</scope>
 		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>scorex-core_2.12</artifactId>
-            <version>2.0.0-RC4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/src/main/resources/scorex-core_2.12-RC-4.jar</systemPath>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scorex-core_2.12</artifactId>
+			<version>2.0.0-RC4</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/src/main/resources/scorex-core_2.12-RC-4.jar</systemPath>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-util -->
-        <!--
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-util -->
+		<!--
         <dependency>
             <groupId>org.scorexfoundation</groupId>
             <artifactId>scorex-util_2.12</artifactId>
@@ -89,52 +89,52 @@
             <systemPath>${project.basedir}/src/main/resources/scorex-util_2.12-0.1.1.jar</systemPath>
         </dependency>
         -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>scorex-util_2.12</artifactId>
-            <version>0.1.4</version>
-        </dependency>
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scorex-util_2.12</artifactId>
+			<version>0.1.4</version>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scrypto -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>scrypto_2.12</artifactId>
-            <version>2.1.5</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scrypto -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scrypto_2.12</artifactId>
+			<version>2.1.5</version>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.rudogma/supertagged -->
-        <dependency>
-            <groupId>org.rudogma</groupId>
-            <artifactId>supertagged_2.12</artifactId>
-            <version>1.4</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.rudogma/supertagged -->
+		<dependency>
+			<groupId>org.rudogma</groupId>
+			<artifactId>supertagged_2.12</artifactId>
+			<version>1.4</version>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.iheart/ficus -->
-        <dependency>
-            <groupId>com.iheart</groupId>
-            <artifactId>ficus_2.12</artifactId>
-            <version>1.4.2</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/com.iheart/ficus -->
+		<dependency>
+			<groupId>com.iheart</groupId>
+			<artifactId>ficus_2.12</artifactId>
+			<version>1.4.2</version>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.8.0-beta2</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.8.0-beta2</version>
+		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>iodb_2.12</artifactId>
-            <version>0.3.2</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>iodb_2.12</artifactId>
+			<version>0.3.2</version>
+		</dependency>
 
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>2.27.0</version>
-        </dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>2.27.0</version>
+		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor -->
 		<dependency>
@@ -185,65 +185,72 @@
 			<version>1.27.0</version>
 		</dependency>
 
-    </dependencies>
+		<!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
+		<dependency>
+			<groupId>commons-net</groupId>
+			<artifactId>commons-net</artifactId>
+			<version>3.6</version>
+		</dependency>
 
-    <build>
-        <!--
+	</dependencies>
+
+	<build>
+		<!--
         <sourceDirectory>src/main/scala</sourceDirectory>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
         -->
-        <plugins>
-            <plugin>
-                <groupId>org.scala-tools</groupId>
-                <artifactId>maven-scala-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>compile-scala-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>compile</goal>
-                            <!--
+		<plugins>
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>compile-scala-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>compile</goal>
+							<!--
                             <goal>testCompile</goal>
 -->
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>compile-scala-tests</id>
-                        <phase>generate-test-sources</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <scalaVersion>${scala.version}</scalaVersion>
-                    <!--
+						</goals>
+					</execution>
+					<execution>
+						<id>compile-scala-tests</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<scalaVersion>${scala.version}</scalaVersion>
+					<!--
                     <args>
                         <arg>-Ylog-classpath</arg>
                     </args>
                     -->
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
-                <configuration>
-                    <!--
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.0</version>
+				<configuration>
+					<!--
                     <verbose>true</verbose>
                     -->
-                </configuration>
-            </plugin>
-        </plugins>
-        <testResources>
-            <testResource>
-                <directory>${basedir}/src/test/resources</directory>
-                <includes>
-                    <include>publickey25519proposition_bytes</include>
-                    <include>privatekey25519_bytes</include>
-                    <include>regulartransaction_bytes</include>
-                    <include>regularbox_bytes</include>
-                    <include>certifierrightbox_bytes</include>
+				</configuration>
+			</plugin>
+		</plugins>
+		<testResources>
+			<testResource>
+				<directory>${basedir}/src/test/resources</directory>
+				<includes>
+					<include>publickey25519proposition_bytes</include>
+					<include>privatekey25519_bytes</include>
+					<include>regulartransaction_bytes</include>
+					<include>regularbox_bytes</include>
+					<include>certifierrightbox_bytes</include>
 					<include>mcblock473173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
@@ -262,19 +269,19 @@
 					<!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
 					<include>mctx_v-3</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
-                </includes>
-            </testResource>
-        </testResources>
-    </build>
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.scala-tools</groupId>
-                <artifactId>maven-scala-plugin</artifactId>
-                <configuration>
-                    <scalaVersion>${scala.version}</scalaVersion>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
+				</includes>
+			</testResource>
+		</testResources>
+	</build>
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<configuration>
+					<scalaVersion>${scala.version}</scalaVersion>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
 </project>
