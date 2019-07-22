@@ -30,13 +30,13 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 
 object SidechainSyncInfoSerializer extends Serializer[SidechainSyncInfo] {
   override def toBytes(obj: SidechainSyncInfo): Array[Byte] = {
-    Ints.toByteArray(NodeViewModifier.ModifierIdSize * obj.knownBlockIds.size) ++
+    Array(obj.knownBlockIds.size.toByte) ++
     obj.knownBlockIds.foldLeft(Array[Byte]())((a, b) => a ++ idToBytes(b))
   }
 
   override def parseBytes(bytes: Array[Byte]): Try[SidechainSyncInfo] = Try {
-    val length = BytesUtils.getInt(bytes, 0)
-    if(bytes.length != length + 4)
+    val length: Int = bytes.head.toInt
+    if((bytes.length - 1) != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
     var currentOffset: Int = 4
 
