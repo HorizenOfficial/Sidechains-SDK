@@ -40,8 +40,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          // to do: do we need to set genesis as best one? do it here or outside by calling reportModifierIsValid
-          storage.update(block, 1L), // to do: change according to new score algorithm
+          storage.update(block, 10001L), // 1 MC block ref and 1 SC Block
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
@@ -192,8 +191,6 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   }
 
   override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
-    // TO DO: in case when we want to continue active chain, it works ok, we will stay on the same "stay"
-    // in case when we are applying some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
     val newHistory: SidechainHistory = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
       new SidechainHistory(newStorage, params)
@@ -203,7 +200,15 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
         //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
         new SidechainHistory(storage, params)
     }
-    newHistory -> ProgressInfo(None, Seq(), Seq(), Seq())
+
+    // In case when we try to apply some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
+    // Calculate new ProgressInfo:
+    // Set branch point as previous one
+    // Remove blocks, that were applied before current invalid one
+    // Apply blocks, that were part of ActiveChain
+    // skip blocks to Download, that are part of wrong chain we tried to apply.
+    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove, Seq())
+    newHistory -> newProgressInfo
   }
 
   override def isEmpty: Boolean = height <= 0

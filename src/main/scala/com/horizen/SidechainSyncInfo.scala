@@ -1,6 +1,5 @@
 package com.horizen
 
-import com.google.common.primitives.Ints
 import com.horizen.block.SidechainBlock
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
