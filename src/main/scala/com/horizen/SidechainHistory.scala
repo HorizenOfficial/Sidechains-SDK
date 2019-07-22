@@ -40,7 +40,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          storage.update(block, 10001L), // 1 MC block ref and 1 SC Block
+          storage.update(block, (1L << 32) + 1), // 1 MC block ref and 1 SC Block
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
@@ -108,7 +108,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
   // last 4 bytes contain heights of passed block
   def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + block.mainchainBlocks.size << 4 + 1
+    parentScore + (block.mainchainBlocks.size.toLong << 32 + 1)
   }
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
