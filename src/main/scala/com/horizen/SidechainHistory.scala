@@ -1,7 +1,6 @@
 package com.horizen
 
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
-import com.horizen.chain.SidechainBlockInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
@@ -272,7 +271,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlockIds.
   // return last common block + divergent suffix
   // Note: otherBlockIds ordered from most recent to oldest block
-  private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = { // to do
+  private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = {
     var suffix = Seq[ModifierId]()
     var blockId: ModifierId = null
     var restOfOtherBlockIds = otherBlockIds
