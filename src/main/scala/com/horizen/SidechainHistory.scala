@@ -269,7 +269,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
 
   }
 
-  // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlocks.
+  // get divergent suffix until we reach the end of otherBlockIds or known block in otherBlockIds.
   // return last common block + divergent suffix
   // Note: otherBlockIds ordered from most recent to oldest block
   private def divergentSuffix(otherBlockIds: Seq[ModifierId]): Seq[ModifierId] = { // to do
@@ -277,17 +277,15 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     var blockId: ModifierId = null
     var restOfOtherBlockIds = otherBlockIds
 
-    while(restOfOtherBlockIds.size > 1) {
+    while(restOfOtherBlockIds.nonEmpty) {
       blockId = restOfOtherBlockIds.head
       restOfOtherBlockIds = restOfOtherBlockIds.tail
-      suffix = suffix :+ blockId
+      suffix = blockId +: suffix
 
-      modifierById(blockId) match { // TO DO: optimize, just check for existence without retrieving
-        case Some(_) =>
-          return suffix
-      }
+      if(storage.isInActiveChain(blockId))
+        return suffix
     }
-    Seq() // we didn't find common block (except genesis one) -> we have totally different chains.
+    Seq() // we didn't find common block (even genesis one is different) -> we have totally different chains.
   }
 
   /** From Scorex History:
@@ -296,8 +294,8 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
     * @param other other's node sync info
     * @return Equal if nodes have the same history, Younger if another node is behind, Older if a new node is ahead
     */
-  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = { // to do
-    val dSuffix = divergentSuffix(other.knownBlockIds.reverse)
+  override def compare(other: SidechainSyncInfo): History.HistoryComparisonResult = {
+    val dSuffix = divergentSuffix(other.knownBlockIds)
 
     dSuffix.size match {
       case 0 =>
@@ -309,11 +307,10 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
         else
           Younger
       case _ =>
-        val localSuffixLength = storage.heightOf(bestBlockId).get - storage.heightOf(dSuffix.last).get
-        val otherSuffixLength = dSuffix.length
-        if (localSuffixLength < otherSuffixLength)
+        val otherBestBlockHeight = storage.heightOf(dSuffix.reverse.find(id => storage.heightOf(id).isDefined).get).get
+        if (storage.height < otherBestBlockHeight)
           Older
-        else if (localSuffixLength == otherSuffixLength)
+        else if (storage.height == otherBestBlockHeight)
           Equal // TO DO: should be a fork? Look for RC4
         else
           Younger
