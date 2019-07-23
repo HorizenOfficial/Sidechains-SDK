@@ -196,6 +196,8 @@
                     <include>regulartransaction_bytes</include>
                     <include>regularbox_bytes</include>
                     <include>certifierrightbox_bytes</include>
+                    <include>sidechainblockinfo_bytes</include>
+                    <include>sidechainsyncinfo_bytes</include>
                     <include>mcblock473173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
                     <include>mcblock501173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
                     <include>mcblock273173</include>        <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07 -->

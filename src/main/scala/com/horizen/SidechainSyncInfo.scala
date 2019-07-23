@@ -1,7 +1,6 @@
 package com.horizen
 
 import com.horizen.block.SidechainBlock
-import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History.ModifierIds
 import scorex.util.ModifierId
@@ -19,7 +18,7 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 
   // get most recent block
   override def startingPoints: ModifierIds = {
-    knownBlockIds.lastOption match {
+    knownBlockIds.headOption match {
       case Some(id) => Seq(SidechainBlock.ModifierTypeId -> id)
       case None => Seq()
     }
@@ -34,19 +33,18 @@ object SidechainSyncInfoSerializer extends Serializer[SidechainSyncInfo] {
   }
 
   override def parseBytes(bytes: Array[Byte]): Try[SidechainSyncInfo] = Try {
-    val length: Int = bytes.head.toInt
+    val length: Int = bytes.head & 0xFF
     if((bytes.length - 1) != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
-    var currentOffset: Int = 4
+    var currentOffset: Int = 1
 
     var modifierIds: Seq[ModifierId] = Seq()
 
     while(currentOffset < bytes.length) {
-      modifierIds = modifierIds :+ bytesToId(BytesUtils.reverseBytes(bytes.slice(currentOffset, currentOffset + NodeViewModifier.ModifierIdSize)))
+      modifierIds = modifierIds :+ bytesToId(bytes.slice(currentOffset, currentOffset + NodeViewModifier.ModifierIdSize))
       currentOffset += NodeViewModifier.ModifierIdSize
     }
 
     SidechainSyncInfo(modifierIds)
   }
-
 }

@@ -1,5 +1,8 @@
 package com.horizen.chain
 
+import java.util
+import java.util.Arrays
+
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
@@ -18,6 +21,15 @@ case class SidechainBlockInfo(height: Int,
   override type M = SidechainBlockInfo
 
   override lazy val serializer = SidechainBlockInfoSerializer
+
+  override def hashCode: Int = height.hashCode() + score.hashCode() + semanticValidity.code.toInt + util.Arrays.hashCode(idToBytes(parentId))
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case b: SidechainBlockInfo => height == b.height && score == b.score && parentId == b.parentId && semanticValidity == b.semanticValidity
+      case _ => false
+    }
+  }
 }
 
 
