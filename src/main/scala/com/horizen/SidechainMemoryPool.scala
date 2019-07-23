@@ -126,6 +126,6 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
 
 object SidechainMemoryPool
 {
-  lazy val emptyPool :SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
+  lazy val emptyPool : SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
 }
 

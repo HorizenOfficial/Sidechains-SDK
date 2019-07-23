@@ -4,8 +4,9 @@ import com.horizen.SidechainState
 
 trait SidechainStateFixture {
 
+  /*
   def getSidechainState : SidechainState = {
-    new SidechainState(null, null, null)
+    SidechainState(null, null, null, null, None)
   }
-
+  */
 }

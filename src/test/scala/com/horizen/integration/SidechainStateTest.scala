@@ -1,12 +1,13 @@
 package com.horizen.integration
 
+import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import javafx.util.{Pair => JPair}
 
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainState, SidechainTypes, WalletBoxSerializer}
+import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
 import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
@@ -24,6 +25,7 @@ import org.scalatest._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import org.mockito.Mockito._
+import scorex.core.settings.ScorexSettings
 import scorex.core.{bytesToId, bytesToVersion}
 import scorex.crypto.hash.Blake2b256
 
@@ -38,7 +40,10 @@ class SidechainStateTest
     with MockitoSugar
     with SidechainTypes
 {
-  val stateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), SidechainBoxesCompanion(new JHashMap()))
+  val tmpDir = tempDir()
+  val scorexSettings = mock[ScorexSettings]
+  val sidechainSettings = mock[SidechainSettings]
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
@@ -87,13 +92,30 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
+    val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
+    stateDir.mkdirs()
+    val store = getStore(stateDir)
+
+    val stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+
     stateStorage.update(boxVersion, boxList.toSet, Set[Array[Byte]]())
 
   }
 
   @Test
   def test() : Unit = {
-    val sidechainState : SidechainState = new SidechainState(stateStorage, bytesToVersion(boxVersion.data), applicationState)
+
+    Mockito.when(sidechainSettings.scorexSettings)
+      .thenAnswer(answer => {
+        scorexSettings
+      })
+
+    Mockito.when(scorexSettings.dataDir)
+      .thenAnswer(answer => {
+        tmpDir
+      })
+
+    val sidechainState : SidechainState = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None).get
 
     for (b <- boxList) {
       //Test get
@@ -127,7 +149,7 @@ class SidechainStateTest
       applyTry.isSuccess)
 
     assertEquals(s"State storage version must be updated to $newVersion",
-      newVersion, stateStorage.lastVersionId.get)
+      bytesToVersion(newVersion.data), applyTry.get.version)
 
     assertEquals("Rollaback deth must be 2.",
       2, sidechainState.maxRollbackDepth)
@@ -149,7 +171,7 @@ class SidechainStateTest
       rollbackTry.isSuccess)
 
     assertEquals(s"State storage version must be rolled back to $boxVersion",
-      boxVersion, stateStorage.lastVersionId.get)
+      bytesToVersion(boxVersion.data), rollbackTry.get.version)
 
     assertEquals("Rollaback deth must be 1.",
       1, sidechainState.maxRollbackDepth)

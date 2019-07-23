@@ -13,11 +13,17 @@ import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
+
 
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
-                              timeProvider: NetworkTimeProvider)
+                              timeProvider: NetworkTimeProvider,
+                              sidechainBoxesCompanion: SidechainBoxesCompanion,
+                              sidechainSecretsCompanion: SidechainSecretsCompanion,
+                              applicationWallet: ApplicationWallet,
+                              applicationState: ApplicationState)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
@@ -31,11 +37,44 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings;
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
-    SidechainNodeViewHolder.restoreState(sidechainSettings, timeProvider)
+    val history = Some(new SidechainHistory())
+    val wallet = SidechainWallet.restoreWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
+    val state = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
+    val pool = SidechainMemoryPool.emptyPool
+
+    if (history.isDefined && wallet.isDefined && state.isDefined)
+      Some((history.get, state.get, wallet.get, pool))
+    else
+      None
   }
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
-    SidechainNodeViewHolder.generateGenesisState(sidechainSettings, timeProvider)
+    try {
+      val history = Some(new SidechainHistory())
+      val state = SidechainState.genesisState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
+      val wallet = SidechainWallet.genesisWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
+      val pool = SidechainMemoryPool.emptyPool
+
+      if (history.isDefined && wallet.isDefined && state.isDefined)
+        (history.get, state.get, wallet.get, pool)
+      else {
+        if (history.isEmpty)
+          throw new RuntimeException("History storage is not empty.")
+
+        if (state.isEmpty)
+          throw new RuntimeException("State storage is not empty.")
+
+        if (wallet.isEmpty)
+          throw new RuntimeException("WalletBox storage is not empty.")
+
+        (null, null, null, null)
+      }
+
+    } catch {
+      case exception : Throwable =>
+        log.error ("Error during creation genesis state.", exception)
+        throw exception
+    }
   }
 
   // TO DO: Put it into NodeViewSynchronizerRef::modifierSerializers. Also put here map of custom sidechain transactions
@@ -46,64 +85,34 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   */
 }
 
-object SidechainNodeViewHolder
-{
-
-  val defaultBoxesCompanion : SidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
-  val defaultSecretCompanion : SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
-
-  val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
-  val defaultApplicationState: ApplicationState = new DefaultApplicationState()
-
-  def geneisBlocks : Seq[SidechainBlock] = Seq()
-
-  def restoreState(sidechainSettings: SidechainSettings,
-                   timeProvider: NetworkTimeProvider) :
-    Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)] = {
-    Try {
-      val history = new SidechainHistory()
-
-      val wallet = SidechainWallet.restoreWallet(sidechainSettings, defaultBoxesCompanion, defaultSecretCompanion, defaultApplicationWallet) match {
-        case Success(w) => w
-        case Failure(exception) => throw exception
-      }
-
-      val state = SidechainState.restoreState(sidechainSettings, defaultBoxesCompanion, defaultApplicationState) match {
-        case Success(s) => s
-        case Failure(exception) => throw exception
-      }
-
-      val pool = SidechainMemoryPool.emptyPool
-
-      (history, state, wallet, pool)
-    }.toOption
-  }
-
-  def generateGenesisState(sidechainSettings: SidechainSettings,
-                           timeProvider: NetworkTimeProvider):
-    (SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool) = {
-
-    (new SidechainHistory(),
-      SidechainState.genesisState(sidechainSettings, defaultBoxesCompanion, defaultApplicationState, geneisBlocks).get,
-      SidechainWallet.genesisWallet(sidechainSettings, defaultBoxesCompanion, defaultSecretCompanion, defaultApplicationWallet, geneisBlocks).get,
-      SidechainMemoryPool.emptyPool
-    )
-  }
-}
-
 object SidechainNodeViewHolderRef {
   def props(settings: SidechainSettings,
-            timeProvider: NetworkTimeProvider): Props =
-    Props(new SidechainNodeViewHolder(settings, timeProvider))
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState): Props =
+    Props(new SidechainNodeViewHolder(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState))
 
   def apply(settings: SidechainSettings,
-            timeProvider: NetworkTimeProvider)
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider))
+    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState))
 
   def apply(name: String,
             settings: SidechainSettings,
-            timeProvider: NetworkTimeProvider)
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider), name)
+    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState), name)
 }
