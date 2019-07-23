@@ -79,38 +79,29 @@ public:
 template<typename FT>
 class eqG_gadget : libsnark::gadget<FT> {
 private:
-  libsnark::pb_variable<FT> x, y2, x2;
+  libsnark::pb_variable<FT> x2;
 
 public:
   eqG_gadget(libsnark::protoboard<FT>& pb,
-               const std::string& annotation_prefix=" eqG") :
+             const std::string& annotation_prefix=" eqG") :
     libsnark::gadget<FT>(pb, annotation_prefix)
   {
-    x.allocate(pb, FMT(this->annotation_prefix, " x"));
-    y2.allocate(pb, FMT(this->annotation_prefix, " y2"));
     x2.allocate(pb, FMT(this->annotation_prefix, " x2"));
-    std::cout << "Init sub-circuit " << annotation_prefix << std::endl;
   };
 
-  void generate_r1cs_constraints() {
-    libsnark::linear_combination<FT> x2pa, y2mb;
-
+  void generate_r1cs_constraints(libsnark::pb_variable<FT>& px,
+                                 libsnark::pb_variable<FT>& py2,
+                                 const class hashG_gencase<FT>& hc) {
     this->pb.add_r1cs_constraint(
-            libsnark::r1cs_constraint<FT>(x, x, x2),
-            FMT(this->annotation_prefix, " x*x = x2"));
-    //    x2pa.add_term(var, coeff);
-    //    y2ma.add_term(var, coeff);
+            libsnark::r1cs_constraint<FT>(px, px, x2),
+            FMT(this->annotation_prefix, " px*px = x2"));
     this->pb.add_r1cs_constraint(
-            libsnark::r1cs_constraint<FT>(x2pa, x, y2mb),
-            FMT(this->annotation_prefix, " (x2 + a)*x = y2 - b"));
-    std::cout << "Constraints sub-circuit " << this->annotation_prefix << std::endl;
+            libsnark::r1cs_constraint<FT>(x2 + hc.coeff_a, px, py2 - hc.coeff_b),
+            FMT(this->annotation_prefix, " (x2 + a)*px = py2 - b"));
   };
 
-  void generate_r1cs_witness() {
-    this->pb.val(x) = 0;
-    this->pb.val(y2) = 0;
-    this->pb.val(x2) = 0;
-    std::cout << "Witness sub-circuit " << this->annotation_prefix << std::endl;
+  void generate_r1cs_witness(const FT& vx, const FT& vy2) {
+    this->pb.val(x2) = vx*vx;
   };
 };
 
@@ -152,7 +143,7 @@ public:
                       FMT(annotation_prefix, "-gx2")));
   };
 
-  void generate_r1cs_constraints() {
+  void generate_r1cs_constraints(const class hashG_gencase<FT>& hc) {
     libsnark::linear_combination<FT> zu, x1ab, x_twice, ysq_twice;
 
     zu.add_term(u, pZ);
@@ -204,8 +195,8 @@ public:
             libsnark::r1cs_constraint<FT>(y, y, ysq),
             FMT(this->annotation_prefix, " y*y = ysq"));
 
-    this->x1gx1->generate_r1cs_constraints();
-    this->x2gx2->generate_r1cs_constraints();
+    this->x1gx1->generate_r1cs_constraints(x1, gx1, hc);
+    this->x2gx2->generate_r1cs_constraints(x2, gx2, hc);
   };
 
   void generate_r1cs_witness(class hashG_gencase<FT>& src) { // ?const
@@ -222,8 +213,8 @@ public:
     this->pb.val(ysq) = src.get_ysq();
     this->pb.val(y) = src.get_y();
 
-    this->x1gx1->generate_r1cs_witness();
-    this->x2gx2->generate_r1cs_witness();
+    this->x1gx1->generate_r1cs_witness(src.get_x1(), src.get_gx1());
+    this->x2gx2->generate_r1cs_witness(src.get_x2(), src.get_gx2());
   };
 };
 
@@ -241,7 +232,7 @@ int main() {
   hashG_gencase<FieldT> hc(GroupT::coeff_a, GroupT::coeff_b, pZ);
 
   hashG_gadget<FieldT> hg(pb, hc);
-  hg.generate_r1cs_constraints();
+  hg.generate_r1cs_constraints(hc);
   hg.generate_r1cs_witness(hc);
   assert(pb.is_satisfied());
   return 0;
