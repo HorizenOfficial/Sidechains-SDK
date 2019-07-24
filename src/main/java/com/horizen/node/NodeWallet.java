@@ -3,6 +3,7 @@ package com.horizen.node;
 import com.horizen.box.Box;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
+import com.horizen.transaction.Transaction;
 
 import java.util.*;
 
@@ -25,4 +26,6 @@ public interface NodeWallet {
     List<Secret> allSecrets();
 
     List<Secret> secretsOfType(Class<? extends Secret> type);
+
+    Optional<Transaction> getTransactionById(String txId);
 }

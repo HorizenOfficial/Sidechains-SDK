@@ -1,13 +1,20 @@
 package com.horizen.node;
 
+import com.horizen.block.SidechainBlock;
+
+import java.util.List;
+import java.util.Optional;
+
 public interface NodeHistory {
 
-    void append();
+    Optional<SidechainBlock> getBlockById(byte[] blockId);
 
-    void isEmpty();
+    List<byte[]> getLastBlockids(SidechainBlock startBlock, int count);
 
-    void syncInfo();
+    SidechainBlock getBestBlock();
 
-    void compare();
+    byte[] getBlockIdByHeight(int height);
+
+    int getCurrentHeight();
 
 }

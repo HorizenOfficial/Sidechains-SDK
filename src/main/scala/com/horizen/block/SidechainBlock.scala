@@ -20,14 +20,12 @@ import scorex.util.ModifierId
 import scorex.core.serialization.Serializer
 import scorex.crypto.hash.Blake2b256
 import scorex.core.{bytesToId, idToBytes}
-
-
 import scala.collection.JavaConverters._
 import scala.util.{Success, Try}
 
 class SidechainBlock (
                        override val parentId: ModifierId,
-                       override val timestamp: scorex.core.block.Block.Timestamp,
+                       override val timestamp: Block.Timestamp,
                        val mainchainBlocks : Seq[MainchainBlockReference],
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                        val forgerPublicKey: PublicKey25519Proposition,
@@ -39,7 +37,7 @@ class SidechainBlock (
 
   override lazy val serializer = new SidechainBlockSerializer(companion)
 
-  override lazy val version: scorex.core.block.Block.Version = 0: Byte
+  override lazy val version: Block.Version = 0: Byte
 
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
@@ -118,8 +116,8 @@ object SidechainBlock extends ScorexEncoding {
   val MAX_MC_SIDECHAIN_TXS_NUMBER = 100000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
 
-  def create(parentId: scorex.core.block.Block.BlockId,
-             timestamp: scorex.core.block.Block.Timestamp,
+  def create(parentId: Block.BlockId,
+             timestamp: Block.Timestamp,
              mainchainBlocks : Seq[MainchainBlockReference],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
              ownerPrivateKey: PrivateKey25519,

@@ -163,4 +163,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
+  override def getTransactionById(txId: String): JOptional[Transaction] = {
+    JOptional.empty()
+  }
 }

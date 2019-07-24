@@ -2,10 +2,13 @@ package com.horizen
 
 import java.util.Optional
 
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeView, NodeViewHolder, NodeWallet}
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.block.Block
 import scorex.core.serialization.Serializer
@@ -14,9 +17,12 @@ import scorex.core.utils.NetworkTimeProvider
 
 class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
-  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock] with NodeViewHolder[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool]
+  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock]
 {
+  import SidechainNodeViewHolder.ReceivableMessages._
+
   override type SI = scorex.core.consensus.SyncInfo
+
   override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet
@@ -36,44 +42,38 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
   */
 
 
-  override def updateNodeView(updatedHistory: Optional[SidechainHistory], updatedState: Optional[SidechainState],
-                              updatedWallet: Optional[SidechainWallet], updatedMempool: Optional[SidechainMemoryPool]): Unit = ???
-
-  override def getCurrentNodeView: node.NodeView[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool] = {
-    new CurrentView(history(), minimalState(), memoryPool(), vault())
+ /* def getCurrentNodeView: SidechainNodeView = {
+    new SidechainNodeView(history(), minimalState(), vault(), memoryPool())
+  }*/
+  protected def getCurrentSidechainNodeViewInfo: Receive = {
+    case GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
   }
+
+  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse super.receive
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   def generateGenesisState(hybridSettings: SidechainSettings,
                            timeProvider: NetworkTimeProvider): Unit = ??? // TO DO: change later
+  object ReceivableMessages{
+    case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
+  }
 
 }
-class CurrentView(history:NodeHistory, state:NodeState, memPool:NodeMemoryPool, wallet:NodeWallet)
-    extends NodeView[SidechainHistory,SidechainState,SidechainWallet,SidechainMemoryPool] {
-  override def getNodeHistory: NodeHistory = history
 
-  override def getNodeState: NodeState = state
-
-  override def getNodeMemoryPool: NodeMemoryPool = memPool
-
-  override def getNodeWallet: NodeWallet = wallet
-}
-/*
-object SDKNodeViewHolderRef {
-  def props(settings: SDKSettings,
+object SidechainNodeViewHolderRef {
+  def props(settings: SidechainSettings,
             timeProvider: NetworkTimeProvider): Props =
-    Props(new SDKNodeViewHolder(settings, timeProvider))
+    Props(new SidechainNodeViewHolder(settings, timeProvider))
 
-  def apply(settings: SDKSettings,
+  def apply(settings: SidechainSettings,
             timeProvider: NetworkTimeProvider)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(settings, timeProvider))
 
   def apply(name: String,
-            settings: SDKSettings,
+            settings: SidechainSettings,
             timeProvider: NetworkTimeProvider)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(settings, timeProvider), name)
 }
-*/

@@ -1,6 +1,7 @@
 package com.horizen
 
-import java.util.{List => JList, ArrayList => JArrayList}
+import java.{lang, util}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -10,9 +11,11 @@ import scorex.util.ModifierId
 import scorex.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 import com.horizen.node.NodeMemoryPool
+
+import scala.collection.JavaConverters
 
 class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   extends scorex.core.transaction.MemoryPool[SidechainTypes#BT, SidechainMemoryPool]
@@ -121,6 +124,18 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
   override def remove(tx: SidechainTypes#BT): SidechainMemoryPool = {
     unconfirmed.remove(tx.id)
     this
+  }
+
+  override def getMemoryPoolSortedByFee(limit: Int): lang.Iterable[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
+    JavaConverters.asJavaIterableConverter(take(limit).map(value => value.asInstanceOf[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]])).asJava
+  }
+
+  override def getMemoryPool(): util.Map[String, BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
+    unconfirmed.readOnlySnapshot().mapValues(v=>v.asInstanceOf[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]]).asJava
+  }
+
+  override def getMemoryPoolSize: Int = {
+    size
   }
 }
 

@@ -1,16 +1,16 @@
 package com.horizen.node;
 
+import com.horizen.box.Box;
+import com.horizen.proposition.Proposition;
+import com.horizen.transaction.BoxTransaction;
+
+import java.util.Map;
+
 public interface NodeMemoryPool {
 
-    void remove();
+    Map<String, BoxTransaction<? extends Proposition, ? extends Box<?>> > getMemoryPool();
 
-    void put();
+    Iterable<BoxTransaction<? extends Proposition, ? extends Box<?>>> getMemoryPoolSortedByFee(int limit);
 
-    void getAll();
-
-    void filter();
-
-    void take();
-
-    void contains();
+    int getMemoryPoolSize();
 }

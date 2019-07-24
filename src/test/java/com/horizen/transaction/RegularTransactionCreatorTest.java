@@ -20,6 +20,10 @@ import java.util.Optional;
 import static org.junit.Assert.*;
 
 class TransactionCreatorNodeWallet implements NodeWallet {
+    @Override
+    public Optional<Transaction> getTransactionById(String txId) {
+        return Optional.empty();
+    }
 
     List<Box> _boxesOrderedBytCreationTime;
     List<Secret> _secrets;
