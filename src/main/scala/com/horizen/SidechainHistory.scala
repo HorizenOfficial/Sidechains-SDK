@@ -1,8 +1,8 @@
 package com.horizen
 
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
-import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.params.{NetworkParams, StorageParams}
+import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.util.ModifierId
@@ -10,11 +10,15 @@ import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
+import java.io.{File => JFile}
+
+import com.horizen.companion.SidechainTransactionsCompanion
+import io.iohk.iodb.LSMStore
 
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkParams)
+class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams)
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
@@ -319,5 +323,52 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
         else
           Younger
     }
+  }
+}
+
+
+object SidechainHistory {
+  private def openStorage(storagePath: JFile) : Storage = {
+    storagePath.mkdirs()
+    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+  }
+
+  private def openHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams) : SidechainHistoryStorage = {
+
+    val historyStorage = new SidechainHistoryStorage(storage, sidechainTransactionsCompanion, params)
+
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        storage.close()
+      }
+    })
+
+    historyStorage
+  }
+
+  private[horizen] def restoreHistory(sidechainSettings: SidechainSettings, sidechainTransactionsCompanion: SidechainTransactionsCompanion,
+                                      params: NetworkParams, externalStorage: Option[Storage]) : Option[SidechainHistory] = {
+
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")))
+
+    if (storage.lastVersionID().isPresent)
+      Some(new SidechainHistory(openHistoryStorage(storage, sidechainTransactionsCompanion, params), params))
+    else
+      None
+  }
+
+  private[horizen] def genesisHistory(sidechainSettings: SidechainSettings, sidechainTransactionsCompanion: SidechainTransactionsCompanion,
+                                      params: NetworkParams, externalStorage: Option[Storage]) : Option[SidechainHistory] = {
+
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")))
+
+    if (!storage.lastVersionID().isPresent)
+      new SidechainHistory(openHistoryStorage(storage, sidechainTransactionsCompanion, params), params)
+        .append(sidechainSettings.genesisBlock.get) match {
+        case Success((history, progressInfo)) => Some(history)
+        case _ => None
+      }
+    else
+      None
   }
 }

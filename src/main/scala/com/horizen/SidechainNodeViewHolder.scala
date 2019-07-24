@@ -1,27 +1,23 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.secret.SecretSerializer
-import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
+import com.horizen.params.NetworkParams
+import com.horizen.state.ApplicationState
+import com.horizen.wallet.ApplicationWallet
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 
-
-import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
+                              params: NetworkParams,
                               timeProvider: NetworkTimeProvider,
                               sidechainBoxesCompanion: SidechainBoxesCompanion,
                               sidechainSecretsCompanion: SidechainSecretsCompanion,
+                              sidechainTransactionsCompanion: SidechainTransactionsCompanion,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
@@ -34,10 +30,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
-  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings;
+  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
-    val history = Some(new SidechainHistory())
+    val history = SidechainHistory.restoreHistory(sidechainSettings, sidechainTransactionsCompanion, params, None)
     val wallet = SidechainWallet.restoreWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
     val state = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
     val pool = SidechainMemoryPool.emptyPool
@@ -50,7 +46,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     try {
-      val history = Some(new SidechainHistory())
+      val history = SidechainHistory.genesisHistory(sidechainSettings, sidechainTransactionsCompanion, params, None)
       val state = SidechainState.genesisState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
       val wallet = SidechainWallet.genesisWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
       val pool = SidechainMemoryPool.emptyPool
@@ -87,32 +83,38 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 object SidechainNodeViewHolderRef {
   def props(settings: SidechainSettings,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             sidechainBoxesCompanion: SidechainBoxesCompanion,
             sidechainSecretsCompanion: SidechainSecretsCompanion,
+            sidechainTransactionsCompanion: SidechainTransactionsCompanion,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState): Props =
-    Props(new SidechainNodeViewHolder(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState))
+    Props(new SidechainNodeViewHolder(settings, params, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      sidechainTransactionsCompanion, applicationWallet, applicationState))
 
   def apply(settings: SidechainSettings,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             sidechainBoxesCompanion: SidechainBoxesCompanion,
             sidechainSecretsCompanion: SidechainSecretsCompanion,
+            sidechainTransactionsCompanion: SidechainTransactionsCompanion,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState))
+    system.actorOf(props(settings, params, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      sidechainTransactionsCompanion, applicationWallet, applicationState))
 
   def apply(name: String,
             settings: SidechainSettings,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             sidechainBoxesCompanion: SidechainBoxesCompanion,
             sidechainSecretsCompanion: SidechainSecretsCompanion,
+            sidechainTransactionsCompanion: SidechainTransactionsCompanion,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState), name)
+    system.actorOf(props(settings, params, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      sidechainTransactionsCompanion, applicationWallet, applicationState), name)
 }
