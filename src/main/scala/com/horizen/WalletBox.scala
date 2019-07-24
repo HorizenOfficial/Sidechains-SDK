@@ -12,8 +12,9 @@ import scorex.core.{NodeViewModifier, idToBytes}
 
 import scala.util.{Failure, Success, Try}
 
-class WalletBox(val box: Box[_ <: Proposition], val transactionId: String, val createdAt: Long)
-  extends scorex.core.utils.ScorexEncoding
+class WalletBox(val box: SidechainTypes#SCB, val transactionId: String, val createdAt: Long)
+  extends SidechainTypes
+  with scorex.core.utils.ScorexEncoding
 {
   require(transactionId.length == NodeViewModifier.ModifierIdSize * 2,
     "Expected transactionId length is %d, actual length is %d".format(NodeViewModifier.ModifierIdSize * 2, transactionId.length))
@@ -41,18 +42,13 @@ class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
       sidechainBoxesCompanion.toBytes(walletBox.box))
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[WalletBox] = {
-    try {
-      val txIdBytes = bytes.slice(0, NodeViewModifier.ModifierIdSize)
-      val createdAt = Longs.fromByteArray(bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
-      val boxBytes = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
-      val box = sidechainBoxesCompanion.parseBytes(boxBytes)
-      if (box.isSuccess)
-        Success(new WalletBox(box.get, BytesUtils.toHexString(txIdBytes), createdAt))
-      else
-        Failure(box.asInstanceOf[Failure[Box[_ <: Proposition]]].exception)
-    } catch {
-      case e : Throwable => Failure(e)
+  override def parseBytes(bytes: Array[Byte]): Try[WalletBox] = Try {
+    val txIdBytes = bytes.slice(0, NodeViewModifier.ModifierIdSize)
+    val createdAt = Longs.fromByteArray(bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
+    val boxBytes = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
+    sidechainBoxesCompanion.parseBytes(boxBytes) match {
+      case Success(box) => new WalletBox(box, BytesUtils.toHexString(txIdBytes), createdAt)
+      case Failure(exception) => throw new Exception(exception)
     }
   }
 }

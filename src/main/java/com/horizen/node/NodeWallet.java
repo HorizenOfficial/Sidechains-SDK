@@ -1,27 +1,27 @@
 package com.horizen.node;
 
 import com.horizen.box.Box;
+import com.horizen.proposition.Proposition;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
-import javafx.util.Pair;
 
 import java.util.*;
 
 public interface NodeWallet {
 
     // boxes are sorted by creation time in wallet from oldest to newest
-    List<Box> allBoxes();
+    List<Box<Proposition>> allBoxes();
 
     // boxes are sorted by creation time in wallet from oldest to newest
-    List<Box> allBoxes(List<byte[]> boxIdsToExclude);
+    List<Box<Proposition>> allBoxes(List<byte[]> boxIdsToExclude);
 
-    List<Box> boxesOfType(Class<? extends Box> type);
+    List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type);
 
-    List<Box> boxesOfType(Class<? extends Box> type, List<byte[]> boxIdsToExclude);
+    List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type, List<byte[]> boxIdsToExclude);
 
-    Long boxesBalance(Class<? extends Box> type);
+    Long boxesBalance(Class<? extends Box<? extends Proposition>> type);
 
-    Optional<Secret> secretByPublicKey(ProofOfKnowledgeProposition publicKey);
+    Optional<Secret> secretByPublicKey(Proposition publicKey);
 
     List<Secret> allSecrets();
 

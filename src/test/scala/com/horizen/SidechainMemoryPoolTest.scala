@@ -7,21 +7,23 @@ import org.junit.Assert._
 import com.horizen.fixtures._
 import scorex.util.ModifierId
 
-class SidechainMemoryPoolTest extends JUnitSuite
+class SidechainMemoryPoolTest
+  extends JUnitSuite
   with SidechainMemoryPoolFixture
   with TransactionFixture
+  with SidechainTypes
 {
 
   @Test def remove(): Unit = {
     val memoryPool = getSidechainMemoryPool()
-    val tx = getTransaction().asInstanceOf[SidechainTypes#BT]
+    val tx = getTransaction()
     val txId : ModifierId = ModifierId(tx.id())
 
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true);
     assertEquals("Size must be 1.", memoryPool.size, 1)
     assertEquals("MemoryPool must contain transaction" + txId, memoryPool.modifierById(txId).get, tx)
 
-    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransaction().asInstanceOf[SidechainTypes#BT]).isSuccess,
+    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransaction()).isSuccess,
       true)
     assertEquals("Size must be 2.", memoryPool.size, 2)
 
@@ -32,9 +34,9 @@ class SidechainMemoryPoolTest extends JUnitSuite
 
   @Test def put(): Unit = {
     val memoryPool = getSidechainMemoryPool()
-    val tx = getTransaction().asInstanceOf[SidechainTypes#BT]
-    val txCompat = getCompatibleTransaction().asInstanceOf[SidechainTypes#BT]
-    val txIncompat = getIncompatibleTransaction().asInstanceOf[SidechainTypes#BT]
+    val tx = getTransaction()
+    val txCompat = getCompatibleTransaction()
+    val txIncompat = getIncompatibleTransaction()
     val txId : ModifierId = ModifierId(tx.id())
 
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true);
@@ -65,7 +67,7 @@ class SidechainMemoryPoolTest extends JUnitSuite
           false
       }, 1).head)
 
-    val mp = memoryPool.filter(Seq(tx))
+    val mp = memoryPool.filter(List(tx))
 
     assertEquals("After applying of filter size must be 1.", memoryPool.size, 1)
     assertEquals("MemoryPool must contain transaction " + txCompat.id(), memoryPool.modifierById(ModifierId(txCompat.id())).get, txCompat)
@@ -74,10 +76,10 @@ class SidechainMemoryPoolTest extends JUnitSuite
 
   @Test def putSeq(): Unit = {
     val memoryPool = getSidechainMemoryPool()
-    val txLst = getTransactionList().asInstanceOf[List[SidechainTypes#BT]]
+    val txLst = getTransactionList()
     val txId : ModifierId = ModifierId(txLst.head.id())
 
-    val txIncompat = txLst ::: getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]
+    val txIncompat = txLst ::: getIncompatibleTransactionList()
     assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess, false);
     assertEquals("Size must be 0.", memoryPool.size, 0)
 
@@ -85,21 +87,21 @@ class SidechainMemoryPoolTest extends JUnitSuite
     assertEquals("Size must be 1.", memoryPool.size, 1)
     assertEquals("MemoryPool must contain transaction " + txId, memoryPool.modifierById(txId).get, txLst.head)
 
-    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransactionList()).isSuccess,
       true)
     assertEquals("Size must be 2.", memoryPool.size, 2)
 
-    assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+    assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList()).isSuccess,
       false)
     assertEquals("Size must be 2.", memoryPool.size, 2)
   }
 
   @Test def putWithoutCheck(): Unit = {
     val memoryPool = getSidechainMemoryPool()
-    val txLst = getTransactionList().asInstanceOf[List[SidechainTypes#BT]]
+    val txLst = getTransactionList()
     val txId : ModifierId = ModifierId(txLst.head.id())
 
-    val txIncompat = txLst ::: getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]
+    val txIncompat = txLst ::: getIncompatibleTransactionList()
     assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess, false);
     assertEquals("Size must be 0.", memoryPool.size, 0)
 
@@ -107,11 +109,11 @@ class SidechainMemoryPoolTest extends JUnitSuite
     assertEquals("Size must be 1.", memoryPool.size, 1)
     assertEquals("MemoryPool must contain transaction " + txId, memoryPool.modifierById(txId).get, txLst.head)
 
-    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+    assertEquals("Put operation must be success.", memoryPool.put(getCompatibleTransactionList()).isSuccess,
       true)
     assertEquals("Size must be 2.", memoryPool.size, 2)
 
-    assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList().asInstanceOf[List[SidechainTypes#BT]]).isSuccess,
+    assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList()).isSuccess,
       false)
     assertEquals("Size must be 2.", memoryPool.size, 2)
   }
