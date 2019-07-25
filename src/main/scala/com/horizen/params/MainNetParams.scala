@@ -1,7 +1,10 @@
 package com.horizen.params
 import java.math.BigInteger
 
-object MainNetParams extends NetworkParams {
+import scorex.util.ModifierId
+import scorex.util.bytesToId
+
+class MainNetParams extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
   val EquihashVarIntLength: Int = 3
@@ -14,5 +17,5 @@ object MainNetParams extends NetworkParams {
   override val nPowTargetSpacing: Int = 150 // 2.5 * 60
 
   override val sidechainId: Array[Byte] = new Array[Byte](32) // TO DO: in future MainNetParams will be a class, where specific sidechainId will be set
-  override val sidechainGenesisBlockId: Array[Byte] = new Array[Byte](32) // TO DO: in future MainNetParams will be a class, where specific genesis block id will be set
+  override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)) // TO DO: in future MainNetParams will be a class, where specific genesis block id will be set
 }
