@@ -217,6 +217,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   override def isEmpty: Boolean = height <= 0
 
+  override def contains(id: ModifierId): Boolean = storage.blockInfoById(id).isDefined
+  
   override def applicableTry(block: SidechainBlock): Try[Unit] = {
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
