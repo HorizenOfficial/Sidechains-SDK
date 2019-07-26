@@ -166,6 +166,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val nPowMaxAdjustUp: Int = 16
       override val nPowTargetSpacing: Int = 150
       override val sidechainId: Array[Byte] = null
+      override val sidechainGenesisBlockId: Array[Byte] = null
 
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))

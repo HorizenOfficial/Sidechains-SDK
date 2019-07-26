@@ -13,7 +13,7 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider)
   extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock]
 {
-  override type SI = scorex.core.consensus.SyncInfo
+  override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet
