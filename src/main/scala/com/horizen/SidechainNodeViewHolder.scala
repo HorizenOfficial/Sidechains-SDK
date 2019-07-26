@@ -1,17 +1,32 @@
 package com.horizen
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
+
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSerializer}
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.block.Block
-import scorex.core.serialization.Serializer
+import com.horizen.box.BoxSerializer
+import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.secret.SecretSerializer
+import com.horizen.state.{ApplicationState, DefaultApplicationState}
+import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
+import scorex.util.ScorexLogging
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 
-class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
-                              timeProvider: NetworkTimeProvider)
-  extends scorex.core.NodeViewHolder[SidechainTypes#BT, SidechainBlock]
+
+import scala.util.{Failure, Success, Try}
+
+class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
+                              timeProvider: NetworkTimeProvider,
+                              sidechainBoxesCompanion: SidechainBoxesCompanion,
+                              sidechainSecretsCompanion: SidechainSecretsCompanion,
+                              applicationWallet: ApplicationWallet,
+                              applicationState: ApplicationState)
+  extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
+  with ScorexLogging
+  with SidechainTypes
 {
   override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
@@ -19,11 +34,48 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
-  override val scorexSettings: ScorexSettings = sdkSettings.scorexSettings;
+  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings;
 
-  override def restoreState(): Option[(HIS, MS, VL, MP)] = ???
+  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
+    val history = Some(new SidechainHistory())
+    val wallet = SidechainWallet.restoreWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
+    val state = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
+    val pool = SidechainMemoryPool.emptyPool
 
-  override protected def genesisState: (HIS, MS, VL, MP) = ???
+    if (history.isDefined && wallet.isDefined && state.isDefined)
+      Some((history.get, state.get, wallet.get, pool))
+    else
+      None
+  }
+
+  override protected def genesisState: (HIS, MS, VL, MP) = {
+    try {
+      val history = Some(new SidechainHistory())
+      val state = SidechainState.genesisState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
+      val wallet = SidechainWallet.genesisWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
+      val pool = SidechainMemoryPool.emptyPool
+
+      if (history.isDefined && wallet.isDefined && state.isDefined)
+        (history.get, state.get, wallet.get, pool)
+      else {
+        if (history.isEmpty)
+          throw new RuntimeException("History storage is not empty.")
+
+        if (state.isEmpty)
+          throw new RuntimeException("State storage is not empty.")
+
+        if (wallet.isEmpty)
+          throw new RuntimeException("WalletBox storage is not empty.")
+
+        (null, null, null, null)
+      }
+
+    } catch {
+      case exception : Throwable =>
+        log.error ("Error during creation genesis state.", exception)
+        throw exception
+    }
+  }
 
   // TO DO: Put it into NodeViewSynchronizerRef::modifierSerializers. Also put here map of custom sidechain transactions
   /*val customTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] = ???
@@ -33,26 +85,34 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
   */
 }
 
-object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
-  def generateGenesisState(hybridSettings: SidechainSettings,
-                           timeProvider: NetworkTimeProvider): Unit = ??? // TO DO: change later
-}
+object SidechainNodeViewHolderRef {
+  def props(settings: SidechainSettings,
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState): Props =
+    Props(new SidechainNodeViewHolder(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState))
 
-/*
-object SDKNodeViewHolderRef {
-  def props(settings: SDKSettings,
-            timeProvider: NetworkTimeProvider): Props =
-    Props(new SDKNodeViewHolder(settings, timeProvider))
-
-  def apply(settings: SDKSettings,
-            timeProvider: NetworkTimeProvider)
+  def apply(settings: SidechainSettings,
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider))
+    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState))
 
   def apply(name: String,
-            settings: SDKSettings,
-            timeProvider: NetworkTimeProvider)
+            settings: SidechainSettings,
+            timeProvider: NetworkTimeProvider,
+            sidechainBoxesCompanion: SidechainBoxesCompanion,
+            sidechainSecretsCompanion: SidechainSecretsCompanion,
+            applicationWallet: ApplicationWallet,
+            applicationState: ApplicationState)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider), name)
+    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
+      applicationWallet, applicationState), name)
 }
-*/

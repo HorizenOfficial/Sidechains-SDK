@@ -1,24 +1,24 @@
 package com.horizen.companion
 
 import org.scalatest.junit.JUnitSuite
-
 import org.junit.Test
 import org.junit.Assert._
-
 import com.horizen.fixtures._
 import com.horizen.customtypes._
 import com.horizen.secret._
-
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
+
+import com.horizen.SidechainTypes
 
 class SidechainSecretsCompanionTest
   extends JUnitSuite
   with SecretFixture
+  with SidechainTypes
 {
 
-  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
-  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
 
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())

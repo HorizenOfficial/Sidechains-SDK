@@ -5,7 +5,7 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.WalletBox
+import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
@@ -14,7 +14,10 @@ import com.horizen.utils.BytesUtils
 import scala.collection.JavaConverters._
 
 
-trait BoxFixture extends SecretFixture {
+trait BoxFixture
+  extends SecretFixture
+  with SidechainTypes
+{
 
   def getRegularBox () : RegularBox = {
     new RegularBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
@@ -76,7 +79,7 @@ trait BoxFixture extends SecretFixture {
     boxClass match {
       case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
       case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
-      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox().asInstanceOf[SidechainTypes#SCB], BytesUtils.toHexString(txId), Random.nextInt(100000))
       case _ => null
     }
   }
@@ -90,7 +93,7 @@ trait BoxFixture extends SecretFixture {
     boxList
   }
 
-  def getWalletBoxList (boxList : JList[_ <: Box[_ <: Proposition]]) : JList[WalletBox] = {
+  def getWalletBoxList (boxList : JList[SidechainTypes#SCB]) : JList[WalletBox] = {
     val wboxList : JList[WalletBox] = new JArrayList[WalletBox]()
     val txId = new Array[Byte](32)
     Random.nextBytes(txId)

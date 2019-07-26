@@ -49,12 +49,12 @@ class SidechainWalletTest
   val storedSecretList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val secretVersions = new ListBuffer[ByteArrayWrapper]()
 
-  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
-  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
-  val customSecretSerializers: JHashMap[JByte, SecretSerializer[_ <: Secret]] = new JHashMap()
-  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer)
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
+  customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
   @Before
@@ -217,11 +217,11 @@ class SidechainWalletTest
     // Prepare what we expect to receive for ApplicationWallet.onChangeBoxes
     Mockito.when(mockedApplicationWallet.onChangeBoxes(
       ArgumentMatchers.any[Array[Byte]](),
-      ArgumentMatchers.anyList[Box[_ <: Proposition]](),
+      ArgumentMatchers.anyList[SidechainTypes#SCB](),
       ArgumentMatchers.anyList[Array[Byte]]()))
       .thenAnswer(answer => {
         val version = answer.getArgument(0).asInstanceOf[Array[Byte]]
-        val boxesToUpdate = answer.getArgument(1).asInstanceOf[JList[Box[_ <: Proposition]]]
+        val boxesToUpdate = answer.getArgument(1).asInstanceOf[JList[SidechainTypes#SCB]]
         val boxIdsToRemove = answer.getArgument(2).asInstanceOf[JList[Array[Byte]]].asScala.map(new ByteArrayWrapper(_)).toList.asJava
 
         // check

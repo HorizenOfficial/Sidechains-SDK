@@ -1,52 +1,85 @@
 package com.horizen
 
+import java.io.{File => JFile}
+import java.util.{Optional => JOptional}
+
 import com.horizen.block.SidechainBlock
-import com.horizen.box.Box
+import com.horizen.box.{Box, CoinsBox}
+import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.params.StorageParams
+import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
-import com.horizen.state.ApplicationState
+import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
-import scorex.core.{VersionTag, idToVersion}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import io.iohk.iodb.LSMStore
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
+import scorex.util.ScorexLogging
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
-class LSMStore
-
-case class SidechainState(store: LSMStore, override val version: VersionTag, applicationState: ApplicationState) extends
-    BoxMinimalState[Proposition,
-                    Box[Proposition],
-                    BoxTransaction[Proposition, Box[Proposition]],
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage, override val version: VersionTag, applicationState: ApplicationState)
+  extends
+    BoxMinimalState[SidechainTypes#SCP,
+                    SidechainTypes#SCB,
+                    SidechainTypes#SCBT,
                     SidechainBlock,
-                    SidechainState]{
-
-  //require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
-  //  s"${encoder.encode(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))} != ${encoder.encode(version)}")
+                    SidechainState]
+  with SidechainTypes
+  with SidechainStateReader
+  with ScorexLogging
+{
+  require({
+    stateStorage.lastVersionId match {
+      case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
+      case None => true
+    }
+  },
+  s"Specified version is invalid. ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
 
   override type NVCT = SidechainState
   //type HPMOD = SidechainBlock
 
-
   // Note: emit tx.semanticValidity for each tx
-  override def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+  override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+    if (!tx.semanticValidity())
+      throw new Exception("Transaction is semanticaly invalid.")
+  }
 
   // get closed box from State storage
-  override def closedBox(boxId: Array[Byte]): Option[Box[Proposition]] = ???
+  override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
+    stateStorage.get(boxId)
+  }
 
-  // get boxes for given proposition from state storage
-  override def boxesOf(proposition: Proposition): Seq[Box[Proposition]] = ???
+  override def getClosedBox(boxId: Array[Byte]): JOptional[Box[_ <: Proposition]] = {
+    closedBox(boxId) match {
+      case Some(box) => JOptional.of(box)
+      case None => JOptional.empty()
+    }
+  }
 
   // Note: aggregate New boxes and spent boxes for Block
-  override def changes(mod: SidechainBlock)
-  : Try[BoxStateChanges[Proposition, Box[Proposition]]] = {
+  override def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = {
     SidechainState.changes(mod)
   }
 
-  // Validate block itself, then validate transactions through validateAgainstModifier(tx, mod)
-  // In the block validation we need to verify that for every MC block referenced there is a corresponding MC2SC transaction and verify merkle roots in transaction and block is equal
-  // and moreover verify that every mc2sc transaction has a corresponding mainchain block reference.
-  override def validate(mod: SidechainBlock): Try[Unit] = ???
+  // Validate block itself: version and semanticValidity for block
+  //TODO add call of applicationState.validate(Block)
+  //TODO see validate method in Hybrid (tx validation also)
+  override def validate(mod: SidechainBlock): Try[Unit] = Try {
+    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
+      s"${version} expected")
+    //TODO (Alberto) Do we really need to check semanticValidity for block (and transaction) here???
+    //mod.semanticValidity()
+    mod.transactions.foreach(tx => validate(tx).get)
+    //TODO Try as result of validate?
+    if (!applicationState.validate(this, mod))
+      throw new Exception("Exception was thrown by ApplicationState validation.")
+  }
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
@@ -57,36 +90,40 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   // TO DO: put validateAgainstModifier logic inside validate(mod)
 
   // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
-  override def validate(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+  // TO DO check logic in Hybrid.BoxMinimalState.validate
+  // TO DO TBD
+  override def validate(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+    var closedCoinsBoxesAmount : Long = 0L
+    var newCoinsBoxesAmount : Long = 0L
 
-  // NOTE: mod is only for internal usage: e.g. for Backward and Forward transactions.
-  def validateAgainstModifier(tx: BoxTransaction[Proposition, Box[Proposition]],
-               mod: SidechainBlock): Try[Unit] = {
-    tx match {
-      //case t: MC2SCAggregatedTransaction => validateMC2SCAggregatedTx(t, mod)
-      //case t: WithdrawalRequestTransaction => validateWithdrawalRequestTx(t)
-      // other SDK known objects with specific validation processing
-      // ...
-      case _ => Try { // RegularTransactions and custom sidechain transactions
-        validate(tx)
+    if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
+
+      for (u <- tx.unlockers().asScala) {
+        closedBox(u.closedBoxId()) match {
+          case Some(box) => {
+            val boxKey = u.boxKey()
+            if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
+              throw new Exception("Box unlocking proof is invalid.")
+            if (box.isInstanceOf[CoinsBox[_ <: Proposition]])
+              closedCoinsBoxesAmount += box.value()
+          }
+          case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
+        }
       }
+
+      newCoinsBoxesAmount = tx.newBoxes().asScala.filter(_.isInstanceOf[CoinsBox[_ <: Proposition]]).map(_.value()).sum
+
+      if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
+        throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
+          s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}");
+
     }
-  }
 
-  def validateMC2SCAggregatedTx(tx: MC2SCAggregatedTransaction,
-                        mod: SidechainBlock
-                       ): Try[Unit] = Try {
-    // 1) check that MC2SCAggregatedTransaction (forward transaction) contains all sidechain related FT
-    // 2) check that transaction is valid
-  }
-
-  def validateWithdrawalRequestTx(tx: WithdrawalRequestTransaction): Try[Unit] = Try {
-    // validate unlockers to be sure that we can spent proper boxes.
-    // no new boxes must be created
+    semanticValidity(tx);
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
-    validate(mod) flatMap { _ =>
+    validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id)) // check applyChanges implementation
       })
@@ -99,23 +136,49 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[Proposition, Box[Proposition]], newVersion: VersionTag): Try[SidechainState] = ???
+  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag): Try[SidechainState] = Try {
+    val version = versionToBytes(newVersion)
+    applicationState.onApplyChanges(this, version,
+      changes.toAppend.map(_.box).asJava,
+      changes.toRemove.map(_.boxId.array).asJava) match {
+      case Success(appState) =>
+        new SidechainState(stateStorage.update(new ByteArrayWrapper(version), changes.toAppend.map(_.box).toSet,
+                                    changes.toRemove.map(_.boxId.array).toSet).get,
+                       newVersion, applicationState)
+      case Failure(exception) => throw exception
+    }
+  }.recoverWith{case exception =>
+    log.error("Exception was thrown during applyChanges.", exception)
+    Failure(exception)
+  }
 
-  override def maxRollbackDepth: Int = ??? //store.keepVersions
+  override def maxRollbackDepth: Int = {
+    stateStorage.rollbackVersions.size
+  }
 
-  override def rollbackTo(version: VersionTag): Try[SidechainState] = ???
-
+  override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
+    require(to != null, "Version to rollback to must be NOT NULL.")
+    val version = BytesUtils.fromHexString(to)
+    applicationState.onRollback(version) match {
+      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, to, appState)
+      case Failure(exception) => throw exception
+    }
+  }.recoverWith{case exception =>
+    log.error("Exception was thrown during rollback.", exception)
+    Failure(exception)
+  }
 }
 
-object SidechainState {
-  def semanticValidity(tx: BoxTransaction[Proposition, Box[Proposition]]): Try[Unit] = ???
+object SidechainState
+  extends ScorexLogging
+{
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
-  def changes(mod: SidechainBlock) : Try[BoxStateChanges[Proposition, Box[Proposition]]] = Try {
-    val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[Box[Proposition]], 0L)
+  def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = Try {
+    val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[SidechainTypes#SCB], 0L)
 
-    val (toRemove: Seq[Array[Byte]], toAdd: Seq[Box[Proposition]], reward) =
+    val (toRemove: Seq[Array[Byte]], toAdd: Seq[SidechainTypes#SCB], reward) =
       mod.transactions.foldLeft(initial){ case ((sr, sa, f), tx) =>
         (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
       }
@@ -124,14 +187,55 @@ object SidechainState {
     // calculate list of new boxes -> toAppend
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
-    val ops: Seq[BoxStateChangeOperation[Proposition, Box[Proposition]]] =
-      toRemove.map(id => Removal[Proposition, Box[Proposition]](scorex.crypto.authds.ADKey(id))) ++
-      toAdd.map(b => Insertion[Proposition, Box[Proposition]](b))
+    val ops: Seq[BoxStateChangeOperation[SidechainTypes#SCP, SidechainTypes#SCB]] =
+      toRemove.map(id => Removal[SidechainTypes#SCP, SidechainTypes#SCB](scorex.crypto.authds.ADKey(id))) ++
+      toAdd.map(b => Insertion[SidechainTypes#SCP, SidechainTypes#SCB](b))
 
-    BoxStateChanges[Proposition, Box[Proposition]](ops)
+    BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB](ops)
 
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
+  }
+
+  private def openStorage(storagePath: JFile) : Storage = {
+    storagePath.mkdirs()
+    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+  }
+
+  private def openStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion) : SidechainStateStorage = {
+
+    val stateStorage = new SidechainStateStorage(storage, sidechainBoxesCompanion)
+
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        storage.close()
+      }
+    })
+
+    stateStorage
+  }
+
+  private[horizen] def restoreState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
+                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
+
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
+
+    if (storage.lastVersionID().isPresent)
+      Some(new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), bytesToVersion(storage.lastVersionID().get().data), applicationState))
+    else
+      None
+  }
+
+  private[horizen] def genesisState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
+                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
+
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
+
+    if (!storage.lastVersionID().isPresent)
+      new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), idToVersion(sidechainSettings.genesisBlock.get.parentId), applicationState)
+        .applyModifier(sidechainSettings.genesisBlock.get).toOption
+    else
+      None
   }
 }

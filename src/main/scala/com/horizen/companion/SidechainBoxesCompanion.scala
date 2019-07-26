@@ -5,14 +5,15 @@ import com.horizen.proposition._
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 
+import com.horizen.SidechainTypes
 import com.horizen.utils.DynamicTypedSerializer
 
 
-case class SidechainBoxesCompanion(customSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]])
-  extends DynamicTypedSerializer[Box[_ <: Proposition], BoxSerializer[_ <: Box[_ <: Proposition]]](
-    new JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]]() {{
-        put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer)
-        put(CertifierRightBox.BOX_TYPE_ID, CertifierRightBoxSerializer.getSerializer)
+case class SidechainBoxesCompanion(customSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]])
+  extends DynamicTypedSerializer[SidechainTypes#SCB, BoxSerializer[SidechainTypes#SCB]](
+    new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]() {{
+        put(RegularBox.BOX_TYPE_ID, RegularBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
+        put(CertifierRightBox.BOX_TYPE_ID, CertifierRightBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
       }},
     customSerializers)
 

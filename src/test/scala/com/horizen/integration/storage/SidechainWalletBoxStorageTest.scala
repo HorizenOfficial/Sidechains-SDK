@@ -1,6 +1,6 @@
 package com.horizen.integration.storage
 
-import com.horizen.WalletBox
+import com.horizen.{SidechainTypes, WalletBox}
 import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
@@ -17,12 +17,13 @@ import java.lang.{Byte => JByte}
 
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
-    with BoxFixture
-    with IODBStoreFixture
+  with BoxFixture
+  with IODBStoreFixture
+  with SidechainTypes
 {
 
-  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
-  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+  var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
   val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 

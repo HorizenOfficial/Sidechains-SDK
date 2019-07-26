@@ -18,8 +18,8 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
   @Test
   def WalletBoxSerializerTest_SerializationTest(): Unit = {
     val transactionIdBytes = new Array[Byte](32)
-    var customBoxesSerializers: JHashMap[JByte, BoxSerializer[_ <: Box[_ <: Proposition]]] = new JHashMap()
-    customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer)
+    var customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+    customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
     val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
     var serializer: WalletBoxSerializer = null
@@ -40,7 +40,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     // Test 2: serialization of custom Box
     Random.nextBytes(transactionIdBytes)
     val walletBoxWithCustomBox = new WalletBox(
-      getCustomBox(),
+      getCustomBox().asInstanceOf[SidechainTypes#SCB],
       BytesUtils.toHexString(transactionIdBytes),
       20000)
     serializer = walletBoxWithCustomBox.serializer(sidechainBoxesCompanion)
