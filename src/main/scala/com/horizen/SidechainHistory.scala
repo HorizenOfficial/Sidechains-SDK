@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.{NetworkParams, StorageParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.utils.BytesUtils
@@ -15,6 +15,8 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.NodeHistory
+import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.transaction.Transaction
 import io.iohk.iodb.LSMStore
 
 import scala.compat.java8.OptionConverters._
@@ -366,6 +368,42 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def getCurrentHeight: Int = {
     height
   }
+
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[Transaction] = {
+    // Just as reminder. history.storage.modifierById
+    JOptional.empty()
+  }
+
+  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[Transaction] = ???
+
+  override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
+    // best MC block header which has already been included in a SC block
+    def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
+    var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
+    var hashOfMcBlockReference = mcBlockReference.hash
+
+    var height = getHeightOfMainchainBlock(hashOfMcBlockReference)
+
+    // Sidechain block which contains this MC block reference
+    var scBlock = getSidechainBlockByMainchainBlockReferenceHash(hashOfMcBlockReference)
+    var scBlockId = Array[Byte]()
+    if(scBlock.isPresent)
+      scBlockId = idToBytes(scBlock.get().id)
+
+    new MainchainBlockReferenceInfo(
+      hashOfMcBlockReference,
+      height,
+      scBlockId
+    )
+  }
+
+  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
+
+  override def getHeightOfMainchainBlock(mcBlockReferenceHash: Array[Byte]): Int = ???
+
+  override def getSidechainBlockByMainchainBlockReferenceHash(mcBlockReferenceHash: Array[Byte]): JOptional[SidechainBlock] = ???
+
+  override def createMainchainBlockReference(mainchainBlockData: Array[Byte]): Try[MainchainBlockReference] = ???
 }
 
 object SidechainHistory {

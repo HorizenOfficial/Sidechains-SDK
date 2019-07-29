@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 
@@ -31,6 +32,15 @@ class TransactionCreatorNodeWallet implements NodeWallet {
         for(Pair<Box, Long> walletBox : _boxesWithCreationTime)
             _boxesOrderedBytCreationTime.add(walletBox.getKey());
         _secrets = secrets;
+    }
+
+    @Override
+    public Long allBoxesBalance() {
+        long sum = 0;
+        for(Box b: _boxesOrderedBytCreationTime){
+            sum += b.value();
+        }
+        return sum;
     }
 
     @Override

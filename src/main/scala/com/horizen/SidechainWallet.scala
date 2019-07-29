@@ -1,6 +1,7 @@
 package com.horizen
 
 import java.io.{File => JFile}
+import java.lang
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
@@ -171,6 +172,10 @@ class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStor
 
   override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
+  }
+
+  override def allBoxesBalance(): lang.Long = {
+    walletBoxStorage.getAll.map(_.box.value()).sum
   }
 }
 

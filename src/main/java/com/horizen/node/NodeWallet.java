@@ -21,6 +21,8 @@ public interface NodeWallet {
 
     Long boxesBalance(Class<? extends Box<? extends Proposition>> type);
 
+    Long allBoxesBalance();
+
     Optional<Secret> secretByPublicKey(Proposition publicKey);
 
     List<Secret> allSecrets();

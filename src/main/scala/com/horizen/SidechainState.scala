@@ -1,6 +1,7 @@
 package com.horizen
 
 import java.io.{File => JFile}
+import java.util
 import java.util.{Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
@@ -168,6 +169,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
   }
+
+  override def getClosedBoxes(boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: SCP]] = ???
+
+  override def getClosedBoxesOfType(`type`: Class[_ <: Box[_ <: SCP]], boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: SCP]] = ???
 }
 
 object SidechainState
