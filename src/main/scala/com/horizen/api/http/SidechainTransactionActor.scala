@@ -1,15 +1,17 @@
-package com.horizen.api
+package com.horizen.api.http
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.api.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.transaction.Transaction
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
+import scorex.util.ScorexLogging
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
-class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext) extends SidechainExtendedActor(sidechainNodeViewHolderRef) {
+class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext)
+  extends Actor with ScorexLogging {
 
   private var transactionMap : TrieMap[String, Promise[Unit]] = TrieMap()
 

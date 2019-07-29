@@ -3,14 +3,15 @@ package com.horizen
 import java.util
 import java.util.Optional
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 import scorex.core.consensus.History.ModifierIds
 import scorex.core.consensus.{History, ModifierSemanticValidity, SyncInfo}
 
 import scala.util.Try
 import com.horizen.node.NodeHistory
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.transaction.Transaction
 
 import scala.collection.JavaConverters
 
@@ -18,15 +19,11 @@ import scala.collection.JavaConverters
 // TO DO: think about additional methods (consensus related?)
 
 
-class SidechainHistory(val storage : SidechainHistoryStorage)
+class SidechainHistory()
   extends scorex.core.consensus.History[
       SidechainBlock,
       SyncInfo,
       SidechainHistory] with NodeHistory {
-
-  val height: Int = storage.height
-  val bestBlockId: ModifierId = storage.bestBlockId
-  val bestBlock: SidechainBlock = storage.bestBlock
 
   override type NVCT = SidechainHistory
 
@@ -46,22 +43,16 @@ class SidechainHistory(val storage : SidechainHistoryStorage)
 
   override def openSurfaceIds(): Seq[ModifierId] = ???
 
-  override def continuationIds(info: SyncInfo, sie: Int): Option[ModifierIds] = ???
+  override def continuationIds(info: SyncInfo, size: Int): Option[ModifierIds] = ???
 
   override def syncInfo: SyncInfo = ???
 
   override def compare(other: SyncInfo): History.HistoryComparisonResult = ???
 
-  def isGenesisBlock(blockId: ModifierId): Boolean = ???
-
-  def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = ???
-
-  def chainBack(block : SidechainBlock, until : ModifierId => Boolean, limit : Int) : Option[Seq[ModifierId]] = ???
-
-  override def getBlockById(blockId: Array[Byte]): Optional[SidechainBlock] = {
+  override def getBlockById(blockId: String): Optional[SidechainBlock] = {
     Optional.ofNullable(
       modifierById(
-        bytesToId(blockId)).orNull
+        bytesToId(blockId.getBytes)).orNull
     )
   }
 
@@ -69,27 +60,37 @@ class SidechainHistory(val storage : SidechainHistoryStorage)
     * Get the id of the previous block from a given block id
     */
   private def previousBlockId(blockId : ModifierId) : Option[ModifierId] = {
+    // TO-DO. Modify on base of our SDK
+    def storage_parentBlockId(blockId : ModifierId) : Option[ModifierId] = ???
     modifierById(blockId).getOrElse() match {
-      case Some(block) => storage.parentBlockId(blockId)
+      case Some(block) => storage_parentBlockId(blockId)
       case _ => None
     }
   }
 
-  override def getLastBlockids(startBlock: SidechainBlock, count: Int): util.List[Array[Byte]] = {
-    var seqOfBlockIds = chainBack(startBlock, isGenesisBlock, count).get
-    if (count >= height){
+  override def getLastBlockids(startBlock: SidechainBlock, count: Int): util.List[String] = {
+    // TO-DO. Modify on base of our SDK
+    def isGenesisBlock_(blockId: ModifierId): Boolean = ???
+    // chainBack should return maximum count elements
+    def chainBack_(block : SidechainBlock, until : ModifierId => Boolean, limit : Int) : Option[Seq[ModifierId]] = ???
+    var seqOfBlockIds = chainBack_(startBlock, isGenesisBlock_, count).get
+    if (seqOfBlockIds.length < count){
       seqOfBlockIds = previousBlockId(seqOfBlockIds.head).get +: seqOfBlockIds
     }
-    else{
-      seqOfBlockIds = seqOfBlockIds.slice(seqOfBlockIds.length - count, seqOfBlockIds.length + 1)
-    }
-    JavaConverters.seqAsJavaList(seqOfBlockIds.map(id => idToBytes(id)))
+
+    JavaConverters.seqAsJavaList(seqOfBlockIds.map(id => idToBytes(id).toString))
   }
 
-  override def getBestBlock(): SidechainBlock = bestBlock
+  override def getBestBlock(): SidechainBlock = ???
 
-  override def getBlockIdByHeight(height: Int): Array[Byte] = {
-    var seqOfBlockIds = chainBack(bestBlock, isGenesisBlock, height).get
+  override def getBlockIdByHeight(height: Int): String = {
+    // this should use (when ready) the optimized indexed version of history
+    // TO-DO. Modify on base of our SDK
+    def isGenesisBlock_(blockId: ModifierId): Boolean = ???
+    val bestBlock : SidechainBlock = ???
+    // chainBack should return maximum count elements
+    def chainBack_(block : SidechainBlock, until : ModifierId => Boolean, limit : Int) : Option[Seq[ModifierId]] = ???
+    var seqOfBlockIds = chainBack_(bestBlock, isGenesisBlock_, height).get
     var blockId : ModifierId =
       if(height == 1){
         var headBlockId = seqOfBlockIds.headOption.get
@@ -98,8 +99,48 @@ class SidechainHistory(val storage : SidechainHistoryStorage)
       else
         seqOfBlockIds(height -2)
 
-    idToBytes(blockId)
+    idToBytes(blockId).toString
   }
 
-  override def getCurrentHeight(): Int = height
+  override def getCurrentHeight(): Int = ???
+
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): Optional[Transaction] = {
+    // Just as reminder. history.storage.modifierById
+    Optional.empty()
+  }
+
+  override def searchTransactionInsideBlockchain(transactionId: String): Optional[Transaction] = {
+    // Just as reminder
+    Optional.empty()
+  }
+
+  override def getSidechainBlockByMainchainBlockReferenceHash(mcBlockReferenceHash: Array[Byte]): Optional[SidechainBlock] = ???
+
+  override def getHeightOfMainchainBlock(mcBlockReferenceHash: Array[Byte]): Int = ???
+
+  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
+
+  override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
+    // best MC block header which has already been included in a SC block
+    def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
+    var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
+    var hashOfMcBlockReference = mcBlockReference.hash
+
+    var height = getHeightOfMainchainBlock(hashOfMcBlockReference)
+
+    // Sidechain block which contains this MC block reference
+    var scBlock = getSidechainBlockByMainchainBlockReferenceHash(hashOfMcBlockReference)
+    var scBlockId = Array[Byte]()
+    if(scBlock.isPresent)
+      scBlockId = idToBytes(scBlock.get().id)
+
+    new MainchainBlockReferenceInfo(
+      hashOfMcBlockReference,
+      height,
+      scBlockId
+    )
+  }
+
+  override def createMainchainBlockReference(mainchainBlockData: Array[Byte]): Try[MainchainBlockReference] = ???
+
 }

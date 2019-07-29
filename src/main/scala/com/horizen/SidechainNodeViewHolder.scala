@@ -11,6 +11,7 @@ import com.horizen.transaction.{RegularTransaction, Transaction, TransactionSeri
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.block.Block
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import scorex.core.serialization.Serializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
@@ -45,6 +46,8 @@ class SidechainNodeViewHolder(sdkSettings: SidechainSettings,
  /* def getCurrentNodeView: SidechainNodeView = {
     new SidechainNodeView(history(), minimalState(), vault(), memoryPool())
   }*/
+
+
   protected def getCurrentSidechainNodeViewInfo: Receive = {
     case GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
   }

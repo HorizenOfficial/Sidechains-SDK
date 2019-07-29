@@ -5,7 +5,6 @@ import java.util.function.Consumer
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.api.ActorRegistry
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
@@ -15,11 +14,11 @@ import scorex.util.{ModifierId, idToBytes}
 
 import scala.collection.JavaConverters
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable, Future}
+import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                   sidechainExtendedActorRegistry : ActorRegistry) (implicit val context: ActorRefFactory)
+case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                  (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("block"))
@@ -36,7 +35,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetBlockRequest](body)match {
           case Success(req) =>
-            var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(req.id.getBytes)
+            var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(req.id)
 
             if(optionSidechainBlock.isPresent) {
               var sblock = optionSidechainBlock.get()
@@ -47,7 +46,8 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
              else{
                 var result = "error" ->
                     (
-                      "errorCode" -> StatusCodes.BadRequest.intValue,
+                      // TO-DO Change the errorCode
+                      "errorCode" -> 999999,
                       "errorDescription" -> s"Invalid id: ${req.id}"
                     )
                 ApiResponse(result)
@@ -74,9 +74,9 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             var sidechainHistory = sidechainNodeView.getNodeHistory
             var seqOfModifierId = sidechainHistory.getLastBlockids(
               sidechainHistory.getBestBlock, req.number)
-            var pairOfBlockIds : Seq[(String, Array[Byte])] = Seq()
-            seqOfModifierId.forEach(new Consumer[Array[Byte]] {
-              override def accept(t: Array[Byte]): Unit = {
+            var pairOfBlockIds : Seq[(String, String)] = Seq()
+            seqOfModifierId.forEach(new Consumer[String] {
+              override def accept(t: String): Unit = {
                 pairOfBlockIds.+:(("blockId", t))
               }
             })
@@ -103,7 +103,10 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             var sidechainHistory = sidechainNodeView.getNodeHistory
             var height = req.height
             if(height > sidechainHistory.getCurrentHeight)
-              ApiResponse("error" -> ("errorCode" -> StatusCodes.BadRequest.intValue, "errorDescription" -> s"Invalid height: $height"))
+              {
+                // TO-DO Change the errorCode
+                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Invalid height: $height"))
+              }
             else{
               val blockId = sidechainHistory.getBlockIdByHeight(height)
               ApiResponse("result" -> ("blockHash" -> blockId))

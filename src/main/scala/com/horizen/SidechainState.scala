@@ -1,5 +1,7 @@
 package com.horizen
 
+import java.util
+
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -105,6 +107,10 @@ case class SidechainState(store: LSMStore, override val version: VersionTag, app
   override def maxRollbackDepth: Int = ??? //store.keepVersions
 
   override def rollbackTo(version: VersionTag): Try[SidechainState] = ???
+
+  override def getClosedBoxes(boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: Proposition]] = ???
+
+  override def getClosedBoxesOfType(`type`: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: Proposition]] = ???
 
 }
 

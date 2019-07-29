@@ -7,15 +7,6 @@ import io.circe.ParsingFailure
 import io.circe
 import io.circe.{Decoder, DecodingFailure, parser}
 
-case class GetClosedBoxesRequest(exclude: Option[List[String]])
-
-case class GetClosedBoxesOfTypeRequest(boxtype: String, exclude: Option[List[String]])
-
-case class GetBalanceByTypeRequest(balancetype: String)
-
-case class GetPublicKeysPropositionsByTypeRequest(proptype: String)
-
-
 import cats.data.{NonEmptyList, Validated}
 
 import scala.util.{Failure, Success, Try}

@@ -1,6 +1,7 @@
 package com.horizen
 
-import java.util.{Optional => JOptional, List => JList}
+import java.lang
+import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
@@ -13,6 +14,7 @@ import com.horizen.storage.{SidechainSecretStorage, SidechainWalletBoxStorage}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.VersionTag
+
 import scala.util.Try
 import scala.collection.JavaConverters._
 
@@ -163,7 +165,7 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
-  override def getTransactionById(txId: String): JOptional[Transaction] = {
-    JOptional.empty()
+  override def allBoxesBalance(): lang.Long = {
+    walletBoxStorage.getAll.map(_.box.value()).sum
   }
 }

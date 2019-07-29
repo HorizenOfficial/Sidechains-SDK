@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import java.lang.{Byte, reflect}
-import java.util.Collections
+import java.util.{Collections, Optional}
 import java.util.function.Consumer
 import java.{lang, util}
 
@@ -9,14 +9,13 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.horizen.api.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.{ActorRegistry, SidechainTransactionActor}
+import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.box.{Box, PublicKey25519NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeMemoryPool, NodeWallet}
+import com.horizen.node.{NodeMemoryPool, NodeWallet, SidechainNodeView}
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction
+import com.horizen.{SidechainTypes, transaction}
 import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, Transaction, TransactionSerializer}
 import com.horizen.utils.ByteArrayWrapper
 import scorex.core.api.http.{ApiError, ApiResponse}
@@ -25,23 +24,25 @@ import io.circe.generic.auto._
 import io.circe.{Encoder, Json, JsonObject}
 import io.circe.syntax._
 import javafx.util.Pair
+import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.transaction.BoxTransaction
 
 import scala.collection.JavaConverters
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable, Future}
+import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 case class SidechainTransactionApi (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                    sidechainExtendedActorRegistry : ActorRegistry) (implicit val context: ActorRefFactory)
+                                    sidechainTransactionActorRef: ActorRef) (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("transaction"))
-            {getMemoryPool ~ getTransaction ~ decodeRawTransaction ~ createRegularTransaction ~ sendCoinsToAddress ~ sendRawTransaction}
+            {getMemoryPool ~ decodeRawTransaction ~ createRegularTransaction ~ sendCoinsToAddress ~ sendRawTransaction}
 
+  private var companion : SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[_ <: Transaction]]())
   /**
-    * Returns an array of tx ids if formatMemPool=false, otherwise a JSONObject for each tx.
+    * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
     */
   def getMemoryPool : Route = (post & path("getMemoryPool"))
   {
@@ -52,16 +53,21 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
         ApiInputParser.parseInput[GetMempoolRequest](body)match {
           case Success(req) =>
             var formatMemPool = req.formatMemPool
-            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getMemoryPool()
+            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
             if(formatMemPool){
-              var keyArray = new Array[String](unconfirmedTxs.size())
-              unconfirmedTxs.keySet().toArray(keyArray)
+              var keyArray = new Array[Array[Byte]](unconfirmedTxs.size())
+              unconfirmedTxs.toArray(keyArray)
               ApiResponse("result" -> keyArray.asJson)
             }
              else
               {
-                var valuesArray = new Array[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]](unconfirmedTxs.size())
-                ApiResponse("result" -> valuesArray.map(_.bytes))
+                var valuesArray : Array[Array[Byte]] = Array[Array[Byte]]()
+                unconfirmedTxs.forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
+                  override def accept(t: transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]): Unit = {
+                    valuesArray.+:(companion.toBytes(t))
+                  }
+              })
+                ApiResponse("result" -> valuesArray)
               }
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
@@ -70,61 +76,101 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
   }
 
   /**
-    * Return in-wallet tx by its id. Return error if not found
-    */
-  def getTransaction : Route = (post & path("getTransaction"))
-  {
-    case class GetTransactionRequest(txid: String, format: Boolean = false)
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetTransactionRequest](body)match {
-          case Success(req) =>
-            var txid = req.txid
-            var format = req.format
-            var option_transaction = sidechainNodeView.getNodeWallet.getTransactionById(txid)
-            if(option_transaction.isPresent){
-              var tx = option_transaction.get()
-                if(format)
-                  ApiResponse("result" -> "")
-                else
-                  ApiResponse("error" -> ("errorCode" -> StatusCodes.BadRequest.intValue, "errorDescription" -> s"No transaction found for id: $txid"))
-            }
-            else
-              ApiResponse("error" -> ("errorCode" -> StatusCodes.BadRequest.intValue, "errorDescription" -> s"No transaction found for id: $txid"))
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
-      }
-    }
-  }
-
-  /**
     * Follows the same behaviour as the corresponding RPC call in zend: by default it will look for
-    * tx in mempool. Additional parameters are:
-    * -format: if true a JSON representation of tx is returned, otherwise return the tx serialized as
+    * transaction in memory pool. Additional parameters are:
+    * -format: if true a JSON representation of transaction is returned, otherwise return the transaction serialized as
     * a hex string. If format is not specified, false behaviour is assumed as default;
-    * -blockhash: If specified, will look for tx in the corresponding block
-    * -txindex: If specified will look for tx in all blockchain blocks;
+    * -blockHash: If specified, will look for tx in the corresponding block
+    * -txIndex: If specified will look for transaction in all blockchain blocks;
     *
     * All the possible behaviours are be:
-    * 1) blockhash set -> Search in block referenced by blockhash
-    * 2) blockhash not set, txindex = true -> Search in mempool, if not found, search in the whole blockchain
-    * 3) blockhash not set, txindex = false -> Search in mempool
+    * 1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
+    * 2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+    * 3) blockHash not set, txIndex = false -> Search in memory pool
     */
   def getRawTransaction : Route = (post & path("getRawTransaction"))
   {
-    case class GetRawTransactionRequest(txid: String, blockhash: String = "", txindex: Boolean = false, format: Boolean = false)
+    case class GetRawTransactionRequest(txId: String, blockHash: String = "", txIndex: Boolean = false, format: Boolean = false)
 
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetRawTransactionRequest](body)match {
           case Success(req) =>
-            var txid = req.txid
+            val memoryPool = sidechainNodeView.getNodeMemoryPool
+            val history = sidechainNodeView.getNodeHistory
+
+            def searchTransactionInMemoryPool(id : String) : Option[_ <: Transaction] = {
+              var opt = memoryPool.getTransactionByid(id)
+              if(opt.isPresent)
+                None
+                //Option(opt.get())
+              else None
+            }
+
+            def searchTransactionInBlock(id : String, blockHash : String) : Option[_ <: Transaction] = {
+              var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
+              if(opt.isPresent)
+                Option(opt.get())
+              else None
+            }
+
+            def searchTransactionInBlockchain(id : String) : Option[_ <: Transaction] = {
+              var opt = history.searchTransactionInsideBlockchain(id)
+              if(opt.isPresent)
+                Option(opt.get())
+              else None
+            }
+
+
+            var txId = req.txId
             var format = req.format
-            var blockHash = req.blockhash
-            var txindex = req.txindex
-            //TO-DO in Java interfaces
-            ApiResponse.OK
+            var blockHash = req.blockHash
+            var txIndex = req.txIndex
+            var transaction : Option[Transaction] = None
+            var error : String = ???
+
+            // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
+            if(blockHash.isEmpty && txIndex){
+              // Search first in memory pool
+              transaction = searchTransactionInMemoryPool(txId)
+
+              // If not found search in the whole blockchain
+              if(transaction.isEmpty)
+                transaction = searchTransactionInBlockchain(txId)
+
+              if(transaction.isEmpty)
+                error = s"Transaction $txId not found in memory pool and blockchain"
+            }
+            // Case --> blockHash not set, txIndex = false -> Search in memory pool
+            else if(blockHash.isEmpty && !txIndex){
+              // Search in memory pool
+              transaction = searchTransactionInMemoryPool(txId)
+
+              if(transaction.isEmpty)
+                error = s"Transaction $txId not found in memory pool"
+            }
+
+            // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
+            else if(!blockHash.isEmpty){
+              transaction = searchTransactionInBlock(txId, blockHash)
+
+              if(transaction.isEmpty)
+                error = s"Transaction $txId not found in specified block"
+            }
+
+            transaction match {
+              case Some(t) =>
+                if(format){
+                  //TO-DO JSON representation of transaction
+                  ApiResponse("result" -> "")
+                }else{
+                  ApiResponse("result"->companion.toBytes(t))
+                }
+              case None =>
+                // TO-DO Change the errorCode
+                ApiResponse("error" -> ("errorCode" -> 999999, error))
+            }
+
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
       }
@@ -142,12 +188,11 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[DecodeRawTransactionRequest](body)match {
           case Success(req) =>
-            var tryTX = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[_<:Transaction]](0))
-              .parseBytes(req.rawtxdata.getBytes)
+            var tryTX = companion.parseBytes(req.rawtxdata.getBytes)
             tryTX match{
               case Success(tx) =>
-                //TO-DO how to encode in JSON?
-                ApiResponse.OK
+                //TO-DO JSON representation of transaction
+                ApiResponse("result" -> "")
               case Failure(exp) =>
                 // TO-DO Change the errorCode
                 ApiResponse("error" -> ("errorCode" -> 99999, "errorDescription" -> exp.getMessage))
@@ -219,11 +264,11 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
                 JavaConverters.seqAsJavaList(outputs),
                 fee, System.currentTimeMillis())
 
-              // TO-DO
-              var jsonRegularTransaction : Json = ("regularTransaction" -> "value...").asJson
-
               if(req.format)
-                ApiResponse("result" -> jsonRegularTransaction)
+                {
+                  //TO-DO JSON representation of transaction
+                  ApiResponse("result" -> "")
+                }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
             }
@@ -251,16 +296,15 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
             var outputList = req.outputs
             var fee = req.fee
             val wallet = sidechainNodeView.getNodeWallet
-            val memoryPool = sidechainNodeView.getNodeMemoryPool
 
             try {
-              var regularTransaction = createRegularTransactionSimplified(outputList, fee, wallet, memoryPool)
-
-              // TO-DO
-              var jsonRegularTransaction : Json = ("regularTransaction" -> "value...").asJson
+              var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
 
               if(req.format)
-                ApiResponse("result" -> jsonRegularTransaction)
+                {
+                  //TO-DO JSON representation of transaction
+                  ApiResponse("result" -> "")
+                }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
             }catch {
@@ -274,8 +318,11 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
     }
   }
 
-  private def createRegularTransactionSimplified(outputList: List[(String, Long)], fee: Long, wallet : NodeWallet, memoryPool : NodeMemoryPool) : RegularTransaction = {
+  private def createRegularTransactionSimplified_(
+                                                  outputList: List[(String, Long)], fee: Long, wallet : NodeWallet,
+                                                  sidechainNodeView : SidechainNodeView) : RegularTransaction = {
 
+    val memoryPool = sidechainNodeView.getNodeMemoryPool
     val boxIdsToExclude : ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
 
     memoryPool.getMemoryPoolSortedByFee(memoryPool.getMemoryPoolSize).forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
@@ -334,10 +381,9 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
             var outputList = req.outputs
             var fee = req.fee
             val wallet = sidechainNodeView.getNodeWallet
-            val memoryPool = sidechainNodeView.getNodeMemoryPool
 
             try {
-              var regularTransaction = createRegularTransactionSimplified(outputList, fee, wallet, memoryPool)
+              var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
               validateAndSendTransaction(regularTransaction)
             }catch {
               case t : Throwable =>
@@ -353,22 +399,13 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
   private def validateAndSendTransaction(transaction : Transaction) = {
     withNodeView{
       sidechainNodeView =>
-        //TO-DO
-        sidechainExtendedActorRegistry.retrieveActorRef(SidechainTransactionActor.getClass.getCanonicalName) match {
-          case Some(actorRef) =>
-            val barrier = Await.result(
-              actorRef ? BroadcastTransaction(transaction),
-              settings.timeout).asInstanceOf[Future[Unit]]
-            onComplete(barrier){
-              case Success(result) =>
-                ApiResponse("result" -> ("transactionId" -> transaction.id()))
-              case Failure(exp) =>
-                // TO-DO Change the errorCode
-                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> exp.getMessage))
-            }
-          case None =>
+        val barrier = Await.result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), settings.timeout).asInstanceOf[Future[Unit]]
+        onComplete(barrier){
+          case Success(result) =>
+            ApiResponse("result" -> ("transactionId" -> transaction.id()))
+          case Failure(exp) =>
             // TO-DO Change the errorCode
-            ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> "No extended actor found"))
+           ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> exp.getMessage))
         }
     }
   }
@@ -386,8 +423,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
         ApiInputParser.parseInput[SendRawTransactionRequest](body)match {
           case Success(req) =>
             var transactionBytes = req.rawTransaction
-            new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[_ <: Transaction]]())
-                .parseBytes(transactionBytes.getBytes) match {
+            companion.parseBytes(transactionBytes.getBytes) match {
               case Success(transaction) =>
                 validateAndSendTransaction(transaction)
               case Failure(exception) =>

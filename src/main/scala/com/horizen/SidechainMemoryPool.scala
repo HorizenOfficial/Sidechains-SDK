@@ -1,7 +1,7 @@
 package com.horizen
 
 import java.{lang, util}
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -126,16 +126,24 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#BT])
     this
   }
 
-  override def getMemoryPoolSortedByFee(limit: Int): lang.Iterable[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
-    JavaConverters.asJavaIterableConverter(take(limit).map(value => value.asInstanceOf[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]])).asJava
+  override def getMemoryPoolSortedByFee(limit: Int): JList[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
+    JavaConverters.seqAsJavaList(
+      take(limit).toSeq
+    )
   }
 
-  override def getMemoryPool(): util.Map[String, BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
-    unconfirmed.readOnlySnapshot().mapValues(v=>v.asInstanceOf[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]]).asJava
+  override def allTransactions: JList[BoxTransaction[_ <: Proposition, _<: Box[_ <: Proposition]]] = {
+    unconfirmed.readOnlySnapshot().values.map(box => box.asInstanceOf[BoxTransaction[_ <: Proposition, _<: Box[_ <: Proposition]]]).toList.asJava
   }
 
   override def getMemoryPoolSize: Int = {
     size
   }
+
+  override def getTransactionByid(transactionId: String): Optional[BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] = {
+    var id = scorex.util.bytesToId(transactionId.getBytes)
+    Optional.ofNullable(unconfirmed.get(id).get)
+  }
+
 }
 
