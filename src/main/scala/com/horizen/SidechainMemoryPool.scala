@@ -1,8 +1,9 @@
 package com.horizen
 
-import java.util.{List => JList, ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.Box
+import com.horizen.node.NodeMemoryPool
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.transaction.BoxTransaction
@@ -10,12 +11,13 @@ import scorex.util.ModifierId
 import scorex.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
+  with NodeMemoryPool
 {
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
@@ -122,10 +124,20 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     unconfirmed.remove(tx.id)
     this
   }
+
+  override def allTransactions(): JList[SidechainTypes#SCBT] = {
+    unconfirmed.values.toList.asJava
+  }
+
+  override def getTransactionsSortedByFee(fee: Int): JList[SidechainTypes#SCBT] = {
+    unconfirmed.values.toList.sortBy(-_.fee).asJava
+  }
+
+  override def getSize: Int = unconfirmed.size
 }
 
 object SidechainMemoryPool
 {
-  lazy val emptyPool :SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
+  lazy val emptyPool : SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
 }
 

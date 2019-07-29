@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.io.File
+import java.io.{File => JFile}
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
@@ -8,13 +8,14 @@ import com.horizen.box.Box
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
+import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
-import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage}
+import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, Storage}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
-import scorex.core.VersionTag
+import scorex.core.{VersionTag, bytesToVersion, idToVersion}
 import scorex.util.ScorexLogging
 
 import scala.util.{Failure, Success, Try}
@@ -38,8 +39,8 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                     applicationWallet: ApplicationWallet)
+class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+                               applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
                  SidechainTypes#SCBT,
@@ -176,80 +177,63 @@ class SidechainWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage
 object SidechainWallet
   extends ScorexLogging
 {
-  private def openBoxStore(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion) :
-    Try[SidechainWalletBoxStorage] = Try {
+  private def openStorage(storagePath: JFile) : Storage = {
+    storagePath.mkdirs()
+    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+  }
 
-    val walletStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")
-    walletStoragePath.mkdirs()
-    val walletDiskStorage = new IODBStoreAdapter(new LSMStore(walletStoragePath, 32))
+  private def openWalletBoxStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion) : SidechainWalletBoxStorage = {
+
+    val walletBoxStorage = new SidechainWalletBoxStorage(storage, sidechainBoxesCompanion)
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        walletDiskStorage.close()
+        storage.close()
       }
     })
 
-    new SidechainWalletBoxStorage(walletDiskStorage, sidechainBoxesCompanion)
+    walletBoxStorage
   }
 
-  private def openSecretStore(sidechainSettings : SidechainSettings, sidechainSecretsCompanion: SidechainSecretsCompanion) :
-    Try[SidechainSecretStorage] = Try {
+  private def openSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion) : SidechainSecretStorage = {
 
-    val secretStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")
-    secretStoragePath.mkdirs()
-    val secretDiskStorage = new IODBStoreAdapter(new LSMStore(secretStoragePath, 32))
+    val secretStorage = new SidechainSecretStorage(storage, sidechainSecretsCompanion)
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        secretDiskStorage.close()
+        storage.close()
       }
     })
 
-    new SidechainSecretStorage(secretDiskStorage, sidechainSecretsCompanion)
+    secretStorage
   }
 
-  def restoreWallet(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                    sidechainSecretsCompanion: SidechainSecretsCompanion, applicationWallet: ApplicationWallet) :
-    Try[SidechainWallet] = Try {
+  private[horizen] def restoreWallet(sidechainSettings: SidechainSettings, applicationWallet: ApplicationWallet,
+                                     sidechainBoxesCompanion: SidechainBoxesCompanion, sidechainSecretsCompanion: SidechainSecretsCompanion,
+                                     externalStorage: Option[Storage]) : Option[SidechainWallet] = {
 
-    val walletBoxStorage = openBoxStore(sidechainSettings, sidechainBoxesCompanion) match {
-      case Success(wbs) => wbs
-      case Failure(exception) => throw exception
-    }
+    val walletBoxStorage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")))
+    val secretStorage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")))
 
-    val secretStorage = openSecretStore(sidechainSettings, sidechainSecretsCompanion) match {
-      case Success(ss) => ss
-      case Failure(exception) => throw exception
-    }
-
-    new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet)
-  }.recoverWith { case exception =>
-    log.error ("Exception was thrown during SidechainWallet initialization.", exception)
-    Failure (exception)
+    if (walletBoxStorage.lastVersionID().isPresent && secretStorage.lastVersionID().isPresent)
+      Some(new SidechainWallet(openWalletBoxStorage(walletBoxStorage, sidechainBoxesCompanion),
+        openSecretStorage(secretStorage, sidechainSecretsCompanion), applicationWallet))
+    else
+      None
   }
 
-  def genesisWallet(sidechainSettings : SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                    sidechainSecretsCompanion: SidechainSecretsCompanion, applicationWallet: ApplicationWallet,
-                    genesisBlocks : Seq[SidechainBlock]) :
-    Try[SidechainWallet] =  Try {
-    val walletBoxStorage = openBoxStore(sidechainSettings, sidechainBoxesCompanion) match {
-      case Success(wbs) => wbs
-      case Failure(exception) => throw exception
-    }
+  private[horizen] def genesisWallet(sidechainSettings: SidechainSettings, applicationWallet: ApplicationWallet,
+                                     sidechainBoxesCompanion: SidechainBoxesCompanion, sidechainSecretsCompanion: SidechainSecretsCompanion,
+                                     externalStorage: Option[Storage]) : Option[SidechainWallet] = {
 
-    val secretStorage = openSecretStore(sidechainSettings, sidechainSecretsCompanion) match {
-      case Success(ss) => ss
-      case Failure(exception) => throw exception
-    }
+    val walletBoxStorage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")))
+    val secretStorage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")))
 
-    var sidechainWallet = new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet)
-
-    for (block <- genesisBlocks)
-      sidechainWallet = sidechainWallet.scanPersistent(block)
-
-    sidechainWallet
-  }.recoverWith { case exception =>
-    log.error ("Exception was thrown during SidechainWallet genesis initialization.", exception)
-    Failure (exception)
+    if (!walletBoxStorage.lastVersionID().isPresent && !secretStorage.lastVersionID().isPresent)
+      Some(new SidechainWallet(openWalletBoxStorage(walletBoxStorage, sidechainBoxesCompanion),
+                          openSecretStorage(secretStorage, sidechainSecretsCompanion), applicationWallet)
+        .scanPersistent(sidechainSettings.genesisBlock.get))
+    else
+      None
   }
 }

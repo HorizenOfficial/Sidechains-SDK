@@ -24,6 +24,9 @@ trait NetworkParams {
   // Sidechain params:
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
   val sidechainId: Array[Byte]
+  val sidechainGenesisBlockId: Array[Byte]
+
+  val maxHistoryRewritingLength: Int = 100
 
 
   // Sidechain genesis params:

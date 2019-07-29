@@ -355,6 +355,7 @@ public class ListSerializerTest {
             listSerializerWithLimits.parseBytesTry(bytes).get();
         }
         catch (Exception e) {
+            System.out.println(e);
             exceptionOccurred = true;
         }
         assertFalse("List expected to be deserialized successful", exceptionOccurred);

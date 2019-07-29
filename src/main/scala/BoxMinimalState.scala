@@ -19,8 +19,6 @@ trait BoxMinimalState[P <: Proposition,
 
   def closedBox(boxId: Array[Byte]): Option[BX]
 
-  def boxesOf(proposition: P): Seq[BX]
-
   def changes(mod: M): Try[BoxStateChanges[P, BX]]
 
   def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag): Try[BMS]

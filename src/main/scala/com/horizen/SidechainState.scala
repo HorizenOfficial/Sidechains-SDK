@@ -1,15 +1,17 @@
 package com.horizen
 
-import java.io.File
+import java.io.{File => JFile}
 import java.util.{Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.node.NodeState
+import com.horizen.params.StorageParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.state.{ApplicationState, SidechainStateReader}
-import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
+import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
@@ -21,7 +23,7 @@ import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
-case class SidechainState(store: SidechainStateStorage, override val version: VersionTag, applicationState: ApplicationState)
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage, override val version: VersionTag, applicationState: ApplicationState)
   extends
     BoxMinimalState[SidechainTypes#SCP,
                     SidechainTypes#SCB,
@@ -29,16 +31,16 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
                     SidechainBlock,
                     SidechainState]
   with SidechainTypes
-  with SidechainStateReader
+  with NodeState
   with ScorexLogging
 {
-    require({
-        store.lastVersionId match {
-          case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
-          case None => true
-        }
-      },
-      s"Specified version is invalid. ${store.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
+  require({
+    stateStorage.lastVersionId match {
+      case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
+      case None => true
+    }
+  },
+  s"Specified version is invalid. ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
 
   override type NVCT = SidechainState
   //type HPMOD = SidechainBlock
@@ -51,7 +53,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
 
   // get closed box from State storage
   override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
-    store.get(boxId)
+    stateStorage.get(boxId)
   }
 
   override def getClosedBox(boxId: Array[Byte]): JOptional[Box[_ <: Proposition]] = {
@@ -60,9 +62,6 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
       case None => JOptional.empty()
     }
   }
-
-  // get boxes for given proposition from state storage
-  override def boxesOf(proposition: SidechainTypes#SCP): Seq[SidechainTypes#SCB] = ???
 
   // Note: aggregate New boxes and spent boxes for Block
   override def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = {
@@ -105,7 +104,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
           case Some(box) => {
             val boxKey = u.boxKey()
             if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
-              throw new Exception("Signature is invalid.")
+              throw new Exception("Box unlocking proof is invalid.")
             if (box.isInstanceOf[CoinsBox[_ <: Proposition]])
               closedCoinsBoxesAmount += box.value()
           }
@@ -144,7 +143,7 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
       changes.toAppend.map(_.box).asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
-        SidechainState(store.update(new ByteArrayWrapper(version), changes.toAppend.map(_.box).toSet,
+        new SidechainState(stateStorage.update(new ByteArrayWrapper(version), changes.toAppend.map(_.box).toSet,
                                     changes.toRemove.map(_.boxId.array).toSet).get,
                        newVersion, applicationState)
       case Failure(exception) => throw exception
@@ -155,14 +154,14 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
   }
 
   override def maxRollbackDepth: Int = {
-    store.rollbackVersions.size
+    stateStorage.rollbackVersions.size
   }
 
   override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => SidechainState(store.rollback(new ByteArrayWrapper(version)).get, to, appState)
+      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, to, appState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -174,9 +173,6 @@ case class SidechainState(store: SidechainStateStorage, override val version: Ve
 object SidechainState
   extends ScorexLogging
 {
-
-  //TODO should it be the same as in class?
-  def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = ???
 
   // TO DO: implement for real block. Now it's just an example.
   // return the list of what boxes we need to remove and what to append
@@ -203,52 +199,44 @@ object SidechainState
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  private def openStore(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion) :
-    Try[(SidechainStateStorage, VersionTag)] = Try {
-    val stateStoragePath = new File(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")
-    stateStoragePath.mkdirs()
-    val stateDiskStorage = new IODBStoreAdapter(new LSMStore(stateStoragePath, 32))
+  private def openStorage(storagePath: JFile) : Storage = {
+    storagePath.mkdirs()
+    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+  }
+
+  private def openStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion) : SidechainStateStorage = {
+
+    val stateStorage = new SidechainStateStorage(storage, sidechainBoxesCompanion)
 
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
-        stateDiskStorage.close()
+        storage.close()
       }
     })
 
-    val stateStorage = new SidechainStateStorage(stateDiskStorage, sidechainBoxesCompanion)
-    val version = stateStorage.lastVersionId match {
-      case Some(v) => bytesToVersion(v.data)
-      case None => bytesToVersion(Array.emptyByteArray)
-    }
-
-    (stateStorage, version)
+    stateStorage
   }
 
-  def restoreState(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                   applicationState: ApplicationState) : Try[SidechainState] = Try {
+  private[horizen] def restoreState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
+                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
 
-    openStore(sidechainSettings, sidechainBoxesCompanion) match {
-      case Success((stateStorage, version)) => new SidechainState(stateStorage, version, applicationState)
-      case Failure(exception) => throw exception
-    }
-  }.recoverWith { case exception =>
-    log.error("Exception was thrown during SidechainState restore.", exception)
-    Failure(exception)
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
+
+    if (storage.lastVersionID().isPresent)
+      Some(new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), bytesToVersion(storage.lastVersionID().get().data), applicationState))
+    else
+      None
   }
 
-  def genesisState(sidechainSettings: SidechainSettings, sidechainBoxesCompanion: SidechainBoxesCompanion,
-                   applicationState: ApplicationState, genesisBlocks : Seq[SidechainBlock]) : Try[SidechainState] = Try {
+  private[horizen] def genesisState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
+                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
 
-    openStore(sidechainSettings, sidechainBoxesCompanion) match {
-      case Success((stateStorage, version)) =>
-        var state = new SidechainState(stateStorage, version, applicationState)
-        for (block <- genesisBlocks)
-          state = state.applyModifier(block).get
-        state
-      case Failure(exception) => throw exception
-    }
-  }.recoverWith { case exception =>
-    log.error ("Exception was thrown during SidechainState genesis initialization.", exception)
-    Failure (exception)
+    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
+
+    if (!storage.lastVersionID().isPresent)
+      new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), idToVersion(sidechainSettings.genesisBlock.get.parentId), applicationState)
+        .applyModifier(sidechainSettings.genesisBlock.get).toOption
+    else
+      None
   }
 }

@@ -7,7 +7,6 @@ import scala.util.Try;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
-import scorex.util.serialization.Serializer;
 import scorex.util.serialization.Writer;
 
 import java.io.ByteArrayOutputStream;
@@ -25,6 +24,7 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
         _maxListLength = maxListLength;
         _serializer = serializer;
     }
+
 
     @Override
     public byte[] toBytes(List<T> obj) {
@@ -97,13 +97,72 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
         }
     }
 
+    //TODO finish implementation
     @Override
-    public void serialize(List<T> obj, Writer writer) {
-
+    public void serialize(List<T> objectList, Writer writer) {
     }
 
     @Override
     public List<T> parse(Reader reader) {
         return null;
     }
+
+    /*
+    @Override
+    public void serialize(List<T> objectList, Writer writer) {
+        List<Integer> lengthList = new ArrayList<>();
+        ByteArrayOutputStream objects = new ByteArrayOutputStream();
+
+        for(T object : objectList) {
+            byte[] objectBytes = object.bytes();
+            lengthList.add(objectBytes.length);
+            objects.write(objectBytes, 0, objectBytes.length);
+        }
+
+        writer.putInt(4 + lengthList.size()*4 + objects.size());
+
+        writer.putInt(objectList.size());
+
+        for(Integer length : lengthList)
+            writer.putInt(length);
+
+        writer.putBytes(objects.toByteArray());
+
+    }
+
+    @Override
+    public List<T> parse(Reader reader) {
+
+        int overallSize = reader.getInt();
+
+//        if(reader.remaining() < overallSize)
+//            throw new IllegalArgumentException("Input data corrupted.");
+
+        int objectCount = reader.getInt();
+
+//        if(objectCount <= 0)
+//            throw new IllegalArgumentException("Input data contains illegal elements count - " + objectCount);
+
+        if(_maxListLength > 0 && objectCount > _maxListLength)
+            throw new IllegalArgumentException("Input data contains to many elements - " + objectCount);
+
+        if(reader.remaining() < objectCount * 4)
+            throw new IllegalArgumentException("Input data corrupted.");
+
+        ArrayList<Integer> lengthList = new ArrayList<>();
+
+        for(int i = 0; i < objectCount; i++)
+            lengthList.add(reader.getInt());
+
+        ArrayList<T> objectList = new ArrayList<>(objectCount);
+
+        for (Integer i : lengthList) {
+            if (reader.remaining() < i)
+                throw new IllegalArgumentException("Input data corrupted.");
+            objectList.add(_serializer.parseBytes(reader.getBytes(i)));
+        }
+
+        return objectList;
+    }
+    */
 }

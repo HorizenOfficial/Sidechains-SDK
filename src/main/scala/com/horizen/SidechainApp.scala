@@ -1,8 +1,18 @@
 package com.horizen
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
+
 import scala.collection.immutable.Map
 import akka.actor.ActorRef
 import com.horizen.block.SidechainBlock
+import com.horizen.box.BoxSerializer
+import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.params.MainNetParams
+import com.horizen.secret.SecretSerializer
+import com.horizen.state.{ApplicationState, DefaultApplicationState}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute, UtilsApiRoute}
 import scorex.core.app.Application
@@ -41,7 +51,14 @@ class SidechainApp(val settingsFilename: String)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq()
 
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, timeProvider)
+  protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
+  protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+  protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
+  protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
+
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, MainNetParams, timeProvider, sidechainBoxesCompanion,
+    sidechainSecretsCompanion, sidechainTransactionsCompanion, defaultApplicationWallet, defaultApplicationState)
 
   override val nodeViewSynchronizer: ActorRef =
     actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,

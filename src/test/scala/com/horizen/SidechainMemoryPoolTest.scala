@@ -16,7 +16,7 @@ class SidechainMemoryPoolTest
 
   @Test def remove(): Unit = {
     val memoryPool = getSidechainMemoryPool()
-    val tx = getTransaction().asInstanceOf[SidechainTypes#SCBT]
+    val tx = getTransaction()
     val txId : ModifierId = ModifierId(tx.id)
 
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true);

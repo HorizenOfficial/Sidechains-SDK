@@ -23,8 +23,6 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   // Key - byte array box Id
   // No remove operation
 
-  //type BoxClass = Class[BX]
-
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 

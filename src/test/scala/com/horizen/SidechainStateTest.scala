@@ -125,16 +125,6 @@ class SidechainStateTest
     assertTrue("Call of semanticValidity must be unsuccessful.",
       sidechainState.semanticValidity(mockedTransaction).isFailure)
 
-    //Test boxesOf
-    try {
-      sidechainState.boxesOf(boxList.head.proposition())
-    } catch {
-      case e : NotImplementedError => exceptionThrown = true
-    }
-
-    assertTrue("BoxesOf method must throw NotImplementedError exception.",
-      exceptionThrown)
-
     //Test validate(Transaction)
     val tryValidate = sidechainState.validate(transactionList.head)
     assertTrue("Transaction validation must be successful.",
@@ -267,4 +257,5 @@ class SidechainStateTest
       sidechainState.closedBox(transactionList.head.newBoxes().asScala.head.id()).isDefined)
 
   }
+
 }

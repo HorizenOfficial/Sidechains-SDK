@@ -15,11 +15,10 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
 import com.horizen.utils.{BytesUtils, ListSerializer}
 import scorex.core.block.Block
-import scorex.core.ModifierTypeId
+import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.util.ModifierId
 import scorex.core.serialization.ScorexSerializer
 import scorex.crypto.hash.Blake2b256
-import scorex.core.{bytesToId, idToBytes}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
@@ -95,17 +94,20 @@ class SidechainBlock (
     if(blockSize > SidechainBlock.MAX_BLOCK_SIZE)
       return false
 
-    // check blocks and txs validity
-    for(b <- mainchainBlocks)
-      if(!b.semanticValidity(params))
-        return false
-    for(tx <- sidechainTransactions)
-      if(!tx.semanticValidity())
-        return false
-
     // check, that signature is valid
     if(!signature.isValid(forgerPublicKey, messageToSign))
       return false
+
+    // Check MainchainBlockReferences order in current block
+    for(i <- 1 until mainchainBlocks.size) {
+      if(!mainchainBlocks(i).header.hashPrevBlock.sameElements(mainchainBlocks(i-1).hash))
+        return false
+    }
+
+    // check MainchainBlockReferences validity
+    for(b <- mainchainBlocks)
+      if(!b.semanticValidity(params))
+        return false
 
     true
   }
@@ -173,6 +175,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
   )
 
+
   override def toBytes(obj: SidechainBlock): Array[Byte] = {
     val mcblocksBytes = _mcblocksSerializer.toBytes(obj.mainchainBlocks.toList.asJava)
 
@@ -239,7 +242,43 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
   }
 
-  override def serialize(obj: SidechainBlock, w: Writer): Unit = ???
+  //TODO finish implementation
+  override def serialize(obj: SidechainBlock, w: Writer): Unit = {
+    w.putBytes(idToBytes(obj.parentId))
+    w.putLong(obj.timestamp)
+    _mcblocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, w)
+    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava, w)
+    w.putBytes(obj.forgerPublicKey.bytes())
+    w.putBytes(obj.signature.bytes())
+  }
 
-  override def parse(r: Reader): SidechainBlock = ???
+  override def parse(r: Reader): SidechainBlock = {
+    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
+    require(r.remaining > 32 + 8 + 4 + 4 + 32 + 64) // size of empty block
+
+    val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+
+    val timestamp = r.getLong()
+
+    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parse(r).asScala
+
+    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
+      _sidechainTransactionsSerializer.parse(r)
+        .asScala
+        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+
+    val owner = new PublicKey25519Proposition(r.getBytes(PublicKey25519Proposition.KEY_LENGTH))
+
+    val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
+
+    new SidechainBlock(
+      parentId,
+      timestamp,
+      mcblocks,
+      sidechainTransactions,
+      owner,
+      ownerSignature,
+      companion
+    )
+  }
 }

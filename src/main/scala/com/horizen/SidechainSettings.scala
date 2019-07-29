@@ -1,14 +1,18 @@
 package com.horizen
 
+import com.horizen.block.SidechainBlock
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.util.ScorexLogging
 
-case class SidechainSettings(scorexSettings: ScorexSettings);
+case class SidechainSettings(scorexSettings: ScorexSettings) {
+
+  lazy val genesisBlock : Option[SidechainBlock] = None
+}
 
 
 object SidechainSettings
   extends ScorexLogging
-  with SettingsReaders
+    with SettingsReaders
 {
   def read(userConfigPath: Option[String]): SidechainSettings = {
     //fromConfig(readConfigFromPath(userConfigPath, "scorex"))

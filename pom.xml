@@ -269,6 +269,8 @@
 					<!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
 					<include>mctx_v-3</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
+					<include>sidechainblockinfo_bytes</include>
+					<include>sidechainsyncinfo_bytes</include>
 				</includes>
 			</testResource>
 		</testResources>
