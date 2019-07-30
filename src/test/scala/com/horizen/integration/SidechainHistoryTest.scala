@@ -399,10 +399,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // Init history1 with 19 more blocks
     var history1blockSeq = Seq[SidechainBlock](genesisBlock)
     var blocksToAppend = 19
-    System.out.println(genesisBlock.id) // to do remove
     while(blocksToAppend > 0) {
       val block = generateNextSidechainBlock(history1blockSeq.last, sidechainTransactionsCompanion, params)
-      System.out.println(block.id) // to do remove
       history1.append(block) match {
         case Success((hist, _)) =>
           history1 = hist
@@ -437,9 +435,6 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // Test 1: retrieve history1 sync info and check against history2
     // get history1 syncInfo
     var history1SyncInfo: SidechainSyncInfo = history1.syncInfo
-    System.out.println() // to do remove
-    for(id <-history1SyncInfo.knownBlockIds) // to do remove
-      System.out.println(id)
     assertTrue("History 1 sync info expected to be not empty", history1SyncInfo.knownBlockIds.nonEmpty)
     assertEquals("History 1 sync info starting point expected to be best block of its chain", history1blockSeq.last.id, history1SyncInfo.startingPoints.head._2)
 
@@ -464,9 +459,6 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // Test 3: retrieve history2 sync info and check against history1
     // get history2 syncInfo
     var history2SyncInfo: SidechainSyncInfo = history2.syncInfo
-    System.out.println() // to do remove
-    for(id <-history2SyncInfo.knownBlockIds) // to do remove
-      System.out.println(id)
     assertTrue("History 2 sync info expected to be not empty", history2SyncInfo.knownBlockIds.nonEmpty)
     assertEquals("History 2 sync info starting point expected to be best block of its chain", history2blockSeq.last.id, history2SyncInfo.startingPoints.head._2)
 
