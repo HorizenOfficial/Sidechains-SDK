@@ -57,7 +57,7 @@ class SidechainApp(val settingsFilename: String)
   protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, MainNetParams, timeProvider, sidechainBoxesCompanion,
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, new MainNetParams(), timeProvider, sidechainBoxesCompanion,
     sidechainSecretsCompanion, sidechainTransactionsCompanion, defaultApplicationWallet, defaultApplicationState)
 
   override val nodeViewSynchronizer: ActorRef =

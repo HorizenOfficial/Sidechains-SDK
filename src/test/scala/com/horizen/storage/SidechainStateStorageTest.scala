@@ -100,7 +100,7 @@ class SidechainStateStorageTest
 
     // Test 1: test successful update
     tryRes = stateStorage.update(version, Set(boxList.head), Set(boxList(2).id()))
-    assertTrue("WalletBoxStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
+    assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 

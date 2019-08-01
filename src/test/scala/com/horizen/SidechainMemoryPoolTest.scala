@@ -19,6 +19,7 @@ class SidechainMemoryPoolTest
     val tx = getTransaction()
     val txId : ModifierId = ModifierId(tx.id)
 
+
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true);
     assertEquals("Size must be 1.", memoryPool.size, 1)
     assertEquals("MemoryPool must contain transaction" + txId, memoryPool.modifierById(txId).get, tx)

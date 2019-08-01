@@ -5,6 +5,7 @@ import scorex.core.NodeViewModifier
 import scorex.core.consensus.History.ModifierIds
 import scorex.util.ModifierId
 import scorex.core.consensus.SyncInfo
+
 import scorex.core.network.message.SyncInfoMessageSpec
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
@@ -29,7 +30,6 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 
 
 object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
-
 
   override def toBytes(obj: SidechainSyncInfo): Array[Byte] = {
     Array(obj.knownBlockIds.size.toByte) ++
@@ -74,3 +74,4 @@ object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
 }
 
 object SidechainSyncInfoMessageSpec extends SyncInfoMessageSpec[SidechainSyncInfo](SidechainSyncInfoSerializer)
+

@@ -35,7 +35,6 @@ case class SidechainBlockInfo(height: Int,
 
 
 object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo] {
-
   override def toBytes(obj: SidechainBlockInfo): Array[Byte] = {
     Ints.toByteArray(obj.height) ++ Longs.toByteArray(obj.score) ++ idToBytes(obj.parentId) ++ Array(obj.semanticValidity.code)
   }
