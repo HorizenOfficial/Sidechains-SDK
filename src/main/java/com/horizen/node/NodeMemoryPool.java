@@ -9,7 +9,7 @@ import java.util.List;
 public interface NodeMemoryPool {
     List<BoxTransaction<Proposition, Box<Proposition>>> allTransactions();
 
-    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFee(int fee);
+    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFee(int limit);
 
     int getSize();
 }
