@@ -1,7 +1,6 @@
 package com.horizen
 
 import java.io.{File => JFile}
-import java.util
 import java.util.{Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
@@ -9,11 +8,10 @@ import com.horizen.box.{Box, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.node.NodeState
 import com.horizen.params.StorageParams
-import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
-import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.state.ApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage, Storage}
-import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
+import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
@@ -170,9 +168,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     Failure(exception)
   }
 
-  override def getClosedBoxes(boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: SCP]] = ???
-
-  override def getClosedBoxesOfType(`type`: Class[_ <: Box[_ <: SCP]], boxIdsToExclude: util.List[Array[Byte]]): util.List[Box[_ <: SCP]] = ???
 }
 
 object SidechainState

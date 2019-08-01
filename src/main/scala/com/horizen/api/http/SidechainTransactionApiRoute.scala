@@ -21,20 +21,17 @@ import com.horizen.utils.ByteArrayWrapper
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
-import io.circe.{Encoder, Json, JsonObject}
 import io.circe.syntax._
 import javafx.util.Pair
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import scorex.core.transaction.BoxTransaction
 
 import scala.collection.JavaConverters
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
-case class SidechainTransactionApi (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                    sidechainTransactionActorRef: ActorRef) (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
+case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
+                                        sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("transaction"))
@@ -55,9 +52,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
             var formatMemPool = req.formatMemPool
             var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
             if(formatMemPool){
-              var keyArray = new Array[Array[Byte]](unconfirmedTxs.size())
-              unconfirmedTxs.toArray(keyArray)
-              ApiResponse("result" -> keyArray.asJson)
+              ApiResponse("result" -> unconfirmedTxs.asScala.map(tx => ("transactionId", tx.id.toString)))
             }
              else
               {
@@ -67,7 +62,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
                     valuesArray.+:(companion.toBytes(t))
                   }
               })
-                ApiResponse("result" -> valuesArray)
+                ApiResponse("result" -> valuesArray.map(tx => ("transaction", tx)))
               }
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
@@ -102,8 +97,8 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
             def searchTransactionInMemoryPool(id : String) : Option[_ <: Transaction] = {
               var opt = memoryPool.getTransactionByid(id)
               if(opt.isPresent)
-                None
-                //Option(opt.get())
+                //None
+                Option(opt.get())
               else None
             }
 
@@ -162,7 +157,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
               case Some(t) =>
                 if(format){
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> "")
+                  ApiResponse("result" -> ("transaction", t.asJson))
                 }else{
                   ApiResponse("result"->companion.toBytes(t))
                 }
@@ -192,7 +187,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
             tryTX match{
               case Success(tx) =>
                 //TO-DO JSON representation of transaction
-                ApiResponse("result" -> "")
+                ApiResponse("result" -> ("transaction", tx.asJson))
               case Failure(exp) =>
                 // TO-DO Change the errorCode
                 ApiResponse("error" -> ("errorCode" -> 99999, "errorDescription" -> exp.getMessage))
@@ -267,7 +262,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> "")
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.asJson))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
@@ -303,7 +298,7 @@ case class SidechainTransactionApi (override val settings: RESTApiSettings, side
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> "")
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.asJson))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))

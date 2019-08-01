@@ -17,7 +17,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef)
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
@@ -109,7 +109,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
               }
             else{
               val blockId = sidechainHistory.getBlockIdByHeight(height).orElse("")
-              ApiResponse("result" -> ("blockHash" -> blockId))
+              ApiResponse("result" -> ("blockId" -> blockId))
             }
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }

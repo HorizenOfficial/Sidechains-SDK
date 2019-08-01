@@ -5,13 +5,14 @@ import java.util.Optional
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.block.{MainchainBlockReferenceJSONSerializer, MainchainBlockReferenceSerializer}
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
-import io.circe.generic.auto._
 import scorex.util.idToBytes
+import io.circe.generic.auto._
+import io.circe.syntax._
+import io.circe.Encoder
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -73,17 +74,16 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
               "mainchainBlockReference" ->
               {
                 if(format)
-                  // TO-DO. JSON representation of mainchain block reference
-                  Array[Byte]()
+                  mcBlockRef.json.asString.get
                 else
-                  MainchainBlockReferenceSerializer.toBytes(mcBlockRef)
+                  MainchainBlockReferenceSerializer.toBytes(mcBlockRef).toString
               },
-              "height" -> mcBlockHeight,
+              "height" -> mcBlockHeight.toString,
               "sidechainBlockId" ->
                 {
                   if(scBlock.isPresent)
-                    idToBytes(scBlock.get().id)
-                  else Array[Byte]()
+                    idToBytes(scBlock.get().id).toString
+                  else ""
                 }
             ))
 
@@ -114,10 +114,9 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 ApiResponse("result" ->
                   {
                     if(format)
-                    // TO-DO. JSON representation of mainchain block reference
-                      Array[Byte]()
+                      aBlock.json.asString.get
                     else
-                      MainchainBlockReferenceSerializer.toBytes(aBlock)
+                      MainchainBlockReferenceSerializer.toBytes(aBlock).toString
                   })
               case Failure(exp) =>
                 // TO-DO Change the errorCode

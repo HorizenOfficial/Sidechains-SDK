@@ -58,7 +58,7 @@ object SidechainTransactionActor {
   }
 }
 
-object SidechainTransactionRef{
+object SidechainTransactionActorRef{
   def props(sidechainNodeViewHolderRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
     Props(new SidechainTransactionActor(sidechainNodeViewHolderRef))

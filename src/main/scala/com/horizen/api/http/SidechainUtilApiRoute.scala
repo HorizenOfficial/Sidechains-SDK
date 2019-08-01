@@ -7,8 +7,8 @@ import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
 
-case class SidechainUtilApi (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                            (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
+case class SidechainUtilApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("util"))
             {dbLog ~ setMockTime}

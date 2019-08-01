@@ -28,4 +28,6 @@ public interface NodeWallet {
     List<Secret> allSecrets();
 
     List<Secret> secretsOfType(Class<? extends Secret> type);
+
+    String generateNewAddress();
 }
