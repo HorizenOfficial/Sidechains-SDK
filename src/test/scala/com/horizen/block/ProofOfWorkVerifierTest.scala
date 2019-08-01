@@ -18,6 +18,8 @@ import scala.collection.mutable.ListBuffer
 
 class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture with MockitoSugar {
 
+  val params = new MainNetParams()
+
   @Test
   def ProofOfWorkVerifierTest_CheckPoW(): Unit = {
     var hash: Array[Byte] = null
@@ -26,25 +28,25 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     // Test 1: Test valid Horizen block #498971
     hash = BytesUtils.fromHexString("00000000117c360186cfea085c6d15c176118a7778ed56733084084133790fe7")
     bits = 0x1c21c09e
-    assertTrue("Proof of Work expected to be Valid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), MainNetParams))
+    assertTrue("Proof of Work expected to be Valid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), params))
 
 
     // Test 2: Test valid Horizen block #238971
     hash = BytesUtils.fromHexString("00000000c1dfa2e554343822f6a6fb70b622ecbd2ae766eb4d61e792f37d46bd")
     bits = 0x1d012dc4
-    assertTrue("Proof of Work expected to be Valid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), MainNetParams))
+    assertTrue("Proof of Work expected to be Valid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), params))
 
 
     // Test 3: Test invalid PoW: bits (target) is lower than hash target
     hash = BytesUtils.fromHexString("00000000c1dfa2e554343822f6a6fb70b622ecbd2ae766eb4d61e792f37d46bd")
     bits = Utils.encodeCompactBits(new BigInteger(1, hash)).toInt // it will cut some part of data, so value will be less than hash target
-    assertFalse("Proof of Work expected to be Invalid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), MainNetParams))
+    assertFalse("Proof of Work expected to be Invalid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), params))
 
 
     // Test 4: Test invalid PoW: bits (target) is greater than powLimit
     hash = BytesUtils.fromHexString("00000000c1dfa2e554343822f6a6fb70b622ecbd2ae766eb4d61e792f37d46bd")
-    bits = Utils.encodeCompactBits(MainNetParams.powLimit.add(BigInteger.ONE)).toInt
-    assertFalse("Proof of Work expected to be Invalid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), MainNetParams))
+    bits = Utils.encodeCompactBits(params.powLimit.add(BigInteger.ONE)).toInt
+    assertFalse("Proof of Work expected to be Invalid.", ProofOfWorkVerifier.checkProofOfWork(getHeaderWithPoW(bits, hash), params))
   }
 
   @Test
@@ -62,7 +64,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     bitsAvg = Utils.decodeCompactBits(UnsignedInts.toLong(0x1d00ffff))
     expectedWork = 0x1d011998
 
-    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, MainNetParams)
+    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, params)
     assertEquals("Calculated PoW bits should be equal to expected one.", expectedWork, calculatedWork)
 
 
@@ -72,7 +74,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     bitsAvg = Utils.decodeCompactBits(UnsignedInts.toLong(0x1f07ffff))
     expectedWork = 0x1f07ffff
 
-    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, MainNetParams)
+    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, params)
     assertEquals("Calculated PoW bits should be equal to expected one.", expectedWork, calculatedWork)
 
 
@@ -82,7 +84,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     bitsAvg = Utils.decodeCompactBits(UnsignedInts.toLong(0x1c05a3f4))
     expectedWork = 0x1c04bceb
 
-    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, MainNetParams)
+    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, params)
     assertEquals("Calculated PoW bits should be equal to expected one.", expectedWork, calculatedWork)
 
 
@@ -92,7 +94,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     bitsAvg = Utils.decodeCompactBits(UnsignedInts.toLong(0x1c387f6f))
     expectedWork = 0x1c4a93bb
 
-    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, MainNetParams)
+    calculatedWork = ProofOfWorkVerifier.calculateNextWorkRequired(bitsAvg, nLastRetargetTime, nThisTime, params)
     assertEquals("Calculated PoW bits should be equal to expected one.", expectedWork, calculatedWork)
   }
 
@@ -166,7 +168,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val nPowMaxAdjustUp: Int = 16
       override val nPowTargetSpacing: Int = 150
       override val sidechainId: Array[Byte] = null
-      override val sidechainGenesisBlockId: Array[Byte] = null
+      override val sidechainGenesisBlockId: ModifierId = null
 
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))

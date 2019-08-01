@@ -1,5 +1,8 @@
 package com.horizen
 
+import java.util.{List => JList, Optional => JOptional}
+import java.io.{File => JFile}
+
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.{NetworkParams, StorageParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
@@ -10,8 +13,6 @@ import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
-import java.io.{File => JFile}
-import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.NodeHistory
@@ -37,9 +38,9 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
-  val height: Int = storage.height
-  val bestBlockId: ModifierId = storage.bestBlockId
-  val bestBlock: SidechainBlock = storage.bestBlock // note: maybe make it lazy?
+  def height: Int = storage.height
+  def bestBlockId: ModifierId = storage.bestBlockId
+  def bestBlock: SidechainBlock = storage.bestBlock
 
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
@@ -98,7 +99,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
             // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
             // TO DO: do we need to save it to history storage to prevent double downloading or it's cached somewhere?
             (
-              storage,
+              Success(storage),
               ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
             )
         }
@@ -121,7 +122,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
   // last 4 bytes contain heights of passed block
   def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + (block.mainchainBlocks.size.toLong << 32 + 1)
+    parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
   }
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
@@ -149,10 +150,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
   // Returns last common block and then variant blocks for two chains.
-  def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
-    def inCurrentChain(blockId: ModifierId): Boolean = storage.isInActiveChain(blockId)
-
-    chainBack(forkBlock.id, inCurrentChain, Int.MaxValue) match {
+  private def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
+    chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
       case Some(newBestChain) =>
         val commonBlockHeight = storage.blockInfoById(newBestChain.head).get.height
         if(height - commonBlockHeight > params.maxHistoryRewritingLength)
@@ -226,6 +225,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   override def isEmpty: Boolean = height <= 0
 
+  override def contains(id: ModifierId): Boolean = storage.blockInfoById(id).isDefined
+  
   override def applicableTry(block: SidechainBlock): Try[Unit] = {
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
@@ -249,7 +250,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        storage.activeChainFrom(commonBlockId).take(size).map(id => (SidechainBlock.ModifierTypeId, id))
+        storage.activeChainFrom(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
       case None =>
         //log.warn("Found chain without common block ids from remote")
         Seq()
@@ -324,11 +325,20 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
         else
           Younger
       case _ =>
-        val otherBestBlockHeight = storage.heightOf(dSuffix.reverse.find(id => storage.heightOf(id).isDefined).get).get
-        if (storage.height < otherBestBlockHeight)
+        val otherBestKnownBlockIndex = dSuffix.size - 1 - dSuffix.reverse.indexWhere(id => storage.heightOf(id).isDefined)
+        val otherBestKnownBlockHeight = storage.heightOf(dSuffix(otherBestKnownBlockIndex)).get
+        // other node height can be approximatly calculated as height of other KNOWN best block height + size of rest unknown blocks after it.
+        // why approximately? see knownBlocksHeightToSync algorithm: blocks to sync step increasing.
+        // to do: need to discuss
+        val otherBestBlockApproxHeight = otherBestKnownBlockHeight + (dSuffix.size - 1 - otherBestKnownBlockIndex)
+        if (storage.height < otherBestBlockApproxHeight)
           Older
-        else if (storage.height == otherBestBlockHeight)
-          Equal // TO DO: should be a fork? Look for RC4
+        else if (storage.height == otherBestBlockApproxHeight) {
+          if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
+            Equal
+          else
+            Younger // TO DO: should be a Fork. Look for RC4
+        }
         else
           Younger
     }
@@ -368,6 +378,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   }
 }
 
+
 object SidechainHistory {
   private def openStorage(storagePath: JFile) : Storage = {
     storagePath.mkdirs()
@@ -406,7 +417,7 @@ object SidechainHistory {
     if (!storage.lastVersionID().isPresent)
       new SidechainHistory(openHistoryStorage(storage, sidechainTransactionsCompanion, params), params)
         .append(sidechainSettings.genesisBlock.get) match {
-        case Success((history, progressInfo)) => Some(history)
+        case Success((history, progressInfo)) => Some(history.reportModifierIsValid(sidechainSettings.genesisBlock.get))
         case _ => None
       }
     else
