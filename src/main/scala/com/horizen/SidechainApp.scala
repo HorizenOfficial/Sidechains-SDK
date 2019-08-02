@@ -53,11 +53,11 @@ class SidechainApp(val settingsFilename: String)
     sidechainSecretsCompanion, sidechainTransactionsCompanion, defaultApplicationWallet, defaultApplicationState)
 
   val sidechainTransactioActor : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActor : ActorRef = SidechainBlockActorRef(nodeViewHolderRef)
+//  val sidechainBlockActor : ActorRef = SidechainBlockActorRef(nodeViewHolderRef)
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActor),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef),//, sidechainBlockActor),
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActor),
     SidechainUtilApiRoute(settings.restApi, nodeViewHolderRef),
@@ -96,4 +96,5 @@ object SidechainApp extends App {
   private val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
   val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
   val  app = new SidechainApp(settingsFilename)
+  app.log.info("Sidechain application successfully started...")
 }

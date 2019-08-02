@@ -17,7 +17,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef)
+case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)//, sidechainBlockActorRef: ActorRef)
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 

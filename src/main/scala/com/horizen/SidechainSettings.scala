@@ -1,12 +1,33 @@
 package com.horizen
 
+import java.time.Instant
+import java.util
+
 import com.horizen.block.SidechainBlock
+import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.transaction.TransactionSerializer
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, bytesToId}
 
 case class SidechainSettings(scorexSettings: ScorexSettings) {
 
-  lazy val genesisBlock : Option[SidechainBlock] = None
+  private def generateGenesisBlock(): SidechainBlock = {
+    var customTransactionSerializers: util.HashMap[java.lang.Byte, TransactionSerializer[SidechainTypes#SCBT]] = new util.HashMap()
+    var sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+    var basicSeed: Long = 6543211L
+    SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(),
+      Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(basicSeed).getBytes),
+      sidechainTransactionsCompanion,
+      null
+    ).get
+  }
+
+  lazy val genesisBlock : Option[SidechainBlock] = Option(generateGenesisBlock())
 }
 
 
