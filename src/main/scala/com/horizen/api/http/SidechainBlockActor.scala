@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 class SidechainBlockActor (sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext)
   extends Actor with ScorexLogging {
 
-  override def receive: Receive = super.receive
+  override def receive: Receive = ???
 }
 
 object SidechainBlockActor {
