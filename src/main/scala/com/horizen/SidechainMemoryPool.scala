@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.Box
 import com.horizen.node.NodeMemoryPool
@@ -134,6 +134,11 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
   }
 
   override def getSize: Int = unconfirmed.size
+
+  override def getTransactionByid(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
+    var id = scorex.util.bytesToId(transactionId.getBytes)
+    Optional.ofNullable(unconfirmed.get(id).get)
+  }
 }
 
 object SidechainMemoryPool

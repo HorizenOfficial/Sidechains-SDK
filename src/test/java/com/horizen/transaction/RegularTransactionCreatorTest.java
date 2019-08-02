@@ -35,6 +35,12 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
+    public String generateNewAddress() {
+        // TO-DO
+        return null;
+    }
+
+    @Override
     public Long allBoxesBalance() {
         long sum = 0;
         for(Box b: _boxesOrderedBytCreationTime){

@@ -3,7 +3,7 @@ package com.horizen
 import java.util.{List => JList, Optional => JOptional}
 import java.io.{File => JFile}
 
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.{NetworkParams, StorageParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.utils.BytesUtils
@@ -13,9 +13,10 @@ import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
-
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.NodeHistory
+import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.transaction.Transaction
 import io.iohk.iodb.LSMStore
 
 import scala.compat.java8.OptionConverters._
@@ -376,6 +377,73 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def getCurrentHeight: Int = {
     height
   }
+
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[Transaction] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => JOptional.empty()
+    }
+  }
+
+  private def findTransactionInsideBlock(transactionId : String, block : SidechainBlock) : JOptional[Transaction] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => JOptional.ofNullable(tx)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[Transaction] = {
+    var startingBlock = JOptional.ofNullable(getBestBlock)
+    var transaction : JOptional[Transaction] = JOptional.empty()
+    var found = false
+    while(!found && startingBlock.isPresent){
+      var tx = findTransactionInsideBlock(transactionId, startingBlock.get())
+      if(tx.isPresent){
+        found = true
+        transaction = JOptional.ofNullable(tx.get())
+      }else{
+        startingBlock = storage.parentBlockId(ModifierId(startingBlock.get().id)) match {
+          case Some(id) => storage.blockById(id) match {
+            case Some(block) => JOptional.ofNullable(block)
+            case None => JOptional.empty()
+          }
+          case None => JOptional.empty()
+        }
+      }
+    }
+
+    transaction
+  }
+
+  private def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
+
+  override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
+    // best MC block header which has already been included in a SC block
+    var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
+    var hashOfMcBlockReference = mcBlockReference.hash
+
+    var height = getHeightOfMainchainBlock(hashOfMcBlockReference)
+
+    // Sidechain block which contains this MC block reference
+    var scBlock = getSidechainBlockByMainchainBlockReferenceHash(hashOfMcBlockReference)
+    var scBlockId = Array[Byte]()
+    if(scBlock.isPresent)
+      scBlockId = idToBytes(scBlock.get().id)
+
+    new MainchainBlockReferenceInfo(
+      hashOfMcBlockReference,
+      height,
+      scBlockId
+    )
+  }
+
+  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
+
+  override def getHeightOfMainchainBlock(mcBlockReferenceHash: Array[Byte]): Int = ???
+
+  override def getSidechainBlockByMainchainBlockReferenceHash(mcBlockReferenceHash: Array[Byte]): JOptional[SidechainBlock] = ???
+
+  override def createMainchainBlockReference(mainchainBlockData: Array[Byte]): Try[MainchainBlockReference] = ???
 }
 
 
