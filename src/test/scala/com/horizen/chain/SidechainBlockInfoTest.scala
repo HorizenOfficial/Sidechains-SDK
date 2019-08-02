@@ -60,8 +60,6 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     var bytes: Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val r = classLoader.getResource("sidechainblockinfo_bytes")
-      val ff = r.getFile
       val file = new File(classLoader.getResource("sidechainblockinfo_bytes").getFile)
       bytes = Files.readAllBytes(file.toPath)
     }

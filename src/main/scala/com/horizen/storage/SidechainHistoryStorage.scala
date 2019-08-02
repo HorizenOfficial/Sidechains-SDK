@@ -19,12 +19,15 @@ import com.horizen.chain.{ActiveChain, SidechainBlockInfo, SidechainBlockInfoSer
 import scala.collection.mutable.ArrayBuffer
 
 
-class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
+class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
+  require(params != null, "params must be NOT NULL.")
+
+  private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
   private val activeChain: ActiveChain = loadActiveChain()
 
@@ -32,16 +35,15 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
     if(height == 0)
       return ActiveChain()
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer(height)
-    activeChainBlocksInfo(height - 1) = (bestBlockId, blockInfoById(bestBlockId).get)
 
-    for(i <- height - 2 to 0 by -1) {
-      val id = activeChainBlocksInfo(i+1)._2.parentId
-      activeChainBlocksInfo(i) = (id, blockInfoById(id).get)
+    activeChainBlocksInfo.append((bestBlockId, blockInfoById(bestBlockId).get))
+    while(activeChainBlocksInfo.last._2.height > 1) {
+      val id = activeChainBlocksInfo.last._2.parentId
+      activeChainBlocksInfo.append((id, blockInfoById(id).get))
     }
-    ActiveChain(activeChainBlocksInfo)
-  }
 
-  private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
+    ActiveChain(activeChainBlocksInfo.reverse)
+  }
 
   private def validityKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"validity$blockId"))
 
@@ -63,7 +65,7 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
     }
   }
 
-  def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(bytesToId(params.sidechainGenesisBlockId))
+  def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(params.sidechainGenesisBlockId)
 
   def bestBlock: SidechainBlock = {
     require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
@@ -82,7 +84,7 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
   }
 
   def blockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = {
-    if(activeChain.contains(blockId))
+    if(activeChain != null && activeChain.contains(blockId))
       return activeChain.getBlockInfo(blockId)
     storage.get(blockInfoKey(blockId)).asScala match {
       case Some(baw) => SidechainBlockInfoSerializer.parseBytesTry(baw.data) match {
@@ -149,17 +151,16 @@ class SidechainHistoryStorage(storage : Storage, sidechainTransactionsCompanion:
   }
 
   def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
-    val blockInfo: SidechainBlockInfo = activeChain.updateSemanticValidity(block.id, status).getOrElse( {
-      // if it's not a part of active chain, retrieve previous info from disk storage
-      val oldInfo: SidechainBlockInfo = blockInfoById(block.id).get
-      SidechainBlockInfo(oldInfo.height, oldInfo.score, oldInfo.parentId, status)
-    })
+    // if it's not a part of active chain, retrieve previous info from disk storage
+    val oldInfo: SidechainBlockInfo = activeChain.getBlockInfo(block.id).getOrElse(blockInfoById(block.id).get)
+    val blockInfo = SidechainBlockInfo(oldInfo.height, oldInfo.score, oldInfo.parentId, status)
 
     storage.update(
       new ByteArrayWrapper(nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
+    activeChain.updateSemanticValidity(block.id, status)
     this
   }
 

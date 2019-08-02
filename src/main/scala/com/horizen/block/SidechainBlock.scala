@@ -79,7 +79,7 @@ class SidechainBlock (
   }
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    if(parentId == null || parentId.length != 32
+    if(parentId == null || parentId.length != 64
         || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
         || forgerPublicKey == null || signature == null)
@@ -127,8 +127,8 @@ object SidechainBlock extends ScorexEncoding {
              ownerPrivateKey: PrivateKey25519,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams
-            ) : Try[SidechainBlock] = {
-    require(parentId.length == 32)
+            ) : Try[SidechainBlock] = Try {
+    require(parentId.length == 64)
     require(mainchainBlocks != null && mainchainBlocks.size <= SidechainBlock.MAX_MC_BLOCKS_NUMBER)
     require(sidechainTransactions != null)
     require(ownerPrivateKey != null)
@@ -158,7 +158,7 @@ object SidechainBlock extends ScorexEncoding {
     if(!block.semanticValidity(params))
       throw new Exception("Sidechain Block is semantically invalid.")
 
-    Success(block)
+    block
   }
 }
 

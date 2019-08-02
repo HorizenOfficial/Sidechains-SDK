@@ -24,6 +24,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertFalse("Empty ActiveChain expected not to contain nonexistent modifier", chain.contains(getRandomModifier()))
     assertTrue("Empty ActiveChain expected not to find nonexistent modifier", chain.getBlockInfo(getRandomModifier()).isEmpty)
     assertTrue("Empty ActiveChain expected not to find modifier for inconsistent height", chain.getBlockInfo(1).isEmpty)
+    assertTrue("Empty ActiveChain expected not to find modifier id for inconsistent height", chain.getBlockId(0).isEmpty)
     assertTrue("Empty ActiveChain expected not to find modifier id for inconsistent height", chain.getBlockId(1).isEmpty)
     assertTrue("Empty ActiveChain expected not to change validity for nonexistent modifier", chain.updateSemanticValidity(getRandomModifier(), ModifierSemanticValidity.Valid).isEmpty)
     assertTrue("Empty ActiveChain expected to return empty chain from nonexistent modifier", chain.chainFrom(getRandomModifier()).isEmpty)
@@ -57,6 +58,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertTrue("ActiveChain expected to find modifier for height 1", chain.getBlockInfo(1).isDefined)
     assertTrue("ActiveChain expected to find modifier for chain current height", chain.getBlockInfo(chainHeight).isDefined)
 
+    assertTrue("ActiveChain expected not to find modifier id for inconsistent height", chain.getBlockId(0).isEmpty)
     assertTrue("ActiveChain expected not to find modifier id for inconsistent height", chain.getBlockId(chainHeight + 1).isEmpty)
     assertTrue("ActiveChain expected to find modifier id for height 1", chain.getBlockId(1).isDefined)
     assertTrue("ActiveChain expected to find modifier id for chain current height", chain.getBlockId(chainHeight).isDefined)
