@@ -3,6 +3,8 @@ package com.horizen.transaction;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import scorex.core.utils.ScorexEncoder;
 
 import java.util.ArrayList;
@@ -12,6 +14,11 @@ public final class CertifierUnlockRequestTransaction extends SidechainTransactio
 {
 
     public static final byte TRANSACTION_TYPE_ID = 5;
+
+    @Override
+    public TransactionJsonSerializer jsonSerializer() {
+        return CertifierUnlockRequestTransactionJsonSerializer.getSerializer();
+    }
 
     @Override
     public CertifierUnlockRequestTransactionSerializer serializer() {

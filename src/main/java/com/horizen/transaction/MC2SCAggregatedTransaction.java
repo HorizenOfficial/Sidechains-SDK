@@ -6,6 +6,8 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -43,6 +45,11 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         _mc2scTransactionsMerkleRootHash = Arrays.copyOf(mc2scTransactionsMerkleRootHash, mc2scTransactionsMerkleRootHash.length);
         _mc2scTransactionsOutputs = mc2scTransactionsOutputs;
         _timestamp = timestamp;
+    }
+
+    @Override
+    public TransactionJsonSerializer jsonSerializer() {
+        return MC2SCAggregatedTransactionJsonSerializer.getSerializer();
     }
 
     @Override

@@ -5,7 +5,7 @@ import scorex.core.api.http.ApiError
 
 import scala.util.control.NonFatal
 
-class SidechainApiErrorHandler {
+object SidechainApiErrorHandler {
 
   implicit val exceptionHandler : ExceptionHandler = ExceptionHandler{
     case NonFatal(exp) => ApiError(exp.getCause)

@@ -5,6 +5,7 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
+import com.horizen.transaction.TransactionJsonSerializer;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
@@ -19,6 +20,11 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
 
     public SemanticallyInvalidTransaction(long timestamp) {
         _timestamp = timestamp;
+    }
+
+    @Override
+    public TransactionJsonSerializer jsonSerializer() {
+        return null;
     }
 
     @Override

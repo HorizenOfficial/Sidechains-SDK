@@ -40,7 +40,7 @@ class MainchainBlockReference(
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
-  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = ???
+  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = MainchainBlockReferenceJSONSerializer
 
   override type M = MainchainBlockReference
 
@@ -270,6 +270,7 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
 
 object MainchainBlockReferenceJSONSerializer extends JsonSerializer [MainchainBlockReference]{
 
+  // TO-DO Implementation not completed
   override def toJson(obj: MainchainBlockReference): Json = {
     Json.obj(("hashHex", Json.fromString(obj.hashHex)))
   }

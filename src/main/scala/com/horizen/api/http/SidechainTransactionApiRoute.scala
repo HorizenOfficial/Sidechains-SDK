@@ -157,8 +157,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               case Some(t) =>
                 if(format){
                   //TO-DO JSON representation of transaction
-                  //ApiResponse("result" -> ("transaction", t.asJson))
-                  ApiResponse.OK
+                  ApiResponse("result" -> ("transaction", t.json.asString.get))
                 }else{
                   ApiResponse("result"->companion.toBytes(t))
                 }
@@ -188,8 +187,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             tryTX match{
               case Success(tx) =>
                 //TO-DO JSON representation of transaction
-                //ApiResponse("result" -> ("transaction", tx.asJson))
-                ApiResponse.OK
+                ApiResponse("result" -> ("transaction", tx.json.asString.get))
               case Failure(exp) =>
                 // TO-DO Change the errorCode
                 ApiResponse("error" -> ("errorCode" -> 99999, "errorDescription" -> exp.getMessage))
@@ -264,8 +262,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  //ApiResponse("result" -> ("regularTransaction", regularTransaction.asJson))
-                  ApiResponse.OK
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.json.asString.get))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
@@ -301,8 +298,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  //ApiResponse("result" -> ("regularTransaction", regularTransaction.asJson))
-                  ApiResponse.OK
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.json.asString.get))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
@@ -398,7 +394,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   private def validateAndSendTransaction(transaction : Transaction) = {
     withNodeView{
       sidechainNodeView =>
-        val barrier = Await.result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), settings.timeout).asInstanceOf[Future[Unit]]
+        val barrier = Await.result(
+          sidechainTransactionActorRef ? BroadcastTransaction(transaction),
+          settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier){
           case Success(result) =>
             ApiResponse("result" -> ("transactionId" -> transaction.id.toString))

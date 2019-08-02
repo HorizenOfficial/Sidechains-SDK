@@ -3,6 +3,8 @@ package com.horizen.transaction;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import scorex.core.utils.ScorexEncoder;
 
 import java.util.ArrayList;
@@ -11,6 +13,11 @@ import java.util.List;
 public final class WithdrawalRequestTransaction extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
     public static final byte TRANSACTION_TYPE_ID = 4;
+
+    @Override
+    public TransactionJsonSerializer jsonSerializer() {
+        return WithdrawalRequestTransactionJsonSerializer.getSerializer();
+    }
 
     @Override
     public WithdrawalRequestTransactionSerializer serializer() {

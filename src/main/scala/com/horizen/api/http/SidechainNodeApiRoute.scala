@@ -18,7 +18,7 @@ case class SidechainNodeApiRoute(override val settings: RESTApiSettings, sidecha
     ApiResponse.OK
   }
 
-  def getAllPeersInfo : Route = (post & path("getAllPeersInfo"))
+  def getAllPeersInfo : Route = (post & path("getAllPeer sInfo"))
   {
     ApiResponse.OK
   }

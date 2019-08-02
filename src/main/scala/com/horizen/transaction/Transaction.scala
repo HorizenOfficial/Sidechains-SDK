@@ -6,7 +6,7 @@ import scorex.util.bytesToId
 
 
 abstract class Transaction
-  extends scorex.core.transaction.Transaction
+  extends scorex.core.transaction.Transaction with TransactionJsonSerializable
 {
   def transactionTypeId: Byte
 }

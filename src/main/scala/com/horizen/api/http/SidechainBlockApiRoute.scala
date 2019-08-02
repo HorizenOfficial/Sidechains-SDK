@@ -10,14 +10,14 @@ import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import io.circe.Json
 import io.circe.syntax._
-import scorex.util.{ModifierId, idToBytes}
+import scorex.util.idToBytes
+import akka.pattern.ask
+import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.GenerateSidechainBlocks
 
-import scala.collection.JavaConverters
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)//, sidechainBlockActorRef: ActorRef)
+case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef)
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
@@ -168,13 +168,12 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GenerateRequest](body)match {
           case Success(req) =>
-            // TO-DO
-            val awaitable : Awaitable[Future[List[ModifierId]]] = ???
-            var duration : Duration = ???
-            val barrier = Await.result(awaitable, duration).asInstanceOf[Future[List[ModifierId]]]
+            val barrier = Await.result(
+              sidechainBlockActorRef ? GenerateSidechainBlocks(req.blockCount),
+              settings.timeout).asInstanceOf[Future[List[String]]]
             onComplete(barrier){
               case Success(listOfBlockIds) =>
-                var seqOfPairOfBlockIds : Seq[(String, Array[Byte])] = listOfBlockIds.map(id => idToBytes(id)).map(id => ("blockId", id))
+                var seqOfPairOfBlockIds : Seq[(String, String)] = listOfBlockIds.map(id => ("blockId", id))
                 ApiResponse("result" -> seqOfPairOfBlockIds)
               case Failure(exp) =>
                 // TO-DO Change the errorCode
