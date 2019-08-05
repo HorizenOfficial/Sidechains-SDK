@@ -129,8 +129,8 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     unconfirmed.values.toList.asJava
   }
 
-  override def getTransactionsSortedByFee(fee: Int): JList[SidechainTypes#SCBT] = {
-    unconfirmed.values.toList.sortBy(-_.fee).asJava
+  override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
+    unconfirmed.values.toList.sortBy(-_.fee).take(limit).asJava
   }
 
   override def getSize: Int = unconfirmed.size

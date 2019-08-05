@@ -1,5 +1,8 @@
 package com.horizen
 
+import java.util.{List => JList, Optional => JOptional}
+import java.io.{File => JFile}
+
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.{NetworkParams, StorageParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
@@ -10,8 +13,6 @@ import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
-import java.io.{File => JFile}
-import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.node.NodeHistory
 import io.iohk.iodb.LSMStore

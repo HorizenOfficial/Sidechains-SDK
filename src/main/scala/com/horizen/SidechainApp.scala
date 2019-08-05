@@ -76,5 +76,5 @@ class SidechainApp(val settingsFilename: String)
 object SidechainApp extends App {
   private val settingsFilename = args.headOption.getOrElse("settings.conf")
   val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
-  val  app = new SidechainApp(settingsFilename)
+  val  app = new SidechainApp(settingsFilename).run()
 }

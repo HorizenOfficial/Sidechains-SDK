@@ -19,7 +19,6 @@ import com.horizen.chain.{ActiveChain, SidechainBlockInfo, SidechainBlockInfoSer
 import scala.collection.mutable.ArrayBuffer
 
 
-
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends ScorexLogging {
   // Version - RandomBytes(32)
