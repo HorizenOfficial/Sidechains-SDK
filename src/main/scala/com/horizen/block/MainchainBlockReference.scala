@@ -7,15 +7,21 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
+import com.horizen.serialization.{JsonSerializable, JsonSerializer}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils._
+import io.circe.Decoder.Result
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
+import io.circe.{Decoder, Encoder, HCursor, Json}
+import io.circe.syntax._
+import io.circe.generic.auto._
+
 
 // Mainchain Block structure:
 //
@@ -28,11 +34,13 @@ class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
                     val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
-                    ) extends BytesSerializable {
+                    ) extends BytesSerializable with JsonSerializable {
 
   lazy val hash: Array[Byte] = header.hash
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
+
+  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = MainchainBlockReferenceJSONSerializer
 
   override type M = MainchainBlockReference
 
@@ -83,6 +91,7 @@ class MainchainBlockReference(
 
     true
   }
+
 }
 
 
@@ -257,4 +266,14 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = ???
 
   override def parse(r: Reader): MainchainBlockReference = ???
+}
+
+object MainchainBlockReferenceJSONSerializer extends JsonSerializer [MainchainBlockReference]{
+
+  // TO-DO Implementation not completed
+  override def toJson(obj: MainchainBlockReference): Json = {
+    Json.obj(("hashHex", Json.fromString(obj.hashHex)))
+  }
+
+  override def tryParseJson: Try[MainchainBlockReference] = ???
 }

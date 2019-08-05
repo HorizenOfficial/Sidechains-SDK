@@ -1,6 +1,7 @@
 package com.horizen
 
 import java.io.{File => JFile}
+import java.lang
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
@@ -10,7 +11,7 @@ import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.Secret
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, Storage}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -18,7 +19,7 @@ import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToVersion}
 import scorex.util.ScorexLogging
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 import scala.collection.JavaConverters._
 
 
@@ -171,6 +172,25 @@ class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStor
 
   override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
+  }
+
+  override def allBoxesBalance(): lang.Long = {
+    walletBoxStorage.getAll.map(_.box.value()).sum
+  }
+
+  override def generateNewAddress(): String = {
+    var seed = "seed"+Random.nextInt(100)
+    val secret : PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(seed.getBytes)
+    addSecret(secret) match {
+      case Success(s) => {
+        var address = secret.publicImage()
+        val theSecret = s.secretByPublicKey(address)
+        if(theSecret.isPresent)
+          address.address()
+        else ""
+      }
+      case Failure(exception) => ""
+    }
   }
 }
 

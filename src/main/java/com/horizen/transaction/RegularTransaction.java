@@ -12,6 +12,8 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
 import scala.util.Failure;
@@ -58,6 +60,11 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         _signatures = signatures;
         _fee = fee;
         _timestamp = timestamp;
+    }
+
+    @Override
+    public TransactionJsonSerializer jsonSerializer() {
+        return RegularTransactionJsonSerializer.getSerializer();
     }
 
     @Override
@@ -240,7 +247,7 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         return super.encodedId();
     }
 
-    @Override
+    //@Override
     public ScorexEncoder encoder() {
         return null;
     }

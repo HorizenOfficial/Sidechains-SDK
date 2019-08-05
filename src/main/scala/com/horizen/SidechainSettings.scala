@@ -25,6 +25,7 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
     sidechainTransactionsCompanion,
     null
   ).toOption
+
 }
 
 

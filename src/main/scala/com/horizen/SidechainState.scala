@@ -167,6 +167,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
   }
+
 }
 
 object SidechainState
