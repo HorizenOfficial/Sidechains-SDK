@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 object ApiInputParser{
 
   //Wrapper: decode the body string as json conforming to the case class T. This allows to handle none inputs and better handle exceptions
-  def parseInput[T](body: String)(implicit decoder: Decoder[T]): Try[T] = {
+  def parseInput[T](body: String)(implicit decoder: Decoder[T]): Try[T] = Try{
     var toDecode: String = body
 
     //Needed for APIs with all parameters optional. In other cases it will just throw an error later
@@ -23,8 +23,8 @@ object ApiInputParser{
 
     //Decode JSON and apply it to case class
     parser.decodeAccumulating[T](toDecode) match {
-      case Validated.Invalid(e) => Failure(readException(e))
-      case Validated.Valid(succ) => Success(succ)
+      case Validated.Invalid(e) => throw readException(e)
+      case Validated.Valid(succ) => succ
 
     }
   }

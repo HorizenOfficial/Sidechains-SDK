@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface NodeHistory {
     Optional<SidechainBlock> getBlockById(String blockId);
 
-    List<String> getLastBlockIds(SidechainBlock startBlock, int count);
+    List<String> getLastBlockIds(String startBlockId, int count);
 
     SidechainBlock getBestBlock();
 

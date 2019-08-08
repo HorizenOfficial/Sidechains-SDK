@@ -252,7 +252,7 @@ object SidechainWallet
     if (!walletBoxStorage.lastVersionID().isPresent && !secretStorage.lastVersionID().isPresent)
       Some(new SidechainWallet(openWalletBoxStorage(walletBoxStorage, sidechainBoxesCompanion),
                           openSecretStorage(secretStorage, sidechainSecretsCompanion), applicationWallet)
-        .scanPersistent(sidechainSettings.genesisBlock.get))
+        .scanPersistent(sidechainSettings.genesisBlock.get).addSecret(PrivateKey25519Creator.getInstance().generateSecret("WRONG SOLUTION".getBytes)).get)
     else
       None
   }

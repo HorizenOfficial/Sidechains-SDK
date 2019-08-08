@@ -84,7 +84,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     var progressInfo: ProgressInfo[SidechainBlock] = null
 
     // Test 1: append block after genesis
-    val blockB2: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val blockB2: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, basicSeed = 111L)
     history.append(blockB2) match {
       case Success((hist, prog)) =>
         history = hist
@@ -107,7 +107,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 2: append block after current tip (not after genesis)
-    val blockB3: SidechainBlock = generateNextSidechainBlock(blockB2, sidechainTransactionsCompanion, params)
+    val blockB3: SidechainBlock = generateNextSidechainBlock(blockB2, sidechainTransactionsCompanion, params, basicSeed = 112L)
     history.append(blockB3) match {
       case Success((hist, prog)) =>
         history = hist
@@ -149,7 +149,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 4: try to append semantically invalid block
-    val invalidBlock = createSemanticallyInvalidClone(generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params), sidechainTransactionsCompanion)
+    val invalidBlock = createSemanticallyInvalidClone(generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params, basicSeed = 1231L), sidechainTransactionsCompanion)
     history.append(invalidBlock) match {
       case Success(_) =>
         assertTrue("Exception expected during block appending", false)
@@ -177,7 +177,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     // Test 6: try to add block b3
     // score of b3 chain expected to be the same as B3 chain. So no chain switch expected.
-    val forkBlockb3: SidechainBlock = generateNextSidechainBlock(forkBlockb2, sidechainTransactionsCompanion, params)
+    val forkBlockb3: SidechainBlock = generateNextSidechainBlock(forkBlockb2, sidechainTransactionsCompanion, params, basicSeed = 199L)
     history.append(forkBlockb3) match {
       case Success((hist, prog)) =>
         history = hist
@@ -201,7 +201,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 7: try to add block b4. Chain switch to b4 fork expected.
-    val forkBlockb4: SidechainBlock = generateNextSidechainBlock(forkBlockb3, sidechainTransactionsCompanion, params)
+    val forkBlockb4: SidechainBlock = generateNextSidechainBlock(forkBlockb3, sidechainTransactionsCompanion, params, basicSeed = 11192L)
     history.append(forkBlockb4) match {
       case Success((hist, prog)) =>
         history = hist
@@ -228,7 +228,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 8: try to add block B4, that contains invalid transactions
-    val blockB4: SidechainBlock = generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params)
+    val blockB4: SidechainBlock = generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
     history.append(blockB4) match {
       case Success((hist, prog)) =>
         history = hist
@@ -295,7 +295,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     var blocksToAppend = 9
 
     while(blocksToAppend > 0) {
-      val block = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params)
+      val block = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 86766L)
 
       history.append(block) match {
         case Success((hist, _)) =>
@@ -313,7 +313,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 1: fork changes for block after genesis
-    val blockH2 = generateNextSidechainBlock(blockSeq.head, sidechainTransactionsCompanion, params)
+    val blockH2 = generateNextSidechainBlock(blockSeq.head, sidechainTransactionsCompanion, params, basicSeed = 9000L)
     history.bestForkChanges(blockH2) match {
       case Success(progressInfo) =>
         assertEquals("Different progress info branch point expected.", blockSeq.head.id, progressInfo.branchPoint.get)
@@ -325,7 +325,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 2: fork changes for block in the middle
-    val blockH5 = generateNextSidechainBlock(blockSeq(4), sidechainTransactionsCompanion, params)
+    val blockH5 = generateNextSidechainBlock(blockSeq(4), sidechainTransactionsCompanion, params, basicSeed = 65522L)
     history.bestForkChanges(blockH5) match {
       case Success(progressInfo) =>
         assertEquals("Different progress info branch point expected.", blockSeq(4).id, progressInfo.branchPoint.get)
@@ -337,7 +337,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 3: fork changes for block before last
-    val blockH9 = generateNextSidechainBlock(blockSeq(8), sidechainTransactionsCompanion, params)
+    val blockH9 = generateNextSidechainBlock(blockSeq(8), sidechainTransactionsCompanion, params, basicSeed = 1231234L)
     history.bestForkChanges(blockH9) match {
       case Success(progressInfo) =>
         assertEquals("Different progress info branch point expected.", blockSeq(8).id, progressInfo.branchPoint.get)
@@ -350,7 +350,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     // Test 4: fork changes for block after last one
     // wrong situation
-    val blockH11 = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params)
+    val blockH11 = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 5545454L)
     history.bestForkChanges(blockH11) match {
       case Success(progressInfo) =>
         assertTrue("Exception expected during bestForkChanges calculation", false)
@@ -374,14 +374,14 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     assertTrue("Genesis history creation expected to be successful. ", historyOption.isDefined)
     var history: SidechainHistory = historyOption.get
 
-    val applicableBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val applicableBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, basicSeed = 5656521L)
     history.applicableTry(applicableBlock) match {
       case Success(_) =>
       case Failure(_) =>
         assertFalse("Block expected to be applicable", true)
     }
 
-    val irrelevantBlock: SidechainBlock = generateNextSidechainBlock(generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 99L), sidechainTransactionsCompanion, params)
+    val irrelevantBlock: SidechainBlock = generateNextSidechainBlock(generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 99L), sidechainTransactionsCompanion, params, basicSeed = 7872832L)
     history.applicableTry(irrelevantBlock) match {
       case Success(_) =>
         assertTrue("Exception expected on applicableTry for block without parent already stored in history.", false)
@@ -400,7 +400,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     var history1blockSeq = Seq[SidechainBlock](genesisBlock)
     var blocksToAppend = 19
     while(blocksToAppend > 0) {
-      val block = generateNextSidechainBlock(history1blockSeq.last, sidechainTransactionsCompanion, params)
+      val block = generateNextSidechainBlock(history1blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 443356L)
       history1.append(block) match {
         case Success((hist, _)) =>
           history1 = hist
@@ -472,7 +472,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Append to history2 one more block, different to the one in history1
-    val forkBlock = generateNextSidechainBlock(history2blockSeq.last, sidechainTransactionsCompanion, params)
+    val forkBlock = generateNextSidechainBlock(history2blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 77655L)
     history2blockSeq = history2blockSeq :+ forkBlock
     history2.append(forkBlock) match {
       case Success((hist, _)) =>

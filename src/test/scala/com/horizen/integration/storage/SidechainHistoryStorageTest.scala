@@ -59,7 +59,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
 
 
     // Add one more block
-    val secondBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock,sidechainTransactionsCompanion, params)
+    val secondBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
     expectedHeight += 1
     expectedScore += 1
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(secondBlock, expectedScore).isSuccess)
@@ -104,7 +104,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
 
 
     // Add block from another chain after genesis one, which lead to Fork
-    val forkBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val forkBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, basicSeed = 991919L)
     expectedHeight = 2
     expectedScore = 100L
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(forkBlock, expectedScore).isSuccess)

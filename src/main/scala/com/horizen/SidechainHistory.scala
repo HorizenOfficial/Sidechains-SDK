@@ -349,17 +349,25 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     storage.blockById(ModifierId(blockId)).asJava
   }
 
-  override def getLastBlockIds(startBlock: SidechainBlock, count: Int): JList[String] = {
+  override def getLastBlockIds(startBlockId: String, count: Int): JList[String] = {
     val blockList = new ListBuffer[String]()
-    for (i <- 0 until count) {
+    var id: ModifierId = ModifierId @@ startBlockId
+    if(storage.blockInfoById(id).isEmpty)
+      blockList.asJava
+    else {
+      blockList.append(id)
       breakable {
-        storage.parentBlockId(startBlock.id) match {
-          case Some(block) => blockList.append()
-          case None => break
+        while (blockList.size < count && !isGenesisBlock(id)) {
+          storage.parentBlockId(id) match {
+            case Some(parentBlockId) =>
+              blockList.append(parentBlockId)
+              id = parentBlockId
+            case None => break
+          }
         }
       }
+      blockList.asJava
     }
-    blockList.asJava
   }
 
   override def getBestBlock: SidechainBlock = {

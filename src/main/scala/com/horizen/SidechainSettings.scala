@@ -18,7 +18,7 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
 
   lazy val genesisBlock : Option[SidechainBlock] = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
-    Instant.now.getEpochSecond - 10000,
+    1565162709L, // Wednesday, August 7, 2019 7:25:09 AM
     Seq(),
     Seq(),
     PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(123).getBytes),

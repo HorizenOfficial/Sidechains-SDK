@@ -43,7 +43,7 @@ class SidechainBlock (
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
   override lazy val id: ModifierId =
-    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
+    bytesToId(Blake2b256(messageToSign))
 
   override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
     var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
@@ -195,8 +195,8 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
   }
 
   override def parseBytesTry(bytes: Array[Byte]): Try[SidechainBlock] = Try {
-    require(bytes.length <= SidechainBlock.MAX_BLOCK_SIZE)
-    require(bytes.length > 32 + 8 + 4 + 4 + 32 + 64) // size of empty block
+    require(bytes.length <= SidechainBlock.MAX_BLOCK_SIZE, "Unable to parse SidechainBlock bytes: reach out of maximum length.")
+    require(bytes.length > 32 + 8 + 4 + 4 + 32 + 64, "Unable to parse SidechainBlock bytes: input data corrupted.") // size of empty block
 
     var offset: Int = 0
 

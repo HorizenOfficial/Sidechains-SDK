@@ -21,9 +21,9 @@ import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
-import com.horizen.forge.SidechainBlockForgerRef
+import com.horizen.forge.ForgerRef
 import io.circe.Encoder
 import scorex.core.serialization.SerializerRegistry.SerializerRecord
 
@@ -55,11 +55,15 @@ class SidechainApp(val settingsFilename: String)
   protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, new MainNetParams(), timeProvider, sidechainBoxesCompanion,
+  case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
+
+  }
+  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id)
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, params, timeProvider, sidechainBoxesCompanion,
     sidechainSecretsCompanion, sidechainTransactionsCompanion, defaultApplicationWallet, defaultApplicationState)
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockForgerActorRef : ActorRef = SidechainBlockForgerRef(sidechainSettings, nodeViewHolderRef)
+  val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, sidechainTransactionsCompanion, params)
   val sidechainBlockActorActorRef : ActorRef = SidechainBlockActorRef(nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   //SerializerRecord(SimpleBoxTransaction.simpleBoxEncoder)
@@ -68,7 +72,7 @@ class SidechainApp(val settingsFilename: String)
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilApiRoute(settings.restApi, nodeViewHolderRef),
@@ -79,8 +83,8 @@ class SidechainApp(val settingsFilename: String)
     //WalletApiRoute(settings.restApi, nodeViewHolderRef),
     //StatsApiRoute(settings.restApi, nodeViewHolderRef),
     //UtilsApiRoute(settings.restApi),
-    NodeViewApiRoute[SidechainTypes#SCBT](settings.restApi, nodeViewHolderRef),
-    PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
+    //NodeViewApiRoute[SidechainTypes#SCBT](settings.restApi, nodeViewHolderRef),
+    //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
   override val nodeViewSynchronizer: ActorRef =
