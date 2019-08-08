@@ -3,6 +3,7 @@ package com.horizen.forge
 import java.time.Instant
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
@@ -14,16 +15,14 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.block.Block
 import scorex.util.{ModifierId, ScorexLogging}
+
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Await, Future}
 
-import scala.concurrent.Await
-import scala.concurrent.duration.FiniteDuration
 
-// Implementation not completed
 class Forger(settings: SidechainSettings,
              sidechainNodeViewHolderRef: ActorRef,
              companion: SidechainTransactionsCompanion,
@@ -33,23 +32,12 @@ class Forger(settings: SidechainSettings,
   import Forger._
   import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 
-  /*protected def startSidechainBlockForging : Receive = {
-    case StartSidechainBlockForging => None
-  }
-
-  protected def stopSidechainBlockForging : Receive = {
-    case StopSidechainBlockForging => None
-  }*/
-
   implicit lazy val timeout: Timeout = Timeout(settings.scorexSettings.restApi.timeout)
   override def receive: Receive = {
     case Forger.ReceivableMessages.GetBlockTemplate =>
       val future = sidechainNodeViewHolderRef ? getNextBlockForgingInfo
       val pfi: ForgingInfo = Await.result(future, settings.scorexSettings.restApi.timeout).asInstanceOf[ForgingInfo]
       sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params).get
-
-    case Forger.ReceivableMessages.StartSidechainBlockForging =>
-      sidechainNodeViewHolderRef ! getNextBlockForgingInfo
 
     case sbi: TrySubmitBlock =>
       new SidechainBlockSerializer(companion).parseBytesTry(sbi.blockBytes) match {
@@ -60,28 +48,31 @@ class Forger(settings: SidechainSettings,
           sender() ! Failure(e)
       }
 
-    case pfi: ForgingInfo =>
-      sidechainNodeViewHolderRef !
-        LocallyGeneratedModifier[SidechainBlock](
-          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params).get
-        )
+    case Forger.ReceivableMessages.ForgeBlock =>
+      val future = sidechainNodeViewHolderRef ? getNextBlockForgingInfo
+      val pfi: ForgingInfo = Await.result(future, settings.scorexSettings.restApi.timeout).asInstanceOf[ForgingInfo]
 
-    case Forger.ReceivableMessages.StopSidechainBlockForging => None
+      val blockTry = SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params)
+      blockTry match {
+        case Success(block) =>
+          sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
+          sender() ! Success(block.id)
+        case Failure(e) =>
+          sender() ! Failure(e)
+      }
 
     case a: Any =>
       log.error("Strange input: " + a)
   }
 }
 
-object Forger extends ScorexLogging{
-
+object Forger extends ScorexLogging {
   import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
-  object ReceivableMessages{
+  object ReceivableMessages {
 
     case object GetBlockTemplate
-    case object StartSidechainBlockForging
-    case object StopSidechainBlockForging
+    case object ForgeBlock
     case class TrySubmitBlock(blockBytes: Array[Byte])
     case class ForgingInfo(parentId: Block.BlockId,
                            timestamp: Block.Timestamp,

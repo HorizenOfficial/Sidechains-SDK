@@ -1,8 +1,5 @@
 package com.horizen.api.http
 
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.function.Consumer
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
@@ -11,12 +8,11 @@ import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import io.circe.Json
 import io.circe.syntax._
-import scorex.util.{ModifierId, idToBytes}
+import scorex.util.ModifierId
 import akka.pattern.ask
-import akka.util.Timeout
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.forge.Forger.ReceivableMessages.GetBlockTemplate
-import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.block.SidechainBlock
 import com.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters._
@@ -27,7 +23,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
-  override val route : Route = (pathPrefix("block"))
+  override val route : Route = pathPrefix("block")
             {getBlock ~ getLastBlockIds ~ getBlockIdByHeight ~ getBestBlockInfo ~ getBlockTemplate ~ submitBlock  ~ generateBlocks}
 
   /**
@@ -158,10 +154,12 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             } match {
               case Success(_) =>
                 val future = sidechainBlockActorRef ? SubmitSidechainBlock(blockBytes)
-                val submitResult = Await.result(future, timeout.duration).asInstanceOf[Try[ModifierId]]
-                submitResult match {
-                  case Success(id) => ApiResponse("id" -> Json.fromString(id))
-                  case Failure(e) => ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted: ${e.getMessage}"))
+                val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
+                Await.result(submitResultFuture, timeout.duration) match {
+                  case Success(id) =>
+                    ApiResponse("id" -> Json.fromString(id))
+                  case Failure(e) =>
+                    ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted: ${e.getMessage}"))
                 }
               case Failure(e) =>
                 ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted1: ${e.getMessage}"))
@@ -187,16 +185,13 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GenerateRequest](body) match {
           case Success(req) =>
-            val barrier = Await.result(
-              sidechainBlockActorRef ? GenerateSidechainBlocks(req.number),
-              settings.timeout).asInstanceOf[Future[List[String]]]
-            onComplete(barrier){
-              case Success(listOfBlockIds) =>
-                var seqOfPairOfBlockIds : Seq[(String, String)] = listOfBlockIds.map(id => ("blockId", id))
-                ApiResponse("result" -> seqOfPairOfBlockIds)
-              case Failure(exp) =>
-                // TO-DO Change the errorCode
-                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> exp.getMessage))
+            val future = sidechainBlockActorRef ? GenerateSidechainBlocks(req.number)
+            val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
+            Await.result(submitResultFuture, timeout.duration) match {
+              case Success(ids) =>
+                ApiResponse("id" -> ids.map(id => id.asInstanceOf[String]).asJson)
+              case Failure(e) =>
+                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not created: ${e.getMessage}"))
             }
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
