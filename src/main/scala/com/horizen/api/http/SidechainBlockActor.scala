@@ -1,12 +1,10 @@
 package com.horizen.api.http
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.{SidechainHistory, SidechainSyncInfo}
+import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.block.SidechainBlock
-import com.horizen.forge.Forger.ReceivableMessages.{ForgeBlock, TrySubmitBlock}
+import com.horizen.forge.Forger.ReceivableMessages.{TryForgeNextBlock, TrySubmitBlock}
 import scorex.core.PersistentNodeViewModifier
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -14,21 +12,23 @@ import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, ExecutionContext, Promise}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
-      (sidechainNodeViewHolderRef : ActorRef, sidechainForgerRef: ActorRef)(implicit ec : ExecutionContext)
+(settings: SidechainSettings, sidechainNodeViewHolderRef : ActorRef, forgerRef: ActorRef)(implicit ec : ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var promiseForSeqMap: Map[ModifierId, Promise[Try[Seq[ModifierId]]]] = Map()
-  private var promiseMap: Map[ModifierId, Promise[Try[ModifierId]]] = Map()
-  private var generatedSequences: Map[ModifierId, Seq[ModifierId]] = Map()
-  private var generatedBlocks: Set[ModifierId] = Set()
+  private var generatedBlockGroups: Map[ModifierId, Seq[ModifierId]] = Map()
+  private var generateBlocksPromises: Map[ModifierId, Promise[Try[Seq[ModifierId]]]] = Map()
 
-  implicit lazy val timeout: Timeout = Timeout(FiniteDuration(1, TimeUnit.SECONDS))
+  private var submitedBlocks: Set[ModifierId] = Set()
+  private var submitBlockPromises: Map[ModifierId, Promise[Try[ModifierId]]] = Map()
+
+  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
+  implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallyFailedModification[PMOD]])
@@ -36,110 +36,109 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     context.system.eventStream.subscribe(self, classOf[ChangedHistory[HR]])
   }
 
-  protected def sidechainViewHolderEvents : Receive = {
-    case SemanticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
-      if(generatedBlocks.contains(sidechainBlock.id)) {
-        promiseMap.get(sidechainBlock.id) match {
-          case Some(p) => p.success(Failure(throwable))
+  def processBlockFailedEvent(sidechainBlock: SidechainBlock, throwable: Throwable): Unit = {
+    if(submitedBlocks.contains(sidechainBlock.id)) {
+      submitBlockPromises.get(sidechainBlock.id) match {
+        case Some(p) => p.success(Failure(throwable))
+        case _ =>
+      }
+      submitedBlocks -= sidechainBlock.id
+      submitBlockPromises -= sidechainBlock.id
+      generatedBlockGroups -= sidechainBlock.id
+    }
+  }
+
+  def processHistoryChangedEvent(history: SidechainHistory): Unit = {
+    val expectedBlocks = submitedBlocks.toSeq
+    for(id <- expectedBlocks) {
+      if(history.contains(id)) {
+        submitBlockPromises.get(id) match {
+          case Some(p) => p.success(Success(id))
           case _ =>
         }
-        generatedBlocks -= sidechainBlock.id
-        promiseMap -= sidechainBlock.id
-        generatedSequences -= sidechainBlock.id
+        generateBlocksPromises.get(id) match {
+          case Some(p) => p.success(Success(generatedBlockGroups(id)))
+          case _ =>
+        }
+        submitedBlocks -= id
+        submitBlockPromises -= id
+        generatedBlockGroups -= id
       }
+    }
+  }
+  protected def sidechainNodeViewHolderEvents : Receive = {
+    case SemanticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
+      processBlockFailedEvent(sidechainBlock, throwable)
 
     case SyntacticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
-      if(generatedBlocks.contains(sidechainBlock.id)) {
-        promiseMap.get(sidechainBlock.id) match {
-          case Some(p) => p.success(Failure(throwable))
-          case _ =>
-        }
-        generatedBlocks -= sidechainBlock.id
-        promiseMap -= sidechainBlock.id
-        generatedSequences -= sidechainBlock.id
-      }
+      processBlockFailedEvent(sidechainBlock, throwable)
 
     case ChangedHistory(history: SidechainHistory) =>
-      val expectedBlocks = generatedBlocks.toSeq
-      for(id <- expectedBlocks) {
-        if(history.contains(id)) {
-          promiseMap.get(id) match {
-            case Some(p) => p.success(Success(id))
-            case _ =>
-          }
-          promiseForSeqMap.get(id) match {
-            case Some(p) => p.success(Success(generatedSequences.get(id).get))
-            case _ =>
-          }
-          generatedBlocks -= id
-          promiseMap -= id
-          generatedSequences -= id
-        }
-      }
+      processHistoryChangedEvent(history)
 
   }
 
+  // Note: It should be used only in regtest
   protected def generateSidechainBlocks : Receive = {
     case GenerateSidechainBlocks(blockCount) =>
+      // Try to forge blockCount blocks, collect their ids and wait for
       var generatedIds: Seq[ModifierId] = Seq()
       for(i <- 1 to blockCount) {
-        val future = sidechainForgerRef ? ForgeBlock
-        Await.result(future, FiniteDuration(500, TimeUnit.MILLISECONDS)).asInstanceOf[Try[ModifierId]] match { // to do: process await exceptions, use "global" timeout
+        val future = forgerRef ? TryForgeNextBlock
+        Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
           case Success(id) =>
             generatedIds = id +: generatedIds
+            submitedBlocks += id
             if(i == blockCount) {
-              generatedBlocks += id
+              // Create a promise, that will wait for blocks applying result from Node
               val prom = Promise[Try[Seq[ModifierId]]]()
-              generatedSequences += (id -> generatedIds)
-              promiseForSeqMap += (id -> prom)
+              generatedBlockGroups += (id -> generatedIds)
+              generateBlocksPromises += (id -> prom)
               sender() ! prom.future
             }
 
           case Failure(ex) =>
-            sender() ! Failure(ex)
+            sender() ! Future[Try[Seq[ModifierId]]](Failure(ex))
         }
       }
   }
 
   protected def tryToSubmitBlock: Receive = {
     case SubmitSidechainBlock(blockBytes: Array[Byte]) =>
-      val future = sidechainForgerRef ? TrySubmitBlock(blockBytes)
-      Await.result(future, FiniteDuration(1, TimeUnit.SECONDS)).asInstanceOf[Try[ModifierId]] match { // to do: process await exceptions, use "global" timeout
+      val future = forgerRef ? TrySubmitBlock(blockBytes)
+      Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
         case Success(id) =>
-          generatedBlocks += id
+          // Create a promise, that will wait for block applying result from Node
           val prom = Promise[Try[ModifierId]]()
-          promiseMap += (id -> prom)
+          submitedBlocks += id
+          submitBlockPromises += (id -> prom)
           sender() ! prom.future
 
         case Failure(ex) =>
-          sender() ! Failure(ex)
-
+          sender() ! Future[Try[ModifierId]](Failure(ex))
       }
   }
 
   override def receive: Receive = {
-    generateSidechainBlocks orElse sidechainViewHolderEvents orElse tryToSubmitBlock orElse
-      {
-        case a : Any => log.error("Strange input: " + a)
-      }
+    sidechainNodeViewHolderEvents orElse generateSidechainBlocks  orElse tryToSubmitBlock orElse {
+      case message: Any => log.error("SidechainBlockActor received strange message: " + message)
+    }
   }
 }
 
 object SidechainBlockActor {
-
   object ReceivableMessages{
-
     case class GenerateSidechainBlocks(blockCount: Int)
     case class SubmitSidechainBlock(blockBytes: Array[Byte])
   }
 }
 
 object SidechainBlockActorRef{
-  def props(sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainBlockActor(sidechainNodeViewHolderRef, sidechainForgerRef))
+    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 
-  def apply(sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(sidechainNodeViewHolderRef, sidechainForgerRef))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 }

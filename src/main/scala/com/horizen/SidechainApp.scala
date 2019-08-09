@@ -64,7 +64,7 @@ class SidechainApp(val settingsFilename: String)
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, sidechainTransactionsCompanion, params)
-  val sidechainBlockActorActorRef : ActorRef = SidechainBlockActorRef(nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   //SerializerRecord(SimpleBoxTransaction.simpleBoxEncoder)
 

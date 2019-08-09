@@ -11,7 +11,7 @@ import io.circe.syntax._
 import scorex.util.ModifierId
 import akka.pattern.ask
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
-import com.horizen.forge.Forger.ReceivableMessages.GetBlockTemplate
+import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
 import com.horizen.block.SidechainBlock
 import com.horizen.utils.BytesUtils
 
@@ -129,14 +129,19 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
   }
 
   /**
-    * Return Sidechain block candidate for being next tip, signed by Forger
+    * Return Sidechain block candidate for being next tip, already signed by Forger
     * Note: see todos, think about returning an unsigned block
     */
   def getBlockTemplate : Route = (post & path("getBlockTemplate")) {
-    val future = forgerRef ? GetBlockTemplate
-    val blockTemplate = Await.result(future, timeout.duration).asInstanceOf[SidechainBlock]
+    val future = forgerRef ? TryGetBlockTemplate
+    val blockTemplate = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
     // TO DO: replace with ApiResponse(blockTemplate.toJson) in future
-    ApiResponse("blockHex" -> BytesUtils.toHexString(blockTemplate.bytes).asJson)
+    blockTemplate match {
+      case Success(block) =>
+        ApiResponse("blockHex" -> BytesUtils.toHexString(block.bytes).asJson)
+      case Failure(e) =>
+        ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Failed to get block remplate: ${e.getMessage}"))
+    }
   }
   
   def submitBlock : Route = (post & path("submitBlock"))
@@ -162,7 +167,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
                     ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted: ${e.getMessage}"))
                 }
               case Failure(e) =>
-                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted1: ${e.getMessage}"))
+                ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted: ${e.getMessage}"))
             }
 
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
