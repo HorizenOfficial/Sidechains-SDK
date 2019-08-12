@@ -80,7 +80,9 @@ class SidechainApp(val settingsFilename: String)
     sidechainTransactionsCompanion, params)
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
-    sidechainStateStorage, sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
+    sidechainStateStorage,
+    "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
+    sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
 
   override val nodeViewSynchronizer: ActorRef =

@@ -35,12 +35,6 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public String generateNewAddress() {
-        // TO-DO
-        return null;
-    }
-
-    @Override
     public Long allBoxesBalance() {
         long sum = 0;
         for(Box b: _boxesOrderedBytCreationTime){
@@ -122,6 +116,16 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     @Override
     public List<Secret> secretsOfType(Class<? extends Secret> type) {
         return null;
+    }
+
+    @Override
+    public byte[] walletSeed() {
+        return "seed".getBytes();
+    }
+
+    @Override
+    public Boolean addNewSecret(Secret secret) {
+        return false;
     }
 }
 
