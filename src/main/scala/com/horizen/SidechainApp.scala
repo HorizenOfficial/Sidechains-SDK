@@ -77,10 +77,10 @@ class SidechainApp(val settingsFilename: String)
     sidechainBoxesCompanion)
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
-    sidechainTransactionsCompanion, new MainNetParams())
+    sidechainTransactionsCompanion, params)
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
-    sidechainStateStorage, sidechainWalletBoxStorage, sidechainSecretStorage, new MainNetParams(), timeProvider,
+    sidechainStateStorage, sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
 
   override val nodeViewSynchronizer: ActorRef =
