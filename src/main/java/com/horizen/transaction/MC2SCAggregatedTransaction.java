@@ -12,6 +12,7 @@ import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -22,7 +23,9 @@ import scorex.util.encode.Base16;
 
 import java.util.*;
 
-public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
+public final class MC2SCAggregatedTransaction
+    extends BoxTransaction<Proposition, Box<Proposition>>
+    implements JsonSerializable
 {
     public static final byte TRANSACTION_TYPE_ID = 2;
     private byte[] _mc2scTransactionsMerkleRootHash;
@@ -189,7 +192,25 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
 
     @Override
     public ScorexEncoder encoder() {
-        return null;
+        return new ScorexEncoder();
     }
 
+    @Override
+    public Json toJson() {
+        ArrayList<Json> arr = new ArrayList<>();
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = this.encoder();
+
+        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("fee", Json.fromLong(this.fee()));
+        values.put("timestamp", Json.fromLong(this._timestamp));
+
+        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(encoder.encode(this._mc2scTransactionsMerkleRootHash)));
+
+        for(Box<Proposition> b : this.newBoxes())
+            arr.add(b.toJson());
+        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        return Json.obj(values.toSeq());
+    }
 }

@@ -8,6 +8,7 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.TransactionJsonSerializer;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -72,5 +73,10 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     @Override
     public byte transactionTypeId() {
         return 11;
+    }
+
+    @Override
+    public Json toJson() {
+        return null;
     }
 }

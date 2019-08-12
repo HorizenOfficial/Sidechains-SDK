@@ -1,12 +1,10 @@
 package com.horizen.transaction
 
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
-import scorex.util.bytesToId
-
+import com.horizen.serialization.JsonSerializable
 
 abstract class Transaction
   extends scorex.core.transaction.Transaction with TransactionJsonSerializable
+  with JsonSerializable
 {
   def transactionTypeId: Byte
 }

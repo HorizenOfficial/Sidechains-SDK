@@ -2,18 +2,22 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
+import java.io.{File => JFile}
 
 import scala.collection.immutable.Map
+import scala.collection
 import akka.actor.ActorRef
 import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.MainNetParams
+import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
+import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, Storage}
+import com.horizen.transaction.TransactionSerializer
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
+import io.iohk.iodb.LSMStore
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute}
 import scorex.core.app.Application
@@ -27,7 +31,7 @@ import com.horizen.forge.ForgerRef
 import io.circe.Encoder
 import scorex.core.serialization.SerializerRegistry.SerializerRecord
 
-import scala.concurrent.ExecutionContext
+import scala.collection.mutable
 import scala.io.Source
 
 class SidechainApp(val settingsFilename: String)
@@ -40,6 +44,8 @@ class SidechainApp(val settingsFilename: String)
 
   private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
   override implicit lazy val settings: ScorexSettings = SidechainSettings.read(Some(settingsFilename)).scorexSettings
+
+  private val storageList = mutable.ListBuffer[Storage]()
 
   System.out.println(s"Starting application with settings \n$sidechainSettings")
   log.debug(s"Starting application with settings \n$sidechainSettings")
@@ -59,8 +65,31 @@ class SidechainApp(val settingsFilename: String)
 
   }
   val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id)
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, params, timeProvider, sidechainBoxesCompanion,
-    sidechainSecretsCompanion, sidechainTransactionsCompanion, defaultApplicationWallet, defaultApplicationState)
+
+  protected val sidechainSecretStorage = new SidechainSecretStorage(
+    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
+    sidechainSecretsCompanion)
+  protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
+    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
+    sidechainBoxesCompanion)
+  protected val sidechainStateStorage = new SidechainStateStorage(
+    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
+    sidechainBoxesCompanion)
+  protected val sidechainHistoryStorage = new SidechainHistoryStorage(
+    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
+    sidechainTransactionsCompanion, new MainNetParams())
+
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
+    sidechainStateStorage, sidechainWalletBoxStorage, sidechainSecretStorage, new MainNetParams(), timeProvider,
+    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
+
+  override val nodeViewSynchronizer: ActorRef =
+    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
+      SidechainBlock, SidechainHistory, SidechainMemoryPool]
+      (networkControllerRef, nodeViewHolderRef,
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
+        Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]]() //TODO Must be specified
+      ))
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, sidechainTransactionsCompanion, params)
@@ -87,15 +116,20 @@ class SidechainApp(val settingsFilename: String)
     //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
-  override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
-      SidechainBlock, SidechainHistory, SidechainMemoryPool]
-      (networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-       Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]]() //TODO Must be specified
-      ))
-
   override val swaggerConfig: String = Source.fromResource("api/testApi.yaml").getLines.mkString("\n")
+
+  override def stopAll(): Unit = {
+    super.stopAll()
+    storageList.foreach(_.close())
+  }
+
+  //TODO additional initialization (see HybridApp)
+  private def openStorage(storagePath: JFile) : Storage = {
+    storagePath.mkdirs()
+    val storage = new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+    storageList += storage
+    storage
+  }
 
   // Note: ignore this at the moment
   // waiting WS client interface
@@ -103,13 +137,10 @@ class SidechainApp(val settingsFilename: String)
 
   // waiting WS client interface
   private def getMainchainConnectionInfo  = ???
-
-  //TODO additional initialization (see HybridApp)
 }
 
 object SidechainApp extends App {
   private val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
-  val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
   val app = new SidechainApp(settingsFilename)
   app.run()
   app.log.info("Sidechain application successfully started...")

@@ -16,6 +16,7 @@ import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.JsonSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -25,7 +26,9 @@ import scorex.core.utils.ScorexEncoder;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
+public final class RegularTransaction
+    extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
+    implements JsonSerializable
 {
 
     public static final byte TRANSACTION_TYPE_ID = 1;
@@ -249,6 +252,33 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
 
     //@Override
     public ScorexEncoder encoder() {
-        return null;
+        return new ScorexEncoder();
+    }
+
+    @Override
+    public Json toJson() {
+        ArrayList<Json> arr = new ArrayList<>();
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = this.encoder();
+
+        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("fee", Json.fromLong(this._fee));
+        values.put("timestamp", Json.fromLong(this._timestamp));
+
+        for(RegularBox b : this._inputs)
+            arr.add(b.toJson());
+        values.put("inputs", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        arr.clear();
+        for(RegularBox b : this.newBoxes())
+            arr.add(b.toJson());
+        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        arr.clear();
+        for(Signature25519 s : this._signatures)
+            arr.add(s.toJson());
+        values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        return Json.obj(values.toSeq());
     }
 }

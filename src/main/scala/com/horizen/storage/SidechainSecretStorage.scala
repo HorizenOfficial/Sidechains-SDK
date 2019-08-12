@@ -144,4 +144,6 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     this
   }
 
+  def isEmpty: Boolean = !storage.lastVersionID().isPresent
+
 }

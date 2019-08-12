@@ -20,6 +20,7 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(Signature25519 signature) {
         return signature.bytes();
@@ -29,14 +30,15 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
     public Try<Signature25519> parseBytesTry(byte[] bytes) {
         return Signature25519.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(Signature25519 obj, Writer writer) {
-
+    public void serialize(Signature25519 signature, Writer writer) {
+        writer.putBytes(signature.bytes());
     }
 
     @Override
     public Signature25519 parse(Reader reader) {
-        return null;
+        return Signature25519.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

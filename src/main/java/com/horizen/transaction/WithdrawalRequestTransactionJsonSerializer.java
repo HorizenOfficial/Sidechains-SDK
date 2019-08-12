@@ -25,7 +25,7 @@ public class WithdrawalRequestTransactionJsonSerializer implements TransactionJs
     }
 
     @Override
-    public Try<WithdrawalRequestTransaction> tryParseJson() {
+    public Try<WithdrawalRequestTransaction> parseJsonTry() {
         return null;
     }
 }

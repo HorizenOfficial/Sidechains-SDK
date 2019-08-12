@@ -157,7 +157,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               case Some(t) =>
                 if(format){
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> ("transaction", t.json.asString.get))
+                  ApiResponse("result" -> ("transaction", t.toJson.asString.get))
                 }else{
                   ApiResponse("result"->companion.toBytes(t))
                 }
@@ -187,7 +187,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             tryTX match{
               case Success(tx) =>
                 //TO-DO JSON representation of transaction
-                ApiResponse("result" -> ("transaction", tx.json.asString.get))
+                ApiResponse("result" -> ("transaction", tx.toJson.asString.get))
               case Failure(exp) =>
                 // TO-DO Change the errorCode
                 ApiResponse("error" -> ("errorCode" -> 99999, "errorDescription" -> exp.getMessage))
@@ -262,7 +262,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> ("regularTransaction", regularTransaction.json.asString.get))
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.toJson.asString.get))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))
@@ -298,7 +298,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               if(req.format)
                 {
                   //TO-DO JSON representation of transaction
-                  ApiResponse("result" -> ("regularTransaction", regularTransaction.json.asString.get))
+                  ApiResponse("result" -> ("regularTransaction", regularTransaction.toJson.asString.get))
                 }
               else
                 ApiResponse("result" -> RegularTransactionSerializer.getSerializer.toBytes(regularTransaction))

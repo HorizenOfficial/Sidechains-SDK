@@ -25,7 +25,7 @@ public class CertifierUnlockRequestTransactionJsonSerializer implements Transact
     }
 
     @Override
-    public Try<CertifierUnlockRequestTransaction> tryParseJson() {
+    public Try<CertifierUnlockRequestTransaction> parseJsonTry() {
         return null;
     }
 }

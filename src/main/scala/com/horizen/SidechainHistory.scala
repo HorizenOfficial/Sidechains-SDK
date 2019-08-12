@@ -455,45 +455,24 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 }
 
 
-object SidechainHistory {
-  private def openStorage(storagePath: JFile) : Storage = {
-    storagePath.mkdirs()
-    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
-  }
+object SidechainHistory
+{
+  private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
+                                      params: NetworkParams) : Option[SidechainHistory] = {
 
-  private def openHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams) : SidechainHistoryStorage = {
-
-    val historyStorage = new SidechainHistoryStorage(storage, sidechainTransactionsCompanion, params)
-
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        storage.close()
-      }
-    })
-
-    historyStorage
-  }
-
-  private[horizen] def restoreHistory(sidechainSettings: SidechainSettings, sidechainTransactionsCompanion: SidechainTransactionsCompanion,
-                                      params: NetworkParams, externalStorage: Option[Storage]) : Option[SidechainHistory] = {
-
-    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")))
-
-    if (storage.lastVersionID().isPresent)
-      Some(new SidechainHistory(openHistoryStorage(storage, sidechainTransactionsCompanion, params), params))
+    if (!historyStorage.isEmpty)
+      Some(new SidechainHistory(historyStorage, params))
     else
       None
   }
 
-  private[horizen] def genesisHistory(sidechainSettings: SidechainSettings, sidechainTransactionsCompanion: SidechainTransactionsCompanion,
-                                      params: NetworkParams, externalStorage: Option[Storage]) : Option[SidechainHistory] = {
+  private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
+                                      params: NetworkParams, genesisBlock: SidechainBlock) : Option[SidechainHistory] = {
 
-    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")))
-
-    if (!storage.lastVersionID().isPresent)
-      new SidechainHistory(openHistoryStorage(storage, sidechainTransactionsCompanion, params), params)
-        .append(sidechainSettings.genesisBlock.get) match {
-        case Success((history, progressInfo)) => Some(history.reportModifierIsValid(sidechainSettings.genesisBlock.get))
+    if (historyStorage.isEmpty)
+      new SidechainHistory(historyStorage, params)
+        .append(genesisBlock) match {
+        case Success((history, progressInfo)) => Some(history.reportModifierIsValid(genesisBlock))
         case _ => None
       }
     else

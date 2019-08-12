@@ -1,5 +1,7 @@
 package com.horizen.fixtures
 
+import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+
 import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
@@ -77,9 +79,9 @@ trait BoxFixture
     Random.nextBytes(txId)
 
     boxClass match {
-      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
-      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), BytesUtils.toHexString(txId), Random.nextInt(100000))
-      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox().asInstanceOf[SidechainTypes#SCB], BytesUtils.toHexString(txId), Random.nextInt(100000))
+      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox().asInstanceOf[SidechainTypes#SCB], bytesToId(txId), Random.nextInt(100000))
       case _ => null
     }
   }
@@ -99,7 +101,7 @@ trait BoxFixture
     Random.nextBytes(txId)
 
     for (b <- boxList.asScala)
-      wboxList.add(new WalletBox(b, BytesUtils.toHexString(txId), Random.nextInt(100000)))
+      wboxList.add(new WalletBox(b, bytesToId(txId), Random.nextInt(100000)))
 
     wboxList
   }

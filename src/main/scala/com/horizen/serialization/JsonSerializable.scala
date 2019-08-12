@@ -1,14 +1,12 @@
 package com.horizen.serialization
 
 import io.circe.Json
-import scorex.core.serialization.BytesSerializable
 
-trait JsonSerializable extends BytesSerializable{
+trait JsonSerializable {
 
-  override type M >: this.type <: JsonSerializable
+  type J >: this.type  <: JsonSerializable
 
-  def json: Json = jsonSerializer.toJson(this)
+  def toJson : Json
 
-  def jsonSerializer: JsonSerializer[M]
-
+  def jsonSerializer : JsonSerializer[J]
 }

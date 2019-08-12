@@ -8,6 +8,5 @@ trait JsonSerializer[T <: JsonSerializable] {
 
   def toJson(obj : T) : Json
 
-  def tryParseJson: Try[T]
-
+  def parseJsonTry : Try[T]
 }

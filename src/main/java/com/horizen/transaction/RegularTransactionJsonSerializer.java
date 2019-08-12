@@ -25,7 +25,7 @@ public class RegularTransactionJsonSerializer implements TransactionJsonSerializ
     }
 
     @Override
-    public Try<RegularTransaction> tryParseJson() {
+    public Try<RegularTransaction> parseJsonTry() {
         return null;
     }
 }

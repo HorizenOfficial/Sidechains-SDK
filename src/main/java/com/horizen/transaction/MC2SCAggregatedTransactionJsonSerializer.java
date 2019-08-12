@@ -25,7 +25,7 @@ public class MC2SCAggregatedTransactionJsonSerializer implements TransactionJson
     }
 
     @Override
-    public Try<MC2SCAggregatedTransaction> tryParseJson() {
+    public Try<MC2SCAggregatedTransaction> parseJsonTry() {
         return null;
     }
 }

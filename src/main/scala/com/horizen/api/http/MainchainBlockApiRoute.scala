@@ -74,7 +74,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
               "mainchainBlockReference" ->
               {
                 if(format)
-                  mcBlockRef.json.asString.get
+                  mcBlockRef.toJson.asString.get
                 else
                   MainchainBlockReferenceSerializer.toBytes(mcBlockRef).toString
               },
@@ -114,7 +114,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 ApiResponse("result" ->
                   {
                     if(format)
-                      aBlock.json.asString.get
+                      aBlock.toJson.asString.get
                     else
                       MainchainBlockReferenceSerializer.toBytes(aBlock).toString
                   })
