@@ -21,6 +21,7 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(RegularTransaction transaction) {
         return transaction.bytes();
@@ -30,15 +31,16 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
     public Try<RegularTransaction> parseBytesTry(byte[] bytes) {
         return RegularTransaction.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(RegularTransaction obj, Writer writer) {
-
+    public void serialize(RegularTransaction transaction, Writer writer) {
+        writer.putBytes(transaction.bytes());
     }
 
     @Override
     public RegularTransaction parse(Reader reader) {
-        return null;
+        return RegularTransaction.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }
 

@@ -20,6 +20,7 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(MC2SCAggregatedTransaction transaction) {
         return transaction.bytes();
@@ -29,15 +30,16 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
     public Try<MC2SCAggregatedTransaction> parseBytesTry(byte[] bytes) {
         return MC2SCAggregatedTransaction.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(MC2SCAggregatedTransaction obj, Writer writer) {
-
+    public void serialize(MC2SCAggregatedTransaction transaction, Writer writer) {
+        writer.putBytes(transaction.bytes());
     }
 
     @Override
     public MC2SCAggregatedTransaction parse(Reader reader) {
-        return null;
+        return MC2SCAggregatedTransaction.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }
 

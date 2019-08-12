@@ -20,6 +20,7 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(ForwardTransfer transaction) {
         return transaction.bytes();
@@ -29,14 +30,15 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
     public Try<ForwardTransfer> parseBytesTry(byte[] bytes) {
         return ForwardTransfer.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(ForwardTransfer obj, Writer writer) {
-
+    public void serialize(ForwardTransfer transaction, Writer writer) {
+        writer.putBytes(transaction.bytes());
     }
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        return null;
+        return ForwardTransfer.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

@@ -1,19 +1,26 @@
 package com.horizen.proposition;
 
+import io.circe.Json;
+import io.circe.Json$;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.ScorexEncoding;
+import com.horizen.serialization.JsonSerializable;
 
+import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.crypto.signatures.Curve25519;
 import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
 
-public final class PublicKey25519Proposition extends ScorexEncoding implements ProofOfKnowledgeProposition<PrivateKey25519>
+public final class PublicKey25519Proposition
+    extends ScorexEncoding
+    implements ProofOfKnowledgeProposition<PrivateKey25519>
+    , JsonSerializable
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
@@ -115,6 +122,16 @@ public final class PublicKey25519Proposition extends ScorexEncoding implements P
     public static int getLength() {
         return KEY_LENGTH;
     }
+
+    public Json toJson() {
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = new ScorexEncoder();
+
+        values.put("publicKey", Json.fromString(encoder.encode(this._pubKeyBytes)));
+
+        return Json.obj(values.toSeq());
+    }
+
 
 }
 

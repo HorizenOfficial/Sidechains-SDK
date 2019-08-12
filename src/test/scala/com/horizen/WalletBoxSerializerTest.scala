@@ -1,5 +1,7 @@
 package com.horizen
 
+import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+
 import com.horizen.box.{Box, BoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
@@ -29,7 +31,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     Random.nextBytes(transactionIdBytes)
     val walletBoxWithRegularBox = new WalletBox(
       getRegularBox(getSecret("seed1".getBytes), 1, 100),
-      BytesUtils.toHexString(transactionIdBytes),
+      bytesToId(transactionIdBytes),
       10000)
     serializer = walletBoxWithRegularBox.serializer(sidechainBoxesCompanion)
     bytes = serializer.toBytes(walletBoxWithRegularBox)
@@ -41,7 +43,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     Random.nextBytes(transactionIdBytes)
     val walletBoxWithCustomBox = new WalletBox(
       getCustomBox().asInstanceOf[SidechainTypes#SCB],
-      BytesUtils.toHexString(transactionIdBytes),
+      bytesToId(transactionIdBytes),
       20000)
     serializer = walletBoxWithCustomBox.serializer(sidechainBoxesCompanion)
     bytes = serializer.toBytes(walletBoxWithCustomBox)

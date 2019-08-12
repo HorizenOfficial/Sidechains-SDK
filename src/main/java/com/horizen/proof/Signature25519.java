@@ -2,15 +2,21 @@ package com.horizen.proof;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.serialization.JsonSerializable;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
+public final class Signature25519
+    implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition>
+    , JsonSerializable
+{
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
     byte[] _signatureBytes;
@@ -61,5 +67,15 @@ public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, P
         int result = Objects.hash(SIGNATURE_LENGTH);
         result = 31 * result + Arrays.hashCode(_signatureBytes);
         return result;
+    }
+
+    @Override
+    public Json toJson() {
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = new ScorexEncoder();
+
+        values.put("signature", Json.fromString(encoder.encode(this._signatureBytes)));
+
+        return Json.obj(values.toSeq());
     }
 }

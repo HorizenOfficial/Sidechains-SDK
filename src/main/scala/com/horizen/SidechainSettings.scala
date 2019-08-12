@@ -5,9 +5,11 @@ import java.util.{HashMap => JHashMap}
 import java.time.Instant
 
 import com.horizen.block.SidechainBlock
+import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.util.ScorexLogging
 import scorex.util._
@@ -16,8 +18,12 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
+  private def getGenesisTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = {
+    Seq()
+  }
+
   lazy val genesisBlock : Option[SidechainBlock] = SidechainBlock.create(
-    bytesToId(new Array[Byte](32)),
+    SidechainSettings.genesisParentBlockId,
     Instant.now.getEpochSecond - 10000,
     Seq(),
     Seq(),
@@ -32,6 +38,9 @@ object SidechainSettings
   extends ScorexLogging
     with SettingsReaders
 {
+
+  val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(Random.randomBytes())
+
   def read(userConfigPath: Option[String]): SidechainSettings = {
     //fromConfig(readConfigFromPath(userConfigPath, "scorex"))
     new SidechainSettings(ScorexSettings.read(userConfigPath))

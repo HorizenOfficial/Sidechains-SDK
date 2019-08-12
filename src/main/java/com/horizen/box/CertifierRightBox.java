@@ -3,13 +3,19 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.serialization.JsonSerializable;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.core.utils.ScorexEncoder;
+
 import java.util.Arrays;
 
 // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
-public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25519Proposition>
+public final class CertifierRightBox
+    extends PublicKey25519NoncedBox<PublicKey25519Proposition>
+    implements JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 2;
@@ -73,5 +79,19 @@ public final class CertifierRightBox extends PublicKey25519NoncedBox<PublicKey25
         } catch (Exception e) {
             return new Failure<>(e);
         }
+    }
+
+    @Override
+    public Json toJson() {
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = new ScorexEncoder();
+
+        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("proposition", this._proposition.toJson());
+        values.put("value", Json.fromLong(this._value));
+        values.put("nonce", Json.fromLong(this._nonce));
+        values.put("activeFromWithdrawalEpoch", Json.fromLong(this._activeFromWithdrawalEpoch));
+
+        return Json.obj(values.toSeq());
     }
 }

@@ -173,4 +173,6 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     activeChain.updateTip(block.id, blockInfo)
     this
   }
+
+  def isEmpty: Boolean = !storage.lastVersionID().isPresent
 }

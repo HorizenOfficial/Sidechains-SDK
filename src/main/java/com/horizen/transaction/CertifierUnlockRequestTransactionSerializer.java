@@ -28,6 +28,7 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
         _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
+    /*
     @Override
     public byte[] toBytes(T obj) {
         return _boxSerializer.toBytes(obj.newBoxes());
@@ -38,14 +39,16 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
         List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(bytes).get();
         return null;
     }
+    */
 
     @Override
-    public void serialize(T obj, Writer writer) {
-
+    public void serialize(T transaction, Writer writer) {
+        writer.putBytes(_boxSerializer.toBytes(transaction.newBoxes()));
     }
 
     @Override
     public T parse(Reader reader) {
+        List<NoncedBox<Proposition>> boxes = _boxSerializer.parse(reader);
         return null;
     }
 }

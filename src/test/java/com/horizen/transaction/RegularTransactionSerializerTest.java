@@ -10,6 +10,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
@@ -43,6 +44,16 @@ public class RegularTransactionSerializerTest {
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
+
+        /*
+        //Save transaction to binary file for regression tests.
+        try {
+            FileOutputStream out = new FileOutputStream("src/test/resources/regulartransaction_bytes");
+            out.write(transaction.serializer().toBytes(transaction));
+            out.close();
+        } catch (Throwable e) {
+        }
+        */
     }
 
     @Test

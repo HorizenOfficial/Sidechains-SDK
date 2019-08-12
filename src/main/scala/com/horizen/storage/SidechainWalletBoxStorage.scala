@@ -160,4 +160,6 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     this
   }
 
+  def isEmpty: Boolean = !storage.lastVersionID().isPresent
+
 }

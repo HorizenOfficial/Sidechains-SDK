@@ -86,4 +86,6 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     this
   }
 
+  def isEmpty: Boolean = !storage.lastVersionID().isPresent
+
 }

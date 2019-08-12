@@ -1,6 +1,7 @@
 package com.horizen.box;
 
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
 
 /**
  * Just to not farget what is a Box interface
@@ -19,7 +20,9 @@ import com.horizen.proposition.Proposition;
  */
 
 
-public interface Box<P extends Proposition> extends scorex.core.transaction.box.Box<P>
+public interface Box<P extends Proposition>
+    extends scorex.core.transaction.box.Box<P>
+    , JsonSerializable
 {
     @Override
     long value();

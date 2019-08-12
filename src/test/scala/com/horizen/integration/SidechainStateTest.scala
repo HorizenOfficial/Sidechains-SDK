@@ -46,6 +46,12 @@ class SidechainStateTest
   val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
 
+  val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
+  stateDir.mkdirs()
+  val store = getStore(stateDir)
+
+  val stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val boxVersion = getVersion
   val transactionList = new ListBuffer[RegularTransaction]()
@@ -92,12 +98,6 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
-    stateDir.mkdirs()
-    val store = getStore(stateDir)
-
-    val stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
-
     stateStorage.update(boxVersion, boxList.toSet, Set[Array[Byte]]())
 
   }
@@ -115,7 +115,7 @@ class SidechainStateTest
         tmpDir
       })
 
-    val sidechainState : SidechainState = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None).get
+    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, applicationState).get
 
     for (b <- boxList) {
       //Test get

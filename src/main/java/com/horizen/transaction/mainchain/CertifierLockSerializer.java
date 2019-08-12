@@ -20,6 +20,7 @@ public final class CertifierLockSerializer implements SidechainRelatedMainchainO
         return serializer;
     }
 
+    /*
     @Override
     public byte[] toBytes(CertifierLock transaction) {
         return transaction.bytes();
@@ -29,14 +30,15 @@ public final class CertifierLockSerializer implements SidechainRelatedMainchainO
     public Try<CertifierLock> parseBytesTry(byte[] bytes) {
         return CertifierLock.parseBytes(bytes);
     }
+    */
 
     @Override
-    public void serialize(CertifierLock obj, Writer writer) {
-
+    public void serialize(CertifierLock transaction, Writer writer) {
+        writer.putBytes(transaction.bytes());
     }
 
     @Override
     public CertifierLock parse(Reader reader) {
-        return null;
+        return CertifierLock.parseBytes(reader.getBytes(reader.remaining())).get();
     }
 }

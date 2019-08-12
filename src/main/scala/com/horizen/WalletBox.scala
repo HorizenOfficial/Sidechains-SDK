@@ -8,12 +8,13 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.proposition.Proposition
 import com.horizen.utils.BytesUtils
 import scorex.core.serialization.ScorexSerializer
-import scorex.core.{NodeViewModifier, idToBytes}
+import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 
-class WalletBox(val box: SidechainTypes#SCB, val transactionId: String, val createdAt: Long)
+class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val createdAt: Long)
   extends SidechainTypes
   with scorex.core.utils.ScorexEncoding
 {
@@ -38,6 +39,7 @@ class WalletBox(val box: SidechainTypes#SCB, val transactionId: String, val crea
 class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
   extends ScorexSerializer[WalletBox]
 {
+  /*
   override def toBytes(walletBox: WalletBox): Array[Byte] = {
     Bytes.concat(BytesUtils.fromHexString(walletBox.transactionId), Longs.toByteArray(walletBox.createdAt),
       sidechainBoxesCompanion.toBytes(walletBox.box))
@@ -52,8 +54,18 @@ class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
       case Failure(exception) => throw new Exception(exception)
     }
   }
+  */
 
-  override def serialize(obj: WalletBox, w: Writer): Unit = ???
+  override def serialize(walletBox: WalletBox, writer: Writer): Unit = {
+    writer.putBytes(idToBytes(walletBox.transactionId))
+    writer.putLong(walletBox.createdAt)
+    sidechainBoxesCompanion.serialize(walletBox.box, writer)
+  }
 
-  override def parse(r: Reader): WalletBox = ???
+  override def parse(reader: Reader): WalletBox = {
+    val txId = bytesToId(reader.getBytes(NodeViewModifier.ModifierIdSize))
+    val createdAt = reader.getLong()
+    val box = sidechainBoxesCompanion.parse(reader)
+    new WalletBox(box, txId, createdAt)
+  }
 }
