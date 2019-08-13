@@ -92,6 +92,7 @@ public final class CertifierRightBox
         values.put("value", Json.fromLong(this._value));
         values.put("nonce", Json.fromLong(this._nonce));
         values.put("activeFromWithdrawalEpoch", Json.fromLong(this._activeFromWithdrawalEpoch));
+        values.put("typeId", Json.fromLong(this.boxTypeId()));
 
         return Json.obj(values.toSeq());
     }

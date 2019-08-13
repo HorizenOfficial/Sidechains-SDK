@@ -1,16 +1,12 @@
 package com.horizen.api.http
 
-import java.util
 import java.util.function.Consumer
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import com.horizen.SidechainTypes
-import com.horizen.box.BoxSerializer
-import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
-import com.horizen.utils.BytesUtils
 import io.circe.Json
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
@@ -29,9 +25,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             {getAllBoxes ~ getBoxesOfType ~ getBalance ~ getBalanceOfType ~
               createNewPublicKeyProposition ~ getPropositions ~ getPublicKeyPropositionByType}
 
-
-  private var boxCompanion : SidechainBoxesCompanion = new SidechainBoxesCompanion(new util.HashMap[java.lang.Byte, BoxSerializer[SidechainTypes#SCB]]())
-
   /**
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list.
     */
@@ -45,15 +38,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
           case Success(req) =>
             var wallet = sidechainNodeView.getNodeWallet
             var idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
-            var closedBoxes = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => Json.obj(
-                "boxHex" -> Json.fromString(BytesUtils.toHexString(boxCompanion.toBytes(box))),
-                "box" -> box.toJson
-              )
-            )
+            var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
 
-            //var scalaClosedBoxesSerialized = closedBoxes.asScala.map(box => ("box", boxCompanion.toBytes(box)))
-
-            ApiResponse("result" -> Json.fromValues(closedBoxes))
+            ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
@@ -78,9 +65,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
 
             var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
-            var scalaClosedBoxesSerialized = allClosedBoxesByType.asScala.map(box => ("box", boxCompanion.toBytes(box)))
+            var closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
 
-            ApiResponse("result" -> scalaClosedBoxesSerialized)
+            ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }

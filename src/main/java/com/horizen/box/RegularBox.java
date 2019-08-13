@@ -75,6 +75,7 @@ public final class RegularBox
         values.put("proposition", this._proposition.toJson());
         values.put("value", Json.fromLong(this._value));
         values.put("nonce", Json.fromLong(this._nonce));
+        values.put("typeId", Json.fromLong(this.boxTypeId()));
 
         return Json.obj(values.toSeq());
     }
