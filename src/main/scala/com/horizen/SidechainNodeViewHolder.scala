@@ -54,7 +54,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
       wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock) match {
         case w: Some[SidechainWallet] => w
-        case None => throw new RuntimeException("WalletBox and/or Secret storages are not empty!")
+        case None => throw new RuntimeException("WalletBox storage is not empty!")
       }
       pool <- Some(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)

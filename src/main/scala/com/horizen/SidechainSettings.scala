@@ -1,15 +1,15 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
-import java.time.Instant
+import java.lang.{Byte => JByte, Long => JLong}
+import java.util.{HashMap => JHashMap, ArrayList => JArrayList}
+import javafx.util.{Pair => JPair}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.box.NoncedBox
+import com.horizen.box.{NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.proposition.Proposition
-import com.horizen.secret.PrivateKey25519Creator
-import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.transaction.{RegularTransaction, SidechainTransaction, TransactionSerializer}
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.util.ScorexLogging
 import scorex.util._
@@ -18,22 +18,40 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
+  val secretKey = PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(123).getBytes)
+
+  val targetSecretKey = PrivateKey25519Creator.getInstance().generateSecret("target".getBytes)
+
   private def getGenesisTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = {
-    Seq()
+    val fee = 10
+    val timestamp = 1547798549470L
+
+    val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
+    val to = new JArrayList[JPair[PublicKey25519Proposition, JLong]]
+
+    val creator = PrivateKey25519Creator.getInstance
+
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 1, 1000), secretKey))
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 2, 2000), secretKey))
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 3, 100), secretKey))
+
+    to.add(new JPair[PublicKey25519Proposition, JLong](targetSecretKey.publicImage, 100L))
+
+    val transaction = RegularTransaction.create(from, to, fee, timestamp)
+    Seq(transaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
   }
 
   lazy val genesisBlock : Option[SidechainBlock] = SidechainBlock.create(
     SidechainSettings.genesisParentBlockId,
     1565162709L, // Wednesday, August 7, 2019 7:25:09 AM
     Seq(),
-    Seq(),
-    PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(123).getBytes),
+    getGenesisTransactions,
+    secretKey,
     sidechainTransactionsCompanion,
     null
   ).toOption
 
 }
-
 
 object SidechainSettings
   extends ScorexLogging
