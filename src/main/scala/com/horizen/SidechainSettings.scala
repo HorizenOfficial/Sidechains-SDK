@@ -23,7 +23,7 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
   val targetSecretKey = PrivateKey25519Creator.getInstance().generateSecret("target".getBytes)
 
   private def getGenesisTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = {
-    val fee = 10
+    val fee = 0
     val timestamp = 1547798549470L
 
     val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
@@ -31,11 +31,11 @@ case class SidechainSettings(scorexSettings: ScorexSettings) {
 
     val creator = PrivateKey25519Creator.getInstance
 
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 1, 1000), secretKey))
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 2, 2000), secretKey))
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 3, 100), secretKey))
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 1, 100000L), secretKey))
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 2, 200000L), secretKey))
+    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(secretKey.publicImage, 3, 100000L), secretKey))
 
-    to.add(new JPair[PublicKey25519Proposition, JLong](targetSecretKey.publicImage, 100L))
+    to.add(new JPair[PublicKey25519Proposition, JLong](targetSecretKey.publicImage, 400000L))
 
     val transaction = RegularTransaction.create(from, to, fee, timestamp)
     Seq(transaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])

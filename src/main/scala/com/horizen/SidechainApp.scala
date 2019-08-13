@@ -78,7 +78,7 @@ class SidechainApp(val settingsFilename: String)
     sidechainTransactionsCompanion, params)
 
   //TODO remove these test settings
-  sidechainSecretStorage.add(sidechainSettings.secretKey)
+  sidechainSecretStorage.add(sidechainSettings.targetSecretKey)
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
