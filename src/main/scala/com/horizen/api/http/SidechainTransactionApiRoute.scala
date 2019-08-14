@@ -17,12 +17,14 @@ import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, Public
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.{SidechainTypes, transaction}
 import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, Transaction, TransactionSerializer}
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import io.circe.syntax._
 import javafx.util.Pair
+
+import io.circe.Json
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
@@ -183,11 +185,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[DecodeRawTransactionRequest](body)match {
           case Success(req) =>
-            var tryTX = companion.parseBytesTry(req.rawtxdata.getBytes)
+            var bytes = BytesUtils.fromHexString(req.rawtxdata)
+            var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(req.rawtxdata))
             tryTX match{
               case Success(tx) =>
                 //TO-DO JSON representation of transaction
-                ApiResponse("result" -> ("transaction", tx.toJson.asString.get))
+                ApiResponse("result" -> Json.obj(("transaction", tx.toJson)))
               case Failure(exp) =>
                 // TO-DO Change the errorCode
                 ApiResponse("error" -> ("errorCode" -> 99999, "errorDescription" -> exp.getMessage))
