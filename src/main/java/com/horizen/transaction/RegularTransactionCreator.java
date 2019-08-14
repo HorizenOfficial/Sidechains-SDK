@@ -57,12 +57,13 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
+        List<Pair<PublicKey25519Proposition, Long>> toResult = new ArrayList<>(to);
         if(current_amount > to_amount) {
-            to.add(new Pair<>(changeAddress, current_amount - to_amount));
+            toResult.add(new Pair<>(changeAddress, current_amount - to_amount));
         }
 
         // TO DO: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
         long timestamp = System.currentTimeMillis();
-        return RegularTransaction.create(from, to, fee, timestamp);
+        return RegularTransaction.create(from, toResult, fee, timestamp);
     }
 }

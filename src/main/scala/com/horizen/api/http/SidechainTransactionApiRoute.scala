@@ -16,8 +16,8 @@ import com.horizen.node.{NodeMemoryPool, NodeWallet, SidechainNodeView}
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.{SidechainTypes, transaction}
-import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, Transaction, TransactionSerializer}
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.transaction._
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
@@ -313,6 +313,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     }
   }
 
+  // Note: method should return Try[RegularTransaction]
   private def createRegularTransactionSimplified_(
                                                   outputList: List[(String, Long)], fee: Long, wallet : NodeWallet,
                                                   sidechainNodeView : SidechainNodeView) : RegularTransaction = {
@@ -330,32 +331,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       }
     })
 
-    val boxes = wallet.boxesOfType(
-      scala.Predef.classOf[PublicKey25519NoncedBox[PublicKey25519Proposition]],
-      JavaConverters.bufferAsJavaList(boxIdsToExclude))
+    var outputs: java.util.List[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
+      new Pair(new PublicKey25519Proposition(BytesUtils.fromHexString(element._1)), new lang.Long(element._2))).asJava
 
-    val inputs : IndexedSeq[Pair[RegularBox, PrivateKey25519]] = IndexedSeq[Pair[RegularBox, PrivateKey25519]]()
-
-    boxes.forEach(new Consumer[Box[_ <: Proposition]] {
-      override def accept(t: Box[_ <: Proposition]): Unit = {
-        var box = t.asInstanceOf[PublicKey25519NoncedBox[PublicKey25519Proposition]]
-        var secret = wallet.secretByPublicKey(box.proposition())
-        var privateKey = secret.get().asInstanceOf[PrivateKey25519]
-        wallet.secretByPublicKey(box.proposition()).get().asInstanceOf[PrivateKey25519]
-        var pair = new Pair(
-          new RegularBox(privateKey.publicImage, box.nonce(), box.value()),
-          privateKey)
-        inputs.+:(pair)
-      }
-    })
-
-    val outputs : IndexedSeq[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
-      new Pair(PublicKey25519PropositionSerializer.getSerializer().parseBytes(element._1.getBytes()), new lang.Long(element._2))).toIndexedSeq
-
-    RegularTransaction.create(
-      JavaConverters.seqAsJavaList(inputs),
-      JavaConverters.seqAsJavaList(outputs),
-      fee, System.currentTimeMillis())
+    var tx: RegularTransaction = null
+    try {
+      tx = RegularTransactionCreator.create(wallet, outputs, wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
+    }
+    catch {
+      case e: Exception => log.error(s"RegularTransaction creaion error: ${e.getMessage}")
+    }
+    tx // to do: see note above
   }
 
   /**
@@ -364,7 +350,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     */
   def sendCoinsToAddress : Route = (post & path("sendCoinsToAddress"))
   {
-    case class SendCoinsToAddressesRequest(outputs: List[(String, Long)], fee: Long){
+    // Note: Sergii, you can use your own classes instead of SendCoinsToAddressesOutputsRequest
+    case class SendCoinsToAddressesOutputsRequest(to: String, value: Long){
+    }
+
+    case class SendCoinsToAddressesRequest(outputs: List[SendCoinsToAddressesOutputsRequest], fee: Long){
       require(outputs.nonEmpty, "Empty outputs list")
       require(fee >= 0, "Negative fee. Fee must be >= 0")
     }
@@ -373,7 +363,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[SendCoinsToAddressesRequest](body)match {
           case Success(req) =>
-            var outputList = req.outputs
+            var outputList = req.outputs.map(output => (output.to, output.value))
             var fee = req.fee
             val wallet = sidechainNodeView.getNodeWallet
 
