@@ -62,7 +62,8 @@ trait SidechainNodeViewHolderFixture
     getStorage(),
     sidechainTransactionsCompanion, params)
 
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey)
+  sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
+  sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
 
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,

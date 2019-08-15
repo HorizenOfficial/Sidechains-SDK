@@ -44,27 +44,26 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     */
   def getMemoryPool : Route = (post & path("getMemoryPool"))
   {
-    case class GetMempoolRequest(formatMemPool: Boolean = false)
+    case class GetMempoolRequest(format: Option[Boolean] = Some(true))
 
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetMempoolRequest](body)match {
           case Success(req) =>
-            var formatMemPool = req.formatMemPool
             var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
-            if(formatMemPool){
-              ApiResponse("result" -> unconfirmedTxs.asScala.map(tx => ("transactionId", tx.id.toString)))
+            if(req.format.getOrElse(true)){
+              ApiResponse(
+                "result" -> Json.obj(
+                  "transactions" -> Json.fromValues(unconfirmedTxs.asScala.map(tx => tx.toJson))
+                )
+              )
+            } else {
+              ApiResponse(
+                "result" -> Json.obj(
+                  "transactions" -> Json.fromValues(unconfirmedTxs.asScala.map(tx => Json.fromString(tx.id.toString)))
+                )
+              )
             }
-             else
-              {
-                var valuesArray : Array[Array[Byte]] = Array[Array[Byte]]()
-                unconfirmedTxs.forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
-                  override def accept(t: transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]): Unit = {
-                    valuesArray.+:(companion.toBytes(t))
-                  }
-              })
-                ApiResponse("result" -> valuesArray.map(tx => ("transaction", tx)))
-              }
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
       }
@@ -356,9 +355,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     case class SendCoinsToAddressesOutputsRequest(to: String, value: Long){
     }
 
-    case class SendCoinsToAddressesRequest(outputs: List[SendCoinsToAddressesOutputsRequest], fee: Long){
+    case class SendCoinsToAddressesRequest(outputs: List[SendCoinsToAddressesOutputsRequest], fee: Option[Long]){
       require(outputs.nonEmpty, "Empty outputs list")
-      require(fee >= 0, "Negative fee. Fee must be >= 0")
+      require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
     }
 
     entity(as[String]) { body =>
@@ -370,7 +369,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             val wallet = sidechainNodeView.getNodeWallet
 
             try {
-              var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
+              var regularTransaction = createRegularTransactionSimplified_(outputList, fee.getOrElse(0L), wallet, sidechainNodeView)
               validateAndSendTransaction(regularTransaction)
             }catch {
               case t : Throwable =>
@@ -391,7 +390,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier){
           case Success(result) =>
-            ApiResponse("result" -> ("transactionId" -> transaction.id.toString))
+            ApiResponse("result" -> Json.obj("transactionId" -> Json.fromString(transaction.id)))
           case Failure(exp) =>
             // TO-DO Change the errorCode
            ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> exp.getMessage))
