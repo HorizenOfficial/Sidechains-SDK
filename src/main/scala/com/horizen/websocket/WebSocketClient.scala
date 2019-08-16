@@ -55,7 +55,7 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
 
     case SubscribeForUpdateTipEvent(f) =>
 
-      sender() ! subscribeToUpdateEvent(f)
+      subscribeToUpdateEvent(f)
 
     case UnSubscribeForUpdateTipEvent(actor : Actor) =>
   }
@@ -78,7 +78,7 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
 
   def subscribeToUpdateEvent(f : UpdateTipEvent => Unit) =
   {
-    new UpdateTipEventActor(f)
+    system.actorOf(Props(new UpdateTipEventActor(f) ))
   }
 }
 
@@ -86,7 +86,7 @@ object WebSocketClient{
   object ReceivableMessages{
     case class UpdateTipEvent(message : String)
     case class SubscribeForUpdateTipEvent(f : UpdateTipEvent => Unit)
-    case class UnSubscribeForUpdateTipEvent(actor : Actor)
+    case class UnSubscribeForUpdateTipEvent(actor : ActorRef)
   }
 }
 

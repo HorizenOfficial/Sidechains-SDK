@@ -17,9 +17,9 @@ class UpdateTipEventActor(f : UpdateTipEvent => Unit)(implicit ec : ExecutionCon
 
   protected final def onEvent : Receive =
   {
-    case UpdateTipEvent =>
+    case event :UpdateTipEvent =>
       log.info(s"Received event...")
-      f
+      f(event)
   }
 
   override final def receive: Receive =
