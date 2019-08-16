@@ -1,9 +1,13 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
+import java.net.InetSocketAddress
 import java.util.{HashMap => JHashMap}
 import java.time.Instant
 
+import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
+import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -11,10 +15,16 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
+import scorex.core.settings.ScorexSettings.readConfigFromPath
 import scorex.util.ScorexLogging
 import scorex.util._
 
-case class SidechainSettings(scorexSettings: ScorexSettings) {
+case class WebSocketClientSettings(
+                                    bindingAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),
+                                    connectionTimeout : Long = 5000,
+                                    connectionTimeUnit :String = "MILLISECONDS")
+
+case class SidechainSettings(scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -43,10 +53,15 @@ object SidechainSettings
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(Random.randomBytes())
 
   def read(userConfigPath: Option[String]): SidechainSettings = {
-    //fromConfig(readConfigFromPath(userConfigPath, "scorex"))
-    new SidechainSettings(ScorexSettings.read(userConfigPath))
+    fromConfig(readConfigFromPath(userConfigPath, "scorex"))
+    //new SidechainSettings(ScorexSettings.read(userConfigPath))
   }
 
+  private def fromConfig(config: Config): SidechainSettings = {
+    val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocket")
+    val scorexSettings = config.as[ScorexSettings]("scorex")
+    SidechainSettings(scorexSettings, webSocketClientSettings)
+  }
   /*
   implicit val networkSettingsValueReader: ValueReader[SDKSettings] =
     (cfg: Config, path: String) => fromConfig(cfg.getConfig(path))
