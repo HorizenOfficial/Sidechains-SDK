@@ -29,5 +29,7 @@ public interface NodeWallet {
 
     List<Secret> secretsOfType(Class<? extends Secret> type);
 
-    String generateNewAddress();
+    byte[] walletSeed();
+
+    Boolean addNewSecret(Secret secret);
 }

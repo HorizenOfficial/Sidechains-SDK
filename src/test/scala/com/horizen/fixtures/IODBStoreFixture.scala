@@ -1,12 +1,13 @@
 package com.horizen.fixtures
 
 import java.io.File
-import javafx.util.Pair
-import java.util.{List => JList, ArrayList => JArrayList}
 
+import javafx.util.Pair
+import java.util.{ArrayList => JArrayList, List => JList}
+
+import com.horizen.storage.{IODBStoreAdapter, Storage}
 import io.iohk.iodb.LSMStore
 import io.iohk.iodb.Store
-
 import com.horizen.utils.ByteArrayWrapper
 
 import scala.util.Random
@@ -66,6 +67,10 @@ trait IODBStoreFixture {
 
   def getStore (dir: File) : Store = {
     new LSMStore(dir, keySize)
+  }
+
+  def getStorage(): Storage = {
+    new IODBStoreAdapter(getStore())
   }
 
   def getValue : ByteArrayWrapper = {

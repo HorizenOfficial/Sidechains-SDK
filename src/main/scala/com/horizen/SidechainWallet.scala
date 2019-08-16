@@ -40,7 +40,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                                applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
@@ -178,8 +178,17 @@ class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStor
     walletBoxStorage.getAll.map(_.box.value()).sum
   }
 
-  override def generateNewAddress(): String = {
-    var seed = "seed"+Random.nextInt(100)
+  override def walletSeed(): Array[Byte] = seed
+
+  override def addNewSecret(secret: Secret): lang.Boolean = {
+    addSecret(secret) match {
+      case Success(_) => true
+      case Failure(e) =>
+        //log.write(s"Error during secret appending: "${e.getMessage|")
+        false
+    }
+
+    /*var seed = "seed"+Random.nextInt(100)
     val secret : PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(seed.getBytes)
     addSecret(secret) match {
       case Success(s) => {
@@ -190,26 +199,26 @@ class SidechainWallet private[horizen] (walletBoxStorage: SidechainWalletBoxStor
         else ""
       }
       case Failure(exception) => ""
-    }
+    }*/
   }
 }
 
 object SidechainWallet
 {
-  private[horizen] def restoreWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+  private[horizen] def restoreWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                                      applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
 
     if (!walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet))
+      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet))
     else
       None
   }
 
-  private[horizen] def genesisWallet(walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
+  private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                                      applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Option[SidechainWallet] = {
 
     if (walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(walletBoxStorage, secretStorage, applicationWallet)
+      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
         .scanPersistent(genesisBlock))
     else
       None

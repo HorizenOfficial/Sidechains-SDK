@@ -386,7 +386,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       val stateStorage = new SidechainHistoryStorage(null, sidechainTransactionsCompanion, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
-      case e => System.out.print(e.getMessage)
+      case e : Throwable => System.out.print(e.getMessage)
     }
 
     assertTrue("HistoryStorage constructor. Exception must be thrown if storage is not specified.",

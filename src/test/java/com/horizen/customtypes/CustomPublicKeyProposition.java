@@ -3,7 +3,10 @@ package com.horizen.customtypes;
 import com.horizen.ScorexEncoding;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PropositionSerializer;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import com.horizen.utils.BytesUtils;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -64,5 +67,15 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
         return "CustomPublicKeyProposition{" +
                 "_pubKeyBytes=" + BytesUtils.toHexString(_pubKeyBytes) +
                 '}';
+    }
+
+    @Override
+    public Json toJson() {
+        return null;
+    }
+
+    @Override
+    public JsonSerializer<JsonSerializable> jsonSerializer() {
+        return null;
     }
 }

@@ -28,8 +28,6 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.ForgerRef
-import io.circe.Encoder
-import scorex.core.serialization.SerializerRegistry.SerializerRecord
 
 import scala.collection.mutable
 import scala.io.Source
@@ -79,8 +77,15 @@ class SidechainApp(val settingsFilename: String)
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     sidechainTransactionsCompanion, params)
 
+  //TODO remove these test settings
+  sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
+  sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
-    sidechainStateStorage, sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
+    sidechainStateStorage,
+    "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
+    sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
 
   override val nodeViewSynchronizer: ActorRef =

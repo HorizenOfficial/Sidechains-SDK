@@ -62,7 +62,7 @@ object SidechainApiClient extends App {
 
   println("Welcome to the Sidechain node command-line client...")
   Iterator.continually(StdIn.readLine()).takeWhile(!_.equals("quit")).foreach { command =>
-    println(s"[$command RESULT] " + sidechainApiClient.executeCommand(command))
+    println(s"[$command RESULT] " + sidechainApiClient.executeCommand(command + " "))
   }
 
 }
