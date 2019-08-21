@@ -5,5 +5,4 @@ import java.util.Optional;
 
 public interface SidechainStateReader {
     Optional<Box> getClosedBox(byte[] boxId);
-
 }

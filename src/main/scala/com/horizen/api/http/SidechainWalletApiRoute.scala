@@ -36,9 +36,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetBoxesRequest](body) match {
           case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
-            var idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
-            var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
+            val wallet = sidechainNodeView.getNodeWallet
+            val idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+            val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
 
             ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
@@ -59,13 +59,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetBoxesOfTypeRequest](body)match {
           case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
+            val wallet = sidechainNodeView.getNodeWallet
 
-            var idsOfBoxesToExclude = req.excludeBoxIds.map(strId => strId.getBytes)
-            var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
+            val idsOfBoxesToExclude = req.excludeBoxIds.map(strId => strId.getBytes)
+            val clazz: java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
 
-            var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
-            var closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
+            val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
+            val closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
 
             ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
@@ -83,7 +83,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     withNodeView{
       sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var sumOfBalances : Long = wallet.allBoxesBalance()
+        val sumOfBalances: Long = wallet.allBoxesBalance()
         ApiResponse("result" -> Json.obj("globalBalance" -> Json.fromLong(sumOfBalances)))
     }
   }
@@ -99,8 +99,8 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         ApiInputParser.parseInput[GetBalanceByTypeRequest](body)match {
           case Success(req) =>
             val wallet = sidechainNodeView.getNodeWallet
-            var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(req.boxType).asSubclass(classOf[SidechainTypes#SCB])
-            var balance = wallet.boxesBalance(clazz)
+            val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(req.boxType).asSubclass(classOf[SidechainTypes#SCB])
+            val balance = wallet.boxesBalance(clazz)
             ApiResponse("result" -> ("balance" -> balance))
 
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
@@ -155,9 +155,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         ApiInputParser.parseInput[GetPublicKeysPropositionsByTypeRequest](body)match {
           case Success(req) =>
             val wallet = sidechainNodeView.getNodeWallet
-            var clazz : java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])
-            var listOfPropositions = wallet.secretsOfType(clazz)
-            var listOfAddresses : Seq[String] = Seq()
+            val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])
+            val listOfPropositions = wallet.secretsOfType(clazz)
+            val listOfAddresses: Seq[String] = Seq()
             listOfPropositions.forEach(new Consumer[Secret] {
               override def accept(t: Secret): Unit = {
                 var proofOfKnowledgeProposition = t.publicImage()

@@ -338,7 +338,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
           if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
             Equal
           else
-            Younger // TO DO: should be a Fork. Look for RC4
+            Fork
         }
         else
           Younger

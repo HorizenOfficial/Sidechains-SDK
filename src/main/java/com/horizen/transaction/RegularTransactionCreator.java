@@ -15,7 +15,6 @@ import java.util.List;
 public class RegularTransactionCreator {
 
     public static RegularTransaction create(NodeWallet wallet, List<Pair<PublicKey25519Proposition, Long>> to, PublicKey25519Proposition changeAddress, long fee, List<byte[]> boxIdsToExclude) {
-        // TO DO:
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
         // 2. get from wallet proper number of closed RegularBox ordered by creation time, which ids is not in boxIdsToExclude and sum of their values >= sum above
@@ -57,13 +56,13 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
-        List<Pair<PublicKey25519Proposition, Long>> toResult = new ArrayList<>(to);
+        List<Pair<PublicKey25519Proposition, Long>> sendTo = new ArrayList<>(to);
         if(current_amount > to_amount) {
-            toResult.add(new Pair<>(changeAddress, current_amount - to_amount));
+            sendTo.add(new Pair<>(changeAddress, current_amount - to_amount));
         }
 
-        // TO DO: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
+        // NOTE: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
         long timestamp = System.currentTimeMillis();
-        return RegularTransaction.create(from, toResult, fee, timestamp);
+        return RegularTransaction.create(from, sendTo, fee, timestamp);
     }
 }

@@ -7,7 +7,7 @@ import java.io.{File => JFile}
 import scala.collection.immutable.Map
 import scala.collection
 import akka.actor.ActorRef
-import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilsApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
@@ -51,7 +51,7 @@ class SidechainApp(val settingsFilename: String)
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq()
+  override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(SidechainSyncInfoMessageSpec)
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
@@ -98,30 +98,20 @@ class SidechainApp(val settingsFilename: String)
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, sidechainTransactionsCompanion, params)
-  val sidechainBlockActorActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
-
-  //SerializerRecord(SimpleBoxTransaction.simpleBoxEncoder)
+  val sidechainBlockActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorActorRef, sidechainBlockForgerActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
-    SidechainUtilApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
-    //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
-    //DebugApiRoute(settings.restApi, nodeViewHolderRef, miner),
-    //WalletApiRoute(settings.restApi, nodeViewHolderRef),
-    //StatsApiRoute(settings.restApi, nodeViewHolderRef),
-    //UtilsApiRoute(settings.restApi),
-    //NodeViewApiRoute[SidechainTypes#SCBT](settings.restApi, nodeViewHolderRef),
-    //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
+    SidechainUtilsApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
-  override val swaggerConfig: String = Source.fromResource("api/testApi.yaml").getLines.mkString("\n")
+  override val swaggerConfig: String = ""
 
   override def stopAll(): Unit = {
     super.stopAll()

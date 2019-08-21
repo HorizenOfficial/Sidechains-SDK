@@ -499,7 +499,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     // Test 4: compare history1 syncInfo with history2, they have fork on lasts block, height is the same.
     comparisonResult = history2.compare(history1SyncInfo)
-    assertEquals("History 1 chain expected to be younger then history 2 chain", History.Younger, comparisonResult)
+    assertEquals("History 1 chain expected to be younger then history 2 chain", History.Fork, comparisonResult)
     // Verify history2 continuationIds for history1 info
     continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
