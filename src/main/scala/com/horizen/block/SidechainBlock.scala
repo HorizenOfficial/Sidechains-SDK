@@ -67,7 +67,7 @@ class SidechainBlock (override val parentId: ModifierId,
   lazy val messageToSign: Array[Byte] = {
     val sidechainTransactionsStream = new ByteArrayOutputStream
     sidechainTransactions.foreach {
-      tx => sidechainTransactionsStream.write(tx.bytes)
+      tx => sidechainTransactionsStream.write(tx.messageToSign())
     }
 
     val mainchainBlocksStream = new ByteArrayOutputStream
@@ -152,24 +152,30 @@ object SidechainBlock extends ScorexEncoding {
              sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
              ownerPrivateKey: PrivateKey25519,
              companion: SidechainTransactionsCompanion,
-             params: NetworkParams
+             params: NetworkParams,
+             signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ) : Try[SidechainBlock] = Try {
     require(parentId.length == 64)
     require(mainchainBlocks != null && mainchainBlocks.size <= SidechainBlock.MAX_MC_BLOCKS_NUMBER)
     require(sidechainTransactions != null)
     require(ownerPrivateKey != null)
 
-    val unsignedBlock: SidechainBlock = new SidechainBlock(
-      parentId,
-      timestamp,
-      mainchainBlocks,
-      sidechainTransactions,
-      ownerPrivateKey.publicImage(),
-      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
-      companion
-    )
+    val signature = signatureOption match {
+      case Some(signature) => signature
+      case None =>
+        val unsignedBlock: SidechainBlock = new SidechainBlock(
+          parentId,
+          timestamp,
+          mainchainBlocks,
+          sidechainTransactions,
+          ownerPrivateKey.publicImage(),
+          new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
+          companion
+        )
 
-    val signature = ownerPrivateKey.sign(unsignedBlock.messageToSign)
+        ownerPrivateKey.sign(unsignedBlock.messageToSign)
+    }
+
 
     val block: SidechainBlock = new SidechainBlock(
       parentId,

@@ -2,18 +2,20 @@ package com.horizen
 
 import java.net.InetSocketAddress
 import java.lang.{Byte => JByte, Long => JLong}
-import java.util.{HashMap => JHashMap, ArrayList => JArrayList}
-import javafx.util.{Pair => JPair}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap}
 
+import javafx.util.{Pair => JPair}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, SidechainTransaction, TransactionSerializer}
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.core.settings.ScorexSettings.readConfigFromPath
 import scorex.util.ScorexLogging
@@ -48,19 +50,22 @@ case class SidechainSettings(scorexSettings: ScorexSettings, webSocketClientSett
     to.add(new JPair[PublicKey25519Proposition, JLong](targetSecretKey2.publicImage, 20000L))
 
     val transaction = RegularTransaction.create(from, to, fee, timestamp)
+    val id = transaction.id
     Seq(transaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
   }
 
-  lazy val genesisBlock : Option[SidechainBlock] = SidechainBlock.create(
+  lazy val genesisBlock : Option[SidechainBlock] = Some(new SidechainBlock(
     SidechainSettings.genesisParentBlockId,
     1565162709L, // Wednesday, August 7, 2019 7:25:09 AM
     Seq(),
     getGenesisTransactions,
-    secretKey,
-    sidechainTransactionsCompanion,
-    null
-  ).toOption
-
+    secretKey.publicImage(),
+    new Signature25519(BytesUtils.fromHexString(
+      "28f65fdffb6a0ecffd308445e1ef551935e614a45be9dc936467abcd82297fd5856a3395ae5854e13de9db576a88422da39970a93f0b21ba5b659b3f6cae0100")
+    ),
+    sidechainTransactionsCompanion
+   )
+  )
 }
 
 object SidechainSettings
@@ -68,7 +73,7 @@ object SidechainSettings
     with SettingsReaders
 {
 
-  val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(Random.randomBytes())
+  val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
   def read(userConfigPath: Option[String]): SidechainSettings = {
     fromConfig(readConfigFromPath(userConfigPath, "scorex"))

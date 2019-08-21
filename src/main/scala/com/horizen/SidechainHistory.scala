@@ -1,11 +1,10 @@
 package com.horizen
 
-import java.util.{List => JList, Optional => JOptional}
-import java.io.{File => JFile}
+import java.util.{List => JList, ArrayList => JArrayList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
-import com.horizen.params.{NetworkParams, StorageParams}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
+import com.horizen.params.NetworkParams
+import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.util.ModifierId
@@ -16,12 +15,7 @@ import scorex.util.idToBytes
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.transaction.Transaction
-import io.iohk.iodb.LSMStore
 import scala.compat.java8.OptionConverters._
-import scala.collection.JavaConverters._
-import scala.util.control.Breaks._
-import scala.collection.mutable.ListBuffer
-import com.horizen.companion.SidechainTransactionsCompanion
 import scala.util.{Failure, Success, Try}
 
 
@@ -109,7 +103,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   }
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
-    blockId.equals(params.sidechainGenesisBlockId)
+      blockId.equals(params.sidechainGenesisBlockId)
   }
 
   def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
@@ -349,24 +343,19 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     storage.blockById(ModifierId(blockId)).asJava
   }
 
-  override def getLastBlockIds(startBlockId: String, count: Int): JList[String] = {
-    val blockList = new ListBuffer[String]()
-    var id: ModifierId = ModifierId @@ startBlockId
-    if(storage.blockInfoById(id).isEmpty)
-      blockList.asJava
+  override def getLastBlockIds(count: Int): JList[String] = {
+    val blockList = new JArrayList[String]()
+    if(isEmpty)
+      blockList
     else {
-      blockList.append(id)
-      breakable {
-        while (blockList.size < count && !isGenesisBlock(id)) {
-          storage.parentBlockId(id) match {
-            case Some(parentBlockId) =>
-              blockList.append(parentBlockId)
-              id = parentBlockId
-            case None => break
-          }
-        }
+      var id = bestBlockId
+      blockList.add(id)
+      while (blockList.size < count && !isGenesisBlock(id)) {
+        val parentBlockId = storage.parentBlockId(id).get
+        blockList.add(parentBlockId)
+        id = parentBlockId
       }
-      blockList.asJava
+      blockList
     }
   }
 
