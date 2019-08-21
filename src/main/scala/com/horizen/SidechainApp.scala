@@ -121,7 +121,8 @@ class SidechainApp(val settingsFilename: String)
     //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
-  override val swaggerConfig: String = Source.fromResource("api/testApi.yaml").getLines.mkString("\n")
+  override val swaggerConfig: String = ""
+    //Source.fromResource("api/testApi.yaml").getLines.mkString("\n")
 
   override def stopAll(): Unit = {
     super.stopAll()
