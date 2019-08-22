@@ -76,7 +76,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetMempoolRequest](body)match {
           case Success(req) =>
-            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
+            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getAllTransactions()
             if(req.format.getOrElse(true)){
               ApiResponse(
                 "result" -> Json.obj(
@@ -121,7 +121,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             val history = sidechainNodeView.getNodeHistory
 
             def searchTransactionInMemoryPool(id : String) : Option[_ <: Transaction] = {
-              var opt = memoryPool.getTransactionByid(id)
+              var opt = memoryPool.getTransactionById(id)
               if(opt.isPresent)
                 //None
                 Option(opt.get())
