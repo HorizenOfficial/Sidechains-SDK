@@ -12,10 +12,13 @@ import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import scorex.core.transaction.box.proposition.PublicKey25519Proposition
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import akka.pattern.ask
+import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
@@ -117,12 +120,15 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
+        val secret = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
 
-        val key = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
-        if(wallet.addNewSecret(key)) {
-          ApiResponse("result" -> Json.obj("proposition" -> key.publicImage().toJson))
-        } else
-          ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> "Failed to create ne key pair."))
+        val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+          case Success(_) =>
+            ApiResponse("result" -> Json.obj("proposition" -> secret.publicImage().toJson))
+          case Failure(e) =>
+            ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Failed to create ne key pair: ${e.getMessage}."))
+        }
       }
     }
   }
