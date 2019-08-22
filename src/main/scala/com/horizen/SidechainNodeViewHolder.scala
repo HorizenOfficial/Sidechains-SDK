@@ -12,6 +12,8 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
+import scala.util.Success
+
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               historyStorage: SidechainHistoryStorage,
                               stateStorage: SidechainStateStorage,
@@ -44,19 +46,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock) match {
-        case h: Some[SidechainHistory] => h
-        case None => throw new RuntimeException("History storage is not empty!")
-      }
-      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock) match {
-        case s: Some[SidechainState] => s
-        case None => throw new RuntimeException("State storage is not empty!")
-      }
-      wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock) match {
-        case w: Some[SidechainWallet] => w
-        case None => throw new RuntimeException("WalletBox storage is not empty!")
-      }
-      pool <- Some(SidechainMemoryPool.emptyPool)
+      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock)
+      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock)
+      wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock)
+      pool <- Success(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)
 
     result.get
