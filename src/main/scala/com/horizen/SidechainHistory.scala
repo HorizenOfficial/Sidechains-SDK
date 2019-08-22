@@ -456,15 +456,12 @@ object SidechainHistory
   }
 
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
-                                      params: NetworkParams, genesisBlock: SidechainBlock) : Option[SidechainHistory] = {
+                                      params: NetworkParams, genesisBlock: SidechainBlock) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty)
       new SidechainHistory(historyStorage, params)
-        .append(genesisBlock) match {
-        case Success((history, progressInfo)) => Some(history.reportModifierIsValid(genesisBlock))
-        case _ => None
-      }
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
     else
-      None
+      throw new RuntimeException("History storage is not empty!")
   }
 }

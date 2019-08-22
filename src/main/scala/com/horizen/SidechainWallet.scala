@@ -193,12 +193,12 @@ object SidechainWallet
   }
 
   private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Option[SidechainWallet] = {
+                                     applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
-        .scanPersistent(genesisBlock))
+      new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
+        .scanPersistent(genesisBlock)
     else
-      None
+      throw new RuntimeException("WalletBox storage is not empty!")
   }
 }

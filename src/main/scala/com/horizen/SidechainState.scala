@@ -200,12 +200,12 @@ object SidechainState
   }
 
   private[horizen] def genesisState(stateStorage: SidechainStateStorage, applicationState: ApplicationState,
-                                    genesisBlock: SidechainBlock) : Option[SidechainState] = {
+                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
       new SidechainState(stateStorage, idToVersion(genesisBlock.parentId), applicationState)
-        .applyModifier(genesisBlock).toOption
+        .applyModifier(genesisBlock).get
     else
-      None
+      throw new RuntimeException("State storage is not empty!")
   }
 }
