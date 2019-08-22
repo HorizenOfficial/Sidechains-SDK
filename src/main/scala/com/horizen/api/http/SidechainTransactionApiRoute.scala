@@ -390,10 +390,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       sidechainNodeView =>
         val barrier = Await.result(
           sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-          settings.timeout).asInstanceOf[Future[Unit]]
+          settings.timeout).asInstanceOf[Future[ModifierId]]
         onComplete(barrier){
-          case Success(result) =>
-            ApiResponse("result" -> Json.obj("transactionId" -> Json.fromString(transaction.id)))
+          case Success(id) =>
+            ApiResponse("result" -> Json.obj("transactionId" -> Json.fromString(id)))
           case Failure(exp) =>
             // TO-DO Change the errorCode
            ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> exp.getMessage))
