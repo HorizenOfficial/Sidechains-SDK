@@ -174,5 +174,5 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     this
   }
 
-  def isEmpty: Boolean = !storage.lastVersionID().isPresent
+  def isEmpty: Boolean = storage.isEmpty
 }

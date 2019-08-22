@@ -89,6 +89,8 @@ class IODBStoreAdapter (store : Store)
     value
   }
 
+  override def isEmpty(): Boolean = !lastVersionID().isPresent
+
   override def close(): Unit = {
     store.close()
   }

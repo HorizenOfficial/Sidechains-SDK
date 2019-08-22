@@ -156,8 +156,10 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     blockTemplateTry match {
       case Success(block) =>
         ApiResponse(
-          "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
-          "blockInfo" -> block.toJson
+          "result" -> Json.obj(
+            "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
+            "blockInfo" -> block.toJson
+          )
         )
       case Failure(e) =>
         // TO-DO Change the errorCode
