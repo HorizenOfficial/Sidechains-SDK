@@ -4,12 +4,9 @@ import io.circe.Json
 
 trait WebSocketResponseMessage {
 
-  var requestType : Int
-
 }
 
 case class ErrorResponse(
-                          var requestType : Int,
                           var errorCode : Int,
                           var errorMessage : String
                         ) extends WebSocketResponseMessage {
@@ -25,14 +22,12 @@ abstract class BlockResponse extends WebSocketResponseMessage {
 
 case class GetSingleBlockResponse(
                                    var correlationId : String,
-                                   var requestType : Int,
                                    var height : Int,
                                    var hash : String,
                                    var block : String) extends BlockResponse
 
 case class GetMultipleBlocksResponse(
                                       var correlationId : String,
-                                      var requestType : Int,
                                       var counter : Int,
                                       var height : Int,
                                       var hash : String,
@@ -40,7 +35,6 @@ case class GetMultipleBlocksResponse(
 
 case class GetMultipleBlockHashesResponse(
                                    var correlationId : String,
-                                   var requestType : Int,
                                    height : Int,
                                    hashes : Seq[String]) extends WebSocketResponseMessage
 
@@ -100,16 +94,6 @@ case class GetSingleBlock (
   override def updateBlockRequest(): Seq[(String, Json)] = Seq()
 }
 
-case class GetMultipleBlocks (
-                               override var correlationId : String,
-                               var lenght : Int,
-                               var afterHeight : Option[Int],
-                               var afterHash : Option[String]) extends BlockRequest {
-  override var command = "getBlocks"
-
-  override def updateBlockRequest(): Seq[(String, Json)] = Seq()
-}
-
 case class GetMultipleBlockHashes (
                                     override var correlationId : String,
                                     var lenght : Int,
@@ -120,16 +104,14 @@ case class GetMultipleBlockHashes (
   override def updateBlockRequest(): Seq[(String, Json)] = Seq()
 }
 
+case class ChannelMessageEvent(message : String){}
+case class ChannelMessage(message : String){}
 
 trait WebSocketEvent {
-  var eventType : Int
-  var message : String
 }
 
 case class UpdateTipEvent(
-                           override  var message : String,
                            height : Int,
                            hash : String,
                            block : String) extends WebSocketEvent {
-  override var eventType: Int = 1
 }

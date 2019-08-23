@@ -6,19 +6,18 @@ import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
 
-class WebSocketEventActor[E <: WebSocketEvent](f : E => Unit, clazz : Class[E])(implicit ec : ExecutionContext) extends Actor with ScorexLogging {
+class WebSocketEventActor(f : ChannelMessageEvent => Unit)(implicit ec : ExecutionContext) extends Actor with ScorexLogging {
 
   protected final def onEvent : Receive =
   {
-    case event : E =>
+    case event : ChannelMessageEvent =>
       f(event)
 
     case Subscribe =>
-      context.system.eventStream.subscribe(self, clazz)
+      context.system.eventStream.subscribe(self, classOf[ChannelMessageEvent])
 
     case UnSubscribe =>
-      var res = context.system.eventStream.unsubscribe(self, clazz)
-      res
+      context.system.eventStream.unsubscribe(self, classOf[ChannelMessageEvent])
   }
 
   override final def receive: Receive =
