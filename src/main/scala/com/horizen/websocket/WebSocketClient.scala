@@ -57,9 +57,11 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
                     promise.success(resp._2)
                   requestPool -= correlationId
                 case None =>
+                  log.error(resp+" --> It cannot be parsed")
               }
           }
         case Failure(exception) =>
+          log.error(exception.getMessage)
       }
 
     case SubscribeForEvent(f) =>

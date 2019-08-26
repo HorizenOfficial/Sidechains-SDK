@@ -36,32 +36,40 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     getSingleBlock(afterHeight, afterHash) match {
       case Success(value) =>
         value match {
-          case Right(error) => log.error("getSingleBlock: Response error --> " + error.toString)
+          case Right(error) =>
+            log.error("getSingleBlock: Response error --> " + error.toString)
+            return Failure(new Exception(error.errorMessage))
           case Left(bl) =>
             blockBytes = bl.block.getBytes
         }
-      case Failure(exception) => log.error("getSingleBlock: Unexpected exception --> " + exception.getMessage)
+      case Failure(exception) =>
+        log.error("getSingleBlock: Unexpected exception --> " + exception.getMessage)
+        return Failure(exception)
     }
 
     return MainchainBlockReferenceSerializer.parseBytesTry(blockBytes)
 
   }
 
-  def getBlockHashes(lenght: Int, afterHeight: Option[Int], afterHash: Option[String]): Seq[String] = {
+  def getBlockHashes(lenght: Int, afterHeight: Option[Int], afterHash: Option[String]): Try[Seq[String]] = {
 
     var hashes: Seq[String] = Seq[String]()
 
     getMultipleBlockHashes(lenght, afterHeight, afterHash) match {
       case Success(value) =>
         value match {
-          case Right(error) => log.error("getMultipleBlockHashes: Response error --> " + error.toString)
+          case Right(error) =>
+            log.error("getMultipleBlockHashes: Response error --> " + error.toString)
+            return Failure(new Exception(error.errorMessage))
           case Left(bl) =>
             hashes = bl.hashes
         }
-      case Failure(exception) => log.error("getMultipleBlockHashes: Unexpected exception --> " + exception.getMessage)
+      case Failure(exception) =>
+        log.error("getMultipleBlockHashes: Unexpected exception --> " + exception.getMessage)
+        return Failure(exception)
     }
 
-    return hashes
+    return Success(hashes)
   }
 
   private def getSingleBlock(afterHeight: Option[Int], afterHash: Option[String]): Try[Either[GetSingleBlockResponse, ErrorResponse]] = {
@@ -73,11 +81,14 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
-    val webSocketResponse = Await.result(fut, timeout.duration)
+    try {
+      val webSocketResponse = Await.result(fut, timeout.duration)
+      return parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetSingleBlockResponse, ErrorResponse]]]
+    }catch {
+      case e : Throwable =>
+        return Failure(e)
+    }
 
-    response = parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetSingleBlockResponse, ErrorResponse]]]
-
-    return response
   }
 
   private def getMultipleBlockHashes(lenght: Int, afterHeight: Option[Int], afterHash: Option[String]): Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = {
@@ -90,11 +101,14 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
-    val webSocketResponse = Await.result(fut, timeout.duration)
+    try {
+      val webSocketResponse = Await.result(fut, timeout.duration)
+      return parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]]]
+    }catch {
+      case e : Throwable =>
+        return Failure(e)
+    }
 
-    response = parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]]]
-
-    return response
   }
 
   def subscribeOnEvent[E <: WebSocketEvent](f: E => Unit, clazz: Class[E]): String = {
