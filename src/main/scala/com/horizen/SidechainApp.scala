@@ -7,7 +7,7 @@ import java.io.{File => JFile}
 import scala.collection.immutable.Map
 import scala.collection
 import akka.actor.ActorRef
-import com.horizen.api.http.{FirstSolutionRestApi, MainchainBlockApiRoute, SecondSolutionRestApi, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
@@ -111,8 +111,6 @@ class SidechainApp(val settingsFilename: String)
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    FirstSolutionRestApi(sidechainSettings, settings.restApi, nodeViewHolderRef),
-    SecondSolutionRestApi(sidechainSettings, settings.restApi, nodeViewHolderRef)
     //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
     //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
     //DebugApiRoute(settings.restApi, nodeViewHolderRef, miner),
@@ -123,8 +121,8 @@ class SidechainApp(val settingsFilename: String)
     //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
-  override val swaggerConfig: String = //""
-    Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
+  override val swaggerConfig: String = ""
+  //Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
 
   override def stopAll(): Unit = {
     super.stopAll()
