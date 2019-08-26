@@ -47,7 +47,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
         return Failure(exception)
     }
 
-    return MainchainBlockReferenceSerializer.parseBytesTry(blockBytes)
+    MainchainBlockReferenceSerializer.parseBytesTry(blockBytes)
 
   }
 
@@ -69,7 +69,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
         return Failure(exception)
     }
 
-    return Success(hashes)
+    Success(hashes)
   }
 
   private def getSingleBlock(afterHeight: Option[Int], afterHash: Option[String]): Try[Either[GetSingleBlockResponse, ErrorResponse]] = {
@@ -83,10 +83,10 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
     try {
       val webSocketResponse = Await.result(fut, timeout.duration)
-      return parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetSingleBlockResponse, ErrorResponse]]]
+      parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetSingleBlockResponse, ErrorResponse]]]
     }catch {
       case e : Throwable =>
-        return Failure(e)
+        Failure(e)
     }
 
   }
@@ -103,10 +103,10 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
     try {
       val webSocketResponse = Await.result(fut, timeout.duration)
-      return parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]]]
+      parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]]]
     }catch {
       case e : Throwable =>
-        return Failure(e)
+        Failure(e)
     }
 
   }
@@ -131,12 +131,10 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
     var result = Await.result(fut, timeout.duration).asInstanceOf[Future[String]]
 
-    var actorName = ""
-
     if (result.isCompleted)
-      actorName = result.value.get.get
+      result.value.get.get
+    else ""
 
-    return actorName
   }
 
   def unSubscribeOnEvent(actorName: String) = {
