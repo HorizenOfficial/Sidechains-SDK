@@ -66,11 +66,6 @@ public final class RegularTransaction
     }
 
     @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return RegularTransactionJsonSerializer.getSerializer();
-    }
-
-    @Override
     public TransactionSerializer serializer() {
         return RegularTransactionSerializer.getSerializer();
     }
@@ -280,5 +275,9 @@ public final class RegularTransaction
         values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
+    }
+
+    public static RegularTransaction parseJson(Json json) {
+        return null;
     }
 }

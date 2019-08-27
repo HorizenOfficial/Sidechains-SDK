@@ -73,9 +73,4 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
     public Json toJson() {
         return null;
     }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }
 }

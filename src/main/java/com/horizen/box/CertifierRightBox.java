@@ -16,7 +16,6 @@ import java.util.Arrays;
 // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
 public final class CertifierRightBox
     extends PublicKey25519NoncedBox<PublicKey25519Proposition>
-    implements JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 2;
@@ -97,8 +96,8 @@ public final class CertifierRightBox
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static CertifierRightBox parseJson(Json json) {
         return null;
     }
+
 }

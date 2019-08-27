@@ -51,11 +51,6 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return MC2SCAggregatedTransactionJsonSerializer.getSerializer();
-    }
-
-    @Override
     public TransactionSerializer serializer() {
         return MC2SCAggregatedTransactionSerializer.getSerializer();
     }
@@ -212,5 +207,9 @@ public final class MC2SCAggregatedTransaction
         values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
+    }
+
+    public static MC2SCAggregatedTransaction parseJson(Json json) {
+        return null;
     }
 }

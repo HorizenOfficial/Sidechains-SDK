@@ -19,11 +19,6 @@ public final class CertifierUnlockRequestTransaction
     public static final byte TRANSACTION_TYPE_ID = 5;
 
     @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return CertifierUnlockRequestTransactionJsonSerializer.getSerializer();
-    }
-
-    @Override
     public CertifierUnlockRequestTransactionSerializer serializer() {
         return new CertifierUnlockRequestTransactionSerializer();
     }
@@ -86,5 +81,9 @@ public final class CertifierUnlockRequestTransaction
         values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
+    }
+
+    public static CertifierUnlockRequestTransaction parseJson(Json json) {
+        return  null;
     }
 }

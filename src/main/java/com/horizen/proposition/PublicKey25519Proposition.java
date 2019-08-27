@@ -133,11 +133,8 @@ public final class PublicKey25519Proposition
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static PublicKey25519Proposition parseJson(Json json) {
         return null;
     }
-
-
 }
 

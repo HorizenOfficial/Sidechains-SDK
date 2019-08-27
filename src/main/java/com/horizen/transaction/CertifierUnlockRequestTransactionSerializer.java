@@ -12,7 +12,8 @@ import scorex.util.serialization.Writer;
 import java.util.HashMap;
 import java.util.List;
 
-public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction> implements TransactionSerializer<T>
+public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction>
+    implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 

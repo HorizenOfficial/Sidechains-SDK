@@ -104,9 +104,4 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
 
         return Json.obj(values.toSeq());
     }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }
 }

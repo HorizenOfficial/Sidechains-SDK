@@ -6,7 +6,11 @@ import scala.util.Try
 
 trait JsonSerializer[T <: JsonSerializable] {
 
-  def toJson(obj : T) : Json
+  def toJson(obj : T) : Json = obj.toJson
 
-  def parseJsonTry : Try[T]
+  def parseJson(json: Json) : T = ???
+
+  def parseJsonTry(json: Json) : Try[T] = Try {
+    parseJson(json)
+  }
 }

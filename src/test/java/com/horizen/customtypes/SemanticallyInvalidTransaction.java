@@ -5,7 +5,6 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
-import com.horizen.transaction.TransactionJsonSerializer;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import io.circe.Json;
@@ -22,11 +21,6 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     public static final byte TRANSACTION_TYPE_ID = 11;
     public SemanticallyInvalidTransaction(long timestamp) {
         _timestamp = timestamp;
-    }
-
-    @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return null;
     }
 
     @Override

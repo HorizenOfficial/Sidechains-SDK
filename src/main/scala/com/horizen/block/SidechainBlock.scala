@@ -133,10 +133,6 @@ class SidechainBlock (override val parentId: ModifierId,
 
     Json.fromFields(values)
   }
-
-  override type J = this.type
-
-  override def jsonSerializer: JsonSerializer[SidechainBlock.this.type] = ???
 }
 
 
@@ -281,9 +277,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putLong(obj.timestamp)
 
     val bw = w.newWriter()
-    var bwl = bw.length()
     _mcblocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
-    bwl = bw.length()
     w.putInt(bw.length())
     w.append(bw)
 

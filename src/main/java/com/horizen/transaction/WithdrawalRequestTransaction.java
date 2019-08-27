@@ -18,11 +18,6 @@ public final class WithdrawalRequestTransaction
     public static final byte TRANSACTION_TYPE_ID = 4;
 
     @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return WithdrawalRequestTransactionJsonSerializer.getSerializer();
-    }
-
-    @Override
     public WithdrawalRequestTransactionSerializer serializer() {
         return new WithdrawalRequestTransactionSerializer();
     }
@@ -85,5 +80,9 @@ public final class WithdrawalRequestTransaction
         values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
+    }
+
+    public static WithdrawalRequestTransaction parseJson(Json json) {
+        return null;
     }
 }

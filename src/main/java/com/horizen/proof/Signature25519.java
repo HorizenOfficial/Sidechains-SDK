@@ -80,8 +80,8 @@ public final class Signature25519
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static Signature25519 parseJson(Json json) {
         return null;
     }
+
 }

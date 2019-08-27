@@ -122,8 +122,6 @@ class MainchainBlockReference(
 
     Json.fromFields(values)
   }
-
-  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = ???
 }
 
 
@@ -298,12 +296,12 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   override def parse(r: Reader): MainchainBlockReference = ???
 }
 
+/*
 object MainchainBlockReferenceJSONSerializer extends JsonSerializer [MainchainBlockReference]{
 
   // TO-DO Implementation not completed
   override def toJson(obj: MainchainBlockReference): Json = {
     Json.obj(("hashHex", Json.fromString(obj.hashHex)))
   }
-
-  override def parseJsonTry: Try[MainchainBlockReference] = ???
 }
+*/

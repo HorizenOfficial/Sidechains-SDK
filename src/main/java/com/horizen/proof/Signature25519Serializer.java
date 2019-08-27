@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import io.circe.Json;
 import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
@@ -41,4 +42,10 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
     public Signature25519 parse(Reader reader) {
         return Signature25519.parseBytes(reader.getBytes(reader.remaining())).get();
     }
+
+    @Override
+    public Signature25519 parseJson(Json json) {
+        return Signature25519.parseJson(json);
+    }
+
 }

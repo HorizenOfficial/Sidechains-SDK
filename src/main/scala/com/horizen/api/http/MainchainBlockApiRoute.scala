@@ -5,7 +5,7 @@ import java.util.Optional
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.block.{MainchainBlockReferenceJSONSerializer, MainchainBlockReferenceSerializer}
+import com.horizen.block.{MainchainBlockReferenceSerializer}
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
