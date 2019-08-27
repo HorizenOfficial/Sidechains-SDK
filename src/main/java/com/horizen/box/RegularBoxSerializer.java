@@ -33,18 +33,6 @@ public final class RegularBoxSerializer
         return serializer;
     }
 
-    /*
-    @Override
-    public byte[] toBytes(RegularBox box) {
-        return box.bytes();
-    }
-
-    @Override
-    public Try<RegularBox> parseBytesTry(byte[] bytes) {
-        return RegularBox.parseBytes(bytes);
-    }
-    */
-
     @Override
     public void serialize(RegularBox box, Writer writer) {
         writer.putBytes(box.bytes());

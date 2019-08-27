@@ -22,18 +22,6 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
         return serializer;
     }
 
-    /*
-    @Override
-    public byte[] toBytes(RegularTransaction transaction) {
-        return transaction.bytes();
-    }
-
-    @Override
-    public Try<RegularTransaction> parseBytesTry(byte[] bytes) {
-        return RegularTransaction.parseBytes(bytes);
-    }
-    */
-
     @Override
     public void serialize(RegularTransaction transaction, Writer writer) {
         writer.putBytes(transaction.bytes());

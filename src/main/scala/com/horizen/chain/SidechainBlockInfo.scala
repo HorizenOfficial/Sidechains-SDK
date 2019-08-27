@@ -35,30 +35,7 @@ case class SidechainBlockInfo(height: Int,
 
 
 object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo] {
-  /*
-  override def toBytes(obj: SidechainBlockInfo): Array[Byte] = {
-    Ints.toByteArray(obj.height) ++ Longs.toByteArray(obj.score) ++ idToBytes(obj.parentId) ++ Array(obj.semanticValidity.code)
-  }
 
-  override def parseBytesTry(bytes: Array[Byte]): Try[SidechainBlockInfo] = Try {
-    var offset: Int = 0
-
-    val height: Int = BytesUtils.getInt(bytes, offset)
-    offset += 4
-
-    val score: Long = BytesUtils.getLong(bytes, offset)
-    offset += 8
-
-    val parentId = bytesToId(bytes.slice(offset, offset + NodeViewModifier.ModifierIdSize))
-    offset += NodeViewModifier.ModifierIdSize
-
-    val semanticValidityCode: Byte = bytes(offset)
-
-    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode))
-  }
-  */
-
-  //TODO Finish implementation
   override def serialize(obj: SidechainBlockInfo, w: Writer): Unit = {
     w.putInt(obj.height)
     w.putLong(obj.score)

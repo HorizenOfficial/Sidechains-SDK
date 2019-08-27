@@ -21,18 +21,6 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
         return serializer;
     }
 
-    /*
-    @Override
-    public byte[] toBytes(Signature25519 signature) {
-        return signature.bytes();
-    }
-
-    @Override
-    public Try<Signature25519> parseBytesTry(byte[] bytes) {
-        return Signature25519.parseBytes(bytes);
-    }
-    */
-
     @Override
     public void serialize(Signature25519 signature, Writer writer) {
         writer.putBytes(signature.bytes());

@@ -23,18 +23,6 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
         return serializer;
     }
 
-    /*
-    @Override
-    public byte[] toBytes(PublicKey25519Proposition proposition) {
-        return proposition.bytes();
-    }
-
-    @Override
-    public Try<PublicKey25519Proposition> parseBytesTry(byte[] bytes) {
-        return PublicKey25519Proposition.parseBytes(bytes);
-    }
-    */
-
     @Override
     public void serialize(PublicKey25519Proposition proposition, Writer writer) {
     writer.putBytes(proposition.bytes());

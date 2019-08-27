@@ -203,75 +203,6 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
   )
 
-
-  /*
-  override def toBytes(obj: SidechainBlock): Array[Byte] = {
-    val mcblocksBytes = _mcblocksSerializer.toBytes(obj.mainchainBlocks.toList.asJava)
-
-    // TO DO: we should use SidechainTransactionsCompanion with all defined custom transactions
-    val sidechainTransactionsBytes = _sidechainTransactionsSerializer.toBytes(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava)
-
-    Bytes.concat(
-      idToBytes(obj.parentId),                              // 32 bytes
-      Longs.toByteArray(obj.timestamp),                     // 8 bytes
-      Ints.toByteArray(mcblocksBytes.length),               // 4 bytes
-      mcblocksBytes,                                        // total size of all MC Blocks
-      Ints.toByteArray(sidechainTransactionsBytes.length),  // 4 bytes
-      sidechainTransactionsBytes,                           // total size of all MC Blocks
-      obj.forgerPublicKey.bytes,                                      // 32 bytes
-      obj.signature.bytes                              // 64 bytes
-    )
-  }
-
-  override def parseBytesTry(bytes: Array[Byte]): Try[SidechainBlock] = Try {
-    require(bytes.length <= SidechainBlock.MAX_BLOCK_SIZE, "Unable to parse SidechainBlock bytes: reach out of maximum length.")
-    require(bytes.length > 32 + 8 + 4 + 4 + 32 + 64, "Unable to parse SidechainBlock bytes: input data corrupted.") // size of empty block
-
-    var offset: Int = 0
-
-    val parentId = bytesToId(bytes.slice(offset, offset + 32))
-    offset += 32
-
-    val timestamp = BytesUtils.getLong(bytes, offset)
-    offset += 8
-
-    val mcblocksSize = BytesUtils.getInt(bytes, offset)
-    offset += 4
-
-    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parseBytesTry(bytes.slice(offset, offset + mcblocksSize)).get.asScala
-    offset += mcblocksSize
-
-    // to do: parse SC txs
-    val sidechainTransactionsSize = BytesUtils.getInt(bytes, offset)
-    offset += 4
-
-    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-      _sidechainTransactionsSerializer.parseBytesTry(bytes.slice(offset, offset + mcblocksSize)).get
-        .asScala
-        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
-    offset += sidechainTransactionsSize
-
-    val owner = new PublicKey25519Proposition(bytes.slice(offset, offset + PublicKey25519Proposition.KEY_LENGTH))
-    offset += PublicKey25519Proposition.KEY_LENGTH
-
-    val ownerSignature = new Signature25519(bytes.slice(offset, offset + Signature25519.SIGNATURE_LENGTH))
-    offset += Signature25519.SIGNATURE_LENGTH
-
-    require(offset == bytes.length)
-
-    new SidechainBlock(
-      parentId,
-      timestamp,
-      mcblocks,
-      sidechainTransactions,
-      owner,
-      ownerSignature,
-      companion
-    )
-
-  }
-  */
-
   override def serialize(obj: SidechainBlock, w: Writer): Unit = {
     w.putBytes(idToBytes(obj.parentId))
     w.putLong(obj.timestamp)
@@ -292,7 +223,6 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
   override def parse(r: Reader): SidechainBlock = {
     require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
-    //require(r.remaining > 32 + 8 + 4 + 4 + 32 + 64) // size of empty block
 
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 

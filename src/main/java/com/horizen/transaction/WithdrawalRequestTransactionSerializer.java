@@ -28,19 +28,6 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
         _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
-    /*
-    @Override
-    public byte[] toBytes(T obj) {
-        return _boxSerializer.toBytes(obj.newBoxes());
-    }
-
-    @Override
-    public Try<T> parseBytesTry(byte[] bytes) {
-        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(bytes).get();
-        return null;
-    }
-    */
-
     @Override
     public void serialize(T transaction, Writer writer) {
         writer.putBytes(_boxSerializer.toBytes(transaction.newBoxes()));

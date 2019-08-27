@@ -22,18 +22,6 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
         return serializer;
     }
 
-    /*
-    @Override
-    public byte[] toBytes(CertifierRightBox box) {
-        return box.bytes();
-    }
-
-    @Override
-    public Try<CertifierRightBox> parseBytesTry(byte[] bytes) {
-        return CertifierRightBox.parseBytes(bytes);
-    }
-    */
-
     @Override
     public void serialize(CertifierRightBox box, Writer writer) {
         writer.putBytes(box.bytes());
