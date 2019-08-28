@@ -142,29 +142,26 @@ public final class MC2SCAggregatedTransaction
         );
     }
 
-    public static Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
-        try {
-            if(bytes.length < 48)
-                throw new IllegalArgumentException("Input data corrupted.");
-            if(bytes.length > MAX_TRANSACTION_SIZE)
-                throw new IllegalArgumentException("Input data length is too large.");
+    public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 48)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        if(bytes.length > MAX_TRANSACTION_SIZE)
+            throw new IllegalArgumentException("Input data length is too large.");
 
-            byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
-            offset += Utils.SHA256_LENGTH;
+        int offset = 0;
 
-            long timestamp = BytesUtils.getLong(bytes, offset);
-            offset += 8;
+        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+        offset += Utils.SHA256_LENGTH;
 
-            int batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
 
-            return new Success<>(new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp));
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+        List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
+        return new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp);
     }
 
     public static MC2SCAggregatedTransaction create(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {

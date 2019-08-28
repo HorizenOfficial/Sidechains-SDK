@@ -28,7 +28,7 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
 
     @Override
     public MC2SCAggregatedTransaction parse(Reader reader) {
-        return MC2SCAggregatedTransaction.parseBytes(reader.getBytes(reader.remaining())).get();
+        return MC2SCAggregatedTransaction.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override

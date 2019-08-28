@@ -28,7 +28,7 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
 
     @Override
     public Signature25519 parse(Reader reader) {
-        return Signature25519.parseBytes(reader.getBytes(reader.remaining())).get();
+        return Signature25519.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override

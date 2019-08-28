@@ -34,6 +34,6 @@ public final class PrivateKey25519Serializer implements SecretSerializer<Private
 
     @Override
     public PrivateKey25519 parse(Reader reader) {
-        return PrivateKey25519.parseBytes(reader.getBytes(reader.remaining())).get();
+        return PrivateKey25519.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

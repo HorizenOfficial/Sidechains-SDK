@@ -39,6 +39,6 @@ public final class CertifierLockSerializer implements SidechainRelatedMainchainO
 
     @Override
     public CertifierLock parse(Reader reader) {
-        return CertifierLock.parseBytes(reader.getBytes(reader.remaining())).get();
+        return CertifierLock.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

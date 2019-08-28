@@ -39,6 +39,6 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        return ForwardTransfer.parseBytes(reader.getBytes(reader.remaining())).get();
+        return ForwardTransfer.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

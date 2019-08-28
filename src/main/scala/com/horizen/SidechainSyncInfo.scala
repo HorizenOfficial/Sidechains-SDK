@@ -32,13 +32,13 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
 
   override def serialize(obj: SidechainSyncInfo, w: Writer): Unit = {
-    w.put((obj.knownBlockIds.size & 0xFF).toByte)
+    w.putInt(obj.knownBlockIds.size)
     for(b <- obj.knownBlockIds)
       w.putBytes(idToBytes(b))
   }
 
   override def parse(r: Reader): SidechainSyncInfo = {
-    val length = r.getByte() & 0xFF
+    val length = r.getInt()
     if (r.remaining != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
 

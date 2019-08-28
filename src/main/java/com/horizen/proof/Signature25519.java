@@ -45,13 +45,8 @@ public final class Signature25519
         return Signature25519Serializer.getSerializer();
     }
 
-    public static Try<Signature25519> parseBytes(byte[] bytes) {
-        try {
-            Signature25519 signature = new Signature25519(bytes);
-            return new Success<Signature25519>(signature);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static Signature25519 parseBytes(byte[] bytes) {
+        return new Signature25519(bytes);
     }
 
     @Override

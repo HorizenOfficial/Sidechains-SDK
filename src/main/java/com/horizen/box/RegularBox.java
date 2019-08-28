@@ -50,16 +50,11 @@ public final class RegularBox
         return RegularBoxSerializer.getSerializer();
     }
 
-    public static Try<RegularBox> parseBytes(byte[] bytes) {
-        try {
-            Try<PublicKey25519Proposition> t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
-            long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 8, PublicKey25519Proposition.getLength() + 16));
-            RegularBox box = new RegularBox(t.get(), nonce, value);
-            return new Success<>(box);
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static RegularBox parseBytes(byte[] bytes) {
+        PublicKey25519Proposition t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
+        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 8, PublicKey25519Proposition.getLength() + 16));
+        return new RegularBox(t, nonce, value);
     }
 
     @Override

@@ -30,9 +30,9 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
         return Arrays.copyOf(_output.certifierLockOutputBytes(), _output.certifierLockOutputBytes().length);
     }
 
-    public static Try<CertifierLock> parseBytes(byte[] bytes) {
+    public static CertifierLock parseBytes(byte[] bytes) {
         MainchainTxCertifierLockCrosschainOutput output = MainchainTxCertifierLockCrosschainOutput.create(bytes, 0).get();
-        return new Success<>(new CertifierLock(output));
+        return new CertifierLock(output);
     }
 
     @Override

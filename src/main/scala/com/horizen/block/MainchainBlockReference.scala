@@ -291,7 +291,9 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
     new MainchainBlockReference(header, mc2scTx, SCMap)
   }
 
-  override def serialize(obj: MainchainBlockReference, w: Writer): Unit = ???
+  override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
+
+  }
 
   override def parse(r: Reader): MainchainBlockReference = ???
 }

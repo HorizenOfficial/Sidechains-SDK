@@ -29,7 +29,7 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
 
     @Override
     public RegularTransaction parse(Reader reader) {
-        return RegularTransaction.parseBytes(reader.getBytes(reader.remaining())).get();
+        return RegularTransaction.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override

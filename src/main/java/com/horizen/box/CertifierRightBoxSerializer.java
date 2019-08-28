@@ -29,7 +29,7 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
 
     @Override
     public CertifierRightBox parse(Reader reader) {
-        return CertifierRightBox.parseBytes(reader.getBytes(reader.remaining())).get();
+        return CertifierRightBox.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override

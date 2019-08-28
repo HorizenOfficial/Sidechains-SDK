@@ -165,47 +165,47 @@ public final class RegularTransaction
         );
     }
 
-    public static Try<RegularTransaction> parseBytes(byte[] bytes) {
-        try {
-            if(bytes.length < 40)
-                throw new IllegalArgumentException("Input data corrupted.");
-            if(bytes.length > MAX_TRANSACTION_SIZE)
-                throw new IllegalArgumentException("Input data length is too large.");
+    public static RegularTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 40)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        if(bytes.length > MAX_TRANSACTION_SIZE)
+            throw new IllegalArgumentException("Input data length is too large.");
 
-            long fee = BytesUtils.getLong(bytes, offset);
+        int offset = 0;
+
+        long fee = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
+        for(PublicKey25519Proposition proposition : outputPropositions) {
+            outputs.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
             offset += 8;
-
-            long timestamp = BytesUtils.getLong(bytes, offset);
-            offset += 8;
-
-            int batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<RegularBox> inputs = _boxSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-            offset += batchSize;
-
-            batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-            offset += batchSize;
-
-            List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
-            for(PublicKey25519Proposition proposition : outputPropositions) {
-                outputs.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
-                offset += 8;
-            }
-
-            batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            if(bytes.length != offset + batchSize)
-                throw new IllegalArgumentException("Input data corrupted.");
-            List<Signature25519> signatures = _signaturesSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-
-            return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
-        } catch (Exception e) {
-            return new Failure<>(e);
         }
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+        if(bytes.length != offset + batchSize)
+            throw new IllegalArgumentException("Input data corrupted.");
+
+        List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
+        return new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
     }
 
     public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,

@@ -40,7 +40,7 @@ public final class RegularBoxSerializer
 
     @Override
     public RegularBox parse(Reader reader) {
-        return RegularBox.parseBytes(reader.getBytes(reader.remaining())).get();
+        return RegularBox.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override
