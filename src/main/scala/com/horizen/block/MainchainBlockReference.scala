@@ -8,19 +8,17 @@ import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.{JsonSerializable, JsonSerializer}
-import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
-import com.horizen.utils._
-import io.circe.Decoder.Result
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.utils.{ByteArrayWrapper, _}
+import io.circe.Json
+import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.{Failure, Success, Try}
-import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
-import io.circe.{Decoder, Encoder, HCursor, Json}
-import io.circe.syntax._
-import io.circe.generic.auto._
+import scala.collection.mutable
+import scala.collection.mutable.Map
+import scala.util.{Failure, Success, Try}
 
 
 // Mainchain Block structure:
@@ -33,8 +31,8 @@ import io.circe.generic.auto._
 class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                    val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
-                    ) extends BytesSerializable with JsonSerializable {
+                    val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]]
+                    ) extends JsonSerializable {
 
   lazy val hash: Array[Byte] = header.hash
 

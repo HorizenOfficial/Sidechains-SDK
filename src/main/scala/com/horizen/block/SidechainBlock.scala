@@ -2,7 +2,6 @@ package com.horizen.block
 
 import java.io.ByteArrayOutputStream
 import java.time.Instant
-import java.util
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.ScorexEncoding
@@ -15,14 +14,14 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
 import com.horizen.utils.{BytesUtils, ListSerializer}
 import scorex.core.block.Block
-import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
-import scorex.util.ModifierId
 import scorex.core.serialization.ScorexSerializer
+import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
+import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
-import scala.util.{Success, Try}
+import scala.util.Try
 
 class SidechainBlock (
                        override val parentId: ModifierId,

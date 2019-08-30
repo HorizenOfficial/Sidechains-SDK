@@ -12,14 +12,12 @@ import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.SidechainTransaction
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.util.{Failure, Success}
-
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
   extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerPublicKey, block.signature, companion) {
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
-trait SidechainBlockFixture {
+trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
 
   def generateGenesisBlock(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L): SidechainBlock = {
     SidechainBlock.create(
@@ -42,7 +40,8 @@ trait SidechainBlockFixture {
           params.sidechainGenesisBlockId
         else
           res(i - 1).id
-      }
+        }
+
       res = res :+ SidechainBlock.create(
         parentId,
         Instant.now.getEpochSecond - 1000 + i * 10,

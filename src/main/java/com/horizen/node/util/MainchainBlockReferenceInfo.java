@@ -1,9 +1,14 @@
 package com.horizen.node.util;
 
+import java.util.Arrays;
+
 public final class MainchainBlockReferenceInfo {
 
     // Mainchain block reference hash with the most height
     private byte[] mainchainBlockReferenceHash;
+
+    // parent mainchain block reference hash with the most height
+    private byte[] parentMainchainBlockReferenceHash;
 
     // Height in mainchain of mainchainBlockReference
     private int height;
@@ -11,18 +16,22 @@ public final class MainchainBlockReferenceInfo {
     // Sidechain block ID which contains this MC block reference
     private byte[] sidechainBlockId;
 
-    public MainchainBlockReferenceInfo(byte[] mainchainBlockReferenceHash, int height, byte[] sidechainBlockId) {
-        this.mainchainBlockReferenceHash = mainchainBlockReferenceHash;
+    public MainchainBlockReferenceInfo(byte[] mainchainBlockReferenceHash,
+                                       byte[] parentMainchainBlockReferenceHash,
+                                       int height,
+                                       byte[] sidechainBlockId) {
+        this.mainchainBlockReferenceHash = Arrays.copyOf(mainchainBlockReferenceHash, mainchainBlockReferenceHash.length);
+        this.parentMainchainBlockReferenceHash = Arrays.copyOf(parentMainchainBlockReferenceHash, parentMainchainBlockReferenceHash.length);
         this.height = height;
-        this.sidechainBlockId = sidechainBlockId;
+        this.sidechainBlockId = Arrays.copyOf(sidechainBlockId, sidechainBlockId.length);
     }
 
     public byte[] getMainchainBlockReferenceHash() {
         return mainchainBlockReferenceHash;
     }
 
-    public void setMainchainBlockReferenceHash(byte[] mainchainBlockReferenceHash) {
-        this.mainchainBlockReferenceHash = mainchainBlockReferenceHash;
+    public byte[] getParentMainchainBlockReferenceHash() {
+        return parentMainchainBlockReferenceHash;
     }
 
     public int getHeight() {
@@ -36,9 +45,4 @@ public final class MainchainBlockReferenceInfo {
     public byte[] getSidechainBlockId() {
         return sidechainBlockId;
     }
-
-    public void setSidechainBlockId(byte[] sidechainBlockId) {
-        this.sidechainBlockId = sidechainBlockId;
-    }
-
 }

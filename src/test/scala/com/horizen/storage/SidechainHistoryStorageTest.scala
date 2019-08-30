@@ -1,24 +1,22 @@
 package com.horizen.storage
 
-import com.horizen.companion.SidechainTransactionsCompanion
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.junit._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
-import org.mockito._
 import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap, Optional => JOptional}
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
 import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.SidechainBlockInfo
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.transaction._
 import com.horizen.utils.ByteArrayWrapper
 import javafx.util.Pair
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit._
+import org.mockito._
+import org.scalatest.junit.JUnitSuite
+import org.scalatest.mockito._
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, idToBytes}
@@ -367,13 +365,13 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
 
     // Test 1: try to update best block with a forked block
-    tryRes = historyStorage.updateBestBlock(newBestBlock, newBestBlockInfo)
+    tryRes = historyStorage.setAsBestBlock(newBestBlock, newBestBlockInfo)
     assertTrue("HistoryStorage successful best block update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
-    tryRes = historyStorage.updateBestBlock(newBestBlock, newBestBlockInfo)
+    tryRes = historyStorage.setAsBestBlock(newBestBlock, newBestBlockInfo) // Why it shall be failed? @TODO check it
     assertTrue("HistoryStorage failure expected during update.", tryRes.isFailure)
     assertEquals("HistoryStorage different exception expected during update.", expectedException, tryRes.failed.get)
   }

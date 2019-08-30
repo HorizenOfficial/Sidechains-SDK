@@ -1,22 +1,22 @@
 package com.horizen.chain
 
-import java.io.{File, FileOutputStream}
+import java.io.File
 import java.nio.file.Files
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
-import org.scalatest.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+import org.scalatest.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
-import scorex.util.ModifierId
-import scorex.util.{bytesToId, idToBytes}
+import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
+  setSeed(1000L)
 
   val height = 100
   val score: Long = 1L << 32 + 1
-  val parentId: ModifierId = getRandomModifier(1000L)
+  val parentId: ModifierId = getRandomModifier()
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
 
   @Test

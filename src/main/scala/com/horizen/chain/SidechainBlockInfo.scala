@@ -1,14 +1,12 @@
 package com.horizen.chain
 
 import java.util
-import java.util.Arrays
 
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.ModifierSemanticValidity
-import scorex.core.serialization.BytesSerializable
-import scorex.core.serialization.ScorexSerializer
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
@@ -17,7 +15,10 @@ import scala.util.Try
 case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
-                              semanticValidity: ModifierSemanticValidity) extends BytesSerializable {
+                              semanticValidity: ModifierSemanticValidity,
+                              mainchainBlockReferenceHashes: Seq[ByteArrayWrapper] = Seq()) extends BytesSerializable with ChainData[ModifierId] {
+
+  override def getParentId: ModifierId = parentId
 
   override type M = SidechainBlockInfo
 
@@ -25,9 +26,10 @@ case class SidechainBlockInfo(height: Int,
 
   override def hashCode: Int = height.hashCode() + score.hashCode() + semanticValidity.code.toInt + util.Arrays.hashCode(idToBytes(parentId))
 
+  // Shall we delete it due case class generate his own equals?
   override def equals(obj: Any): Boolean = {
     obj match {
-      case b: SidechainBlockInfo => height == b.height && score == b.score && parentId == b.parentId && semanticValidity == b.semanticValidity
+      case b: SidechainBlockInfo => height == b.height && score == b.score && parentId == b.parentId && semanticValidity == b.semanticValidity && mainchainBlockReferenceHashes.equals(b.mainchainBlockReferenceHashes)
       case _ => false
     }
   }
