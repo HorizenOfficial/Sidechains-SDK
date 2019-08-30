@@ -12,16 +12,26 @@ import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.SidechainTransaction
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.util.{Failure, Success}
-
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
   extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerPublicKey, block.signature, companion) {
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
-trait SidechainBlockFixture {
+trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
 
-  def generateGenesisBlock(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L): SidechainBlock = {
+  def generateGenesisBlock(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L, genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlock = {
+    SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(generateMainchainBlockReference(blockHash = genesisMainchainBlockHash)),
+      Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(basicSeed).getBytes),
+      companion,
+      null
+    ).get
+  }
+
+  def generateGenesisBlockWithNoMainchainReferences(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L, genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlock = {
     SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
@@ -42,11 +52,12 @@ trait SidechainBlockFixture {
           params.sidechainGenesisBlockId
         else
           res(i - 1).id
-      }
+        }
+
       res = res :+ SidechainBlock.create(
         parentId,
         Instant.now.getEpochSecond - 1000 + i * 10,
-        Seq(),
+        generateMainchainReferences(),
         Seq(),
         PrivateKey25519Creator.getInstance().generateSecret("seed%d".format(basicSeed.toInt + i).getBytes),
         companion,

@@ -1,18 +1,18 @@
 package com.horizen.integration.storage
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
+
+import com.horizen.SidechainTypes
+import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{IODBStoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.transaction.{Transaction, TransactionSerializer}
+import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage}
+import com.horizen.transaction.TransactionSerializer
+import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
-import java.util.{HashMap => JHashMap}
-import java.lang.{Byte => JByte}
-
-import com.horizen.SidechainTypes
-import org.junit.Assert._
-import com.horizen.block.SidechainBlock
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.ModifierId
 
@@ -46,7 +46,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     var expectedHeight: Int = 1
     var expectedScore: Long = 1L
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(genesisBlock, expectedScore).isSuccess)
-    assertTrue("HistoryStorage best block expected to be updated", historyStorage.updateBestBlock(genesisBlock, historyStorage.blockInfoById(genesisBlock.id).get).isSuccess)
+    assertTrue("HistoryStorage best block expected to be updated", historyStorage.setAsBestBlock(genesisBlock, historyStorage.blockInfoById(genesisBlock.id).get).isSuccess)
     // Verify changes
     assertEquals("HistoryStorage different height expected", expectedHeight, historyStorage.height)
     assertEquals("HistoryStorage different bestBlockId expected", genesisBlock.id, historyStorage.bestBlockId)
@@ -74,7 +74,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
 
     // Update best block -> active chain related data should change
-    assertTrue("HistoryStorage best block expected to be updated", historyStorage.updateBestBlock(secondBlock, historyStorage.blockInfoById(secondBlock.id).get).isSuccess)
+    assertTrue("HistoryStorage best block expected to be updated", historyStorage.setAsBestBlock(secondBlock, historyStorage.blockInfoById(secondBlock.id).get).isSuccess)
     // Verify changes
     assertEquals("HistoryStorage different height expected", expectedHeight, historyStorage.height)
     assertEquals("HistoryStorage different bestBlockId expected", secondBlock.id, historyStorage.bestBlockId)
@@ -90,7 +90,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     expectedScore += 1
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(thirdBlock, expectedScore).isSuccess)
     // Update best block -> active chain related data should change
-    assertTrue("HistoryStorage best block expected to be updated", historyStorage.updateBestBlock(thirdBlock, historyStorage.blockInfoById(thirdBlock.id).get).isSuccess)
+    assertTrue("HistoryStorage best block expected to be updated", historyStorage.setAsBestBlock(thirdBlock, historyStorage.blockInfoById(thirdBlock.id).get).isSuccess)
 
     // Verify changes
     assertEquals("HistoryStorage different height expected", expectedHeight, historyStorage.height)
@@ -109,7 +109,13 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     expectedScore = 100L
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(forkBlock, expectedScore).isSuccess)
     // Update best block -> active chain related data should change
-    assertTrue("HistoryStorage best block expected to be updated", historyStorage.updateBestBlock(forkBlock, historyStorage.blockInfoById(forkBlock.id).get).isSuccess)
+    // change semantic validity of active chain block
+    // @TODO semantic validity shall not be updated after setting block as best block, add check
+    assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Unknown, historyStorage.blockInfoById(forkBlock.id).get.semanticValidity)
+    assertTrue("HistoryStorage block semantic validity expected to be updated", historyStorage.updateSemanticValidity(forkBlock, ModifierSemanticValidity.Valid).isSuccess)
+    assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Valid, historyStorage.blockInfoById(forkBlock.id).get.semanticValidity)
+
+    assertTrue("HistoryStorage best block expected to be updated", historyStorage.setAsBestBlock(forkBlock, historyStorage.blockInfoById(forkBlock.id).get).isSuccess)
 
     // Verify changes
     assertEquals("HistoryStorage different height expected", expectedHeight, historyStorage.height)
@@ -122,10 +128,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different block chain expected form active chain", Seq(forkBlock.id), historyStorage.activeChainFrom(forkBlock.id))
 
 
-    // change semantic validity of active chain block
-    assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Unknown, historyStorage.blockInfoById(forkBlock.id).get.semanticValidity)
-    assertTrue("HistoryStorage block semantic validity expected to be updated", historyStorage.updateSemanticValidity(forkBlock, ModifierSemanticValidity.Valid).isSuccess)
-    assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Valid, historyStorage.blockInfoById(forkBlock.id).get.semanticValidity)
+
 
     // change semantic validity of not an active chain block
     assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Unknown, historyStorage.blockInfoById(secondBlock.id).get.semanticValidity)

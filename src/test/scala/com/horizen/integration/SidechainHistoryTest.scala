@@ -5,7 +5,6 @@ import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
-import java.io.{File => JFile}
 
 import scala.util.{Failure, Success}
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
@@ -17,7 +16,10 @@ import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import io.iohk.iodb.LSMStore
 import org.mockito.Mockito
+import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
+import scorex.core.consensus.History.ProgressInfo
+import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.settings.ScorexSettings
 import scorex.util.ModifierId
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
@@ -32,7 +34,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
-  var genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
+  val genesisBlock: SidechainBlock = generateGenesisBlockWithNoMainchainReferences(sidechainTransactionsCompanion)
   var params: NetworkParams = _
 
   val sidechainSettings = mock[SidechainSettings]
@@ -141,7 +143,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 3: try to append block that parent is absent
-    val unknownBlock = generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 444L)
+    val unknownBlock = generateGenesisBlockWithNoMainchainReferences(sidechainTransactionsCompanion, basicSeed = 444L)
     history.append(unknownBlock) match {
       case Success((hist, prog)) =>
         history = hist

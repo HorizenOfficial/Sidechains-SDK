@@ -2,6 +2,7 @@ package com.horizen.params
 
 import java.math.BigInteger
 
+import com.horizen.CommonParams
 import scorex.util.ModifierId
 
 trait NetworkParams {
@@ -32,6 +33,7 @@ trait NetworkParams {
 
 
   // Sidechain genesis params:
-  val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32) // hash of the block which include SidechainCreationTx for current SC
+  val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](CommonParams.mainchainBlockHashLength) // hash of the block which include SidechainCreationTx for current SC
   val genesisPoWData: List[Tuple2[Int, Int]] = List() // Tuple2 with timestamps and bits values of <nPowAveragingWindow> blocks up-to <genesisMainchainBlockHash> block. From oldest MC block to genesis one.
+  val genesisMainchainBlockHeight = 1 // Height of the block which include SidechainCreationTx for current SC
 }

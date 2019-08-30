@@ -1,20 +1,20 @@
 package com.horizen
 
-import java.util.{List => JList, ArrayList => JArrayList, Optional => JOptional}
+import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.node.NodeHistory
+import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
-import scorex.util.ModifierId
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
-import scorex.util.idToBytes
-import com.horizen.node.NodeHistory
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.transaction.Transaction
+import scorex.util.{ModifierId, idToBytes}
+
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -186,7 +186,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
     Try {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
-      newStorage = newStorage.updateBestBlock(block, storage.blockInfoById(block.id).get).get
+      newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id).get).get
       new SidechainHistory(newStorage, params)
     } match {
       case Success(newHistory) => newHistory
@@ -412,35 +412,21 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     transaction
   }
 
-  private def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
-
-  override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
-    // best MC block header which has already been included in a SC block
-    var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
-    var hashOfMcBlockReference = mcBlockReference.hash
-
-    var height = getHeightOfMainchainBlock(hashOfMcBlockReference)
-
-    // Sidechain block which contains this MC block reference
-    var scBlock = getSidechainBlockByMainchainBlockReferenceHash(hashOfMcBlockReference)
-    var scBlockId = Array[Byte]()
-    if(scBlock.isPresent)
-      scBlockId = idToBytes(scBlock.get().id)
-
-    new MainchainBlockReferenceInfo(
-      hashOfMcBlockReference,
-      height,
-      scBlockId
-    )
+  override def getBestMainchainBlockReferenceInfo: JOptional[MainchainBlockReferenceInfo] = {
+    storage.getBestMainchainBlockReferenceInfo.asJava
   }
 
-  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
+  override def getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(height: Int): JOptional[MainchainBlockReferenceInfo] = {
+    storage.getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(height).asJava
+  }
 
-  override def getHeightOfMainchainBlock(mcBlockReferenceHash: Array[Byte]): Int = ???
+  override def getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReferenceInfo] = {
+    storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
+  }
 
-  override def getSidechainBlockByMainchainBlockReferenceHash(mcBlockReferenceHash: Array[Byte]): JOptional[SidechainBlock] = ???
-
-  override def createMainchainBlockReference(mainchainBlockData: Array[Byte]): Try[MainchainBlockReference] = ???
+  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReference] = {
+    storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
+  }
 }
 
 
