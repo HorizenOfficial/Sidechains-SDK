@@ -1,0 +1,769 @@
+openapi: "3.0.0"
+
+info:
+  version: "1.0"
+  title: Sidechain Node API spec
+  description: API docs for Sidechain node.
+
+tags:
+  - name: block
+    description: Operations about blocks
+  - name: transaction
+    description: Operations about transactions
+  - name: wallet
+    description: Operations about wallet
+  - name: util
+    description: Utilty operations
+
+paths:
+
+  /block/findById:
+    post:
+      tags:
+        - block
+      summary: find block by id
+      description: return a single block
+      operationId: getBlock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                blockId:
+                  description: ID of block to return
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockHex:
+                        type: string
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlock'
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /block/lastIds:
+    post:
+      tags:
+        - block
+      summary: find last block ids
+      description: Returns an array of number last sidechain block ids
+      operationId: getLastBlockIds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                number:
+                  description: The number of block ids to return
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      lastBlockIds:
+                        type: array
+                        items:
+                          type: string
+
+  /block/findIdByHeight:
+    post:
+      tags:
+        - block
+      summary: find a block id by height
+      description: Return a sidechain block Id by its height in a blockchain
+      operationId: getBlockIdByHeight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                height:
+                  description: The height, in a blockchain, of the block to return
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /block/best:
+    post:
+      tags:
+        - block
+      summary: find the best block
+      description: Return here best sidechain block id and height in active chain
+      operationId: getBestBlockInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlock'
+                      height:
+                        type: integer
+                        format: int64
+
+  /block/template:
+    post:
+      tags:
+        - block
+      summary: find block candidate for being next tip
+      description: Return Sidechain block candidate for being next tip, already signed by Forger
+      operationId: getBlockTemplate
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockHex:
+                        type: string
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlock'
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /block/submit:
+    post:
+      tags:
+        - block
+      summary: submitBlock
+      description: submitBlock
+      operationId: submitBlock
+      requestBody:
+        description: The sidechain block as array of bytes
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                blockHex:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /block/generate:
+    post:
+      tags:
+        - block
+      summary: generate new blocks
+      description: Returns ids of generated sidechain blocks
+      operationId: generateBlocks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                number:
+                  description: The number of blocks to generate
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /wallet/allBoxes:
+    post:
+      tags:
+        - wallet
+      summary: find all boxes
+      description: Return all boxes, excluding those which ids are included in excludeBoxIds list
+      operationId: getAllBoxes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boxTypeClass:
+                  description: Filter boxes of a given type
+                  type: string
+                excludeBoxIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      boxes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Box'
+
+  /wallet/balance:
+    post:
+      tags:
+        - wallet
+      summary: the global balance
+      description: Return the global balance for all types of boxes
+      operationId: getBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boxType:
+                  description: Filter balance for given box type
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      balance:
+                        type: integer
+                        format: int64
+
+  /wallet/createNewPublicKeyProposition:
+    post:
+      tags:
+        - wallet
+      summary: new secret
+      description: Create new secret and return corresponding address (public key)
+      operationId: createNewPublicKeyProposition
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      address:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /wallet/allPropositions:
+    post:
+      tags:
+        - wallet
+      summary: find all public keys
+      description: Returns the list of all wallet’s propositions (public keys)
+      operationId: getPropositions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                proptype:
+                  description: Filter propositions of the given type
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      listOfAddresses:
+                        type: array
+                        items:
+                          type: string
+
+  /transaction/allTransactions:
+    post:
+      tags:
+        - transaction
+      summary: find all transactions in memory pool
+      description: Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction
+      operationId: getMemoryPool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transaction'
+                      transactionIds:
+                        type: array
+                        items:
+                          type: string
+
+  /transaction/findById:
+    post:
+      tags:
+        - transaction
+      summary: find transaction in memory pool, or in a block or in full blockchain
+      description:  "All the possible behaviours are:\n
+      1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
+      2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
+      3) blockHash not set, txIndex = false -> Search in memory pool"
+      operationId: getRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                blockHash:
+                  type: string
+                transactionIndex:
+                  type: boolean
+                format:
+                  type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /transaction/decodeTransactionBytes:
+    post:
+      tags:
+        - transaction
+      summary: a human readable representation of the trasanction
+      description: Return a JSON representation of a transaction given its byte serialization
+      operationId: decodeRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionBytes:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /transaction/createRegularTransaction:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a regular transaction
+      description: Create and sign a regular transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createRegularTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionInputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      boxId:
+                        type: string
+                transactionOutputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                format:
+                  type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /transaction/createRegularTransactionSimplified:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a regular transaction
+      description: Create and sign a regular transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createRegularTransactionSimplified
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionOutputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                fee:
+                  type: integer
+                  format: int64
+                format:
+                  type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /transaction/sendCoinsToAddress:
+    post:
+      tags:
+        - transaction
+      summary: send a transaction
+      description: Create and sign a regular transaction, specifying outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      operationId: sendCoinsToAddress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionOutputs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                fee:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+  /transaction/sendTransaction:
+    post:
+      tags:
+        - transaction
+      summary: send a transaction
+      description: Validate and send a transaction, given its serialization as input. Then return the id of the transaction
+      operationId: sendRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionBytes:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/ApiErrorPart'
+
+
+
+components:
+  schemas:
+    # Objects
+    ApiErrorPart:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        description:
+          type: string
+
+    PublicKey25519Proposition:
+      type: object
+      properties:
+        publicKey:
+          type: string
+
+    Signature25519:
+      type: object
+      properties:
+        signature:
+          type: string
+
+    MainchainHeader:
+      type: object
+      properties:
+        mainchainHeaderBytes:
+          type: string
+        version:
+          type: integer
+          format: int32
+        hashPrevBlock:
+          type: string
+        hashMerkleRoot:
+          type: string
+        hashReserved:
+          type: string
+        hashSCMerkleRootsMap:
+          type: string
+        time:
+          type: integer
+          format: int64
+        bits:
+          type: integer
+          format: int64
+        nonce:
+          type: string
+        solution:
+          type: string
+
+    MC2SCAggregatedTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        fee:
+          type: integer
+          format: int64
+        timestamp:
+          type: integer
+          format: int64
+        mc2scTransactionsMerkleRootHash:
+          type: string
+        newBoxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Box'
+
+    Box:
+      type: object
+      properties:
+        id:
+          type: string
+        proposition:
+          $ref: '#/components/schemas/PublicKey25519Proposition'
+        value:
+          type: integer
+          format: int64
+        nonce:
+          type: integer
+          format: int64
+        activeFromWithdrawalEpoch:
+          type: integer
+          format: int64
+        typeId:
+          type: integer
+          format: int64
+
+    MainchainBlock:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/MainchainHeader'
+        sidechainRelatedAggregatedTransaction:
+          $ref: '#/components/schemas/MC2SCAggregatedTransaction'
+        merkleRoots:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+
+    Transaction:
+      type: object
+
+    SidechainBlock:
+      type: object
+      properties:
+        id:
+          type: string
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        mainchainBlocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainBlock'
+        sidechainTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        forgerPublicKey:
+          $ref: '#/components/schemas/PublicKey25519Proposition'
+        signature:
+          $ref: '#/components/schemas/Signature25519'
+
+

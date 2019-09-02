@@ -1,10 +1,13 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.Views;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.io.ByteArrayOutputStream;
@@ -12,7 +15,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
@@ -25,11 +27,9 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract List<BoxUnlocker<P>> unlockers();
 
-    public abstract List<B> newBoxes();
-
-    public abstract long fee();
-
-    public abstract long timestamp();
+    @JsonProperty("newBoxes")public abstract List<B> newBoxes();
+    @JsonProperty("fee") public abstract long fee();
+    @JsonProperty("timestamp") public abstract long timestamp();
 
     public abstract boolean semanticValidity();
 

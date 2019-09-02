@@ -3,108 +3,70 @@ package com.horizen.api.http
 import java.util.function.Consumer
 
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import com.horizen.SidechainTypes
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
 import io.circe.Json
-import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import scorex.core.transaction.box.proposition.PublicKey25519Proposition
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
       extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("wallet"))
-            {getAllBoxes ~ getBoxesOfType ~ getBalance ~ getBalanceOfType ~
-              createNewPublicKeyProposition ~ getPropositions ~ getPublicKeyPropositionByType}
+            {getAllBoxes ~ getBalance  ~ createNewPublicKeyProposition ~ getPropositions}
 
   /**
-    * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list.
+    * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list. Filter boxes of a given type
     */
-  def getAllBoxes : Route = (post & path("getAllBoxes"))
+  def getAllBoxes : Route = (post & path("allBoxes"))
   {
-    case class GetBoxesRequest(excludeBoxIds: Option[List[String]])
+    case class GetBoxesRequest(boxTypeClass: Option[String], excludeBoxIds: Option[List[String]])
 
-    entity(as[String]) { body =>
+    entity(as[GetBoxesRequest]) { body =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetBoxesRequest](body) match {
-          case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
-            var idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
-            var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
+        var optBoxTypeClass = body.boxTypeClass
+        var wallet = sidechainNodeView.getNodeWallet
+        var idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
 
-            ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
-
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+        if(optBoxTypeClass.isEmpty){
+          var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
+          SidechainApiResponse(Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
+        }else{
+          var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(optBoxTypeClass.get).asSubclass(classOf[SidechainTypes#SCB])
+          var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
+          var closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
+          SidechainApiResponse(Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
         }
       }
     }
   }
 
   /**
-    * Returns an array of JSONObjects each describing a box of a given type, excluding those which ids are included in 'excludeBoxIds' list.
+    * Returns the balance for given box type, or all types of boxes
     */
-  def getBoxesOfType : Route = (post & path("getBoxesOfType"))
+  def getBalance : Route = (post & path("balance"))
   {
-    case class GetBoxesOfTypeRequest(boxTypeClass: String, excludeBoxIds: List[String] = List[String]())
-
-    entity(as[String]) { body =>
+    case class GetBalanceByTypeRequest(boxType: Option[String])
+    entity(as[GetBalanceByTypeRequest]) { body =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetBoxesOfTypeRequest](body)match {
-          case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
-
-            var idsOfBoxesToExclude = req.excludeBoxIds.map(strId => strId.getBytes)
-            var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
-
-            var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
-            var closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
-
-            ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
-
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
-      }
-    }
-  }
-
-  /**
-    * Returns global balance for all types of boxes
-    */
-  def getBalance : Route = (post & path("getBalance"))
-  {
-    withNodeView{
-      sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var sumOfBalances : Long = wallet.allBoxesBalance()
-        ApiResponse("result" -> Json.obj("globalBalance" -> Json.fromLong(sumOfBalances)))
-    }
-  }
+        var optBoxType = body.boxType
+        if(optBoxType.isEmpty){
+          var sumOfBalances : Long = wallet.allBoxesBalance()
+          SidechainApiResponse(Json.obj("balance" -> Json.fromLong(sumOfBalances)))
 
-  /**
-    * Returns the balance for given box type
-    */
-  def getBalanceOfType : Route = (post & path("getBalanceOfType"))
-  {
-    case class GetBalanceByTypeRequest(boxType: String)
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetBalanceByTypeRequest](body)match {
-          case Success(req) =>
-            val wallet = sidechainNodeView.getNodeWallet
-            var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(req.boxType).asSubclass(classOf[SidechainTypes#SCB])
-            var balance = wallet.boxesBalance(clazz)
-            ApiResponse("result" -> ("balance" -> balance))
-
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+        }else{
+          var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxType.get).asSubclass(classOf[SidechainTypes#SCB])
+          var balance = wallet.boxesBalance(clazz)
+          SidechainApiResponse("balance" -> balance)
         }
+
       }
     }
   }
@@ -120,53 +82,39 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
         val key = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
         if(wallet.addNewSecret(key)) {
-          ApiResponse("result" -> Json.obj("proposition" -> key.publicImage().toJson))
+          SidechainApiResponse(Json.obj("proposition" -> key.publicImage().toJson))
         } else
-          ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> "Failed to create ne key pair."))
+          SidechainApiResponse(
+            SidechainApiErrorResponse(
+              WalletApiGroupErrorCodes.SECRET_NOT_ADDED, "Failed to create key pair."))
       }
     }
   }
 
   /**
-    * Returns the list of all wallet’s propositions (public keys)
+    * Returns the list of all wallet’s propositions (public keys). Filter propositions of the given type
     */
-  def getPropositions : Route = (post & path("getPropositions"))
+  def getPropositions : Route = (post & path("allPropositions"))
   {
-    entity(as[String]) { body =>
+    case class GetPublicKeysPropositionsByTypeRequest(proptype: Option[String])
+    entity(as[GetPublicKeysPropositionsByTypeRequest]) { body =>
       withNodeView{ sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        ApiResponse(
-          "result" -> Json.obj(
-            "propositions" -> Json.fromValues(wallet.allSecrets().asScala.map(s => s.publicImage().toJson))
-            )
-        )
-      }
-    }
-  }
-
-  /**
-    * Returns the list of all wallet’s addresses (public keys) of the given type
-    */
-  def getPublicKeyPropositionByType : Route = (post & path("getPublicKeyPropositionByType"))
-  {
-    case class GetPublicKeysPropositionsByTypeRequest(proptype: String = "")
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetPublicKeysPropositionsByTypeRequest](body)match {
-          case Success(req) =>
-            val wallet = sidechainNodeView.getNodeWallet
-            var clazz : java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])
-            var listOfPropositions = wallet.secretsOfType(clazz)
-            var listOfAddresses : Seq[String] = Seq()
-            listOfPropositions.forEach(new Consumer[Secret] {
-              override def accept(t: Secret): Unit = {
-                var proofOfKnowledgeProposition = t.publicImage()
-                if(t.isInstanceOf[PublicKey25519Proposition])
-                  listOfAddresses.+(t.asInstanceOf[PublicKey25519Proposition].address)
-              }
-            })
-            ApiResponse("result" -> listOfAddresses)
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+        var optPropType = body.proptype
+        if(optPropType.isEmpty){
+          SidechainApiResponse(Json.obj("propositions" -> Json.fromValues(wallet.allSecrets().asScala.map(s => s.publicImage().toJson))))
+        }else{
+          var clazz : java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(optPropType.get).asSubclass(classOf[SidechainTypes#SCS])
+          var listOfPropositions = wallet.secretsOfType(clazz)
+          var listOfAddresses : Seq[String] = Seq()
+          listOfPropositions.forEach(new Consumer[Secret] {
+            override def accept(t: Secret): Unit = {
+              var proofOfKnowledgeProposition = t.publicImage()
+              if(t.isInstanceOf[PublicKey25519Proposition])
+                listOfAddresses.+(t.asInstanceOf[PublicKey25519Proposition].address)
+            }
+          })
+          SidechainApiResponse("propositions" -> listOfAddresses)
         }
       }
     }

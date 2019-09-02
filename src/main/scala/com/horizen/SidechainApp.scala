@@ -5,9 +5,8 @@ import java.util.{HashMap => JHashMap}
 import java.io.{File => JFile}
 
 import scala.collection.immutable.Map
-import scala.collection
 import akka.actor.ActorRef
-import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http.{ApplicationApiGroup, ApplicationApiRoute, FirstSolutionRestApi, MySecondCustomApi, POCApi, SecondSolutionRestApi, SidechainApiErrorHandler, SidechainApiRejectionHandler, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainRejectionApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
@@ -19,14 +18,14 @@ import com.horizen.transaction.TransactionSerializer
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
 import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute}
+import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
-import akka.http.scaladsl.server.{ExceptionHandler, Route}
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.horizen.forge.ForgerRef
 
 import scala.collection.mutable
@@ -49,6 +48,9 @@ class SidechainApp(val settingsFilename: String)
   log.debug(s"Starting application with settings \n$sidechainSettings")
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
+
+  override implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
+
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq()
@@ -104,13 +106,32 @@ class SidechainApp(val settingsFilename: String)
 
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
-  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
+  // I'm a developer and I want to add my custom rest api
+  var customApiRoutes : Seq[ApplicationApiGroup] = Seq[ApplicationApiGroup](
+    new MySecondCustomApi(sidechainSettings)
+  )
+
+  // I'm a developer and I want to exclude from my api some core routes
+  var rejectedApiPaths : Seq[(String, String)] = Seq[(String, String)]()
+
+  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
+  rejectedApiPaths.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ (SidechainRejectionApiRoute(path._1, path._2, settings.restApi, nodeViewHolderRef)))
+
+  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
+  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
+  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
+  customApiRoutes.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ (ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute)))
+
+  val coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
+//    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    FirstSolutionRestApi(sidechainSettings, settings.restApi, nodeViewHolderRef),
+    SecondSolutionRestApi(sidechainSettings, settings.restApi, nodeViewHolderRef),
+    POCApi(sidechainSettings, settings.restApi, nodeViewHolderRef)
     //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
     //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
     //DebugApiRoute(settings.restApi, nodeViewHolderRef, miner),
@@ -121,7 +142,14 @@ class SidechainApp(val settingsFilename: String)
     //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
-  override val swaggerConfig: String = Source.fromResource("api/testApi.yaml").getLines.mkString("\n")
+  // In order to provide the feature to override core api and exclude some other apis,
+  // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
+  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
+    .union(rejectedApiRoutes)
+    .union(applicationApiRoutes)
+    .union(coreApiRoutes)
+
+  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
 
   override def stopAll(): Unit = {
     super.stopAll()

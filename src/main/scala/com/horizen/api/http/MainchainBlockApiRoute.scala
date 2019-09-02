@@ -57,10 +57,8 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
   {
     case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: String, format : Boolean = false)
 
-    entity(as[String]) { body =>
+    entity(as[GetMainchainBlockReferenceRequest]) { req =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
             val history = sidechainNodeView.getNodeHistory
 
             var mcBlockRefHash = req.mainchainBlockReferenceHash.getBytes
@@ -87,8 +85,6 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 }
             ))
 
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
       }
     }
   }
@@ -101,10 +97,8 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
   {
     case class CreateMainchainBlockReferenceRequest(mainchainBlockData: String, format : Boolean = false)
 
-    entity(as[String]) { body =>
+    entity(as[CreateMainchainBlockReferenceRequest]) { req =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[CreateMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
             var mcBlockData = req.mainchainBlockData.getBytes
             var format = req.format
 
@@ -125,8 +119,6 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
                     "errorDescription" -> s"Creation failed. ${exp.getMessage}"))
             }
 
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
       }
     }
   }

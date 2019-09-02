@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util
 
+import com.fasterxml.jackson.annotation.{JsonIgnore, JsonIgnoreProperties, JsonInclude, JsonProperty, JsonView}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import com.horizen.box.{Box, NoncedBox}
@@ -12,7 +14,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import com.horizen.serialization.{JsonSerializable, JsonSerializer, Views}
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
 import com.horizen.utils.{BytesUtils, ListSerializer}
 import io.circe.Json
@@ -29,13 +31,16 @@ import scala.collection.mutable
 import scala.collection.mutable.HashMap
 import scala.util.{Success, Try}
 
-class SidechainBlock (override val parentId: ModifierId,
-                      override val timestamp: Block.Timestamp,
-                      val mainchainBlocks : Seq[MainchainBlockReference],
-                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                      val forgerPublicKey: PublicKey25519Proposition,
-                      val signature: Signature25519,
-                      companion: SidechainTransactionsCompanion)
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder"))
+class SidechainBlock (
+                       @JsonProperty("parentId") override val parentId: ModifierId,
+                       @JsonProperty("timestamp") override val timestamp: Block.Timestamp,
+                       @JsonProperty("mainchainBlocks") val mainchainBlocks : Seq[MainchainBlockReference],
+                       @JsonProperty("sidechainTransactions") val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
+                       @JsonProperty("forgerPublicKey") val forgerPublicKey: PublicKey25519Proposition,
+                       @JsonProperty("signature") val signature: Signature25519,
+                       companion: SidechainTransactionsCompanion)
   extends Block[SidechainTypes#SCBT]
   with JsonSerializable
 {
@@ -48,6 +53,7 @@ class SidechainBlock (override val parentId: ModifierId,
 
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
+  @JsonProperty("id")
   override lazy val id: ModifierId =
     bytesToId(Blake2b256(messageToSign))
 

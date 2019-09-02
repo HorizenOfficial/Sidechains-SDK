@@ -20,7 +20,7 @@ class SidechainTransactionApiRouteTest
   with SidechainNodeViewHolderFixture
 {
 
-  val getMemoryPoolRoute = getSidechainTransactionApiRoute.getMemoryPool
+  val getMemoryPoolRoute = getSidechainTransactionApiRoute.allTransactions
 
   @Test
   def testMemoryPool() : Unit = {

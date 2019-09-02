@@ -1,5 +1,6 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -13,7 +14,7 @@ import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
+import com.horizen.serialization.Views;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
 import io.circe.Json;
@@ -26,6 +27,7 @@ import scorex.core.utils.ScorexEncoder;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
+@JsonView(Views.Default.class)
 public final class RegularTransaction
     extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
     implements JsonSerializable
@@ -36,9 +38,9 @@ public final class RegularTransaction
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
     private List<Signature25519> _signatures;
+
     private long _fee;
     private long _timestamp;
-
 
     private List<RegularBox> _newBoxes;
     private List<BoxUnlocker<PublicKey25519Proposition>> _unlockers;
