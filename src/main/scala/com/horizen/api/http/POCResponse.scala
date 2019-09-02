@@ -1,4 +1,4 @@
-package scorex.core.api.http
+package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode, StatusCodes}
 import akka.http.scaladsl.server.{Directives, Route}
