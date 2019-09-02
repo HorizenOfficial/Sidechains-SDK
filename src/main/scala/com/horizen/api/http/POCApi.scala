@@ -3,7 +3,6 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.horizen.api.http.dto.{POCDTORequest, POCDTOResponse}
-import scorex.core.api.http.POCResponse
 import scorex.core.settings.RESTApiSettings
 import JacksonSupport._
 import com.fasterxml.jackson.core.JsonFactory

@@ -23,10 +23,10 @@ class POCResponse(statusCode: StatusCode) {
 }
 
 object POCResponse {
-  implicit def toRoute(jsonRoute: ApiResponse): Route = jsonRoute.defaultRoute
+  implicit def toRoute(jsonRoute: POCResponse): Route = jsonRoute.defaultRoute
 
   def apply(result: String): Route = OK(result)
   def apply(result: Future[String]): Route = OK(result)
 
-  object OK extends ApiResponse(StatusCodes.OK)
+  object OK extends POCResponse(StatusCodes.OK)
 }
