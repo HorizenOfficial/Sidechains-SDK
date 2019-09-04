@@ -28,8 +28,9 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public abstract List<BoxUnlocker<P>> unlockers();
 
     @JsonProperty("newBoxes")public abstract List<B> newBoxes();
-    @JsonProperty("fee") public abstract long fee();
-    @JsonProperty("timestamp") public abstract long timestamp();
+    public abstract long fee();
+    @JsonProperty("timestamp")
+    public abstract long timestamp();
 
     public abstract boolean semanticValidity();
 

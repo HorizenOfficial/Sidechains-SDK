@@ -7,6 +7,7 @@ import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.StringUnmarshallers;
 import akka.http.scaladsl.model.ContentType;
 import akka.http.scaladsl.model.StatusCodes;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.horizen.SidechainSettings;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.SidechainBlock;
@@ -57,6 +58,7 @@ public class MySecondCustomApi extends ApplicationApiGroup {
 
     @Override
     public List<Route> getRoutes() {
+        JsonUtil.addCustomSerializer(Long.class, new CustomTransactionJsonSerializer());
         List<Route> routes = new ArrayList<Route>();
         routes.add(resource());
         routes.add(hello());
@@ -97,7 +99,9 @@ public class MySecondCustomApi extends ApplicationApiGroup {
         );
         CustomTransaction transaction = new CustomTransaction(from, to, fee, timestamp);
 
-        String resp = JsonUtil.toJson(transaction);
+//        String resp = JsonUtil.toJson(transaction);
+
+        String resp = serialize(transaction);
 
         return akka.http.javadsl.server.Directives.path("hello", () ->
                 akka.http.javadsl.server.Directives.get(() ->
@@ -117,9 +121,24 @@ public class MySecondCustomApi extends ApplicationApiGroup {
 
     }
 
+    private String serialize(BoxTransaction transaction){
+        String resp = "";
+
+        try {
+            resp = JsonUtil.toJson(transaction);
+            System.out.println(resp);
+            resp = JsonUtil.toJson(transaction, Views.CustomView.class);
+            System.out.println(resp);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return resp;
+    }
+
     private Route hello2(){
 
-        long fee = 10;
+        long fee = 5;
         long timestamp = 1547798549470L;
 
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
@@ -148,7 +167,7 @@ public class MySecondCustomApi extends ApplicationApiGroup {
         );
         SecondCustomTransaction transaction = new SecondCustomTransaction(from, to, fee, timestamp);
 
-        String resp = JsonUtil.toJsonWithCustomView(transaction, Views.CustomView.class);
+        String resp = serialize(transaction);
 
         return akka.http.javadsl.server.Directives.path("hello2", () ->
                         akka.http.javadsl.server.Directives.get(() ->

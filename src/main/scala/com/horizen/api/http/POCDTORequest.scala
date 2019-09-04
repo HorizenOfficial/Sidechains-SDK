@@ -1,4 +1,4 @@
-package com.horizen.api.http.dto
+package com.horizen.api.http
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

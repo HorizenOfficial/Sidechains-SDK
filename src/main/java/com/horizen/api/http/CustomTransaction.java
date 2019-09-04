@@ -1,8 +1,7 @@
 package com.horizen.api.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRootName;
-import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
@@ -23,13 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @JsonView(Views.Default.class)
+@JsonInclude
 @JsonRootName("customTransaction")
 public final class CustomTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox> {
 
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
     private List<Signature25519> _signatures;
-    @JsonProperty("myFee") private long _fee;
+    private long _fee;
     private long _timestamp;
 
     @JsonProperty("messageToSign")
@@ -53,11 +53,15 @@ public final class CustomTransaction extends SidechainTransaction<PublicKey25519
         return new ArrayList<RegularBox>();
     }
 
+    @JsonProperty("myFee")
     @Override
     public long fee() {
         return _fee;
     }
 
+    @JsonView(Views.CustomView.class)
+    @JsonSerialize(using = CustomTransactionJsonSerializer.class)
+    @JsonProperty("myTimestamp")
     @Override
     public long timestamp() {
         return _timestamp;
