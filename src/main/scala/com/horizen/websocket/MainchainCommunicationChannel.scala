@@ -29,11 +29,11 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     webSocketClient = WebSocketClientRef(webSocketConfiguration)
   }
 
-  def getBlock(afterHeight: Option[Int], afterHash: Option[String]): Try[MainchainBlockReference] = {
+  def getBlock(heightOrHash : Either[Int, String]): Try[MainchainBlockReference] = {
 
     var blockBytes: Array[Byte] = Array[Byte]()
 
-    getSingleBlock(afterHeight, afterHash) match {
+    getSingleBlock(heightOrHash) match {
       case Success(value) =>
         value match {
           case Right(error) =>
@@ -51,11 +51,11 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   }
 
-  def getBlockHashes(lenght: Int, afterHeight: Option[Int], afterHash: Option[String]): Try[Seq[String]] = {
+  def getBlockHashes(lenght: Int, afterHeightOrAfterHash : Either[Int, String]): Try[Seq[String]] = {
 
     var hashes: Seq[String] = Seq[String]()
 
-    getMultipleBlockHashes(lenght, afterHeight, afterHash) match {
+    getMultipleBlockHashes(lenght, afterHeightOrAfterHash) match {
       case Success(value) =>
         value match {
           case Right(error) =>
@@ -72,12 +72,33 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     Success(hashes)
   }
 
-  private def getSingleBlock(afterHeight: Option[Int], afterHash: Option[String]): Try[Either[GetSingleBlockResponse, ErrorResponse]] = {
+  def sync(hashes : Seq[String], lenght: Int): Try[Seq[String]] = {
+
+    var hashes: Seq[String] = Seq[String]()
+
+    getSyncInfo(hashes, lenght) match {
+      case Success(value) =>
+        value match {
+          case Right(error) =>
+            log.error("getSyncInfo: Response error --> " + error.toString)
+            return Failure(new Exception(error.errorMessage))
+          case Left(bl) =>
+            hashes = bl.hashes
+        }
+      case Failure(exception) =>
+        log.error("getSyncInfo: Unexpected exception --> " + exception.getMessage)
+        return Failure(exception)
+    }
+
+    Success(hashes)
+  }
+
+  private def getSingleBlock(heightOrHash : Either[Int, String]): Try[Either[GetSingleBlockResponse, ErrorResponse]] = {
     var response: Try[Either[GetSingleBlockResponse, ErrorResponse]] = Failure(new IllegalStateException("Parsing not yet completed"))
     val correlationId = generateCorrelationId()
 
     val fut = Await.result(
-      (webSocketClient ? GetSingleBlock(correlationId, afterHeight, afterHash)),
+      (webSocketClient ? GetSingleBlock(correlationId, heightOrHash)),
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
@@ -91,13 +112,32 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   }
 
-  private def getMultipleBlockHashes(lenght: Int, afterHeight: Option[Int], afterHash: Option[String]): Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = {
+  private def getMultipleBlockHashes(lenght: Int, afterHeightOrAfterHash : Either[Int, String]): Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = {
     var response: Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = Failure(new IllegalStateException("Parsing not yet completed"))
     val correlationId = generateCorrelationId()
 
     val fut = Await.result(
       (webSocketClient ? GetMultipleBlockHashes(
-        correlationId, lenght, afterHeight, afterHash)),
+        correlationId, lenght, afterHeightOrAfterHash)),
+      timeout.duration)
+      .asInstanceOf[Future[ChannelMessage]]
+
+    try {
+      val webSocketResponse = Await.result(fut, timeout.duration)
+      parseResponse(webSocketResponse).asInstanceOf[Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]]]
+    }catch {
+      case e : Throwable =>
+        Failure(e)
+    }
+
+  }
+
+  private def getSyncInfo(hashes : Seq[String], lenght: Int): Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = {
+    var response: Try[Either[GetMultipleBlockHashesResponse, ErrorResponse]] = Failure(new IllegalStateException("Parsing not yet completed"))
+    val correlationId = generateCorrelationId()
+
+    val fut = Await.result(
+      (webSocketClient ? GetSyncInfo(correlationId, hashes, lenght)),
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
@@ -193,14 +233,14 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
                   case _ => -1
                 }
               var hash = map.get("hash").getOrElse("").toString
-              var block = map.get("hash").getOrElse("").toString
+              var block = map.get("block").getOrElse("").toString
               var corrId = map.get("msgId").getOrElse("").toString
 
               reqType match {
                 case 2 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
                 case 3 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
                 case 2 => Success(Left(GetSingleBlockResponse(corrId, height, hash, block)))
-                case 3 =>
+                case 3 | 4 =>
                   {
                     var hashes : Seq[String] = Seq()
                     map.get("hashes") match {

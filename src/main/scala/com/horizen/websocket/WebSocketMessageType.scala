@@ -52,56 +52,62 @@ trait WebSocketRequestMessage {
     jsonTuple = jsonTuple :+ ("msgId", Json.fromString(correlationId))
     jsonTuple = jsonTuple :+ ("command", Json.fromString(command))
 
-    jsonTuple :+ updateJsonWithMembers()
+    jsonTuple = jsonTuple ++ updateJsonWithMembers()
 
-    var jsonObj = Json.fromFields(jsonTuple)
-
-    jsonObj
+    Json.fromFields(jsonTuple)
   }
 }
 
 abstract class BlockRequest extends WebSocketRequestMessage {
 
-  protected var lenght : Int
-  protected var afterHeight : Option[Int]
-  protected var afterHash : Option[String]
+}
 
-  def updateBlockRequest(): Seq[(String, Json)]
+case class GetSingleBlock (
+                            override var correlationId : String,
+                            var heightOrHash : Either[Int, String]) extends BlockRequest {
+  override var command = "getBlock"
 
   override def updateJsonWithMembers(): Seq[(String, Json)] = {
-    var jsonTuple = Seq[(String, Json)]()
+    var jsonTuple : Seq[(String, Json)] = Seq[(String, Json)]()
 
-    jsonTuple = jsonTuple :+  ("lenght", Json.fromInt(lenght))
-
-    if(!afterHash.isEmpty)
-      jsonTuple = jsonTuple :+ ("afterHash", Json.fromString(afterHash.get))
-    if(!afterHeight.isEmpty)
-      jsonTuple = jsonTuple :+ ("afterHeight", Json.fromInt(afterHeight.get))
-
-    jsonTuple :+ updateBlockRequest()
+    heightOrHash match {
+      case Left(value) => jsonTuple = jsonTuple :+ ("height", Json.fromInt(value))
+      case Right(value) => jsonTuple = jsonTuple :+ ("hash", Json.fromString(value))
+    }
 
     jsonTuple
   }
 }
 
-case class GetSingleBlock (
-                            override var correlationId : String,
-                            var afterHeight : Option[Int],
-                            var afterHash : Option[String]) extends BlockRequest {
-  override var command = "getBlock"
-  override var lenght : Int = 1
-
-  override def updateBlockRequest(): Seq[(String, Json)] = Seq()
-}
-
 case class GetMultipleBlockHashes (
                                     override var correlationId : String,
                                     var lenght : Int,
-                                    var afterHeight : Option[Int],
-                                    var afterHash : Option[String]) extends BlockRequest {
+                                    var afterHeightOrAfterHash : Either[Int, String]) extends BlockRequest {
   override var command = "getBlockHashes"
 
-  override def updateBlockRequest(): Seq[(String, Json)] = Seq()
+  override def updateJsonWithMembers(): Seq[(String, Json)] = {
+    var jsonTuple : Seq[(String, Json)] = Seq[(String, Json)](("len", Json.fromInt(lenght)))
+
+    afterHeightOrAfterHash match {
+      case Left(value) => jsonTuple = jsonTuple :+ ("afterHeight", Json.fromInt(value))
+      case Right(value) => jsonTuple = jsonTuple :+ ("afterHash", Json.fromString(value))
+    }
+
+    jsonTuple
+  }
+}
+
+case class GetSyncInfo(
+                        override var correlationId : String,
+                        var hashes : Seq[String],
+                        var lenght : Int
+                      ) extends WebSocketRequestMessage {
+  override var command: String = "getSyncInfo"
+
+  override def updateJsonWithMembers(): Seq[(String, Json)] = Seq[(String, Json)](
+    ("hashes", Json.fromValues(hashes.map(hash => Json.fromString(hash)))),
+    ("len", Json.fromInt(lenght))
+  )
 }
 
 case class ChannelMessageEvent(message : String){}
