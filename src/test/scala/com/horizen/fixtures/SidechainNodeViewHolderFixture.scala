@@ -27,7 +27,7 @@ trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
 {
 
-  val sidechainSettings = SidechainSettings.read(Some("src/main/resources/settings.conf"))
+  val sidechainSettings = SidechainSettings.read(Some("src/main/additional-resources/settings/settings.conf"))
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
