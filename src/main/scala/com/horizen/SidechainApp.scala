@@ -8,7 +8,7 @@ import scala.collection.immutable.Map
 import scala.collection
 import akka.actor.ActorRef
 import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilsApiRoute, SidechainWalletApiRoute}
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, StorageParams}
@@ -28,6 +28,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.ForgerRef
+import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
 import scala.io.Source
@@ -78,8 +79,10 @@ class SidechainApp(val settingsFilename: String)
     sidechainTransactionsCompanion, params)
 
   //TODO remove these test settings
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+  if(sidechainSettings.scorexSettings.network.nodeName.equals("testNode1")) {
+    sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
+    sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+  }
 
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
@@ -88,12 +91,17 @@ class SidechainApp(val settingsFilename: String)
     sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
 
+
+  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+    Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
+      Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
+
   override val nodeViewSynchronizer: ActorRef =
     actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
       SidechainBlock, SidechainHistory, SidechainMemoryPool]
       (networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-        Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]]() //TODO Must be specified
+        modifierSerializers
       ))
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
