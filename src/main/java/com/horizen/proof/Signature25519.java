@@ -1,9 +1,12 @@
 package com.horizen.proof;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.JsonSerializer;
+import com.horizen.serialization.Views;
 import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
@@ -14,12 +17,14 @@ import scorex.crypto.signatures.Curve25519;
 import java.util.Arrays;
 import java.util.Objects;
 
+@JsonView(Views.Default.class)
 public final class Signature25519
     implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition>
     , JsonSerializable
 {
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
+    @JsonProperty("signature")
     byte[] _signatureBytes;
 
     public Signature25519 (byte[] signatureBytes) {

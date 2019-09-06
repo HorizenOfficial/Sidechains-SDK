@@ -1,4 +1,4 @@
-package com.horizen.api.http
+package com.horizen.api.http.schema
 
 trait ApiGroupErrorCodes {
 

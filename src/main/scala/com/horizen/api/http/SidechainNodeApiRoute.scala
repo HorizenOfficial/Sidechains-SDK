@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import scorex.core.api.http.ApiResponse
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
@@ -15,12 +14,12 @@ case class SidechainNodeApiRoute(override val settings: RESTApiSettings, sidecha
 
   def connect : Route = (post & path("connect"))
   {
-    ApiResponse.OK
+    SidechainApiResponse.OK
   }
 
   def getAllPeersInfo : Route = (post & path("getAllPeer sInfo"))
   {
-    ApiResponse.OK
+    SidechainApiResponse.OK
   }
 
 }

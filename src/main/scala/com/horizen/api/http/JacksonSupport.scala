@@ -18,11 +18,11 @@ object JacksonSupport {
   private val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
 
-  implicit def JacksonMarshaller: ToEntityMarshaller[AnyRef] = {
+  /*implicit def JacksonMarshaller: ToEntityMarshaller[AnyRef] = {
     Marshaller.withFixedContentType(`application/json`) { obj =>
       HttpEntity(`application/json`, mapper.writeValueAsString(obj).getBytes("UTF-8"))
     }
-  }
+  }*/
 
   implicit def JacksonUnmarshaller[T <: AnyRef](implicit c: ClassTag[T]): FromRequestUnmarshaller[T] = {
     new FromRequestUnmarshaller[T]{

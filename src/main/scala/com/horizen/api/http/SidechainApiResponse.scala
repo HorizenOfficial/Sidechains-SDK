@@ -1,18 +1,36 @@
 package com.horizen.api.http
 
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode, StatusCodes}
+import akka.http.scaladsl.server.{Directives, Route}
+import JacksonSupport._
 import io.circe.Json
-import scorex.core.api.http.ApiResponse
 
-object SidechainApiResponse extends ApiResponse(StatusCodes.OK) {
+import scala.concurrent.Future
 
-  override def complete(result: Json): Route = super.complete(Json.obj("result" -> result))
+class SidechainApiResponse(statusCode: StatusCode) {
 
-  def apply(error : SidechainApiErrorResponse): Route = super.complete(
-    Json.obj("error"-> Json.obj(
-      ("code", Json.fromString(error.code)),
-      ("description", Json.fromString(error.description)),
-      ("detail", Json.fromString(error.detail))))
-  )
+  def apply(result: String): Route = withString(result)
+  def apply(result: Json): Route = withString(result.toString())
+  def apply(result: Future[String]): Route = Directives.onSuccess(result)(withString)
+
+  def defaultRoute: Route = withString(defaultMessage)
+  def defaultMessage: String = statusCode.reason
+
+  def withString(s: String): Route = complete(s)
+
+  def complete(result: String): Route = {
+    val httpEntity = HttpEntity(ContentTypes.`application/json`, result)
+    Directives.complete(statusCode.intValue() -> httpEntity)
+  }
+}
+
+object SidechainApiResponse {
+
+  implicit def toRoute(route: SidechainApiResponse): Route = route.defaultRoute
+
+  def apply(result: String): Route = OK(result)
+  def apply(result: Future[String]): Route = OK(result)
+  def apply(result: Either[Throwable, String]): Route = result.fold(SidechainApiError.apply, OK.apply)
+
+  object OK extends SidechainApiResponse(StatusCodes.OK)
 }

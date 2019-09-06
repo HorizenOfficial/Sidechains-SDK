@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -21,6 +22,7 @@ public final class CertifierRightBox
 
     public static final byte BOX_TYPE_ID = 2;
     // CertifierRightBox can be opened starting from specified Withdrawal epoch.
+    @JsonProperty("activeFromWithdrawalEpoch")
     private long _activeFromWithdrawalEpoch;
 
     public CertifierRightBox(PublicKey25519Proposition proposition,

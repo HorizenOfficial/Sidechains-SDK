@@ -1,21 +1,11 @@
 package com.horizen.api.http
 
-import java.util.Optional
-
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.block.{MainchainBlockReferenceJSONSerializer, MainchainBlockReferenceSerializer}
-import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
-import scorex.util.idToBytes
-import io.circe.generic.auto._
-import io.circe.syntax._
-import io.circe.Encoder
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
 
 case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
@@ -33,7 +23,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     */
   def getBestMainchainBlockReferenceInfo : Route = (post & path("getBestMainchainBlockReferenceInfo"))
   {
-    entity(as[String]) { body =>
+/*    entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         val history = sidechainNodeView.getNodeHistory;
         var mainchainBlockRefenrenceInfo = history.getBestMainchainBlockReferenceInfo
@@ -44,7 +34,8 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
           "sidechainBlockId" -> mainchainBlockRefenrenceInfo.getSidechainBlockId
         ))
       }
-    }
+    }*/
+    SidechainApiResponse.OK
   }
 
   /**
@@ -55,7 +46,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     */
   def getMainchainBlockReference : Route = (post & path("getMainchainBlockReference"))
   {
-    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: String, format : Boolean = false)
+/*    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: String, format : Boolean = false)
 
     entity(as[GetMainchainBlockReferenceRequest]) { req =>
       withNodeView{ sidechainNodeView =>
@@ -86,7 +77,8 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
             ))
 
       }
-    }
+    }*/
+    SidechainApiResponse.OK
   }
 
   /**
@@ -95,7 +87,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     */
   def createMainchainBlockReference : Route = (post & path("createMainchainBlockReference"))
   {
-    case class CreateMainchainBlockReferenceRequest(mainchainBlockData: String, format : Boolean = false)
+/*    case class CreateMainchainBlockReferenceRequest(mainchainBlockData: String, format : Boolean = false)
 
     entity(as[CreateMainchainBlockReferenceRequest]) { req =>
       withNodeView{ sidechainNodeView =>
@@ -120,7 +112,8 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
             }
 
       }
-    }
+    }*/
+    SidechainApiResponse.OK
   }
   
 }

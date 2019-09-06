@@ -5,38 +5,22 @@ import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.StringUnmarshallers;
-import akka.http.scaladsl.model.ContentType;
 import akka.http.scaladsl.model.StatusCodes;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.horizen.SidechainSettings;
-import com.horizen.block.MainchainBlockReference;
-import com.horizen.block.SidechainBlock;
-import com.horizen.box.Box;
-import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
-import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.node.SidechainNodeView;
-import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.RegularTransaction;
-import com.horizen.transaction.SidechainTransaction;
-import com.horizen.transaction.TransactionSerializer;
-import io.circe.Encoder;
 import io.circe.Json;
 import javafx.util.Pair;
-import scala.Function1;
 import scala.Tuple2;
 import scala.collection.JavaConverters;
-import scala.collection.JavaConverters.*;
-import scala.collection.Seq;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import static akka.http.javadsl.server.Directives.allOf;
@@ -58,7 +42,6 @@ public class MySecondCustomApi extends ApplicationApiGroup {
 
     @Override
     public List<Route> getRoutes() {
-        JsonUtil.addCustomSerializer(Long.class, new CustomTransactionJsonSerializer());
         List<Route> routes = new ArrayList<Route>();
         routes.add(resource());
         routes.add(hello());
@@ -124,14 +107,14 @@ public class MySecondCustomApi extends ApplicationApiGroup {
     private String serialize(BoxTransaction transaction){
         String resp = "";
 
-        try {
-            resp = JsonUtil.toJson(transaction);
+/*        try {
+            resp = JsonObjectMapper.serialize(transaction);
             System.out.println(resp);
-            resp = JsonUtil.toJson(transaction, Views.CustomView.class);
+            resp = JsonObjectMapper.serialize(transaction, Views.CustomView.class);
             System.out.println(resp);
         }catch (Exception e){
             e.printStackTrace();
-        }
+        }*/
 
         return resp;
     }

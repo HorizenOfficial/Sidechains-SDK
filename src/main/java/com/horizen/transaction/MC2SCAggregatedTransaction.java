@@ -1,5 +1,7 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -8,6 +10,7 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.JsonSerializer;
+import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -28,9 +31,16 @@ public final class MC2SCAggregatedTransaction
     implements JsonSerializable
 {
     public static final byte TRANSACTION_TYPE_ID = 2;
+
+    @JsonView(Views.Default.class)
+    @JsonProperty("mc2scTransactionsMerkleRootHash")
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
     private long _timestamp;
+
+    public MC2SCAggregatedTransaction(byte[] _mc2scTransactionsMerkleRootHash){
+        this._mc2scTransactionsMerkleRootHash = _mc2scTransactionsMerkleRootHash;
+    }
 
     private List<BoxUnlocker<Proposition>> _unlockers;
     private List<Box<Proposition>> _newBoxes;

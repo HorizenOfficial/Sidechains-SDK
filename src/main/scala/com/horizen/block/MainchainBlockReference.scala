@@ -3,11 +3,13 @@ package com.horizen.block
 import java.io.ByteArrayOutputStream
 import java.util
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import com.horizen.serialization.{JsonMerkleRootsSerializer, JsonSerializable, JsonSerializer, Views}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils.{ByteArrayWrapper, _}
@@ -30,9 +32,13 @@ import scala.collection.mutable
 // Transaction counter  positive integer (number of transactions in block)      1-9 bytes
 // Transactions         the (non empty) list of transactions                    depends on <Transaction counter>
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
+                    @JsonProperty("merkleRoots")
+                    @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
                     val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
                     )
   extends BytesSerializable

@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
@@ -32,6 +33,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     @Override
     public final PKP proposition() { return _proposition; }
 
+    @JsonProperty("nonce")
     @Override
     public final long nonce() { return _nonce; }
 

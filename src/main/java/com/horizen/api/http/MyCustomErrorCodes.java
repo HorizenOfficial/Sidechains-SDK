@@ -1,5 +1,7 @@
 package com.horizen.api.http;
 
+import com.horizen.api.http.schema.ApiGroupErrorCodes;
+
 public class MyCustomErrorCodes implements ApiGroupErrorCodes {
 
     @Override

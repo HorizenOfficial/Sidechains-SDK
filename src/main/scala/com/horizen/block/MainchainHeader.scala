@@ -6,8 +6,9 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scala.util.Try
 import java.time.Instant
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import com.horizen.serialization.{JsonSerializable, JsonSerializer, Views}
 import io.circe.Json
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
@@ -23,6 +24,8 @@ import scala.collection.mutable
 // SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
 // hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
 //
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
                        val version: Int,                      // 4 bytes
