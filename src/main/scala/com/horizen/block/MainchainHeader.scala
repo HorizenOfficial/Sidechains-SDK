@@ -9,7 +9,6 @@ import java.time.Instant
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import io.circe.Json
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
 

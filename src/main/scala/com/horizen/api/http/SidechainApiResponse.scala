@@ -3,14 +3,12 @@ package com.horizen.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode, StatusCodes}
 import akka.http.scaladsl.server.{Directives, Route}
 import JacksonSupport._
-import io.circe.Json
 
 import scala.concurrent.Future
 
 class SidechainApiResponse(statusCode: StatusCode) {
 
   def apply(result: String): Route = withString(result)
-  def apply(result: Json): Route = withString(result.toString())
   def apply(result: Future[String]): Route = Directives.onSuccess(result)(withString)
 
   def defaultRoute: Route = withString(defaultMessage)

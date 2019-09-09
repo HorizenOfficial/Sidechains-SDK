@@ -158,25 +158,25 @@
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
-		<dependency>
+<!--		<dependency>
 			<groupId>io.circe</groupId>
 			<artifactId>circe-core_2.12</artifactId>
 			<version>0.9.0</version>
-		</dependency>
+		</dependency>-->
 
 		<!-- https://mvnrepository.com/artifact/io.circe/circe-generic -->
-		<dependency>
+<!--		<dependency>
 			<groupId>io.circe</groupId>
 			<artifactId>circe-generic_2.12</artifactId>
 			<version>0.9.0</version>
-		</dependency>
+		</dependency>-->
 
 		<!-- https://mvnrepository.com/artifact/io.circe/circe-parser -->
-		<dependency>
+<!--		<dependency>
 			<groupId>io.circe</groupId>
 			<artifactId>circe-parser_2.12</artifactId>
 			<version>0.9.0</version>
-		</dependency>
+		</dependency>-->
 
 		<!-- https://mvnrepository.com/artifact/de.heikoseeberger/akka-http-circe -->
 		<dependency>
