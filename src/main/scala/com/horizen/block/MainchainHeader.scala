@@ -76,26 +76,6 @@ class MainchainHeader(
     true
   }
 
-/*  override def toJson: Json = {
-    val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
-    val encoder: ScorexEncoder = new ScorexEncoder
-
-    values.put("mainchainHeaderBytes", Json.fromString(encoder.encode(this.mainchainHeaderBytes)))
-    values.put("version", Json.fromInt(this.version))
-    values.put("hashPrevBlock", Json.fromString(encoder.encode(this.hashPrevBlock)))
-    values.put("hashMerkleRoot", Json.fromString(encoder.encode(this.hashMerkleRoot)))
-    values.put("hashReserved", Json.fromString(encoder.encode(this.hashReserved)))
-    values.put("hashSCMerkleRootsMap", Json.fromString(encoder.encode(this.hashSCMerkleRootsMap)))
-    values.put("time", Json.fromInt(this.time))
-    values.put("bits", Json.fromInt(this.bits))
-    values.put("nonce", Json.fromString(encoder.encode(this.nonce)))
-    values.put("solution", Json.fromString(encoder.encode(this.solution)))
-
-    Json.fromFields(values)
-
-  }
-
-  override def jsonSerializer: JsonSerializer[MainchainHeader] = ???*/
 }
 
 

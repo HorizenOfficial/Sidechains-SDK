@@ -126,20 +126,5 @@ public final class PublicKey25519Proposition
         return KEY_LENGTH;
     }
 
-/*    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("publicKey", Json.fromString(encoder.encode(this._pubKeyBytes)));
-
-        return Json.obj(values.toSeq());
-    }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }*/
-
-
 }
 

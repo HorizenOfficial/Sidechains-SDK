@@ -97,34 +97,6 @@ class MainchainBlockReference(
     true
   }
 
-/*  override def toJson: Json = {
-
-    val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
-    val encoder: ScorexEncoder = new ScorexEncoder
-
-    def mapMerkleRoot(key: ByteArrayWrapper, value: Array[Byte]): Json = {
-      Json.fromFields(
-        Seq(("key", Json.fromString(encoder.encode(key.data))),
-            ("value", Json.fromString(encoder.encode(value)))
-        )
-      )
-    }
-
-    values.put("header", this.header.toJson)
-    if (this.sidechainRelatedAggregatedTransaction.isDefined)
-      values.put("sidechainRelatedAggregatedTransaction", this.sidechainRelatedAggregatedTransaction.get.toJson)
-
-    if (this.sidechainsMerkleRootsMap.isDefined)
-        values.put("merkleRoots",
-          Json.fromValues(
-            this.sidechainsMerkleRootsMap.get.map{case (key, value) => mapMerkleRoot(key, value)}
-          )
-        )
-
-    Json.fromFields(values)
-  }
-
-  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = ???*/
 }
 
 

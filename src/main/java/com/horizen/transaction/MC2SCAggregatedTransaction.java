@@ -2,12 +2,15 @@ package com.horizen.transaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.ScorexByteEncoderSerializer;
+import com.horizen.serialization.ScorexStringEncoderSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
@@ -23,15 +26,18 @@ import scorex.util.encode.Base16;
 
 import java.util.*;
 
+@JsonView(Views.Default.class)
 public final class MC2SCAggregatedTransaction
     extends BoxTransaction<Proposition, Box<Proposition>>
 {
     public static final byte TRANSACTION_TYPE_ID = 2;
 
-    @JsonView(Views.Default.class)
     @JsonProperty("mc2scTransactionsMerkleRootHash")
+    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
+
+    @JsonProperty("timestamp")
     private long _timestamp;
 
     public MC2SCAggregatedTransaction(byte[] _mc2scTransactionsMerkleRootHash){
@@ -103,6 +109,8 @@ public final class MC2SCAggregatedTransaction
         return TRANSACTION_TYPE_ID;
     }
 
+    @JsonProperty("id")
+    @JsonSerialize(using = ScorexStringEncoderSerializer.class)
     @Override
     public String id() {
         return Base16.encode(Blake2b256.hash(_mc2scTransactionsMerkleRootHash));
@@ -196,22 +204,4 @@ public final class MC2SCAggregatedTransaction
         return new ScorexEncoder();
     }
 
-/*    @Override
-    public Json toJson() {
-        ArrayList<Json> arr = new ArrayList<>();
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
-
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("fee", Json.fromLong(this.fee()));
-        values.put("timestamp", Json.fromLong(this._timestamp));
-
-        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(encoder.encode(this._mc2scTransactionsMerkleRootHash)));
-
-        for(Box<Proposition> b : this.newBoxes())
-            arr.add(b.toJson());
-        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        return Json.obj(values.toSeq());
-    }*/
 }

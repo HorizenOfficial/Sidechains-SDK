@@ -253,30 +253,4 @@ public final class RegularTransaction
         return new ScorexEncoder();
     }
 
-/*    @Override
-    public Json toJson() {
-        ArrayList<Json> arr = new ArrayList<>();
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
-
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("fee", Json.fromLong(this._fee));
-        values.put("timestamp", Json.fromLong(this._timestamp));
-
-        for(RegularBox b : this._inputs)
-            arr.add(b.toJson());
-        values.put("inputs", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        arr.clear();
-        for(RegularBox b : this.newBoxes())
-            arr.add(b.toJson());
-        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        arr.clear();
-        for(Signature25519 s : this._signatures)
-            arr.add(s.toJson());
-        values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        return Json.obj(values.toSeq());
-    }*/
 }
