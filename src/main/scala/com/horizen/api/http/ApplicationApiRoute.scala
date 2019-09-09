@@ -22,8 +22,36 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, sidechain
   override def route: Route = convertRoutes
 
   private def convertRoutes : Route = {
+
     applicationApiGroup.setApplicationNodeViewProvider(new ApplicationNodeViewProvider {
+
       override def getSidechainNodeView: Try[SidechainNodeView] = retrieveSidechainNodeView()
+
+      override def serialize(anObject: Any): String =
+        ApplicationApiRoute.this.serialize(anObject)
+
+      override def serialize(anObject: Any, aView: Class[_]): String =
+        ApplicationApiRoute.this.serialize(anObject, aView)
+
+      override def serialize(anObject: Any, sidechainJsonSerializer: SidechainJsonSerializer): String =
+        ApplicationApiRoute.this.serialize(anObject, sidechainJsonSerializer = sidechainJsonSerializer)
+
+      override def serialize(anObject: Any, aView: Class[_], sidechainJsonSerializer: SidechainJsonSerializer): String =
+        ApplicationApiRoute.this.serialize(anObject, aView, sidechainJsonSerializer)
+
+      override def serializeError(code: String, description: String, detail: String): String =
+        ApplicationApiRoute.this.serializeError(code, description, Option(detail))
+
+      override def serializeError(code: String, description: String, detail: String, aView: Class[_]): String =
+        ApplicationApiRoute.this.serializeError(code, description, Option(detail), aView)
+
+      override def serializeError(code: String, description: String, detail: String, sidechainJsonSerializer: SidechainJsonSerializer): String =
+        ApplicationApiRoute.this.serializeError(code, description, Option(detail), sidechainJsonSerializer = sidechainJsonSerializer)
+
+      override def serializeError(code: String, description: String, detail: String, aView: Class[_], sidechainJsonSerializer: SidechainJsonSerializer): String =
+        ApplicationApiRoute.this.serializeError(code, description, Option(detail), aView, sidechainJsonSerializer)
+
+      override def newJsonSerializer: SidechainJsonSerializer = newSidechainJsonSerializer()
 
     })
 

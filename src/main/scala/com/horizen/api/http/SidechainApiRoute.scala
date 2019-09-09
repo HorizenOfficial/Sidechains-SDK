@@ -27,21 +27,27 @@ trait SidechainApiRoute extends ApiRoute with ApiDirectives
       .mapTo[SidechainNodeView]
   }
 
-  private val mapper = {
-    var jom = new JsonObjectMapper
-    jom.configureObjectMapper()
-    jom
+  private val sidechainJsonSerializer = {
+    var sjs = new SidechainJsonSerializer()
+    sjs.setDefaultConfiguration()
+    sjs
   }
 
-  protected final def serialize(value : Any, view : Class[_] = mapper.getDefaultView) : String = {
-    mapper.serialize(
+  protected final def serialize(value : Any, view : Class[_] = sidechainJsonSerializer.getDefaultView, sidechainJsonSerializer : SidechainJsonSerializer = sidechainJsonSerializer) : String = {
+    sidechainJsonSerializer.serialize(
       SidechainApiResponseBody(value), view)
   }
 
-  protected final def serializeError(code : String, description : String, detail : Option[String] = None, view : Class[_] = mapper.getDefaultView) : String = {
-    mapper.serialize(
+  protected final def serializeError(code : String, description : String, detail : Option[String] = None, view : Class[_] = sidechainJsonSerializer.getDefaultView, sidechainJsonSerializer : SidechainJsonSerializer = sidechainJsonSerializer) : String = {
+    sidechainJsonSerializer.serialize(
       SidechainApiErrorResponseScheme(
         SidechainApiManagedError(code, description, detail)), view)
+  }
+
+  protected def newSidechainJsonSerializer() : SidechainJsonSerializer = {
+    var sjs = new SidechainJsonSerializer()
+    sjs.setDefaultConfiguration()
+    sjs
   }
 
 }

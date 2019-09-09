@@ -6,7 +6,7 @@ import java.io.{File => JFile}
 
 import scala.collection.immutable.Map
 import akka.actor.ActorRef
-import com.horizen.api.http.{ApplicationApiGroup, ApplicationApiRoute, JsonObjectMapper, MySecondCustomApi, SidechainApiErrorHandler, SidechainApiRejectionHandler, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainRejectionApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http.{ApplicationApiGroup, ApplicationApiRoute, SidechainApiErrorHandler, SidechainApiRejectionHandler, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainRejectionApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
@@ -26,7 +26,6 @@ import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.forge.ForgerRef
 
 import scala.collection.mutable
@@ -109,7 +108,8 @@ class SidechainApp(val settingsFilename: String)
 
   // I'm a developer and I want to add my custom rest api
   var customApiRoutes : Seq[ApplicationApiGroup] = Seq[ApplicationApiGroup](
-    new MySecondCustomApi(sidechainSettings)
+    //new MySecondCustomApi(sidechainSettings),
+    //new MyCustomApi()
   )
 
   // I'm a developer and I want to exclude from my api some core routes
