@@ -148,11 +148,11 @@ class SidechainApp(val settingsFilename: String)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
 
-  override val apiRoutes: Seq[ApiRoute] = null
-
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
 
   override lazy val combinedRoute: Route = SidechainCompositeHttpService(actorSystem, sidechainApiRoutes, settings.restApi, swaggerConfig, nodeViewHolderRef).compositeRoute
+
+  override val apiRoutes: Seq[ApiRoute] = null
 
   override def stopAll(): Unit = {
     super.stopAll()

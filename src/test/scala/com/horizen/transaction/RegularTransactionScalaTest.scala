@@ -10,7 +10,6 @@ import javafx.util.{Pair => JPair}
 import com.horizen.box.RegularBox
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import io.circe.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
