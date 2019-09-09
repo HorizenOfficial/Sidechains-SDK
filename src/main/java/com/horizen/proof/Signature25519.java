@@ -2,8 +2,10 @@ package com.horizen.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.serialization.ScorexByteEncoderSerializer;
 import com.horizen.serialization.Views;
 import scala.util.Failure;
 import scala.util.Success;
@@ -19,6 +21,8 @@ public final class Signature25519
 {
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
+
+    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
     @JsonProperty("signature")
     byte[] _signatureBytes;
 
@@ -70,18 +74,4 @@ public final class Signature25519
         return result;
     }
 
-/*    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("signature", Json.fromString(encoder.encode(this._signatureBytes)));
-
-        return Json.obj(values.toSeq());
-    }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }*/
 }

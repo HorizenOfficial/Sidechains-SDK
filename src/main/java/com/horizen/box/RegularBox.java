@@ -3,12 +3,9 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
-import io.circe.Json;
-import io.circe.Json$;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.core.utils.ScorexEncoder;
 
 import java.util.Arrays;
 
@@ -63,22 +60,4 @@ public final class RegularBox
         }
     }
 
-/*    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("proposition", this._proposition.toJson());
-        values.put("value", Json.fromLong(this._value));
-        values.put("nonce", Json.fromLong(this._nonce));
-        values.put("typeId", Json.fromLong(this.boxTypeId()));
-
-        return Json.obj(values.toSeq());
-    }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }*/
 }

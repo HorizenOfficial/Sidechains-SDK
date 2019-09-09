@@ -3,7 +3,6 @@ package com.horizen.transaction;
 import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
 import com.horizen.node.NodeWallet;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -17,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 

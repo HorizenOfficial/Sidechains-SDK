@@ -2,10 +2,8 @@ package com.horizen.block
 
 import java.io.ByteArrayOutputStream
 import java.time.Instant
-import java.util
 
-import com.fasterxml.jackson.annotation.{JsonIgnore, JsonIgnoreProperties, JsonInclude, JsonProperty, JsonView}
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import com.horizen.box.{Box, NoncedBox}
@@ -16,20 +14,16 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
-import com.horizen.utils.{BytesUtils, ListSerializer}
-import io.circe.Json
+import com.horizen.utils.ListSerializer
 import scorex.core.block.Block
 import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.util.ModifierId
 import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.ScorexEncoder
 import scorex.crypto.hash.Blake2b256
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.collection.mutable.HashMap
-import scala.util.{Success, Try}
+import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder"))

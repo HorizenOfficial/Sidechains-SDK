@@ -1,9 +1,12 @@
 package com.horizen.customtypes;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxSerializer;
+import com.horizen.serialization.Views;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -12,11 +15,14 @@ import scorex.crypto.hash.Blake2b256;
 import java.util.Arrays;
 import java.util.Objects;
 
+@JsonView(Views.Default.class)
 public class CustomBox implements Box<CustomPublicKeyProposition>
 {
     public static final byte BOX_TYPE_ID = 1;
 
     CustomPublicKeyProposition _proposition;
+
+    @JsonProperty("value")
     long _value;
 
     public CustomBox (CustomPublicKeyProposition proposition, long value) {
@@ -34,6 +40,7 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
         return _proposition;
     }
 
+    @JsonProperty("id")
     //TODO
     @Override
     public byte[] id() {
@@ -89,19 +96,4 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
                 '}';
     }
 
-/*    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("value", Json.fromLong(this._value));
-
-        return Json.obj(values.toSeq());
-    }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
-    }*/
 }

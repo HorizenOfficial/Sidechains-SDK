@@ -1,7 +1,5 @@
 package com.horizen.proof;
 
-import com.horizen.proof.ProofSerializer;
-import com.horizen.proof.Signature25519;
 import org.junit.Test;
 import scala.util.Try;
 

@@ -1,14 +1,15 @@
 package com.horizen.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.serialization.ScorexByteEncoderSerializer;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposition> extends ScorexEncoding implements NoncedBox<PKP>
 {
@@ -37,6 +38,8 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     @Override
     public final long nonce() { return _nonce; }
 
+    @JsonProperty("id")
+    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
     @Override
     public byte[] id() {
         return Blake2b256.hash(Bytes.concat(_proposition.pubKeyBytes(), Longs.toByteArray(_nonce)));

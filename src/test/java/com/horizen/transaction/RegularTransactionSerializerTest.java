@@ -10,7 +10,6 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 

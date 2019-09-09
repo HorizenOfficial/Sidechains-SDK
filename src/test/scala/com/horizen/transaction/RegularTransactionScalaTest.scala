@@ -1,8 +1,11 @@
 package com.horizen.transaction
 
 import java.lang.{Long => JLong}
+import java.util
 import java.util.{ArrayList => JArrayList}
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.api.http.SidechainJsonSerializer
 import javafx.util.{Pair => JPair}
 import com.horizen.box.RegularBox
 import com.horizen.proposition.PublicKey25519Proposition
@@ -10,7 +13,6 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import io.circe.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
-
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 import scorex.crypto.signatures.Curve25519
@@ -46,44 +48,61 @@ class RegularTransactionScalaTest
 
     val transaction = RegularTransaction.create(from, to, fee, timestamp)
 
-/*    val json = transaction.toJson
+    val serializer = new SidechainJsonSerializer
+    serializer.setDefaultConfiguration()
 
-    json.hcursor.get[String]("id") match {
-      case Right(id) => assertEquals("Transaction id json value must be the same.",
+    val jsonStr = serializer.serialize(transaction)
+
+    val node: JsonNode = serializer.getObjectMapper().readTree(jsonStr)
+
+    try {
+      val id = node.path("id").asText()
+      assertEquals("Transaction id json value must be the same.",
         ScorexEncoder.default.encode(transaction.id), id)
-      case Left(decodingFailure) => fail("Transaction id doesn't not found in json.")
+    } catch {
+      case _ => fail("Transaction id doesn't not found in json.")
     }
 
-    json.hcursor.get[Long]("fee") match {
-      case Right(fee) => assertEquals("Transaction fee json value must be the same.",
-        transaction.fee(), fee)
-      case Left(decodingFailure) => fail("Transaction fee doesn't not found in json.")
+    try {
+      val fee_parsed = node.path("fee").asLong()
+      assertEquals("Transaction fee json value must be the same.",
+        transaction.fee(), fee_parsed)
+    } catch {
+      case _ => fail("Transaction fee doesn't not found in json.")
     }
 
-    json.hcursor.get[Long]("timestamp") match {
-      case Right(timestamp) => assertEquals("Transaction timestamp json value must be the same.",
-        transaction.timestamp(), timestamp)
-      case Left(decodingFailure) => fail("Transaction timestamp doesn't not found in json.")
+    try {
+      val timestamp_parsed = node.path("timestamp").asLong()
+      assertEquals("Transaction timestamp json value must be the same.",
+        transaction.timestamp(), timestamp_parsed)
+    } catch {
+      case _ => fail("Transaction timestamp doesn't not found in json.")
     }
 
-    json.hcursor.get[Json]("inputs") match {
-      case Right(i) =>
-        i.asArray match {
-          case Some(inputs) => assertEquals("Count of transaction inputs in json must be the same.",
-            transaction.unlockers().size(), inputs.size)
-          case None => fail("Transaction inputs in json have invalid format.")
-        }
-      case Left(decodingFailure) => fail("Transaction inputs do not found in json.")
+    try {
+      val inputsNode = node.path("inputs")
+      try {
+        assertEquals("Count of transaction inputs in json must be the same.",
+          transaction.unlockers().size(), inputsNode.size)
+      } catch {
+        case _ => fail("Transaction inputs in json have invalid format.")
+      }
+    } catch {
+      case _ => fail("Transaction inputs do not found in json.")
     }
 
-    json.hcursor.get[Json]("newBoxes") match {
-      case Right(i) =>
-        i.asArray match {
-          case Some(newBoxes) => assertEquals("Count of transaction new boxes in json must be the same.",
-            transaction.newBoxes().size(), newBoxes.size)
-          case None => fail("Transaction newBoxes in json have invalid format.")
-        }
-      case Left(decodingFailure) => fail("Transaction new boxes do not found in json.")
-    }*/
+    try {
+      val newBoxesNode = node.path("newBoxes")
+      try {
+        assertEquals("Count of transaction new boxes in json must be the same.",
+          transaction.newBoxes().size(), newBoxesNode.size)
+      } catch {
+        case _ => fail("Transaction newBoxes in json have invalid format.")
+      }
+    } catch {
+      case _ => fail("Transaction new boxes do not found in json.")
+    }
+
   }
+
 }

@@ -1,5 +1,6 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -32,8 +33,11 @@ public final class RegularTransaction
 
     public static final byte TRANSACTION_TYPE_ID = 1;
 
+    @JsonProperty("inputs")
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
+
+    @JsonProperty("signatures")
     private List<Signature25519> _signatures;
 
     private long _fee;

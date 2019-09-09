@@ -1,7 +1,10 @@
 package com.horizen.proposition;
 
-import io.circe.Json;
-import io.circe.Json$;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.horizen.serialization.ScorexByteEncoderSerializer;
+import com.horizen.serialization.Views;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -9,13 +12,13 @@ import scala.util.Try;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.ScorexEncoding;
 
-import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.crypto.signatures.Curve25519;
 import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
 
+@JsonView(Views.Default.class)
 public final class PublicKey25519Proposition
     extends ScorexEncoding
     implements ProofOfKnowledgeProposition<PrivateKey25519>
@@ -25,6 +28,8 @@ public final class PublicKey25519Proposition
     public static final int KEY_LENGTH = Curve25519.KeyLength();;
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
+    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
+    @JsonProperty("publicKey")
     private byte[] _pubKeyBytes;
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
