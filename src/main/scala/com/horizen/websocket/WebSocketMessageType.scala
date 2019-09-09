@@ -13,25 +13,11 @@ case class ErrorResponse(
 
 }
 
-abstract class BlockResponse extends WebSocketResponseMessage {
-  protected var correlationId : String
-  protected var height : Int
-  protected var hash : String
-  protected var block : String
-}
-
 case class GetSingleBlockResponse(
                                    var correlationId : String,
                                    var height : Int,
                                    var hash : String,
-                                   var block : String) extends BlockResponse
-
-case class GetMultipleBlocksResponse(
-                                      var correlationId : String,
-                                      var counter : Int,
-                                      var height : Int,
-                                      var hash : String,
-                                      var block : String) extends BlockResponse
+                                   var block : String) extends WebSocketResponseMessage
 
 case class GetMultipleBlockHashesResponse(
                                    var correlationId : String,
