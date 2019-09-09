@@ -13,11 +13,9 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.Views;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
-import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -30,7 +28,6 @@ import java.util.*;
 @JsonView(Views.Default.class)
 public final class RegularTransaction
     extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
-    implements JsonSerializable
 {
 
     public static final byte TRANSACTION_TYPE_ID = 1;
@@ -65,11 +62,6 @@ public final class RegularTransaction
         _signatures = signatures;
         _fee = fee;
         _timestamp = timestamp;
-    }
-
-    @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return RegularTransactionJsonSerializer.getSerializer();
     }
 
     @Override
@@ -257,7 +249,7 @@ public final class RegularTransaction
         return new ScorexEncoder();
     }
 
-    @Override
+/*    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
@@ -282,5 +274,5 @@ public final class RegularTransaction
         values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
-    }
+    }*/
 }

@@ -19,11 +19,11 @@ class PublicKey25519PropositionScalaTest
 
     val prop1 = new PublicKey25519Proposition(publicKey)
 
-    val json = prop1.toJson
+/*    val json = prop1.toJson
 
     assertEquals("Json must contain only 1 publicKey.",
       1, json.\\("publicKey").size)
     assertEquals("PublicKey json value must be the same.",
-      ScorexEncoder.default.encode(prop1.pubKeyBytes()), json.\\("publicKey").head.asString.get)
+      ScorexEncoder.default.encode(prop1.pubKeyBytes()), json.\\("publicKey").head.asString.get)*/
   }
 }

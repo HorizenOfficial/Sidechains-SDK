@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
@@ -17,7 +15,6 @@ import java.util.Arrays;
 // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
 public final class CertifierRightBox
     extends PublicKey25519NoncedBox<PublicKey25519Proposition>
-    implements JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 2;
@@ -84,7 +81,7 @@ public final class CertifierRightBox
         }
     }
 
-    @Override
+/*    @Override
     public Json toJson() {
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
         ScorexEncoder encoder = new ScorexEncoder();
@@ -102,5 +99,5 @@ public final class CertifierRightBox
     @Override
     public JsonSerializer<JsonSerializable> jsonSerializer() {
         return null;
-    }
+    }*/
 }

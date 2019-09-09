@@ -4,14 +4,9 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxSerializer;
-import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
-import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -94,7 +89,7 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
                 '}';
     }
 
-    @Override
+/*    @Override
     public Json toJson() {
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
         ScorexEncoder encoder = new ScorexEncoder();
@@ -108,5 +103,5 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
     @Override
     public JsonSerializer<JsonSerializable> jsonSerializer() {
         return null;
-    }
+    }*/
 }

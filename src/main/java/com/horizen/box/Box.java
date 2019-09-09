@@ -3,7 +3,6 @@ package com.horizen.box;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.Views;
 
 /**
@@ -25,7 +24,6 @@ import com.horizen.serialization.Views;
 @JsonView(Views.Default.class)
 public interface Box<P extends Proposition>
     extends scorex.core.transaction.box.Box<P>
-    , JsonSerializable
 {
     @JsonProperty("value")
     @Override

@@ -1,8 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
-import com.horizen.proposition.Proposition;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;

@@ -23,7 +23,7 @@ class RegularBoxScalaTest
     val value = 10
     val box = new RegularBox(proposition, nonce, value)
 
-    val json = box.toJson
+/*    val json = box.toJson
 
     assertEquals("Json must contain only 1 proposition.",
       1, json.\\("proposition").size)
@@ -43,7 +43,7 @@ class RegularBoxScalaTest
     assertEquals("Json must contain only 1 value.",
       1, json.\\("value").size)
     assertEquals("Value json value must be the same.",
-      box.value(), json.\\("value").head.asNumber.get.toLong.get)
+      box.value(), json.\\("value").head.asNumber.get.toLong.get)*/
   }
 }
 

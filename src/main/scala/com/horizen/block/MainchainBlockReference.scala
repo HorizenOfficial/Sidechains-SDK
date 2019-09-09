@@ -9,20 +9,16 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.{JsonMerkleRootsSerializer, JsonSerializable, JsonSerializer, Views}
+import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils.{ByteArrayWrapper, _}
-import io.circe.Json
-import io.circe.Decoder.Result
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 
 // Mainchain Block structure:
@@ -42,7 +38,6 @@ class MainchainBlockReference(
                     val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
                     )
   extends BytesSerializable
-  with JsonSerializable
 {
 
   lazy val hash: Array[Byte] = header.hash
@@ -52,7 +47,7 @@ class MainchainBlockReference(
   //override def jsonSerializer: JsonSerializer[MainchainBlockReference] = MainchainBlockReferenceJSONSerializer
 
   override type M = MainchainBlockReference
-  override type J = MainchainBlockReference
+  /*override type J = MainchainBlockReference*/
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
@@ -102,7 +97,7 @@ class MainchainBlockReference(
     true
   }
 
-  override def toJson: Json = {
+/*  override def toJson: Json = {
 
     val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
     val encoder: ScorexEncoder = new ScorexEncoder
@@ -129,7 +124,7 @@ class MainchainBlockReference(
     Json.fromFields(values)
   }
 
-  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = ???
+  override def jsonSerializer: JsonSerializer[MainchainBlockReference] = ???*/
 }
 
 
@@ -302,14 +297,4 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = ???
 
   override def parse(r: Reader): MainchainBlockReference = ???
-}
-
-object MainchainBlockReferenceJSONSerializer extends JsonSerializer [MainchainBlockReference]{
-
-  // TO-DO Implementation not completed
-  override def toJson(obj: MainchainBlockReference): Json = {
-    Json.obj(("hashHex", Json.fromString(obj.hashHex)))
-  }
-
-  override def parseJsonTry: Try[MainchainBlockReference] = ???
 }

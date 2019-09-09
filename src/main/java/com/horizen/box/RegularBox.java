@@ -3,8 +3,6 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
 import io.circe.Json$;
 import scala.util.Failure;
@@ -17,7 +15,6 @@ import java.util.Arrays;
 public final class RegularBox
     extends PublicKey25519NoncedBox<PublicKey25519Proposition>
     implements CoinsBox<PublicKey25519Proposition>
-    , JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 1;
@@ -66,7 +63,7 @@ public final class RegularBox
         }
     }
 
-    @Override
+/*    @Override
     public Json toJson() {
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
         ScorexEncoder encoder = new ScorexEncoder();
@@ -83,5 +80,5 @@ public final class RegularBox
     @Override
     public JsonSerializer<JsonSerializable> jsonSerializer() {
         return null;
-    }
+    }*/
 }

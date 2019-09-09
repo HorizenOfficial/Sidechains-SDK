@@ -1,6 +1,5 @@
 package com.horizen.transaction;
 
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 

@@ -8,14 +8,11 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
-import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -28,7 +25,6 @@ import java.util.*;
 
 public final class MC2SCAggregatedTransaction
     extends BoxTransaction<Proposition, Box<Proposition>>
-    implements JsonSerializable
 {
     public static final byte TRANSACTION_TYPE_ID = 2;
 
@@ -58,11 +54,6 @@ public final class MC2SCAggregatedTransaction
         _mc2scTransactionsMerkleRootHash = Arrays.copyOf(mc2scTransactionsMerkleRootHash, mc2scTransactionsMerkleRootHash.length);
         _mc2scTransactionsOutputs = mc2scTransactionsOutputs;
         _timestamp = timestamp;
-    }
-
-    @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return MC2SCAggregatedTransactionJsonSerializer.getSerializer();
     }
 
     @Override
@@ -205,7 +196,7 @@ public final class MC2SCAggregatedTransaction
         return new ScorexEncoder();
     }
 
-    @Override
+/*    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
@@ -222,5 +213,5 @@ public final class MC2SCAggregatedTransaction
         values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
-    }
+    }*/
 }

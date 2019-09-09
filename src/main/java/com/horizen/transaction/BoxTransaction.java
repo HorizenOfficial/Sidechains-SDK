@@ -1,13 +1,11 @@
 package com.horizen.transaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.Views;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.io.ByteArrayOutputStream;

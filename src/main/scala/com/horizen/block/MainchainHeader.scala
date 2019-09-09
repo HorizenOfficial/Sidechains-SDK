@@ -8,7 +8,7 @@ import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.{JsonSerializable, JsonSerializer, Views}
+import com.horizen.serialization.Views
 import io.circe.Json
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
@@ -39,7 +39,6 @@ class MainchainHeader(
                        val solution: Array[Byte]              // depends on NetworkParams
                     )
   extends BytesSerializable
-  with JsonSerializable
 {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
@@ -47,7 +46,7 @@ class MainchainHeader(
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   override type M = MainchainHeader
-  override type J = MainchainHeader
+  /*override type J = MainchainHeader*/
 
   override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
@@ -77,7 +76,7 @@ class MainchainHeader(
     true
   }
 
-  override def toJson: Json = {
+/*  override def toJson: Json = {
     val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
     val encoder: ScorexEncoder = new ScorexEncoder
 
@@ -96,7 +95,7 @@ class MainchainHeader(
 
   }
 
-  override def jsonSerializer: JsonSerializer[MainchainHeader] = ???
+  override def jsonSerializer: JsonSerializer[MainchainHeader] = ???*/
 }
 
 

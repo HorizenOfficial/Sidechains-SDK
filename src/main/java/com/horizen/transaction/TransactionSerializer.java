@@ -1,6 +1,5 @@
 package com.horizen.transaction;
 
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 
 public interface TransactionSerializer<T extends Transaction> extends ScorexSerializer<T>

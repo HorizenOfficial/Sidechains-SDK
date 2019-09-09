@@ -14,7 +14,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{JsonSerializable, JsonSerializer, Views}
+import com.horizen.serialization.Views
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
 import com.horizen.utils.{BytesUtils, ListSerializer}
 import io.circe.Json
@@ -42,7 +42,6 @@ class SidechainBlock (
                        @JsonProperty("signature") val signature: Signature25519,
                        companion: SidechainTransactionsCompanion)
   extends Block[SidechainTypes#SCBT]
-  with JsonSerializable
 {
 
   override type M = SidechainBlock
@@ -124,7 +123,7 @@ class SidechainBlock (
     true
   }
 
-  override def toJson: Json = {
+/*  override def toJson: Json = {
     val arr: util.ArrayList[Json] = new util.ArrayList[Json]
     val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
     val encoder: ScorexEncoder = new ScorexEncoder
@@ -142,7 +141,7 @@ class SidechainBlock (
 
   override type J = this.type
 
-  override def jsonSerializer: JsonSerializer[SidechainBlock.this.type] = ???
+  override def jsonSerializer: JsonSerializer[SidechainBlock.this.type] = ???*/
 }
 
 
