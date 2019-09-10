@@ -8,10 +8,10 @@ import akka.http.scaladsl.server.Route
 import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success}
-import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.Json
 import io.circe.syntax._
 import scorex.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse}
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
@@ -31,26 +31,37 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
 
   def allPeers: Route = (path("all") & get) {
-    val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
-      _.map { case (address, peerInfo) =>
-        PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
+    try {
+      val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
+        _.map { case (address, peerInfo) =>
+          PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
+        }
       }
+
+      val res = Await.result(result, settings.timeout)
+      ApiResponse("result" -> res.asJson)
+    }catch {
+      case e : Throwable => ApiError(e)
     }
-    ApiResponse(result)
   }
 
   def connectedPeers: Route = (path("connected") & get) {
-    val result = askActor[Seq[PeerInfo]](networkController, GetConnectedPeers).map {
-      _.map { peerInfo =>
-        PeerInfoResponse(
-          address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
-          lastSeen = peerInfo.lastSeen,
-          name = peerInfo.peerSpec.nodeName,
-          connectionType = peerInfo.connectionType.map(_.toString)
-        )
+    try {
+      val result = askActor[Seq[PeerInfo]](networkController, GetConnectedPeers).map {
+        _.map { peerInfo =>
+          PeerInfoResponse(
+            address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
+            lastSeen = peerInfo.lastSeen,
+            name = peerInfo.peerSpec.nodeName,
+            connectionType = peerInfo.connectionType.map(_.toString)
+          )
+        }
       }
+      val res = Await.result(result, settings.timeout)
+      ApiResponse("result" -> res.asJson)
+    }catch {
+      case e : Throwable => ApiError(e)
     }
-    ApiResponse(result)
   }
 
   def connect : Route = (post & path("connect"))
@@ -76,9 +87,14 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   }
 
   def blacklistedPeers: Route = (path("blacklisted") & get) {
-    val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
-      .map(x => BlacklistedPeers(x.map(_.toString)).asJson)
-    ApiResponse(result)
+    try {
+      val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+        .map(x => BlacklistedPeers(x.map(_.toString)).asJson)
+      val res = Await.result(result, settings.timeout)
+      ApiResponse("result" -> res.asJson)
+    }catch {
+      case e : Throwable => ApiError(e)
+    }
   }
 
 }

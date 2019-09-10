@@ -101,7 +101,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             val wallet = sidechainNodeView.getNodeWallet
             var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(req.boxType).asSubclass(classOf[SidechainTypes#SCB])
             var balance = wallet.boxesBalance(clazz)
-            ApiResponse("result" -> ("balance" -> balance))
+            ApiResponse("result" -> Json.obj(("balance" -> Json.fromLong(balance))))
 
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }

@@ -44,8 +44,10 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
               var sblock = optionSidechainBlock.get()
               var sblock_serialized = sblock.serializer.toBytes(sblock)
               ApiResponse(
-                "blockHex" -> BytesUtils.toHexString(sblock_serialized).asJson,
-                "blockInfo" -> sblock.toJson
+                "result" -> Json.obj(
+                  ("blockHex" -> BytesUtils.toHexString(sblock_serialized).asJson),
+                  ("blockInfo" -> sblock.toJson)
+                )
               )
             }
              else{
@@ -99,7 +101,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             var sidechainHistory = sidechainNodeView.getNodeHistory
             val blockIdOptional = sidechainHistory.getBlockIdByHeight(req.height)
             if(blockIdOptional.isPresent)
-              ApiResponse("id" -> blockIdOptional.get().asJson)
+              ApiResponse("result" -> Json.obj(("id" -> blockIdOptional.get().asJson)))
             else
               {
                 // TO-DO Change the errorCode
@@ -120,15 +122,15 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
         var sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if(height > 0)
-          ApiResponse(
-            "blockInfo" -> sidechainHistory.getBestBlock.toJson,
-            "height" -> height.asJson
+          ApiResponse("result" -> Json.obj(
+            ("blockInfo" -> sidechainHistory.getBestBlock.toJson),
+            ("height" -> height.asJson))
           )
         else
-          ApiResponse(
-            "blockInfo" -> Json.Null,
-            "height" -> height.asJson
-          )
+          ApiResponse("result" -> Json.obj(
+            ("blockInfo" -> Json.Null),
+            ("height" -> height.asJson)
+          ))
     }
   }
 
@@ -142,9 +144,9 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     // TO DO: replace with ApiResponse(blockTemplate.toJson) in future
     blockTemplate match {
       case Success(block) =>
-        ApiResponse(
-          "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
-          "blockInfo" -> block.toJson
+        ApiResponse("result" -> Json.obj(
+          ("blockHex" -> BytesUtils.toHexString(block.bytes).asJson),
+          ("blockInfo" -> block.toJson))
         )
       case Failure(e) =>
         ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Failed to get block remplate: ${e.getMessage}"))
@@ -169,7 +171,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
                 Await.result(submitResultFuture, timeout.duration) match {
                   case Success(id) =>
-                    ApiResponse("id" -> Json.fromString(id))
+                    ApiResponse("result" -> Json.obj(("id" -> Json.fromString(id))))
                   case Failure(e) =>
                     ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not accepted: ${e.getMessage}"))
                 }
@@ -201,7 +203,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
             Await.result(submitResultFuture, timeout.duration) match {
               case Success(ids) =>
-                ApiResponse("id" -> ids.map(id => id.asInstanceOf[String]).asJson)
+                ApiResponse("result" -> Json.obj(("id" -> ids.map(id => id.asInstanceOf[String]).asJson)))
               case Failure(e) =>
                 ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Block was not created: ${e.getMessage}"))
             }
