@@ -25,8 +25,9 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import JacksonSupport._
-import com.horizen.api.http.schema.TransactionApiGroupErrorCodes
+import com.horizen.api.http.schema.{BYTE_PARSING_FAILURE, GENERIC_FAILURE, NOT_FOUND_ID, NOT_FOUND_INPUT}
 import com.horizen.api.http.schema.TransactionRestScheme._
+import com.horizen.serialization.SerializationUtil
 
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
@@ -48,13 +49,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
         if(body.format.getOrElse(true)){
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllTransactionsPost(Option(unconfirmedTxs.asScala.toList), None)
             )
           )
         } else {
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllTransactionsPost(None, Option(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
             )
           )
@@ -143,13 +144,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             if(format){
               //TO-DO JSON representation of transaction
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   TransactionDTO(Option(t), None)
                 )
               )
             }else{
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   TransactionDTO(None, Option(new String(companion.toBytes(t))))
                 )
               )
@@ -157,8 +158,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case None =>
             // TO-DO Change the errorCode
             SidechainApiResponse(
-              serializeError(
-                  TransactionApiGroupErrorCodes.NOT_FOUND_ID, error)
+              SerializationUtil.serializeErrorWithResult(
+                  NOT_FOUND_ID().apiCode, error, "")
               )
         }
       }
@@ -178,14 +179,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               case Success(tx) =>
                 //TO-DO JSON representation of transaction
                 SidechainApiResponse(
-                  serialize(
+                  SerializationUtil.serializeWithResult(
                     RespDecodeTransactionBytesPost(tx)
                   )
                 )
               case Failure(exp) =>
                 SidechainApiResponse(
-                  serializeError(
-                      TransactionApiGroupErrorCodes.BYTE_PARSING_FAILURE, exp.getMessage)
+                  SerializationUtil.serializeErrorWithResult(
+                      BYTE_PARSING_FAILURE().apiCode, exp.getMessage, "")
                   )
             }
       }
@@ -207,8 +208,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
         if(inputBoxes.length < body.transactionInputs.size) {
           SidechainApiResponse(
-            serializeError(
-                TransactionApiGroupErrorCodes.NOT_FOUND_INPUT, s"Unable to find input(s)")
+            SerializationUtil.serializeErrorWithResult(
+                NOT_FOUND_INPUT().apiCode, s"Unable to find input(s)", "")
           )
         } else {
           var inSum: Long = 0
@@ -244,21 +245,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
             if (body.format.getOrElse(false))
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   TransactionDTO(Option(regularTransaction), None)
                 )
               )
             else
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
                 )
               )
           } catch {
             case t : Throwable =>
               SidechainApiResponse(
-                serializeError(
-                    TransactionApiGroupErrorCodes.GENERIC_FAILURE, t.getMessage)
+                SerializationUtil.serializeErrorWithResult(
+                    GENERIC_FAILURE().apiCode, t.getMessage, "")
                 )
           }
         }
@@ -284,21 +285,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
           if(body.format.getOrElse(false))
             SidechainApiResponse(
-              serialize(
+              SerializationUtil.serializeWithResult(
                 TransactionDTO(Option(regularTransaction), None)
               )
             )
           else
             SidechainApiResponse(
-              serialize(
+              SerializationUtil.serializeWithResult(
                 TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
               )
             )
         } catch {
           case t : Throwable =>
             SidechainApiResponse(
-              serializeError(
-                  TransactionApiGroupErrorCodes.GENERIC_FAILURE, t.getMessage)
+              SerializationUtil.serializeErrorWithResult(
+                  GENERIC_FAILURE().apiCode, t.getMessage, "")
               )
         }
       }
@@ -355,8 +356,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         } catch {
           case t : Throwable =>
             SidechainApiResponse(
-              serializeError(
-                  TransactionApiGroupErrorCodes.GENERIC_FAILURE, t.getMessage)
+              SerializationUtil.serializeErrorWithResult(
+                  GENERIC_FAILURE().apiCode, t.getMessage, "")
               )
         }
       }
@@ -372,14 +373,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         onComplete(barrier){
           case Success(result) =>
             SidechainApiResponse(
-              serialize(
+              SerializationUtil.serializeWithResult(
                 TransactionIdDTO(transaction.id)
               )
             )
           case Failure(exp) =>
             SidechainApiResponse(
-              serializeError(
-                  TransactionApiGroupErrorCodes.GENERIC_FAILURE, exp.getMessage)
+              SerializationUtil.serializeErrorWithResult(
+                  GENERIC_FAILURE().apiCode, exp.getMessage, "")
               )
         }
     }
@@ -400,8 +401,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             validateAndSendTransaction(transaction)
           case Failure(exception) =>
             SidechainApiResponse(
-              serializeError(
-                  TransactionApiGroupErrorCodes.GENERIC_FAILURE, exception.getMessage)
+              SerializationUtil.serializeErrorWithResult(
+                  GENERIC_FAILURE().apiCode, exception.getMessage, "")
               )
         }
       }

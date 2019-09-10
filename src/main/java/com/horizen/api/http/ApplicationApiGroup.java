@@ -21,58 +21,6 @@ public abstract class ApplicationApiGroup {
         else throw new IllegalStateException(tryView.failed().get());
     }
 
-    public final SidechainJsonSerializer getJsonObjectMapper() {
-        return applicationNodeViewProvider.newJsonSerializer();
-    }
-
-    public final String serialize(Object anObject) {
-        return applicationNodeViewProvider.serialize(anObject);
-    }
-
-    public final String serialize(Object anObject, Class<?> aView) {
-        if(aView == null)
-            throw new IllegalArgumentException("Argument aView cannot be null.");
-        else return applicationNodeViewProvider.serialize(anObject, aView);
-    }
-
-    public final String serialize(Object anObject, SidechainJsonSerializer sidechainJsonSerializer) {
-        if(sidechainJsonSerializer == null)
-            throw new IllegalArgumentException("Argument sidechainJsonSerializer cannot be null.");
-        else return applicationNodeViewProvider.serialize(anObject, sidechainJsonSerializer);
-    }
-
-    public final String serialize(Object anObject, Class<?> aView, SidechainJsonSerializer sidechainJsonSerializer) {
-        if(aView == null)
-            throw new IllegalArgumentException("Argument aView cannot be null.");
-        else if(sidechainJsonSerializer == null)
-            throw new IllegalArgumentException("Argument sidechainJsonSerializer cannot be null.");
-        else return applicationNodeViewProvider.serialize(anObject, aView, sidechainJsonSerializer);
-    }
-
-    public final String serializeError(String code, String description, String detail) {
-        return applicationNodeViewProvider.serializeError(code, description, detail);
-    }
-
-    public final String serializeError(String code, String description, String detail, Class<?> aView) {
-        if(aView == null)
-            throw new IllegalArgumentException("Argument aView cannot be null.");
-        else return applicationNodeViewProvider.serializeError(code, description, detail, aView);
-    }
-
-    public final String serializeError(String code, String description, String detail, SidechainJsonSerializer sidechainJsonSerializer) {
-        if(sidechainJsonSerializer == null)
-            throw new IllegalArgumentException("Argument sidechainJsonSerializer cannot be null.");
-        else return applicationNodeViewProvider.serializeError(code, description, detail, sidechainJsonSerializer);
-    }
-
-    public final String serializeError(String code, String description, String detail, Class<?> aView, SidechainJsonSerializer sidechainJsonSerializer) {
-        if(aView == null)
-            throw new IllegalArgumentException("Argument aView cannot be null.");
-        else if(sidechainJsonSerializer == null)
-            throw new IllegalArgumentException("Argument sidechainJsonSerializer cannot be null.");
-        else return applicationNodeViewProvider.serializeError(code, description, detail, aView, sidechainJsonSerializer);
-    }
-
     public final void setApplicationNodeViewProvider(ApplicationNodeViewProvider applicationNodeViewProvider){
         this.applicationNodeViewProvider = applicationNodeViewProvider;
     }

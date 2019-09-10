@@ -2,8 +2,8 @@ package com.horizen.proof
 
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.SidechainJsonSerializer
 import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -21,7 +21,7 @@ class Signature25519ScalaTest
     val prp = key.publicImage
     val pr = key.sign(testMessage)
 
-    val serializer = new SidechainJsonSerializer
+    val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
 
     val jsonStr = serializer.serialize(pr)

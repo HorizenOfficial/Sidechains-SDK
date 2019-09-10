@@ -5,9 +5,9 @@ import java.util.{HashMap => JHashMap}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.SidechainTypes
-import com.horizen.api.http.SidechainJsonSerializer
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture
+import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.TransactionSerializer
 import org.junit.Assert._
 import org.junit.Test
@@ -25,7 +25,7 @@ class SidechainBlockTest
   def testToJson(): Unit = {
     val sb = generateGenesisBlock(sidechainTransactionsCompanion)
 
-    val serializer = new SidechainJsonSerializer
+    val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
 
     val jsonStr = serializer.serialize(sb)

@@ -2,6 +2,8 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import com.horizen.api.http.schema.{SidechainApiErrorCodeSchema, SidechainApiErrorCodeUtil}
+import com.horizen.serialization.SerializationUtil
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
@@ -10,7 +12,7 @@ case class SidechainUtilApiRoute(override val settings: RESTApiSettings, sidecha
                                 (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
 
   override val route : Route = (pathPrefix("util"))
-            {dbLog ~ setMockTime}
+            {errorCodes}
 
   def dbLog : Route = (post & path("dbLog"))
   {
@@ -20,6 +22,23 @@ case class SidechainUtilApiRoute(override val settings: RESTApiSettings, sidecha
   def setMockTime : Route = (post & path("setMockTime"))
   {
     SidechainApiResponse.OK
+  }
+
+  def errorCodes : Route = (post & path("errorCodes"))
+  {
+    try {
+      var codes = SidechainApiErrorCodeUtil.predefinedApiErrorCodes
+      var res : Seq[SidechainApiErrorCodeSchema] = codes.map(err =>
+        SidechainApiErrorCodeSchema(err.groupName, err.groupCode, err.internalName, err.internalCode, err.apiCode))
+
+
+      SidechainApiResponse(
+        SerializationUtil.serializeWithResult(res)
+      )
+
+    }catch {
+      case e : Throwable => SidechainApiError(e)
+    }
   }
 
 }

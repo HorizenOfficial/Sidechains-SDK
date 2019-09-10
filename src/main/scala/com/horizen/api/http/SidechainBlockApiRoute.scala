@@ -14,8 +14,9 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import JacksonSupport._
-import com.horizen.api.http.schema.BlockApiGroupErrorCodes
+import com.horizen.api.http.schema.{INVALID_HEIGHT, INVALID_ID, NOT_ACCEPTED, NOT_CREATED, TEMPLATE_FAILURE}
 import com.horizen.api.http.schema.BlockRestScheme._
+import com.horizen.serialization.SerializationUtil
 
 case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                   (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
@@ -37,14 +38,14 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
               var sblock = optionSidechainBlock.get()
               var sblock_serialized = sblock.serializer.toBytes(sblock)
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   RespFindByIdPost(BytesUtils.toHexString(sblock_serialized), sblock)
               ))
             }
             else
               SidechainApiResponse(
-                serializeError(
-                    BlockApiGroupErrorCodes.INVALID_ID, s"Invalid id: ${body.blockId}")
+                SerializationUtil.serializeErrorWithResult(
+                    INVALID_ID().apiCode, s"Invalid id: ${body.blockId}", "")
                 )
       }
     }
@@ -60,7 +61,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             var sidechainHistory = sidechainNodeView.getNodeHistory
             var blockIds = sidechainHistory.getLastBlockIds(sidechainHistory.getBestBlock.id, body.number)
         SidechainApiResponse(
-          serialize(
+          SerializationUtil.serializeWithResult(
             RespLastIdsPost(blockIds.asScala)))
       }
     }
@@ -77,14 +78,14 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
             if(blockIdOptional.isPresent)
               SidechainApiResponse(
-                serialize(
+                SerializationUtil.serializeWithResult(
                   RespFindIdByHeightPost(blockIdOptional.get())
                 )
               )
             else
                 SidechainApiResponse(
-                  serializeError(
-                      BlockApiGroupErrorCodes.INVALID_HEIGHT, s"Invalid height: ${body.height}")
+                  SerializationUtil.serializeErrorWithResult(
+                      INVALID_HEIGHT().apiCode, s"Invalid height: ${body.height}", "")
                   )
       }
     }
@@ -100,14 +101,14 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
         val height = sidechainHistory.getCurrentHeight
         if(height > 0)
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespBestPost(sidechainHistory.getBestBlock, height)
             )
           )
         else
           SidechainApiResponse(
-            serializeError(
-                BlockApiGroupErrorCodes.INVALID_HEIGHT, s"Invalid height: ${height}")
+            SerializationUtil.serializeErrorWithResult(
+                INVALID_HEIGHT().apiCode, s"Invalid height: ${height}", "")
             )
     }
   }
@@ -123,14 +124,14 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     blockTemplate match {
       case Success(block) =>
         SidechainApiResponse(
-          serialize(
+          SerializationUtil.serializeWithResult(
             RespTemplatePost(block, BytesUtils.toHexString(block.bytes))
           )
         )
       case Failure(e) =>
         SidechainApiResponse(
-          serializeError(
-              BlockApiGroupErrorCodes.TEMPLATE_FAILURE, s"Failed to get block template: ${e.getMessage}")
+          SerializationUtil.serializeErrorWithResult(
+              TEMPLATE_FAILURE().apiCode, s"Failed to get block template: ${e.getMessage}", "")
           )
     }
   }
@@ -150,20 +151,20 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 Await.result(submitResultFuture, timeout.duration) match {
                   case Success(id) =>
                     SidechainApiResponse(
-                      serialize(
+                      SerializationUtil.serializeWithResult(
                         RespSubmitPost(id)
                       )
                     )
                   case Failure(e) =>
                     SidechainApiResponse(
-                      serializeError(
-                          BlockApiGroupErrorCodes.NOT_ACCEPTED, s"Block was not accepted: ${e.getMessage}")
+                      SerializationUtil.serializeErrorWithResult(
+                          NOT_ACCEPTED().apiCode, s"Block was not accepted: ${e.getMessage}", "")
                       )
                 }
               case Failure(e) =>
                 SidechainApiResponse(
-                  serializeError(
-                      BlockApiGroupErrorCodes.NOT_ACCEPTED, s"Block was not accepted: ${e.getMessage}")
+                  SerializationUtil.serializeErrorWithResult(
+                      NOT_ACCEPTED().apiCode, s"Block was not accepted: ${e.getMessage}", "")
                   )
             }
       }
@@ -185,14 +186,14 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             Await.result(submitResultFuture, timeout.duration) match {
               case Success(ids) =>
                 SidechainApiResponse(
-                  serialize(
+                  SerializationUtil.serializeWithResult(
                     RespGeneratePost(ids.map(id => id.asInstanceOf[String]))
                   )
                 )
               case Failure(e) =>
                 SidechainApiResponse(
-                  serializeError(
-                      BlockApiGroupErrorCodes.NOT_CREATED, s"Block was not created: ${e.getMessage}")
+                  SerializationUtil.serializeErrorWithResult(
+                      NOT_CREATED().apiCode, s"Block was not created: ${e.getMessage}", "")
                   )
             }
       }

@@ -1,7 +1,7 @@
 package com.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.SidechainJsonSerializer
+import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -21,7 +21,7 @@ class PublicKey25519PropositionScalaTest
 
     val prop1 = new PublicKey25519Proposition(publicKey)
 
-    val serializer = new SidechainJsonSerializer
+    val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
 
     val jsonStr = serializer.serialize(prop1)

@@ -9,8 +9,9 @@ import scorex.core.settings.RESTApiSettings
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import JacksonSupport._
-import com.horizen.api.http.schema.WalletApiGroupErrorCodes
+import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import com.horizen.api.http.schema.WalletRestScheme._
+import com.horizen.serialization.SerializationUtil
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
@@ -34,7 +35,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         if(optBoxTypeClass.isEmpty){
           var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllBoxesPost(closedBoxesJson)
             )
           )
@@ -42,7 +43,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
           var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(optBoxTypeClass.get).asSubclass(classOf[SidechainTypes#SCB])
           var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllBoxesPost(allClosedBoxesByType)
             )
           )
@@ -64,7 +65,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         if(optBoxType.isEmpty){
           var sumOfBalances : Long = wallet.allBoxesBalance()
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespBalancePost(sumOfBalances)
             )
           )
@@ -72,7 +73,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
           var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxType.get).asSubclass(classOf[SidechainTypes#SCB])
           var balance = wallet.boxesBalance(clazz)
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespBalancePost(balance)
             )
           )
@@ -93,14 +94,14 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       val key = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
       if(wallet.addNewSecret(key)) {
         SidechainApiResponse(
-          serialize(
+          SerializationUtil.serializeWithResult(
             RespCreateNewPublicKeyPost(key.publicImage())
           )
           )
       } else
         SidechainApiResponse(
-          serializeError(
-              WalletApiGroupErrorCodes.SECRET_NOT_ADDED, "Failed to create key pair.")
+          SerializationUtil.serializeErrorWithResult(
+              SECRET_NOT_ADDED().apiCode, "Failed to create key pair.", "")
           )
     }
   }
@@ -118,7 +119,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
           var listOfPropositions = wallet.allSecrets().asScala.map(s =>
             s.publicImage().asInstanceOf[SidechainTypes#SCP])
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllPublicKeysPost(listOfPropositions)
             )
           )
@@ -127,7 +128,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
           var listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
             secret.publicImage().asInstanceOf[SidechainTypes#SCP])
           SidechainApiResponse(
-            serialize(
+            SerializationUtil.serializeWithResult(
               RespAllPublicKeysPost(listOfPropositions)
             )
           )

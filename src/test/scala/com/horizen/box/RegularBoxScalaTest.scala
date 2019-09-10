@@ -1,8 +1,8 @@
 package com.horizen.box
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.SidechainJsonSerializer
 import com.horizen.proposition.PublicKey25519Proposition
+import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -25,7 +25,7 @@ class RegularBoxScalaTest
     val value = 10
     val box = new RegularBox(proposition, nonce, value)
 
-    val serializer = new SidechainJsonSerializer
+    val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
 
     val jsonStr = serializer.serialize(box)
