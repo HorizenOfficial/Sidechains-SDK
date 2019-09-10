@@ -1,6 +1,5 @@
 package com.horizen
 
-import java.net.InetSocketAddress
 import java.lang.{Byte => JByte, Long => JLong}
 import java.util.{HashMap => JHashMap, ArrayList => JArrayList}
 import javafx.util.{Pair => JPair}
@@ -19,12 +18,7 @@ import scorex.core.settings.ScorexSettings.readConfigFromPath
 import scorex.util.ScorexLogging
 import scorex.util._
 
-case class WebSocketClientSettings(
-                                    bindingAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),
-                                    connectionTimeout : Long = 5000,
-                                    connectionTimeUnit :String = "MILLISECONDS")
-
-case class SidechainSettings(scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
+case class SidechainSettings(scorexSettings: ScorexSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -76,9 +70,8 @@ object SidechainSettings
   }
 
   private def fromConfig(config: Config): SidechainSettings = {
-    val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
-    SidechainSettings(scorexSettings, webSocketClientSettings)
+    SidechainSettings(scorexSettings)
   }
   /*
   implicit val networkSettingsValueReader: ValueReader[SDKSettings] =

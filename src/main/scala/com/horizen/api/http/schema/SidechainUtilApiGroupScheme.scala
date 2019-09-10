@@ -28,6 +28,8 @@ import com.horizen.serialization.Views
   * Note:
   * In case of requests/responses with the same inputs/outputs format, an unique class will be implemented, without following the above naming convection.
   */
+@JsonView(Array(classOf[Views.Default]))
+case class SidechainApiErrorCodeList(sidechainErrorCodes : List[SidechainApiErrorCodeSchema])
 
 @JsonView(Array(classOf[Views.Default]))
 case class SidechainApiErrorCodeSchema(groupName : String, groupCode : String, internalName : String, internalCode : String, apiCode : String)

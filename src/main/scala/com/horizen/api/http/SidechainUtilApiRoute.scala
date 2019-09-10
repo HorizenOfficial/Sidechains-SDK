@@ -2,7 +2,7 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.horizen.api.http.schema.{SidechainApiErrorCodeSchema, SidechainApiErrorCodeUtil}
+import com.horizen.api.http.schema.{SidechainApiErrorCodeList, SidechainApiErrorCodeSchema, SidechainApiErrorCodeUtil}
 import com.horizen.serialization.SerializationUtil
 import scorex.core.settings.RESTApiSettings
 
@@ -31,9 +31,8 @@ case class SidechainUtilApiRoute(override val settings: RESTApiSettings, sidecha
       var res : Seq[SidechainApiErrorCodeSchema] = codes.map(err =>
         SidechainApiErrorCodeSchema(err.groupName, err.groupCode, err.internalName, err.internalCode, err.apiCode))
 
-
       SidechainApiResponse(
-        SerializationUtil.serializeWithResult(res)
+        SerializationUtil.serializeWithResult(SidechainApiErrorCodeList(res.toList))
       )
 
     }catch {

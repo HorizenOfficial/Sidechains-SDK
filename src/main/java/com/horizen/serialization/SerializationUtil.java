@@ -15,12 +15,12 @@ public class SerializationUtil {
         return serializer.serialize(value);
     }
 
-    public static String serializeWithResult(Object... values) throws Exception {
-        return ApplicationJsonSerializer.getInstance().serialize(new SidechainApiResponseBody(values));
+    public static String serializeWithResult(Object value) throws Exception {
+        return ApplicationJsonSerializer.getInstance().serialize(new SidechainApiResponseBody(value));
     }
 
-    public static String serializeWithResult(ApplicationJsonSerializer serializer, Object... values) throws Exception {
-        return serializer.serialize(new SidechainApiResponseBody(values));
+    public static String serializeWithResult(ApplicationJsonSerializer serializer, Object value) throws Exception {
+        return serializer.serialize(new SidechainApiResponseBody(value));
     }
 
     public static String serializeErrorWithResult(String code,

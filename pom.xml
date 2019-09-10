@@ -157,13 +157,6 @@
 			<version>10.1.8</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/de.heikoseeberger/akka-http-circe -->
-		<dependency>
-			<groupId>de.heikoseeberger</groupId>
-			<artifactId>akka-http-circe_2.12</artifactId>
-			<version>1.19.0</version>
-		</dependency>
-
 		<!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
 		<dependency>
 			<groupId>commons-net</groupId>

@@ -18,7 +18,6 @@ import com.horizen.transaction.TransactionSerializer
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
 import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.app.Application
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
@@ -27,13 +26,12 @@ import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import com.horizen.forge.ForgerRef
 import com.horizen.api.http.SidechainCompositeHttpService
-import scorex.core.api.http.ApiRoute
 
 import scala.collection.mutable
 import scala.io.Source
 
 class SidechainApp(val settingsFilename: String)
-  extends Application
+  extends ScorexApplication
   with ScorexLogging
 {
   override type TX = SidechainTypes#SCBT
@@ -144,16 +142,12 @@ class SidechainApp(val settingsFilename: String)
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  val sidechainApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute]()
+  override val sidechainApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute]()
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
-
-  override lazy val combinedRoute: Route = SidechainCompositeHttpService(actorSystem, sidechainApiRoutes, settings.restApi, swaggerConfig, nodeViewHolderRef).compositeRoute
-
-  override val apiRoutes: Seq[ApiRoute] = null
 
   override def stopAll(): Unit = {
     super.stopAll()

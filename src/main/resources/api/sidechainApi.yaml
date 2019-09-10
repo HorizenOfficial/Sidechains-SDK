@@ -935,9 +935,12 @@ paths:
                 type: object
                 properties:
                   result:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/SidechainApiErrorCode'
+                    type: object
+                    properties:
+                      sidechainErrorCodes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainApiErrorCode'
         default:
           description: any kind of http error
           content:
