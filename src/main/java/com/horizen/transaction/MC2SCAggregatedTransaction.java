@@ -10,6 +10,7 @@ import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.JsonSerializer;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
+import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
 import io.circe.Json;
@@ -41,6 +42,7 @@ public final class MC2SCAggregatedTransaction
                 new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
                     put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
                     put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
+                    put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
                 }}, new HashMap<>()
             ));
 
@@ -76,8 +78,11 @@ public final class MC2SCAggregatedTransaction
     public List<Box<Proposition>> newBoxes() {
         if (_newBoxes == null) {
             _newBoxes = new ArrayList<>();
-            for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
-                _newBoxes.add(t.getBox());
+            for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs) {
+                Optional<Box<Proposition>> boxOptional = t.getBox();
+                if(boxOptional.isPresent())
+                    _newBoxes.add(boxOptional.get());
+            }
         }
         return Collections.unmodifiableList(_newBoxes);
     }
@@ -151,7 +156,7 @@ public final class MC2SCAggregatedTransaction
 
         int offset = 0;
 
-        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, offset + Utils.SHA256_LENGTH);
         offset += Utils.SHA256_LENGTH;
 
         long timestamp = BytesUtils.getLong(bytes, offset);

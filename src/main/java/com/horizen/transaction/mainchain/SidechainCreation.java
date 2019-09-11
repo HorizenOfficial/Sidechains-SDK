@@ -2,24 +2,23 @@ package com.horizen.transaction.mainchain;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.block.MainchainTxCertifierLockCrosschainOutput;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
-import com.horizen.box.CertifierRightBox;
+import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
+import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
-import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Optional;
 
-public final class CertifierLock implements SidechainRelatedMainchainOutput<CertifierRightBox> {
+public final class SidechainCreation implements SidechainRelatedMainchainOutput<RegularBox> {
 
-    private MainchainTxCertifierLockCrosschainOutput output;
+    private MainchainTxSidechainCreationCrosschainOutput output;
     private byte[] containingTxHash;
     private int index;
 
-    public CertifierLock(MainchainTxCertifierLockCrosschainOutput output, byte[] containingTxHash, int index) {
+    public SidechainCreation(MainchainTxSidechainCreationCrosschainOutput output, byte[] containingTxHash, int index) {
         this.output = output;
         this.containingTxHash = containingTxHash;
         this.index = index;
@@ -34,40 +33,38 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
     }
 
     @Override
-    public Optional<CertifierRightBox> getBox() {
-        byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
-        long nonce = BytesUtils.getLong(hash, 0);
-        return Optional.of(new CertifierRightBox(new PublicKey25519Proposition(output.propositionBytes()), nonce, output.lockedAmount(), output.activeFromWithdrawalEpoch()));
+    public Optional<RegularBox> getBox() {
+        // at the moment sc creation output doesn't create any new coins.
+        return Optional.empty();
     }
 
     @Override
     public byte[] bytes() {
         return Bytes.concat(
-                output.certifierLockOutputBytes(),
+                output.sidechainCreationOutputBytes(),
                 containingTxHash,
                 Ints.toByteArray(index)
         );
     }
 
-    public static CertifierLock parseBytes(byte[] bytes) {
-        if(bytes.length < 36 + MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE())
+    public static SidechainCreation parseBytes(byte[] bytes) {
+        if(bytes.length < 36 + MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE())
             throw new IllegalArgumentException("Input data corrupted.");
 
         int offset = 0;
 
-        MainchainTxCertifierLockCrosschainOutput output = MainchainTxCertifierLockCrosschainOutput.create(bytes, offset).get();
-        offset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE();
+        MainchainTxSidechainCreationCrosschainOutput output = MainchainTxSidechainCreationCrosschainOutput.create(bytes, offset).get();
+        offset += MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE();
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;
 
         int idx = BytesUtils.getInt(bytes, offset);
-
-        return new CertifierLock(output, txHash, idx);
+        return new SidechainCreation(output, txHash, idx);
     }
 
     @Override
     public SidechainRelatedMainchainOutputSerializer serializer() {
-        return CertifierLockSerializer.getSerializer();
+        return SidechainCreationSerializer.getSerializer();
     }
 }

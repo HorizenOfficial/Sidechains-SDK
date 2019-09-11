@@ -330,7 +330,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
           Older
         else if (storage.height == otherBestBlockApproxHeight) {
           if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
-            Equal
+            Equal // UPDATE: FORK in both cases
           else
             Fork
         }
