@@ -24,7 +24,7 @@ public class PrivateKey25519SerializerTest {
     public void PrivateKey25519SerializerTest_SerializationTest() {
         SecretSerializer<PrivateKey25519> serializer = key.serializer();
         byte[] keyBytes = serializer.toBytes(key);
-        Try<PrivateKey25519> t = serializer.parseBytes(keyBytes);
+        Try<PrivateKey25519> t = serializer.parseBytesTry(keyBytes);
 
         assertEquals("Keys are not the same.", key, t.get());
     }
@@ -43,7 +43,7 @@ public class PrivateKey25519SerializerTest {
         }
 
         SecretSerializer<PrivateKey25519> serializer = key.serializer();
-        Try<PrivateKey25519> t = serializer.parseBytes(bytes);
+        Try<PrivateKey25519> t = serializer.parseBytesTry(bytes);
         assertEquals("Secret serialization failed.", true, t.isSuccess());
 
         PrivateKey25519 parsedSecret = t.get();

@@ -5,7 +5,7 @@ import com.horizen.SidechainSettings
 trait SidechainSettingsFixture {
 
   def getSidechainSettings : SidechainSettings = {
-    new SidechainSettings(null)
+    new SidechainSettings(null, null)
   }
 
 }

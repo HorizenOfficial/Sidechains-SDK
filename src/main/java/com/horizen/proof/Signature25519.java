@@ -2,15 +2,22 @@ package com.horizen.proof;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
+public final class Signature25519
+    implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition>
+    , JsonSerializable
+{
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
     byte[] _signatureBytes;
@@ -38,13 +45,8 @@ public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, P
         return Signature25519Serializer.getSerializer();
     }
 
-    public static Try<Signature25519> parseBytes(byte[] bytes) {
-        try {
-            Signature25519 signature = new Signature25519(bytes);
-            return new Success<Signature25519>(signature);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static Signature25519 parseBytes(byte[] bytes) {
+        return new Signature25519(bytes);
     }
 
     @Override
@@ -62,4 +64,19 @@ public final class Signature25519 implements ProofOfKnowledge<PrivateKey25519, P
         result = 31 * result + Arrays.hashCode(_signatureBytes);
         return result;
     }
+
+    @Override
+    public Json toJson() {
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = new ScorexEncoder();
+
+        values.put("signature", Json.fromString(encoder.encode(this._signatureBytes)));
+
+        return Json.obj(values.toSeq());
+    }
+
+    public static Signature25519 parseJson(Json json) {
+        return null;
+    }
+
 }

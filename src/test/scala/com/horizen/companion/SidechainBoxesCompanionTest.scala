@@ -31,7 +31,7 @@ class SidechainBoxesCompanionTest
     val regularBoxBytes = sidechainBoxesCompanion.toBytes(regulerBox)
 
     assertEquals("Type of serialized box must be RegularBox.", regulerBox.boxTypeId(), regularBoxBytes(0))
-    assertEquals("Deserialization must restore same box.", regulerBox, sidechainBoxesCompanion.parseBytes(regularBoxBytes).get)
+    assertEquals("Deserialization must restore same box.", regulerBox, sidechainBoxesCompanion.parseBytesTry(regularBoxBytes).get)
 
 
     // Test 2: CertifierRightBox serialization/deserialization
@@ -40,7 +40,7 @@ class SidechainBoxesCompanionTest
     val certifiedRightBoxBytes = sidechainBoxesCompanion.toBytes(certifiedRightBox)
 
     assertEquals("Type of serialized box must be CertifierRightBox.", certifiedRightBox.boxTypeId(), certifiedRightBoxBytes(0))
-    assertEquals("Deserialization must restore same box.", certifiedRightBox, sidechainBoxesCompanion.parseBytes(certifiedRightBoxBytes).get)
+    assertEquals("Deserialization must restore same box.", certifiedRightBox, sidechainBoxesCompanion.parseBytesTry(certifiedRightBoxBytes).get)
   }
 
   @Test def testRegisteredCustom(): Unit = {
@@ -49,7 +49,7 @@ class SidechainBoxesCompanionTest
     val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
     assertEquals("Box type must be custom.", Byte.MaxValue, customBoxBytes(0))
     assertEquals("Type of serialized box must be CustomBox.", customBox.boxTypeId(), customBoxBytes(1))
-    assertEquals("Deserialization must restore same box.", customBox, sidechainBoxesCompanion.parseBytes(customBoxBytes).get)
+    assertEquals("Deserialization must restore same box.", customBox, sidechainBoxesCompanion.parseBytesTry(customBoxBytes).get)
   }
 
   @Test def testUnregisteredCustom(): Unit = {
@@ -72,7 +72,7 @@ class SidechainBoxesCompanionTest
     val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
 
     try {
-      sidechainBoxesCompanionCore.parseBytes(customBoxBytes).get
+      sidechainBoxesCompanionCore.parseBytesTry(customBoxBytes).get
     } catch {
       case _ : Throwable => exceptionThrown = true
     }

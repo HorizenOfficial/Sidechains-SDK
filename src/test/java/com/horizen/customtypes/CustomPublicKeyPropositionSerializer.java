@@ -2,6 +2,8 @@ package com.horizen.customtypes;
 
 import com.horizen.proposition.PropositionSerializer;
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public class CustomPublicKeyPropositionSerializer implements PropositionSerializer<CustomPublicKeyProposition>
 {
@@ -20,12 +22,12 @@ public class CustomPublicKeyPropositionSerializer implements PropositionSerializ
     }
 
     @Override
-    public byte[] toBytes(CustomPublicKeyProposition obj) {
-        return obj.bytes();
+    public void serialize(CustomPublicKeyProposition proposition, Writer writer) {
+        writer.putBytes(proposition.bytes());
     }
 
     @Override
-    public Try<CustomPublicKeyProposition> parseBytes(byte[] bytes) {
-        return CustomPublicKeyProposition.parseBytes(bytes);
+    public CustomPublicKeyProposition parse(Reader reader) {
+        return CustomPublicKeyProposition.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

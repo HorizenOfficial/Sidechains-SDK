@@ -6,20 +6,25 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
 import java.util.*;
 
-public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition, Box<Proposition>>
+public final class MC2SCAggregatedTransaction
+    extends BoxTransaction<Proposition, Box<Proposition>>
+    implements JsonSerializable
 {
     public static final byte TRANSACTION_TYPE_ID = 2;
     private byte[] _mc2scTransactionsMerkleRootHash;
@@ -32,9 +37,9 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
-                new HashMap<Byte, Serializer<? extends SidechainRelatedMainchainOutput>>() {{
-                    put((byte)1, (Serializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)2, (Serializer)CertifierLockSerializer.getSerializer());
+                new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
+                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
                 }}, new HashMap<>()
             ));
 
@@ -131,29 +136,26 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         );
     }
 
-    public static Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
-        try {
-            if(bytes.length < 48)
-                throw new IllegalArgumentException("Input data corrupted.");
-            if(bytes.length > MAX_TRANSACTION_SIZE)
-                throw new IllegalArgumentException("Input data length is too large.");
+    public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 48)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        if(bytes.length > MAX_TRANSACTION_SIZE)
+            throw new IllegalArgumentException("Input data length is too large.");
 
-            byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
-            offset += Utils.SHA256_LENGTH;
+        int offset = 0;
 
-            long timestamp = BytesUtils.getLong(bytes, offset);
-            offset += 8;
+        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+        offset += Utils.SHA256_LENGTH;
 
-            int batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
 
-            return new Success<>(new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp));
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+        List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
+        return new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp);
     }
 
     public static MC2SCAggregatedTransaction create(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
@@ -172,5 +174,27 @@ public final class MC2SCAggregatedTransaction extends BoxTransaction<Proposition
         if(!transaction.semanticValidity())
             throw new IllegalArgumentException("Created transaction is semantically invalid. Proposed merkle root not equal to calculated one.");
         return transaction;
+    }
+
+    @Override
+    public Json toJson() {
+        ArrayList<Json> arr = new ArrayList<>();
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+
+        values.put("id", Json.fromString(this.id()));
+        values.put("fee", Json.fromLong(this.fee()));
+        values.put("timestamp", Json.fromLong(this._timestamp));
+
+        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(BytesUtils.toHexString(this._mc2scTransactionsMerkleRootHash)));
+
+        for(Box<Proposition> b : this.newBoxes())
+            arr.add(b.toJson());
+        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        return Json.obj(values.toSeq());
+    }
+
+    public static MC2SCAggregatedTransaction parseJson(Json json) {
+        return null;
     }
 }

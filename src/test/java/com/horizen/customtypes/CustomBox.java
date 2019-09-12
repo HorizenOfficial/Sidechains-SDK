@@ -5,9 +5,13 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxSerializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -56,15 +60,10 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
         return BOX_TYPE_ID;
     }
 
-    public static Try<CustomBox> parseBytes(byte[] bytes) {
-        try {
-            Try<CustomPublicKeyProposition> t = CustomPublicKeyProposition.parseBytes(Arrays.copyOf(bytes, CustomPublicKeyProposition.getLength()));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, CustomPublicKeyProposition.getLength(), CustomPublicKeyProposition.getLength() + 8));
-            CustomBox box = new CustomBox(t.get(), value);
-            return new Success<>(box);
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static CustomBox parseBytes(byte[] bytes) {
+        CustomPublicKeyProposition t = CustomPublicKeyProposition.parseBytes(Arrays.copyOf(bytes, CustomPublicKeyProposition.getLength()));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, CustomPublicKeyProposition.getLength(), CustomPublicKeyProposition.getLength() + 8));
+        return new CustomBox(t, value);
     }
 
     @Override
@@ -88,5 +87,16 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
                 "_proposition=" + _proposition +
                 ", _value=" + _value +
                 '}';
+    }
+
+    @Override
+    public Json toJson() {
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+        ScorexEncoder encoder = new ScorexEncoder();
+
+        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("value", Json.fromLong(this._value));
+
+        return Json.obj(values.toSeq());
     }
 }

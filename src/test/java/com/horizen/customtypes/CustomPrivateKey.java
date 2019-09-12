@@ -63,15 +63,10 @@ public class CustomPrivateKey implements Secret
         return null;
     }
 
-    public static Try<CustomPrivateKey> parseBytes(byte[] bytes) {
-        try {
-            byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
-            byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
-            CustomPrivateKey secret = new CustomPrivateKey(privateKeyBytes, publicKeyBytes);
-            return new Success<CustomPrivateKey>(secret);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static CustomPrivateKey parseBytes(byte[] bytes) {
+        byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
+        byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
+        return new CustomPrivateKey(privateKeyBytes, publicKeyBytes);
     }
 
     @Override

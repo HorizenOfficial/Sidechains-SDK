@@ -1,6 +1,8 @@
 package com.horizen
 
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
+import java.util.{List => JList, ArrayList => JArrayList, Optional => JOptional}
+
+import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
@@ -10,23 +12,29 @@ import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.idToBytes
-
+import com.horizen.node.NodeHistory
+import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.transaction.Transaction
+import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkParams)
+class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams)
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
-      SidechainHistory] with scorex.core.utils.ScorexEncoding {
+      SidechainHistory]
+  with scorex.core.utils.ScorexEncoding
+  with NodeHistory
+{
 
   override type NVCT = SidechainHistory
 
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
-  val height: Int = storage.height
-  val bestBlockId: ModifierId = storage.bestBlockId
-  val bestBlock: SidechainBlock = storage.bestBlock // note: maybe make it lazy?
+  def height: Int = storage.height
+  def bestBlockId: ModifierId = storage.bestBlockId
+  def bestBlock: SidechainBlock = storage.bestBlock
 
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
@@ -85,7 +93,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
             // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
             // TO DO: do we need to save it to history storage to prevent double downloading or it's cached somewhere?
             (
-              storage,
+              Success(storage),
               ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
             )
         }
@@ -95,7 +103,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   }
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
-    blockId.equals(params.sidechainGenesisBlockId)
+      blockId.equals(params.sidechainGenesisBlockId)
   }
 
   def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
@@ -108,7 +116,7 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
   // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
   // last 4 bytes contain heights of passed block
   def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + (block.mainchainBlocks.size.toLong << 32 + 1)
+    parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
   }
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
@@ -136,10 +144,8 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
 
   // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
   // Returns last common block and then variant blocks for two chains.
-  def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
-    def inCurrentChain(blockId: ModifierId): Boolean = storage.isInActiveChain(blockId)
-
-    chainBack(forkBlock.id, inCurrentChain, Int.MaxValue) match {
+  private def commonBlockSuffixes(forkBlock: SidechainBlock): (Seq[ModifierId], Seq[ModifierId]) = {
+    chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
       case Some(newBestChain) =>
         val commonBlockHeight = storage.blockInfoById(newBestChain.head).get.height
         if(height - commonBlockHeight > params.maxHistoryRewritingLength)
@@ -213,6 +219,8 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
 
   override def isEmpty: Boolean = height <= 0
 
+  override def contains(id: ModifierId): Boolean = storage.blockInfoById(id).isDefined
+
   override def applicableTry(block: SidechainBlock): Try[Unit] = {
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
@@ -233,13 +241,14 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
       Seq(bestBlockId)
   }
 
-  override def continuationIds(info: SidechainSyncInfo, size: Int): Option[ModifierIds] = {
+
+  override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        Some(storage.activeChainFrom(commonBlockId).take(size).map(id => (SidechainBlock.ModifierTypeId, id)))
+        storage.activeChainFrom(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
       case None =>
         //log.warn("Found chain without common block ids from remote")
-        None
+        Seq()
     }
   }
 
@@ -311,13 +320,148 @@ class SidechainHistory(val storage: SidechainHistoryStorage, params: NetworkPara
         else
           Younger
       case _ =>
-        val otherBestBlockHeight = storage.heightOf(dSuffix.reverse.find(id => storage.heightOf(id).isDefined).get).get
-        if (storage.height < otherBestBlockHeight)
+        val otherBestKnownBlockIndex = dSuffix.size - 1 - dSuffix.reverse.indexWhere(id => storage.heightOf(id).isDefined)
+        val otherBestKnownBlockHeight = storage.heightOf(dSuffix(otherBestKnownBlockIndex)).get
+        // other node height can be approximatly calculated as height of other KNOWN best block height + size of rest unknown blocks after it.
+        // why approximately? see knownBlocksHeightToSync algorithm: blocks to sync step increasing.
+        // to do: need to discuss
+        val otherBestBlockApproxHeight = otherBestKnownBlockHeight + (dSuffix.size - 1 - otherBestKnownBlockIndex)
+        if (storage.height < otherBestBlockApproxHeight)
           Older
-        else if (storage.height == otherBestBlockHeight)
-          Equal // TO DO: should be a fork? Look for RC4
+        else if (storage.height == otherBestBlockApproxHeight) {
+          if(otherBestBlockApproxHeight == otherBestKnownBlockHeight)
+            Equal
+          else
+            Fork
+        }
         else
           Younger
     }
+  }
+
+  override def getBlockById(blockId: String): JOptional[SidechainBlock] = {
+    storage.blockById(ModifierId(blockId)).asJava
+  }
+
+  override def getLastBlockIds(count: Int): JList[String] = {
+    val blockList = new JArrayList[String]()
+    if(isEmpty)
+      blockList
+    else {
+      var id = bestBlockId
+      blockList.add(id)
+      while (blockList.size < count && !isGenesisBlock(id)) {
+        val parentBlockId = storage.parentBlockId(id).get
+        blockList.add(parentBlockId)
+        id = parentBlockId
+      }
+      blockList
+    }
+  }
+
+  override def getBestBlock: SidechainBlock = {
+    bestBlock
+  }
+
+  override def getBlockIdByHeight(height: Int): JOptional[String] = {
+    storage.activeChainBlockId(height) match {
+      case Some(blockId) => JOptional.of[String](blockId)
+      case None => JOptional.empty()
+    }
+
+  }
+
+  override def getCurrentHeight: Int = {
+    height
+  }
+
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[Transaction] = {
+    storage.blockById(ModifierId(blockId)) match {
+      case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
+      case None => JOptional.empty()
+    }
+  }
+
+  private def findTransactionInsideBlock(transactionId : String, block : SidechainBlock) : JOptional[Transaction] = {
+    block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
+      case Some(tx) => JOptional.ofNullable(tx)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[Transaction] = {
+    var startingBlock = JOptional.ofNullable(getBestBlock)
+    var transaction : JOptional[Transaction] = JOptional.empty()
+    var found = false
+    while(!found && startingBlock.isPresent){
+      var tx = findTransactionInsideBlock(transactionId, startingBlock.get())
+      if(tx.isPresent){
+        found = true
+        transaction = JOptional.ofNullable(tx.get())
+      }else{
+        startingBlock = storage.parentBlockId(startingBlock.get().id) match {
+          case Some(id) => storage.blockById(id) match {
+            case Some(block) => JOptional.ofNullable(block)
+            case None => JOptional.empty()
+          }
+          case None => JOptional.empty()
+        }
+      }
+    }
+
+    transaction
+  }
+
+  private def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
+
+  override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
+    // best MC block header which has already been included in a SC block
+    var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
+    var hashOfMcBlockReference = mcBlockReference.hash
+
+    var height = getHeightOfMainchainBlock(hashOfMcBlockReference)
+
+    // Sidechain block which contains this MC block reference
+    var scBlock = getSidechainBlockByMainchainBlockReferenceHash(hashOfMcBlockReference)
+    var scBlockId = Array[Byte]()
+    if(scBlock.isPresent)
+      scBlockId = idToBytes(scBlock.get().id)
+
+    new MainchainBlockReferenceInfo(
+      hashOfMcBlockReference,
+      height,
+      scBlockId
+    )
+  }
+
+  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
+
+  override def getHeightOfMainchainBlock(mcBlockReferenceHash: Array[Byte]): Int = ???
+
+  override def getSidechainBlockByMainchainBlockReferenceHash(mcBlockReferenceHash: Array[Byte]): JOptional[SidechainBlock] = ???
+
+  override def createMainchainBlockReference(mainchainBlockData: Array[Byte]): Try[MainchainBlockReference] = ???
+}
+
+
+object SidechainHistory
+{
+  private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
+                                      params: NetworkParams) : Option[SidechainHistory] = {
+
+    if (!historyStorage.isEmpty)
+      Some(new SidechainHistory(historyStorage, params))
+    else
+      None
+  }
+
+  private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
+                                      params: NetworkParams, genesisBlock: SidechainBlock) : Try[SidechainHistory] = Try {
+
+    if (historyStorage.isEmpty)
+      new SidechainHistory(historyStorage, params)
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
+    else
+      throw new RuntimeException("History storage is not empty!")
   }
 }

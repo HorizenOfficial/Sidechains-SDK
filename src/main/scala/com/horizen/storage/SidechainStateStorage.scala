@@ -32,7 +32,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
   def get(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
     storage.get(calculateKey(boxId)) match {
       case v if v.isPresent => {
-        sidechainBoxesCompanion.parseBytes(v.get().data) match {
+        sidechainBoxesCompanion.parseBytesTry(v.get().data) match {
           case Success(box) => Option(box)
           case Failure(exception) => {
             log.error("Error while WalletBox parsing.", exception)
@@ -85,5 +85,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     storage.rollback(version)
     this
   }
+
+  def isEmpty: Boolean = storage.isEmpty
 
 }

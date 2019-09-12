@@ -1,12 +1,18 @@
 package com.horizen.block
 
 import com.horizen.utils.{BytesUtils, Utils}
-import scorex.core.serialization.{BytesSerializable, Serializer}
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 
 import scala.util.Try
 import java.time.Instant
 
 import com.horizen.params.NetworkParams
+import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import io.circe.Json
+import scorex.core.utils.ScorexEncoder
+import scorex.util.serialization.{Reader, Writer}
+
+import scala.collection.mutable
 
 //
 // Representation of MC header
@@ -28,15 +34,19 @@ class MainchainHeader(
                        val bits: Int,                         // 4 bytes
                        val nonce: Array[Byte],                // 32 bytes
                        val solution: Array[Byte]              // depends on NetworkParams
-                    ) extends BytesSerializable {
+                    )
+  extends BytesSerializable
+  with JsonSerializable
+{
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   override type M = MainchainHeader
+  override type J = MainchainHeader
 
-  override def serializer: Serializer[MainchainHeader] = MainchainHeaderSerializer
+  override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(hashPrevBlock == null || hashPrevBlock.length != 32
@@ -62,6 +72,25 @@ class MainchainHeader(
     )
       return false
     true
+  }
+
+  override def toJson: Json = {
+    val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
+    val encoder: ScorexEncoder = new ScorexEncoder
+
+    values.put("mainchainHeaderBytes", Json.fromString(encoder.encode(this.mainchainHeaderBytes)))
+    values.put("version", Json.fromInt(this.version))
+    values.put("hashPrevBlock", Json.fromString(encoder.encode(this.hashPrevBlock)))
+    values.put("hashMerkleRoot", Json.fromString(encoder.encode(this.hashMerkleRoot)))
+    values.put("hashReserved", Json.fromString(encoder.encode(this.hashReserved)))
+    values.put("hashSCMerkleRootsMap", Json.fromString(encoder.encode(this.hashSCMerkleRootsMap)))
+    values.put("time", Json.fromInt(this.time))
+    values.put("bits", Json.fromInt(this.bits))
+    values.put("nonce", Json.fromString(encoder.encode(this.nonce)))
+    values.put("solution", Json.fromString(encoder.encode(this.solution)))
+
+    Json.fromFields(values)
+
   }
 }
 
@@ -116,8 +145,12 @@ object MainchainHeader {
   }
 }
 
-object MainchainHeaderSerializer extends Serializer[MainchainHeader] {
-  override def toBytes(obj: MainchainHeader): Array[Byte] = obj.mainchainHeaderBytes
+object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
+  //override def toBytes(obj: MainchainHeader): Array[Byte] = obj.mainchainHeaderBytes
 
-  override def parseBytes(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes, 0)
+  //override def parseBytesTry(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes, 0)
+
+  override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.bytes)
+
+  override def parse(r: Reader): MainchainHeader = MainchainHeader.create(r.getBytes(r.remaining), 0).get
 }

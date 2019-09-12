@@ -70,33 +70,30 @@ public class MerklePath {
         return resStream.toByteArray();
     }
 
-    public static Try<MerklePath> parseBytes(byte[] bytes) {
-        try {
-            if (bytes.length < 4)
-                throw new IllegalArgumentException("Input data corrupted.");
+    public static MerklePath parseBytes(byte[] bytes) {
+        if (bytes.length < 4)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        int offset = 0;
 
-            int size = BytesUtils.getInt(bytes, offset);
-            offset += 4;
+        int size = BytesUtils.getInt(bytes, offset);
+        offset += 4;
 
-            if(size < 0)
-                throw new IllegalArgumentException("Input data corrupted.");
-            else if (size == 0)
-                return new Success<>(new MerklePath(new ArrayList<>()));
+        if(size < 0)
+            throw new IllegalArgumentException("Input data corrupted.");
+        else if (size == 0)
+            return new MerklePath(new ArrayList<>());
 
-            if(bytes.length != 4 + size * (1 + Utils.SHA256_LENGTH))
-                throw new IllegalArgumentException("Input data corrupted.");
+        if(bytes.length != 4 + size * (1 + Utils.SHA256_LENGTH))
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            ArrayList<Pair<Byte, byte[]>> merklePath =  new ArrayList<>();
-            while(size > 0) {
-                merklePath.add(new Pair<>(bytes[offset], Arrays.copyOfRange(bytes, offset + 1, offset + 1 + Utils.SHA256_LENGTH)));
-                offset += 1 + Utils.SHA256_LENGTH;
-                size--;
-            }
-            return new Success<>(new MerklePath(merklePath));
-        } catch (Exception e) {
-            return new Failure<>(e);
+        ArrayList<Pair<Byte, byte[]>> merklePath =  new ArrayList<>();
+        while(size > 0) {
+            merklePath.add(new Pair<>(bytes[offset], Arrays.copyOfRange(bytes, offset + 1, offset + 1 + Utils.SHA256_LENGTH)));
+            offset += 1 + Utils.SHA256_LENGTH;
+            size--;
         }
+
+        return new MerklePath(merklePath);
     }
 }

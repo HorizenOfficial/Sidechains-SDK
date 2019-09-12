@@ -2,6 +2,8 @@ package com.horizen.customtypes;
 
 import com.horizen.secret.SecretSerializer;
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public class CustomPrivateKeySerializer implements SecretSerializer<CustomPrivateKey> 
 {
@@ -21,13 +23,12 @@ public class CustomPrivateKeySerializer implements SecretSerializer<CustomPrivat
     }
 
     @Override
-    public byte[] toBytes(CustomPrivateKey secret) {
-        return secret.bytes();
+    public void serialize(CustomPrivateKey secret, Writer writer) {
+        writer.putBytes(secret.bytes());
     }
 
     @Override
-    public Try<CustomPrivateKey> parseBytes(byte[] bytes) {
-        return CustomPrivateKey.parseBytes(bytes);
+    public CustomPrivateKey parse(Reader reader) {
+        return CustomPrivateKey.parseBytes(reader.getBytes(reader.remaining()));
     }
-    
 }

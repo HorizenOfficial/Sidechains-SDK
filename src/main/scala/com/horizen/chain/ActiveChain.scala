@@ -12,10 +12,10 @@ class ActiveChain private (private var tipId: Option[ModifierId], private var bl
 
   def tip(): Option[ModifierId] = tipId
 
-  def tipInfo(): SidechainBlockInfo = blockInfos.last
+  def tipInfo(): Option[SidechainBlockInfo] = blockInfos.lastOption
 
   def updateTip(newTipId: ModifierId, newTipInfo: SidechainBlockInfo): Try[Unit] = Try {
-    if(height() > 0 && !newTipInfo.parentId.equals(tip())) {
+    if(height() > 0 && !newTipInfo.parentId.equals(tip().get)) {
       // we get a tip, that is a part of another chain
       heightOf(newTipInfo.parentId) match {
         case Some(parentHeight) =>
@@ -55,8 +55,8 @@ class ActiveChain private (private var tipId: Option[ModifierId], private var bl
 
     var currentHeight = heightOf(id).get
     while(currentHeight < height()) {
-      res = res :+ getBlockInfo(currentHeight).get.parentId
       currentHeight += 1
+      res = res :+ getBlockInfo(currentHeight).get.parentId
     }
     res :+ tip().get
   }
@@ -76,7 +76,7 @@ class ActiveChain private (private var tipId: Option[ModifierId], private var bl
   }
 
   def getBlockId(blockHeight: Int): Option[ModifierId] = {
-    if(blockHeight > height())
+    if(blockHeight <= 0 || blockHeight > height())
       None
     else if(blockHeight == height())
       tip()
@@ -93,11 +93,11 @@ object ActiveChain {
   }
 
   // In case of storage with blocks
-  def apply(blockInfosData: ArrayBuffer[(ModifierId, SidechainBlockInfo)]): ActiveChain = {
+  def apply(blocksInfoData: ArrayBuffer[(ModifierId, SidechainBlockInfo)]): ActiveChain = {
     new ActiveChain(
-      Some(blockInfosData.last._1),
-      blockInfosData.map(tuple => tuple._2),
-      HashMap(blockInfosData.map(tuple => tuple._1 -> tuple._2.height): _*)
+      Some(blocksInfoData.last._1),
+      blocksInfoData.map(tuple => tuple._2),
+      HashMap(blocksInfoData.map(tuple => tuple._1 -> tuple._2.height): _*)
     )
   }
 }

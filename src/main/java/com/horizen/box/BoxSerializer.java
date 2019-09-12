@@ -1,13 +1,17 @@
 package com.horizen.box;
 
-import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import com.horizen.serialization.JsonSerializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
-public interface BoxSerializer<B extends Box> extends Serializer<B>
+public interface BoxSerializer<B extends Box>
+    extends ScorexSerializer<B>
+    , JsonSerializer<B>
 {
     @Override
-    byte[] toBytes(B obj);
+    void serialize(B box, Writer writer);
 
     @Override
-    Try<B> parseBytes(byte[] bytes);
+    B parse(Reader reader);
 }

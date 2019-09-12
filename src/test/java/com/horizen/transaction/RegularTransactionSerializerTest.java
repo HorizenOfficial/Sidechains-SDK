@@ -10,6 +10,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
@@ -43,6 +44,16 @@ public class RegularTransactionSerializerTest {
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
+
+        /*
+        //Save transaction to binary file for regression tests.
+        try {
+            FileOutputStream out = new FileOutputStream("src/test/resources/regulartransaction_bytes");
+            out.write(transaction.serializer().toBytes(transaction));
+            out.close();
+        } catch (Throwable e) {
+        }
+        */
     }
 
     @Test
@@ -50,11 +61,11 @@ public class RegularTransactionSerializerTest {
         TransactionSerializer serializer = transaction.serializer();
         byte[] bytes = serializer.toBytes(transaction);
 
-        Try<RegularTransaction> t = serializer.parseBytes(bytes);
+        Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
         assertEquals("Deserialized transactions expected to be equal", true, transaction.id().equals(t.get().id()));
 
-        boolean failureExpected = serializer.parseBytes("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertEquals("Failure during parsing expected", true, failureExpected);
     }
 
@@ -72,7 +83,7 @@ public class RegularTransactionSerializerTest {
         }
 
         TransactionSerializer serializer = transaction.serializer();
-        Try<RegularTransaction> t = serializer.parseBytes(bytes);
+        Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();

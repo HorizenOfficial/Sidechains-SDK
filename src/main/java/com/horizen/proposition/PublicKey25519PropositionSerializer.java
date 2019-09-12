@@ -1,8 +1,11 @@
 package com.horizen.proposition;
 
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
 {
@@ -21,12 +24,22 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
     }
 
     @Override
-    public byte[] toBytes(PublicKey25519Proposition proposition) {
-        return proposition.bytes();
+    public void serialize(PublicKey25519Proposition proposition, Writer writer) {
+    writer.putBytes(proposition.bytes());
+}
+
+    @Override
+    public PublicKey25519Proposition parse(Reader reader) {
+        return PublicKey25519Proposition.parseBytes(reader.getBytes(reader.remaining()));
     }
 
     @Override
-    public Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
-        return PublicKey25519Proposition.parseBytes(bytes);
+    public Json toJson(PublicKey25519Proposition proposition) {
+        return proposition.toJson();
+    }
+
+    @Override
+    public PublicKey25519Proposition parseJson(Json json) {
+        return PublicKey25519Proposition.parseJson(json);
     }
 }

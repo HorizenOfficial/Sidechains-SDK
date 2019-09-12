@@ -5,6 +5,8 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
 import java.util.Arrays;
 
@@ -26,12 +28,12 @@ public final class PrivateKey25519Serializer implements SecretSerializer<Private
     }
 
     @Override
-    public byte[] toBytes(PrivateKey25519 secret) {
-        return secret.bytes();
+    public void serialize(PrivateKey25519 secret, Writer writer) {
+        writer.putBytes(secret.bytes());
     }
 
     @Override
-    public Try<PrivateKey25519> parseBytes(byte[] bytes) {
-        return PrivateKey25519.parseBytes(bytes);
+    public PrivateKey25519 parse(Reader reader) {
+        return PrivateKey25519.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

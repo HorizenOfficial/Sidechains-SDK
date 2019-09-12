@@ -1,29 +1,31 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.box.BoxSerializer
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.secret.SecretSerializer
-import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
+import com.horizen.node.SidechainNodeView
+import com.horizen.params.NetworkParams
+import com.horizen.state.ApplicationState
+import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
+import com.horizen.wallet.ApplicationWallet
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
+import scala.util.{Failure, Success}
 
-
-import scala.util.{Failure, Success, Try}
+import scala.util.Success
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
+                              historyStorage: SidechainHistoryStorage,
+                              stateStorage: SidechainStateStorage,
+                              walletSeed: Array[Byte],
+                              walletBoxStorage: SidechainWalletBoxStorage,
+                              secretStorage: SidechainSecretStorage,
+                              params: NetworkParams,
                               timeProvider: NetworkTimeProvider,
-                              sidechainBoxesCompanion: SidechainBoxesCompanion,
-                              sidechainSecretsCompanion: SidechainSecretsCompanion,
                               applicationWallet: ApplicationWallet,
-                              applicationState: ApplicationState)
+                              applicationState: ApplicationState,
+                              genesisBlock: SidechainBlock)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
@@ -34,47 +36,24 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
-  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings;
+  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
-  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
-    val history = Some(new SidechainHistory())
-    val wallet = SidechainWallet.restoreWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
-    val state = SidechainState.restoreState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
-    val pool = SidechainMemoryPool.emptyPool
-
-    if (history.isDefined && wallet.isDefined && state.isDefined)
-      Some((history.get, state.get, wallet.get, pool))
-    else
-      None
-  }
+  override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
+    history <- SidechainHistory.restoreHistory(historyStorage, params)
+    state <- SidechainState.restoreState(stateStorage, applicationState)
+    wallet <- SidechainWallet.restoreWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet)
+    pool <- Some(SidechainMemoryPool.emptyPool)
+  } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
-    try {
-      val history = Some(new SidechainHistory())
-      val state = SidechainState.genesisState(sidechainSettings, applicationState, sidechainBoxesCompanion, None)
-      val wallet = SidechainWallet.genesisWallet(sidechainSettings, applicationWallet, sidechainBoxesCompanion, sidechainSecretsCompanion, None)
-      val pool = SidechainMemoryPool.emptyPool
+    val result = for {
+      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock)
+      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock)
+      wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock)
+      pool <- Success(SidechainMemoryPool.emptyPool)
+    } yield (history, state, wallet, pool)
 
-      if (history.isDefined && wallet.isDefined && state.isDefined)
-        (history.get, state.get, wallet.get, pool)
-      else {
-        if (history.isEmpty)
-          throw new RuntimeException("History storage is not empty.")
-
-        if (state.isEmpty)
-          throw new RuntimeException("State storage is not empty.")
-
-        if (wallet.isEmpty)
-          throw new RuntimeException("WalletBox storage is not empty.")
-
-        (null, null, null, null)
-      }
-
-    } catch {
-      case exception : Throwable =>
-        log.error ("Error during creation genesis state.", exception)
-        throw exception
-    }
+    result.get
   }
 
   // TO DO: Put it into NodeViewSynchronizerRef::modifierSerializers. Also put here map of custom sidechain transactions
@@ -83,36 +62,79 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val modifierSerializers: Map[Byte, Serializer[_ <: NodeViewModifier]] =
     Map(new RegularTransaction().modifierTypeId() -> new SidechainTransactionsCompanion(customTransactionSerializers))
   */
+  protected def getCurrentSidechainNodeViewInfo: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages
+      .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+  }
+
+  protected def processLocallyGeneratedSecret: Receive = {
+    case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
+      secretModify(ls.secret)
+  }
+
+  protected def secretModify(secret: SidechainTypes#SCS): Unit = {
+    vault().addSecret(secret) match {
+      case Success(newVault) =>
+        updateNodeView(updatedVault = Some(newVault))
+        sender() ! Success(Unit)
+      case Failure(ex) =>
+        sender() ! Failure(ex)
+    }
+  }
+
+  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse super.receive
+}
+
+object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
+  object ReceivableMessages{
+    case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
+    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+  }
 }
 
 object SidechainNodeViewHolderRef {
-  def props(settings: SidechainSettings,
+  def props(sidechainSettings: SidechainSettings,
+            historyStorage: SidechainHistoryStorage,
+            stateStorage: SidechainStateStorage,
+            walletSeed: Array[Byte],
+            walletBoxStorage: SidechainWalletBoxStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
-            sidechainBoxesCompanion: SidechainBoxesCompanion,
-            sidechainSecretsCompanion: SidechainSecretsCompanion,
             applicationWallet: ApplicationWallet,
-            applicationState: ApplicationState): Props =
-    Props(new SidechainNodeViewHolder(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState))
+            applicationState: ApplicationState,
+            genesisBlock: SidechainBlock): Props =
+    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, stateStorage, walletSeed, walletBoxStorage, secretStorage,
+      params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
-  def apply(settings: SidechainSettings,
+  def apply(sidechainSettings: SidechainSettings,
+            historyStorage: SidechainHistoryStorage,
+            stateStorage: SidechainStateStorage,
+            walletSeed: Array[Byte],
+            walletBoxStorage: SidechainWalletBoxStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
-            sidechainBoxesCompanion: SidechainBoxesCompanion,
-            sidechainSecretsCompanion: SidechainSecretsCompanion,
             applicationWallet: ApplicationWallet,
-            applicationState: ApplicationState)
+            applicationState: ApplicationState,
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState))
+    system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletSeed, walletBoxStorage, secretStorage,
+      params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(name: String,
-            settings: SidechainSettings,
+            sidechainSettings: SidechainSettings,
+            historyStorage: SidechainHistoryStorage,
+            stateStorage: SidechainStateStorage,
+            walletSeed: Array[Byte],
+            walletBoxStorage: SidechainWalletBoxStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
             timeProvider: NetworkTimeProvider,
-            sidechainBoxesCompanion: SidechainBoxesCompanion,
-            sidechainSecretsCompanion: SidechainSecretsCompanion,
             applicationWallet: ApplicationWallet,
-            applicationState: ApplicationState)
+            applicationState: ApplicationState,
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(settings, timeProvider, sidechainBoxesCompanion, sidechainSecretsCompanion,
-      applicationWallet, applicationState), name)
+    system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletSeed, walletBoxStorage, secretStorage,
+      params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }

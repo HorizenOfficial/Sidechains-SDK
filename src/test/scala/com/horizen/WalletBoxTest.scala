@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util
+import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
 
 import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.BytesUtils
@@ -16,7 +16,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
   @Test
   def WalletBox_CreationTest() {
     val box = getRegularBox(getSecret("seed1".getBytes), 1, 100)
-    val transactionId = BytesUtils.toHexString(new Array[Byte](32))
+    val transactionId = bytesToId(new Array[Byte](32))
     val creationTime = 10000
 
 
@@ -30,7 +30,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     // Test 2: transaction id length has invalid length (!= 32)
     var exceptionOccurred = false
     try {
-      new WalletBox(box, BytesUtils.toHexString(new Array[Byte](31)), creationTime)
+      new WalletBox(box, bytesToId(new Array[Byte](31)), creationTime)
     }
     catch {
       case _ : Throwable => exceptionOccurred = true
@@ -41,7 +41,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     // Test 2: createdAt value is negative
     exceptionOccurred = false
     try {
-      new WalletBox(box, BytesUtils.toHexString(new Array[Byte](32)), -100)
+      new WalletBox(box, bytesToId(new Array[Byte](32)), -100)
     }
     catch {
       case _ : Throwable => exceptionOccurred = true
@@ -53,7 +53,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
   def WalletBox_ComparisonTest(): Unit = {
     val walletBox1 = new WalletBox(
       getRegularBox(getSecret("seed1".getBytes), 1, 100),
-      BytesUtils.toHexString(new Array[Byte](32)),
+      bytesToId(new Array[Byte](32)),
       10000)
     var walletBox2: WalletBox = null
 
@@ -61,7 +61,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     // Test 1: compare 2 equals wallet boxes
     walletBox2 = new WalletBox(
       getRegularBox(getSecret("seed1".getBytes), 1, 100),
-      BytesUtils.toHexString(new Array[Byte](32)),
+      bytesToId(new Array[Byte](32)),
       10000)
     assertEquals("WalletBoxes hash codes expected to be equal", walletBox1.hashCode, walletBox2.hashCode)
     assertEquals("WalletBoxes expected to be equal", walletBox1, walletBox2)
@@ -70,7 +70,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     // Test 2: change box
     walletBox2 = new WalletBox(
       getRegularBox(getSecret("seed2".getBytes), 2, 200),
-      BytesUtils.toHexString(new Array[Byte](32)),
+      bytesToId(new Array[Byte](32)),
       10000)
 
     assertNotEquals("WalletBoxes hash codes expected to NOT be equal", walletBox1.hashCode, walletBox2.hashCode)
@@ -83,7 +83,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
 
     walletBox2 = new WalletBox(
       getRegularBox(getSecret("seed1".getBytes), 1, 100),
-      BytesUtils.toHexString(anotherTransactionIdBytes),
+      bytesToId(anotherTransactionIdBytes),
       10000)
 
     assertEquals("WalletBoxes hash codes expected to be equal", walletBox1.hashCode, walletBox2.hashCode)
@@ -93,7 +93,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     // Test 4: change creationTime
     walletBox2 = new WalletBox(
       getRegularBox(getSecret("seed1".getBytes), 1, 100),
-      BytesUtils.toHexString(new Array[Byte](32)),
+      bytesToId(new Array[Byte](32)),
       20000)
     assertEquals("WalletBoxes hash codes expected to be equal", walletBox1.hashCode, walletBox2.hashCode)
     assertNotEquals("WalletBoxes expected to be NOT equal", walletBox1, walletBox2)

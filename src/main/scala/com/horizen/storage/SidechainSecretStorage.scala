@@ -38,7 +38,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   private def loadSecrets() : Unit = {
     _secrets.clear()
     for (s <- storage.getAll.asScala) {
-      val secret = sidechainSecretsCompanion.parseBytes(s.getValue.data)
+      val secret = sidechainSecretsCompanion.parseBytesTry(s.getValue.data)
       if (secret.isSuccess)
         _secrets.put(calculateKey(secret.get.publicImage()), secret.get)
       else
@@ -143,5 +143,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
     this
   }
+
+  def isEmpty: Boolean = storage.isEmpty
 
 }

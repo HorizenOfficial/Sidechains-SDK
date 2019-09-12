@@ -20,7 +20,7 @@ public class Signature25519SerializerTest {
         ProofSerializer<Signature25519> serializer = signature.serializer();
 
         byte[] sb = serializer.toBytes(signature);
-        Try<Signature25519> t = serializer.parseBytes(sb);
+        Try<Signature25519> t = serializer.parseBytesTry(sb);
 
         assertEquals("Signatures are not the same.", signature, t.get());
     }

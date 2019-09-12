@@ -12,16 +12,22 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.JsonSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
+import io.circe.Json;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import javafx.util.Pair;
+
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-public final class RegularTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
+public final class RegularTransaction
+    extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
+    implements JsonSerializable
 {
 
     public static final byte TRANSACTION_TYPE_ID = 1;
@@ -158,47 +164,47 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         );
     }
 
-    public static Try<RegularTransaction> parseBytes(byte[] bytes) {
-        try {
-            if(bytes.length < 40)
-                throw new IllegalArgumentException("Input data corrupted.");
-            if(bytes.length > MAX_TRANSACTION_SIZE)
-                throw new IllegalArgumentException("Input data length is too large.");
+    public static RegularTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 40)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        if(bytes.length > MAX_TRANSACTION_SIZE)
+            throw new IllegalArgumentException("Input data length is too large.");
 
-            long fee = BytesUtils.getLong(bytes, offset);
+        int offset = 0;
+
+        long fee = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
+
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        offset += batchSize;
+
+        List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
+        for(PublicKey25519Proposition proposition : outputPropositions) {
+            outputs.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
             offset += 8;
-
-            long timestamp = BytesUtils.getLong(bytes, offset);
-            offset += 8;
-
-            int batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<RegularBox> inputs = _boxSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-            offset += batchSize;
-
-            batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<PublicKey25519Proposition> outputPropositions = _propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-            offset += batchSize;
-
-            List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
-            for(PublicKey25519Proposition proposition : outputPropositions) {
-                outputs.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
-                offset += 8;
-            }
-
-            batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            if(bytes.length != offset + batchSize)
-                throw new IllegalArgumentException("Input data corrupted.");
-            List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
-
-            return new Success<>(new RegularTransaction(inputs, outputs, signatures, fee, timestamp));
-        } catch (Exception e) {
-            return new Failure<>(e);
         }
+
+        batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+        if(bytes.length != offset + batchSize)
+            throw new IllegalArgumentException("Input data corrupted.");
+
+        List<Signature25519> signatures = _signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
+        return new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
     }
 
     public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
@@ -231,5 +237,35 @@ public final class RegularTransaction extends SidechainTransaction<PublicKey2551
         if(!transaction.semanticValidity())
             throw new IllegalArgumentException("Created transaction is semantically invalid.");
         return transaction;
+    }
+
+    @Override
+    public Json toJson() {
+        ArrayList<Json> arr = new ArrayList<>();
+        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
+
+        values.put("id", Json.fromString(this.id()));
+        values.put("fee", Json.fromLong(this._fee));
+        values.put("timestamp", Json.fromLong(this._timestamp));
+
+        for(RegularBox b : this._inputs)
+            arr.add(b.toJson());
+        values.put("inputs", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        arr.clear();
+        for(RegularBox b : this.newBoxes())
+            arr.add(b.toJson());
+        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        arr.clear();
+        for(Signature25519 s : this._signatures)
+            arr.add(s.toJson());
+        values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
+
+        return Json.obj(values.toSeq());
+    }
+
+    public static RegularTransaction parseJson(Json json) {
+        return null;
     }
 }

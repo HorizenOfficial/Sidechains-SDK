@@ -1,13 +1,15 @@
 package com.horizen
 
 import com.horizen.block.SidechainBlock
-import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History.ModifierIds
 import scorex.util.ModifierId
 import scorex.core.consensus.SyncInfo
-import scorex.core.serialization.Serializer
-import scorex.util.{idToBytes, bytesToId}
+
+import scorex.core.network.message.SyncInfoMessageSpec
+import scorex.core.serialization.ScorexSerializer
+import scorex.util.serialization.{Reader, Writer}
+import scorex.util.{bytesToId, idToBytes}
 
 import scala.util.Try
 
@@ -15,11 +17,11 @@ import scala.util.Try
 case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
   override type M = SidechainSyncInfo
 
-  override def serializer: Serializer[SidechainSyncInfo] = SidechainSyncInfoSerializer
+  override def serializer: ScorexSerializer[SidechainSyncInfo] = SidechainSyncInfoSerializer
 
   // get most recent block
   override def startingPoints: ModifierIds = {
-    knownBlockIds.lastOption match {
+    knownBlockIds.headOption match {
       case Some(id) => Seq(SidechainBlock.ModifierTypeId -> id)
       case None => Seq()
     }
@@ -27,26 +29,25 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 }
 
 
-object SidechainSyncInfoSerializer extends Serializer[SidechainSyncInfo] {
-  override def toBytes(obj: SidechainSyncInfo): Array[Byte] = {
-    Array(obj.knownBlockIds.size.toByte) ++
-    obj.knownBlockIds.foldLeft(Array[Byte]())((a, b) => a ++ idToBytes(b))
+object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
+
+  override def serialize(obj: SidechainSyncInfo, w: Writer): Unit = {
+    w.putInt(obj.knownBlockIds.size)
+    for(b <- obj.knownBlockIds)
+      w.putBytes(idToBytes(b))
   }
 
-  override def parseBytes(bytes: Array[Byte]): Try[SidechainSyncInfo] = Try {
-    val length: Int = bytes.head.toInt
-    if((bytes.length - 1) != length * NodeViewModifier.ModifierIdSize)
+  override def parse(r: Reader): SidechainSyncInfo = {
+    val length = r.getInt()
+    if (r.remaining != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
-    var currentOffset: Int = 4
 
-    var modifierIds: Seq[ModifierId] = Seq()
-
-    while(currentOffset < bytes.length) {
-      modifierIds = modifierIds :+ bytesToId(BytesUtils.reverseBytes(bytes.slice(currentOffset, currentOffset + NodeViewModifier.ModifierIdSize)))
-      currentOffset += NodeViewModifier.ModifierIdSize
-    }
+    val modifierIds : Seq[ModifierId] = for(b <- 0 until length)
+      yield bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 
     SidechainSyncInfo(modifierIds)
   }
-
 }
+
+object SidechainSyncInfoMessageSpec extends SyncInfoMessageSpec[SidechainSyncInfo](SidechainSyncInfoSerializer)
+

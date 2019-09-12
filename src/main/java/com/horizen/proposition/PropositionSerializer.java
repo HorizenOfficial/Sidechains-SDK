@@ -1,14 +1,19 @@
 package com.horizen.proposition;
 
+import com.horizen.serialization.JsonSerializer;
 import scala.util.Try;
-import scorex.core.serialization.Serializer;
+import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
-public interface PropositionSerializer<P extends Proposition> extends Serializer<P>
+public interface PropositionSerializer<P extends Proposition>
+    extends ScorexSerializer<P>
+    , JsonSerializer<P>
 {
     @Override
-    byte[] toBytes(P obj);
+    void serialize(P proposition, Writer writer);
 
     @Override
-    Try<P> parseBytes(byte[] bytes);
+    P parse(Reader reader);
 }
 

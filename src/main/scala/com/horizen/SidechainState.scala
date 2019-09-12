@@ -1,19 +1,15 @@
 package com.horizen
 
-import java.io.{File => JFile}
 import java.util.{Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox}
-import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.params.StorageParams
-import com.horizen.proof.Proof
+import com.horizen.node.NodeState
 import com.horizen.proposition.Proposition
-import com.horizen.state.{ApplicationState, SidechainStateReader}
-import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage, Storage}
-import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, WithdrawalRequestTransaction}
+import com.horizen.state.ApplicationState
+import com.horizen.storage.{SidechainStateStorage}
+import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
@@ -30,7 +26,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
                     SidechainBlock,
                     SidechainState]
   with SidechainTypes
-  with SidechainStateReader
+  with NodeState
   with ScorexLogging
 {
   require({
@@ -68,15 +64,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
   }
 
   // Validate block itself: version and semanticValidity for block
-  //TODO add call of applicationState.validate(Block)
-  //TODO see validate method in Hybrid (tx validation also)
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
       s"${version} expected")
-    //TODO (Alberto) Do we really need to check semanticValidity for block (and transaction) here???
-    //mod.semanticValidity()
-    mod.transactions.foreach(tx => validate(tx).get)
-    //TODO Try as result of validate?
+    //TODO IN FUTURE GENESIS BLOCK MUST BE ALSO VALIDATED
+    if (mod.parentId != SidechainSettings.genesisParentBlockId)
+      mod.transactions.foreach(tx => validate(tx).get)
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
@@ -167,10 +160,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
   }
+
 }
 
 object SidechainState
-  extends ScorexLogging
 {
 
   // TO DO: implement for real block. Now it's just an example.
@@ -198,44 +191,21 @@ object SidechainState
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  private def openStorage(storagePath: JFile) : Storage = {
-    storagePath.mkdirs()
-    new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
-  }
+  private[horizen] def restoreState(stateStorage: SidechainStateStorage, applicationState: ApplicationState) : Option[SidechainState] = {
 
-  private def openStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion) : SidechainStateStorage = {
-
-    val stateStorage = new SidechainStateStorage(storage, sidechainBoxesCompanion)
-
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        storage.close()
-      }
-    })
-
-    stateStorage
-  }
-
-  private[horizen] def restoreState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
-                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
-
-    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
-
-    if (storage.lastVersionID().isPresent)
-      Some(new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), bytesToVersion(storage.lastVersionID().get().data), applicationState))
+    if (!stateStorage.isEmpty)
+      Some(new SidechainState(stateStorage, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     else
       None
   }
 
-  private[horizen] def genesisState(sidechainSettings: SidechainSettings, applicationState: ApplicationState,
-                                    sidechainBoxesCompanion: SidechainBoxesCompanion, externalStorage: Option[Storage]) : Option[SidechainState] = {
+  private[horizen] def genesisState(stateStorage: SidechainStateStorage, applicationState: ApplicationState,
+                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
-    val storage = externalStorage.getOrElse(openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")))
-
-    if (!storage.lastVersionID().isPresent)
-      new SidechainState(openStateStorage(storage, sidechainBoxesCompanion), idToVersion(sidechainSettings.genesisBlock.get.parentId), applicationState)
-        .applyModifier(sidechainSettings.genesisBlock.get).toOption
+    if (stateStorage.isEmpty)
+      new SidechainState(stateStorage, idToVersion(genesisBlock.parentId), applicationState)
+        .applyModifier(genesisBlock).get
     else
-      None
+      throw new RuntimeException("State storage is not empty!")
   }
 }

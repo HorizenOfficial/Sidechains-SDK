@@ -155,7 +155,7 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes, mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
 
     // Prepare list of transactions:
     val secret1 = PrivateKey25519Creator.getInstance().generateSecret("seed1".getBytes())
@@ -197,8 +197,8 @@ class SidechainWalletTest
         // check
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual version is wrong.", new ByteArrayWrapper(blockId), version)
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual walletBoxUpdateList is wrong.", List(
-          new WalletBox(transaction2.newBoxes().get(0), transaction2.id(), transaction2.timestamp()),
-          new WalletBox(transaction2.newBoxes().get(1), transaction2.id(), transaction2.timestamp())
+          new WalletBox(transaction2.newBoxes().get(0), transaction2.id, transaction2.timestamp()),
+          new WalletBox(transaction2.newBoxes().get(1), transaction2.id, transaction2.timestamp())
         ), walletBoxUpdateList)
 
         assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual boxIdsRemoveList is wrong.", List(
@@ -252,7 +252,7 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
 
     val expectedException = new IllegalArgumentException("on rollback exception")
     var rollbackEventOccurred = false
@@ -325,7 +325,7 @@ class SidechainWalletTest
     Mockito.when(mockedBlock.id)
       .thenReturn(bytesToId(blockId))
 
-    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     sidechainWallet.scanPersistent(mockedBlock)
@@ -345,7 +345,7 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, mockedApplicationWallet)
     val secret1 = getSecret("testSeed1".getBytes())
     val secret2 = getSecret("testSeed2".getBytes())
 
@@ -441,7 +441,7 @@ class SidechainWalletTest
   @Test
   def testSecretsDeprecated() : Unit = {
 
-    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     //TEST for - Wallet.secrets
@@ -487,7 +487,7 @@ class SidechainWalletTest
   def testWalletBoxes(): Unit = {
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
-    val sidechainWallet = new SidechainWallet(mockedWalletBoxStorage1, mockedSecretStorage1, new CustomApplicationWallet())
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, new CustomApplicationWallet())
     val walletBoxRegular1 = getWalletBox(classOf[RegularBox])
     val walletBoxRegular2 = getWalletBox(classOf[RegularBox])
     val walletBoxCustom = getWalletBox(classOf[RegularBox])
@@ -534,7 +534,7 @@ class SidechainWalletTest
   @Test
   def testWalletBoxesDeprecated() : Unit = {
 
-    val sidechainWallet = new SidechainWallet(new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion), new CustomApplicationWallet())
 
     //TEST for - Wallet.boxes
