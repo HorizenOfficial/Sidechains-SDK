@@ -1,12 +1,11 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.JsonSerializable;
 import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
-import scorex.core.utils.ScorexEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,22 +56,11 @@ public final class WithdrawalRequestTransaction
     }
 
     @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
-    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
 
-        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("id", Json.fromString(this.id()));
         values.put("fee", Json.fromLong(this.fee()));
 
         for(NoncedBox<Proposition> b : this.newBoxes())
@@ -86,3 +74,4 @@ public final class WithdrawalRequestTransaction
         return null;
     }
 }
+*/

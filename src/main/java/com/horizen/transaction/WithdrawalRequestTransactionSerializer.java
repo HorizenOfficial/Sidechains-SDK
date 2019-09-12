@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
@@ -49,3 +49,4 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
         return null;
     }
 }
+*/

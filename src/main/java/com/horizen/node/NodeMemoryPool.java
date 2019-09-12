@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface NodeMemoryPool {
-    List<BoxTransaction<Proposition, Box<Proposition>>> getAllTransactions();
+    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactions();
 
-    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFee(int limit);
-
-    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedBy(
+    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactions(
             Comparator<BoxTransaction<Proposition, Box<Proposition>>> c,
             int limit);
+
+    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFee(int limit);
 
     int getSize();
 

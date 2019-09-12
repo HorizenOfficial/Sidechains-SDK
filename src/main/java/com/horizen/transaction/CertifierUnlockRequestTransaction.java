@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
@@ -58,16 +58,6 @@ public final class CertifierUnlockRequestTransaction
     }
 
     @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
-    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
@@ -87,3 +77,4 @@ public final class CertifierUnlockRequestTransaction
         return  null;
     }
 }
+*/

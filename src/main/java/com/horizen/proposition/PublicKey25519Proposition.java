@@ -1,10 +1,6 @@
 package com.horizen.proposition;
 
-import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
-import io.circe.Json$;
-import scala.util.Failure;
-import scala.util.Success;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;

@@ -1,6 +1,5 @@
 package com.horizen.transaction.mainchain;
 
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -19,18 +18,6 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
     public static ForwardTransferSerializer getSerializer() {
         return serializer;
     }
-
-    /*
-    @Override
-    public byte[] toBytes(ForwardTransfer transaction) {
-        return transaction.bytes();
-    }
-
-    @Override
-    public Try<ForwardTransfer> parseBytesTry(byte[] bytes) {
-        return ForwardTransfer.parseBytes(bytes);
-    }
-    */
 
     @Override
     public void serialize(ForwardTransfer transaction, Writer writer) {
