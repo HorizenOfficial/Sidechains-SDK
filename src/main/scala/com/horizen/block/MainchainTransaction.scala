@@ -109,25 +109,23 @@ object MainchainTransaction {
 
       // parse Certificate
       // NOTE: just for MC compatibility. not used now, not completed
-      /*{
-        val certOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-        currentOffset += certOutputsNumber.size()
+      val certOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      currentOffset += certOutputsNumber.size()
 
-        // to do: in progress in MC
-        for (i <- 1 to certOutputsNumber.value().intValue()) {
-          val value: Long = BytesUtils.getReversedLong(transactionBytes, currentOffset)
-          currentOffset += 8
+      // to do: in progress in MC
+      for (i <- 1 to certOutputsNumber.value().intValue()) {
+        val value: Long = BytesUtils.getReversedLong(transactionBytes, currentOffset)
+        currentOffset += 8
 
-          val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-          currentOffset += scriptLength.size()
+        val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+        currentOffset += scriptLength.size()
 
-          val script: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
-          val scriptHex: String = BytesUtils.toHexString(script)
-          currentOffset += scriptLength.value().intValue()
+        val script: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
+        val scriptHex: String = BytesUtils.toHexString(script)
+        currentOffset += scriptLength.value().intValue()
 
-          // possible creation of CTxBackwardTransferCrosschainOut(value, script)
-        }
-      }*/
+        // possible creation of CTxBackwardTransferCrosschainOut(value, script)
+      }
 
       // put data into crosschainOutputsMap
       crosschainOutputsMap = crosschainOutputs.groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
@@ -140,7 +138,7 @@ object MainchainTransaction {
 
     // check if it's a transaction with JoinSplits and parse them if need
     // Note: actually joinsplit data is not important for us. So we will just parse it for knowing its size
-    if (version >= PHGR_TX_VERSION || version == GROTH_TX_VERSION || version == SC_TX_VERSION) {
+    if (version >= PHGR_TX_VERSION || version == GROTH_TX_VERSION) {
       val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
       currentOffset += joinSplitsNumber.size()
       if(joinSplitsNumber.value().intValue() != 0) {
