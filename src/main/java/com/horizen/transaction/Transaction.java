@@ -1,3 +1,9 @@
+// scorex.core.transaction was a an abstract class, become a trait.
+// Transaction trait contains definitions for some methods or values
+// To keep definitions in java part we decide to make our com.horizen.Transaction a scala abstract class.
+// This is useless now.
+
+
 /*
 package com.horizen.transaction;
 

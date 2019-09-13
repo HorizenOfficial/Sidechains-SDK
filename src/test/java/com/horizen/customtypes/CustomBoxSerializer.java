@@ -29,6 +29,6 @@ public class CustomBoxSerializer implements BoxSerializer<CustomBox>
 
     @Override
     public CustomBox parse(Reader reader) {
-        return CustomBox.parseBytes(reader.getBytes(reader.remaining())).get();
+        return CustomBox.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

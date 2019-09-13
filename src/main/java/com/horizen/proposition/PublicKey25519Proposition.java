@@ -1,10 +1,6 @@
 package com.horizen.proposition;
 
-import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
-import io.circe.Json$;
-import scala.util.Failure;
-import scala.util.Success;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
@@ -110,14 +106,8 @@ public final class PublicKey25519Proposition
             return new PublicKey25519Proposition(Arrays.copyOfRange(bytesWithVersion, 1,bytesWithVersion.length));
     }
 
-    public static Try<PublicKey25519Proposition> parseBytes(byte[] bytes) {
-        try {
-            PublicKey25519Proposition proposition = new PublicKey25519Proposition(bytes);
-            return new Success<PublicKey25519Proposition>(proposition);
-        }
-        catch (Exception e) {
-            return new Failure(e);
-        }
+    public static PublicKey25519Proposition parseBytes(byte[] bytes) {
+        return new PublicKey25519Proposition(bytes);
     }
 
     public static int getLength() {
@@ -133,11 +123,8 @@ public final class PublicKey25519Proposition
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static PublicKey25519Proposition parseJson(Json json) {
         return null;
     }
-
-
 }
 

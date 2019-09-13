@@ -2,17 +2,12 @@ package com.horizen
 
 import java.util
 
-import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.box.Box
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.proposition.Proposition
-import com.horizen.utils.BytesUtils
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.{Failure, Success, Try}
 
 class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val createdAt: Long)
   extends SidechainTypes
@@ -39,23 +34,6 @@ class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val 
 class WalletBoxSerializer(sidechainBoxesCompanion : SidechainBoxesCompanion)
   extends ScorexSerializer[WalletBox]
 {
-  /*
-  override def toBytes(walletBox: WalletBox): Array[Byte] = {
-    Bytes.concat(BytesUtils.fromHexString(walletBox.transactionId), Longs.toByteArray(walletBox.createdAt),
-      sidechainBoxesCompanion.toBytes(walletBox.box))
-  }
-
-  override def parseBytesTry(bytes: Array[Byte]): Try[WalletBox] = Try {
-    val txIdBytes = bytes.slice(0, NodeViewModifier.ModifierIdSize)
-    val createdAt = Longs.fromByteArray(bytes.slice(NodeViewModifier.ModifierIdSize, NodeViewModifier.ModifierIdSize + 8))
-    val boxBytes = bytes.slice(NodeViewModifier.ModifierIdSize + 8, bytes.length)
-    sidechainBoxesCompanion.parseBytesTry(boxBytes) match {
-      case Success(box) => new WalletBox(box, BytesUtils.toHexString(txIdBytes), createdAt)
-      case Failure(exception) => throw new Exception(exception)
-    }
-  }
-  */
-
   override def serialize(walletBox: WalletBox, writer: Writer): Unit = {
     writer.putBytes(idToBytes(walletBox.transactionId))
     writer.putLong(walletBox.createdAt)

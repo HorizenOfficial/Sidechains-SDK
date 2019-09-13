@@ -179,28 +179,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
   }
 
   override def walletSeed(): Array[Byte] = seed
-
-  override def addNewSecret(secret: Secret): lang.Boolean = {
-    addSecret(secret) match {
-      case Success(_) => true
-      case Failure(e) =>
-        //log.write(s"Error during secret appending: "${e.getMessage|")
-        false
-    }
-
-    /*var seed = "seed"+Random.nextInt(100)
-    val secret : PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(seed.getBytes)
-    addSecret(secret) match {
-      case Success(s) => {
-        var address = secret.publicImage()
-        val theSecret = s.secretByPublicKey(address)
-        if(theSecret.isPresent)
-          address.address()
-        else ""
-      }
-      case Failure(exception) => ""
-    }*/
-  }
 }
 
 object SidechainWallet
@@ -215,12 +193,12 @@ object SidechainWallet
   }
 
   private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Option[SidechainWallet] = {
+                                     applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
-        .scanPersistent(genesisBlock))
+      new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
+        .scanPersistent(genesisBlock)
     else
-      None
+      throw new RuntimeException("WalletBox storage is not empty!")
   }
 }

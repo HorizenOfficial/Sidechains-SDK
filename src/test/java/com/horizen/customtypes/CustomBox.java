@@ -60,15 +60,10 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
         return BOX_TYPE_ID;
     }
 
-    public static Try<CustomBox> parseBytes(byte[] bytes) {
-        try {
-            Try<CustomPublicKeyProposition> t = CustomPublicKeyProposition.parseBytes(Arrays.copyOf(bytes, CustomPublicKeyProposition.getLength()));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, CustomPublicKeyProposition.getLength(), CustomPublicKeyProposition.getLength() + 8));
-            CustomBox box = new CustomBox(t.get(), value);
-            return new Success<>(box);
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static CustomBox parseBytes(byte[] bytes) {
+        CustomPublicKeyProposition t = CustomPublicKeyProposition.parseBytes(Arrays.copyOf(bytes, CustomPublicKeyProposition.getLength()));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, CustomPublicKeyProposition.getLength(), CustomPublicKeyProposition.getLength() + 8));
+        return new CustomBox(t, value);
     }
 
     @Override
@@ -103,10 +98,5 @@ public class CustomBox implements Box<CustomPublicKeyProposition>
         values.put("value", Json.fromLong(this._value));
 
         return Json.obj(values.toSeq());
-    }
-
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
-        return null;
     }
 }

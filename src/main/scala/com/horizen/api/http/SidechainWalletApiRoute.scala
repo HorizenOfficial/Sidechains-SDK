@@ -12,10 +12,13 @@ import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import io.circe.generic.auto._
 import scorex.core.transaction.box.proposition.PublicKey25519Proposition
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
+import akka.pattern.ask
+import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
@@ -23,7 +26,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
   override val route : Route = (pathPrefix("wallet"))
             {getAllBoxes ~ getBoxesOfType ~ getBalance ~ getBalanceOfType ~
-              createNewPublicKeyProposition ~ getPropositions ~ getPublicKeyPropositionByType}
+              createSecret ~ getPublicKeys ~ getPublicKeyByType}
 
   /**
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list.
@@ -36,9 +39,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetBoxesRequest](body) match {
           case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
-            var idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
-            var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
+            val wallet = sidechainNodeView.getNodeWallet
+            val idsOfBoxesToExclude = req.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+            val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.map( box => box.toJson)
 
             ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
@@ -59,13 +62,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetBoxesOfTypeRequest](body)match {
           case Success(req) =>
-            var wallet = sidechainNodeView.getNodeWallet
+            val wallet = sidechainNodeView.getNodeWallet
 
-            var idsOfBoxesToExclude = req.excludeBoxIds.map(strId => strId.getBytes)
-            var clazz : java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
+            val idsOfBoxesToExclude = req.excludeBoxIds.map(strId => strId.getBytes)
+            val clazz: java.lang.Class[_<:SidechainTypes#SCB] = Class.forName(req.boxTypeClass).asSubclass(classOf[SidechainTypes#SCB])
 
-            var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
-            var closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
+            val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava)
+            val closedBoxesJson = allClosedBoxesByType.asScala.map(box => box.toJson)
 
             ApiResponse("result" -> Json.obj("boxes" -> Json.fromValues(closedBoxesJson)))
 
@@ -83,7 +86,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     withNodeView{
       sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var sumOfBalances : Long = wallet.allBoxesBalance()
+        val sumOfBalances: Long = wallet.allBoxesBalance()
         ApiResponse("result" -> Json.obj("globalBalance" -> Json.fromLong(sumOfBalances)))
     }
   }
@@ -102,7 +105,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             var clazz : java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(req.boxType).asSubclass(classOf[SidechainTypes#SCB])
             var balance = wallet.boxesBalance(clazz)
             ApiResponse("result" -> Json.obj(("balance" -> Json.fromLong(balance))))
-
           case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
         }
       }
@@ -112,17 +114,20 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Create new secret and return corresponding address (public key)
     */
-  def createNewPublicKeyProposition : Route = (post & path("createNewPublicKeyProposition"))
+  def createSecret : Route = (post & path("createSecret"))
   {
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
+        val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
 
-        val key = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
-        if(wallet.addNewSecret(key)) {
-          ApiResponse("result" -> Json.obj("proposition" -> key.publicImage().toJson))
-        } else
-          ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> "Failed to create ne key pair."))
+        val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+          case Success(_) =>
+            ApiResponse("result" -> Json.obj("proposition" -> secret.publicImage().toJson))
+          case Failure(e) =>
+            ApiResponse("error" -> ("errorCode" -> 999999, "errorDescription" -> s"Failed to create ne key pair: ${e.getMessage}."))
+        }
       }
     }
   }
@@ -130,7 +135,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Returns the list of all wallet’s propositions (public keys)
     */
-  def getPropositions : Route = (post & path("getPropositions"))
+  def getPublicKeys : Route = (post & path("getPublicKeys"))
   {
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
@@ -147,17 +152,17 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Returns the list of all wallet’s addresses (public keys) of the given type
     */
-  def getPublicKeyPropositionByType : Route = (post & path("getPublicKeyPropositionByType"))
+  def getPublicKeyByType : Route = (post & path("getPublicKeyByType"))
   {
-    case class GetPublicKeysPropositionsByTypeRequest(proptype: String = "")
+    case class getPublicKeyByTypeRequest(proptype: String = "")
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetPublicKeysPropositionsByTypeRequest](body)match {
+        ApiInputParser.parseInput[getPublicKeyByTypeRequest](body)match {
           case Success(req) =>
             val wallet = sidechainNodeView.getNodeWallet
-            var clazz : java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])
-            var listOfPropositions = wallet.secretsOfType(clazz)
-            var listOfAddresses : Seq[String] = Seq()
+            val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])
+            val listOfPropositions = wallet.secretsOfType(clazz)
+            val listOfAddresses: Seq[String] = Seq()
             listOfPropositions.forEach(new Consumer[Secret] {
               override def accept(t: Secret): Unit = {
                 var proofOfKnowledgeProposition = t.publicImage()

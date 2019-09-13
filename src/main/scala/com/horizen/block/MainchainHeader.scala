@@ -92,8 +92,6 @@ class MainchainHeader(
     Json.fromFields(values)
 
   }
-
-  override def jsonSerializer: JsonSerializer[MainchainHeader] = ???
 }
 
 

@@ -1,7 +1,6 @@
 package com.horizen.node;
 
 public class SidechainNodeView {
-
     private NodeWallet nodeWallet;
     private NodeHistory nodeHistory;
     private NodeState nodeState;

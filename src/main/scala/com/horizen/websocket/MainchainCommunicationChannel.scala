@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 
 class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSettings)
                                    (implicit system : ActorSystem, materializer : ActorMaterializer, ec : ExecutionContext)
-                  extends ScorexLogging {
+  extends ScorexLogging {
 
   private var webSocketClient: ActorRef = null
 
@@ -74,7 +74,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   def sync(hashes : Seq[String], lenght: Int): Try[Seq[String]] = {
 
-    var hashes: Seq[String] = Seq[String]()
+    var respHashes: Seq[String] = Seq[String]()
 
     getSyncInfo(hashes, lenght) match {
       case Success(value) =>
@@ -83,14 +83,14 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
             log.error("getSyncInfo: Response error --> " + error.toString)
             return Failure(new Exception(error.errorMessage))
           case Left(bl) =>
-            hashes = bl.hashes
+            respHashes = bl.hashes
         }
       case Failure(exception) =>
         log.error("getSyncInfo: Unexpected exception --> " + exception.getMessage)
         return Failure(exception)
     }
 
-    Success(hashes)
+    Success(respHashes)
   }
 
   private def getSingleBlock(heightOrHash : Either[Int, String]): Try[Either[GetSingleBlockResponse, ErrorResponse]] = {
@@ -219,48 +219,48 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
         errorCode match {
           case -1 => Success(Right(ErrorResponse(errorCode, errorMessage)))
           case _ =>
-            {
-              var reqType =
-                try{
-                  map.get("type").get.asNumber.get.toInt.getOrElse(-1)
-                }catch {
-                  case _ => -1
-                }
-              var height =
-                try {
-                  map.get("height").get.asNumber.get.toInt.getOrElse(-1)
-                }catch {
-                  case _ => -1
-                }
-              var hash = map.get("hash").getOrElse("").toString
-              var block = map.get("block").getOrElse("").toString
-              var corrId = map.get("msgId").getOrElse("").toString
-
-              reqType match {
-                case 2 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
-                case 3 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
-                case 2 => Success(Left(GetSingleBlockResponse(corrId, height, hash, block)))
-                case 3 | 4 =>
-                  {
-                    var hashes : Seq[String] = Seq()
-                    map.get("hashes") match {
-                      case Some(value) =>
-                        if(value.isArray)
-                        {
-                          var jsonHashes = value.asArray.get
-                          jsonHashes.foreach(js => {
-                            if(js.isString){
-                              hashes = hashes :+ (js.asString.get)
-                            }
-                          })
-                        }
-                      case None =>
-                    }
-                    Success(Left(GetMultipleBlockHashesResponse(corrId, height, hashes)))
-                  }
-                case _ => Failure(new IllegalStateException("No response can be parsed"))
+          {
+            var reqType =
+              try{
+                map.get("type").get.asNumber.get.toInt.getOrElse(-1)
+              }catch {
+                case _ => -1
               }
+            var height =
+              try {
+                map.get("height").get.asNumber.get.toInt.getOrElse(-1)
+              }catch {
+                case _ => -1
+              }
+            var hash = map.get("hash").getOrElse("").toString
+            var block = map.get("block").getOrElse("").toString
+            var corrId = map.get("msgId").getOrElse("").toString
+
+            reqType match {
+              case 2 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
+              case 3 if errorCode<Int.MaxValue => Success(Right(ErrorResponse(errorCode, errorMessage)))
+              case 2 => Success(Left(GetSingleBlockResponse(corrId, height, hash, block)))
+              case 3 | 4 =>
+              {
+                var hashes : Seq[String] = Seq()
+                map.get("hashes") match {
+                  case Some(value) =>
+                    if(value.isArray)
+                    {
+                      var jsonHashes = value.asArray.get
+                      jsonHashes.foreach(js => {
+                        if(js.isString){
+                          hashes = hashes :+ (js.asString.get)
+                        }
+                      })
+                    }
+                  case None =>
+                }
+                Success(Left(GetMultipleBlockHashesResponse(corrId, height, hashes)))
+              }
+              case _ => Failure(new IllegalStateException("No response can be parsed"))
             }
+          }
         }
       case Left(value) => Failure(value)
     }

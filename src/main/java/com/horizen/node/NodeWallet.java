@@ -30,6 +30,4 @@ public interface NodeWallet {
     List<Secret> secretsOfType(Class<? extends Secret> type);
 
     byte[] walletSeed();
-
-    Boolean addNewSecret(Secret secret);
 }

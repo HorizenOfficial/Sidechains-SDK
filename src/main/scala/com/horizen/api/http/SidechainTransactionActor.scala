@@ -5,7 +5,7 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.transaction.Transaction
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Promise}
 class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var transactionMap : TrieMap[String, Promise[Unit]] = TrieMap()
+  private var transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[T]])
@@ -22,7 +22,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
 
   protected def broadcastTransaction : Receive = {
     case BroadcastTransaction(transaction) =>
-      val promise = Promise[Unit]
+      val promise = Promise[ModifierId]
       val future = promise.future
       transactionMap(transaction.id) = promise
       sender() ! future
@@ -33,7 +33,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
   protected def sidechainNodeViewHolderEvents : Receive = {
     case SuccessfulTransaction(transaction) =>
       transactionMap.remove(transaction.id) match {
-        case Some(promise) => promise.success()
+        case Some(promise) => promise.success(transaction.id)
         case None =>
       }
     case FailedTransaction(transactionId, throwable, _) =>
@@ -45,9 +45,8 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
 
   override def receive: Receive = {
     broadcastTransaction orElse
-    sidechainNodeViewHolderEvents orElse
-    {
-      case a : Any => log.error("Strange input: " + a)
+    sidechainNodeViewHolderEvents orElse {
+      case message: Any => log.error("SidechainTransactionActor received strange message: " + message)
     }
   }
 }

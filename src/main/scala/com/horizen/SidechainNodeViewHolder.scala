@@ -11,6 +11,9 @@ import com.horizen.wallet.ApplicationWallet
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
+import scala.util.{Failure, Success}
+
+import scala.util.Success
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               historyStorage: SidechainHistoryStorage,
@@ -44,19 +47,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock) match {
-        case h: Some[SidechainHistory] => h
-        case None => throw new RuntimeException("History storage is not empty!")
-      }
-      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock) match {
-        case s: Some[SidechainState] => s
-        case None => throw new RuntimeException("State storage is not empty!")
-      }
-      wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock) match {
-        case w: Some[SidechainWallet] => w
-        case None => throw new RuntimeException("WalletBox storage is not empty!")
-      }
-      pool <- Some(SidechainMemoryPool.emptyPool)
+      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock)
+      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock)
+      wallet <- SidechainWallet.genesisWallet(walletSeed, walletBoxStorage, secretStorage, applicationWallet, genesisBlock)
+      pool <- Success(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)
 
     result.get
@@ -73,12 +67,28 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
   }
 
-  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse super.receive
+  protected def processLocallyGeneratedSecret: Receive = {
+    case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
+      secretModify(ls.secret)
+  }
+
+  protected def secretModify(secret: SidechainTypes#SCS): Unit = {
+    vault().addSecret(secret) match {
+      case Success(newVault) =>
+        updateNodeView(updatedVault = Some(newVault))
+        sender() ! Success(Unit)
+      case Failure(ex) =>
+        sender() ! Failure(ex)
+    }
+  }
+
+  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse super.receive
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
+    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
   }
 }
 

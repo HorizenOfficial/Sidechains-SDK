@@ -2,9 +2,11 @@ package com.horizen.secret;
 
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.serialization.JsonSerializable;
 
 
-public interface Secret extends scorex.core.serialization.BytesSerializable
+public interface Secret
+    extends scorex.core.serialization.BytesSerializable
 {
     byte secretTypeId();
 

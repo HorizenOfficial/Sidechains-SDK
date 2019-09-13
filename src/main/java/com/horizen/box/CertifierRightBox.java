@@ -16,7 +16,6 @@ import java.util.Arrays;
 // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
 public final class CertifierRightBox
     extends PublicKey25519NoncedBox<PublicKey25519Proposition>
-    implements JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 2;
@@ -69,17 +68,12 @@ public final class CertifierRightBox
         return CertifierRightBoxSerializer.getSerializer();
     }
 
-    public static Try<CertifierRightBox> parseBytes(byte[] bytes) {
-        try {
-            Try<PublicKey25519Proposition> t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
-            long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength()+ 8, PublicKey25519Proposition.getLength() + 16));
-            long minimumWithdrawalEpoch = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 16, PublicKey25519Proposition.getLength() + 24));
-            CertifierRightBox box = new CertifierRightBox(t.get(), nonce, value, minimumWithdrawalEpoch);
-            return new Success<>(box);
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static CertifierRightBox parseBytes(byte[] bytes) {
+        PublicKey25519Proposition t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
+        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength()+ 8, PublicKey25519Proposition.getLength() + 16));
+        long minimumWithdrawalEpoch = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 16, PublicKey25519Proposition.getLength() + 24));
+        return new CertifierRightBox(t, nonce, value, minimumWithdrawalEpoch);
     }
 
     @Override
@@ -97,8 +91,8 @@ public final class CertifierRightBox
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static CertifierRightBox parseJson(Json json) {
         return null;
     }
+
 }

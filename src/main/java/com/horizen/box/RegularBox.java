@@ -3,10 +3,7 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
 import io.circe.Json;
-import io.circe.Json$;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -17,7 +14,6 @@ import java.util.Arrays;
 public final class RegularBox
     extends PublicKey25519NoncedBox<PublicKey25519Proposition>
     implements CoinsBox<PublicKey25519Proposition>
-    , JsonSerializable
 {
 
     public static final byte BOX_TYPE_ID = 1;
@@ -54,16 +50,11 @@ public final class RegularBox
         return RegularBoxSerializer.getSerializer();
     }
 
-    public static Try<RegularBox> parseBytes(byte[] bytes) {
-        try {
-            Try<PublicKey25519Proposition> t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
-            long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
-            long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 8, PublicKey25519Proposition.getLength() + 16));
-            RegularBox box = new RegularBox(t.get(), nonce, value);
-            return new Success<>(box);
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static RegularBox parseBytes(byte[] bytes) {
+        PublicKey25519Proposition t = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
+        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength(), PublicKey25519Proposition.getLength() + 8));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 8, PublicKey25519Proposition.getLength() + 16));
+        return new RegularBox(t, nonce, value);
     }
 
     @Override
@@ -80,8 +71,7 @@ public final class RegularBox
         return Json.obj(values.toSeq());
     }
 
-    @Override
-    public JsonSerializer<JsonSerializable> jsonSerializer() {
+    public static RegularBox parseJson(Json json) {
         return null;
     }
 }

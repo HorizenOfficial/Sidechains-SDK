@@ -65,7 +65,7 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
   }
 
   private def createChannel(conf : WebSocketClientSettings) : Try[WebSocketRequest] = {
-    var socketAddress = conf.bindingAddress
+    var socketAddress = conf.remoteAddress
     var uri  = Uri.from(
       scheme = "ws",
       host = socketAddress.getHostName,

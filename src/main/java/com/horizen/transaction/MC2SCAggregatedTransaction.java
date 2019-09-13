@@ -17,7 +17,6 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
-import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
@@ -48,11 +47,6 @@ public final class MC2SCAggregatedTransaction
         _mc2scTransactionsMerkleRootHash = Arrays.copyOf(mc2scTransactionsMerkleRootHash, mc2scTransactionsMerkleRootHash.length);
         _mc2scTransactionsOutputs = mc2scTransactionsOutputs;
         _timestamp = timestamp;
-    }
-
-    @Override
-    public TransactionJsonSerializer jsonSerializer() {
-        return MC2SCAggregatedTransactionJsonSerializer.getSerializer();
     }
 
     @Override
@@ -108,11 +102,6 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
     public byte[] messageToSign() {
         throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
     }
@@ -147,29 +136,26 @@ public final class MC2SCAggregatedTransaction
         );
     }
 
-    public static Try<MC2SCAggregatedTransaction> parseBytes(byte[] bytes) {
-        try {
-            if(bytes.length < 48)
-                throw new IllegalArgumentException("Input data corrupted.");
-            if(bytes.length > MAX_TRANSACTION_SIZE)
-                throw new IllegalArgumentException("Input data length is too large.");
+    public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 48)
+            throw new IllegalArgumentException("Input data corrupted.");
 
-            int offset = 0;
+        if(bytes.length > MAX_TRANSACTION_SIZE)
+            throw new IllegalArgumentException("Input data length is too large.");
 
-            byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
-            offset += Utils.SHA256_LENGTH;
+        int offset = 0;
 
-            long timestamp = BytesUtils.getLong(bytes, offset);
-            offset += 8;
+        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+        offset += Utils.SHA256_LENGTH;
 
-            int batchSize = BytesUtils.getInt(bytes, offset);
-            offset += 4;
-            List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytesTry(Arrays.copyOfRange(bytes, offset, offset + batchSize)).get();
+        long timestamp = BytesUtils.getLong(bytes, offset);
+        offset += 8;
 
-            return new Success<>(new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp));
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+        int batchSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+        List<SidechainRelatedMainchainOutput> mc2scTransactions = _mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
+        return new MC2SCAggregatedTransaction(merkleRoot, mc2scTransactions, timestamp);
     }
 
     public static MC2SCAggregatedTransaction create(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
@@ -191,26 +177,24 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
-    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
 
-        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("id", Json.fromString(this.id()));
         values.put("fee", Json.fromLong(this.fee()));
         values.put("timestamp", Json.fromLong(this._timestamp));
 
-        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(encoder.encode(this._mc2scTransactionsMerkleRootHash)));
+        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(BytesUtils.toHexString(this._mc2scTransactionsMerkleRootHash)));
 
         for(Box<Proposition> b : this.newBoxes())
             arr.add(b.toJson());
         values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
 
         return Json.obj(values.toSeq());
+    }
+
+    public static MC2SCAggregatedTransaction parseJson(Json json) {
+        return null;
     }
 }
