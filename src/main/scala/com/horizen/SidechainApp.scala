@@ -112,7 +112,7 @@ class SidechainApp(val settingsFilename: String)
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorActorRef, sidechainBlockForgerActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilsApiRoute(settings.restApi, nodeViewHolderRef),

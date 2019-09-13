@@ -113,25 +113,25 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
 
   private def tryToDecodeChannelMessage(rawResponse : String, throwable: Throwable = null) : Try[Either[(String, ChannelMessage), ChannelMessageEvent]] =
   {
-      tryToParseCorrIdAndRequestType(rawResponse) match {
-        case Success(value) =>
-          value._1 match {
-            case Success(id) if !id.isEmpty => Success(Left((id, ChannelMessage(rawResponse))))
-            case Failure(exception) =>
-              value._2 match {
-                case Success(reqType) => Success(Right(ChannelMessageEvent(rawResponse)))
-                case Failure(exception) => Failure(exception)
-              }
-          }
-        case Failure(exception) => Failure(exception)
-      }
+    tryToParseCorrIdAndRequestType(rawResponse) match {
+      case Success(value) =>
+        value._1 match {
+          case Success(id) if !id.isEmpty => Success(Left((id, ChannelMessage(rawResponse))))
+          case Failure(exception) =>
+            value._2 match {
+              case Success(reqType) => Success(Right(ChannelMessageEvent(rawResponse)))
+              case Failure(exception) => Failure(exception)
+            }
+        }
+      case Failure(exception) => Failure(exception)
+    }
   }
 
   override def receive: Receive = {
     manageRequest orElse
-    {
-      case a : Any => log.error(getClass.getName + " has received a strange input: " + a)
-    }
+      {
+        case a : Any => log.error(getClass.getName + " has received a strange input: " + a)
+      }
   }
 
   def createWebSocketEventActor(f : ChannelMessageEvent => Unit) =
