@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
@@ -40,3 +40,4 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
         return null;
     }
 }
+*/

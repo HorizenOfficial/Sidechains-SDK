@@ -21,7 +21,6 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import javafx.util.Pair;
-import scorex.core.utils.ScorexEncoder;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;
@@ -241,22 +240,11 @@ public final class RegularTransaction
     }
 
     @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    //@Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
-    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
 
-        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("id", Json.fromString(this.id()));
         values.put("fee", Json.fromLong(this._fee));
         values.put("timestamp", Json.fromLong(this._timestamp));
 

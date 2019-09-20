@@ -142,9 +142,11 @@ class SidechainApp(val settingsFilename: String)
   private def getMainchainConnectionInfo  = ???
 }
 
-object SidechainApp extends App {
-  private val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
-  val app = new SidechainApp(settingsFilename)
-  app.run()
-  app.log.info("Sidechain application successfully started...")
+object SidechainApp /*extends App*/ {
+  def main(args: Array[String]) : Unit = {
+    val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
+    val app = new SidechainApp(settingsFilename)
+    app.run()
+    app.log.info("Sidechain application successfully started...")
+  }
 }

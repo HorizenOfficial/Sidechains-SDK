@@ -74,9 +74,9 @@
 		<dependency>
 			<groupId>org.scorexfoundation</groupId>
 			<artifactId>scorex-core_2.12</artifactId>
-			<version>2.0.0-RC4</version>
+			<version>2.0.0</version>
 			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/scorex-core_2.12.jar</systemPath>
+			<systemPath>${project.basedir}/src/main/additional-resources/scorex-core_2.12.jar</systemPath>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-util -->
@@ -239,13 +239,61 @@
 					<!--
                     <verbose>true</verbose>
                     -->
-                </configuration>
-            </plugin>
-        </plugins>
-        <testResources>
-            <testResource>
-                <directory>${basedir}/src/test/resources</directory>
-                <includes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.1.1</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/lib</outputDirectory>
+							<overWriteReleases>false</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
+							<includeScope>compile</includeScope>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>copy-resources</id>
+						<!-- here the phase you need -->
+						<phase>validate</phase>
+						<goals>
+							<goal>resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${basedir}/target</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${basedir}/src/main/additional-resources/runscripts</directory>
+									<filtering>true</filtering>
+								</resource>
+								<resource>
+									<directory>${basedir}/src/main/additional-resources/settings</directory>
+									<filtering>true</filtering>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<testResources>
+			<testResource>
+				<directory>${basedir}/src/test/resources</directory>
+				<includes>
 					<include>publickey25519proposition_bytes</include>
 					<include>privatekey25519_bytes</include>
 					<include>regulartransaction_bytes</include>

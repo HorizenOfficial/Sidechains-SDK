@@ -134,7 +134,7 @@ object Forger extends ScorexLogging {
         val timestamp: Long = Instant.now.getEpochSecond
         val mainchainBlockRefToInclude: Seq[MainchainBlockReference] = Seq() // TO DO: implement after web client for MC node
         val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-          view.pool.take(SidechainBlock.MAX_MC_BLOCKS_NUMBER) // TO DO: problems with types
+          view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
           .withFilter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .toSeq

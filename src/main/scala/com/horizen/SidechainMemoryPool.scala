@@ -126,25 +126,24 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     this
   }
 
-  override def getAllTransactions(): JList[SidechainTypes#SCBT] = {
+  override def getTransactions: JList[SidechainTypes#SCBT] = {
     unconfirmed.values.toList.asJava
+  }
+
+  override def getTransactions(c: Comparator[SidechainTypes#SCBT], limit: Int): JList[SidechainTypes#SCBT] = {
+    val txs = unconfirmed.values.toList.asJava
+    txs.sort(c)
+    txs.subList(0, limit)
   }
 
   override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
     unconfirmed.values.toList.sortBy(-_.fee).take(limit).asJava
   }
 
-  override def getTransactionsSortedBy(c: Comparator[SidechainTypes#SCBT], limit: Int): JList[SidechainTypes#SCBT] = {
-    val txs = unconfirmed.values.toList.asJava
-    txs.sort(c)
-    txs.subList(0, limit)
-  }
-
   override def getSize: Int = unconfirmed.size
 
   override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
-    var id = scorex.util.bytesToId(transactionId.getBytes)
-    Optional.ofNullable(unconfirmed.get(id).get)
+    Optional.ofNullable(unconfirmed.getOrElse(transactionId, null))
   }
 }
 

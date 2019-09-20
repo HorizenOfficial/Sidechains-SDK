@@ -18,7 +18,6 @@ import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
-import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
@@ -108,11 +107,6 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
     public byte[] messageToSign() {
         throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
     }
@@ -188,21 +182,15 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
-    @Override
     public Json toJson() {
         ArrayList<Json> arr = new ArrayList<>();
         scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
 
-        values.put("id", Json.fromString(encoder.encode(this.id())));
+        values.put("id", Json.fromString(this.id()));
         values.put("fee", Json.fromLong(this.fee()));
         values.put("timestamp", Json.fromLong(this._timestamp));
 
-        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(encoder.encode(this._mc2scTransactionsMerkleRootHash)));
+        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(BytesUtils.toHexString(this._mc2scTransactionsMerkleRootHash)));
 
         for(Box<Proposition> b : this.newBoxes())
             arr.add(b.toJson());

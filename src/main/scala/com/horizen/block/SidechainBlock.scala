@@ -49,7 +49,7 @@ class SidechainBlock (override val parentId: ModifierId,
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
   override lazy val id: ModifierId =
-    bytesToId(Blake2b256(messageToSign))
+    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
     var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
@@ -67,7 +67,7 @@ class SidechainBlock (override val parentId: ModifierId,
   lazy val messageToSign: Array[Byte] = {
     val sidechainTransactionsStream = new ByteArrayOutputStream
     sidechainTransactions.foreach {
-      tx => sidechainTransactionsStream.write(tx.messageToSign())
+      tx => sidechainTransactionsStream.write(tx.bytes)
     }
 
     val mainchainBlocksStream = new ByteArrayOutputStream
@@ -86,7 +86,7 @@ class SidechainBlock (override val parentId: ModifierId,
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(parentId == null || parentId.length != 64
-        || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
+        || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
         || forgerPublicKey == null || signature == null)
       return false
@@ -139,7 +139,7 @@ class SidechainBlock (override val parentId: ModifierId,
 object SidechainBlock extends ScorexEncoding {
   val MAX_BLOCK_SIZE = 2048 * 1024 //2048K
   val MAX_MC_BLOCKS_NUMBER = 3
-  val MAX_MC_SIDECHAIN_TXS_NUMBER = 100000
+  val MAX_SIDECHAIN_TXS_NUMBER = 1000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
 
   def create(parentId: Block.BlockId,
@@ -200,7 +200,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
   private val _sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
     companion,
-    SidechainBlock.MAX_MC_SIDECHAIN_TXS_NUMBER
+    SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
   )
 
   override def serialize(obj: SidechainBlock, w: Writer): Unit = {

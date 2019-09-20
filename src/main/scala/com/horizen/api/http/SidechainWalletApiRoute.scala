@@ -26,7 +26,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
   override val route : Route = (pathPrefix("wallet"))
             {getAllBoxes ~ getBoxesOfType ~ getBalance ~ getBalanceOfType ~
-              createNewPublicKeyProposition ~ getPropositions ~ getPublicKeyPropositionByType}
+              createSecret ~ getPublicKeys ~ getPublicKeyByType}
 
   /**
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list.
@@ -115,12 +115,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Create new secret and return corresponding address (public key)
     */
-  def createNewPublicKeyProposition : Route = (post & path("createNewPublicKeyProposition"))
+  def createSecret : Route = (post & path("createSecret"))
   {
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        val secret = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
+        val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
 
         val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
         Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
@@ -136,7 +136,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Returns the list of all wallet’s propositions (public keys)
     */
-  def getPropositions : Route = (post & path("getPropositions"))
+  def getPublicKeys : Route = (post & path("getPublicKeys"))
   {
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
@@ -153,12 +153,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Returns the list of all wallet’s addresses (public keys) of the given type
     */
-  def getPublicKeyPropositionByType : Route = (post & path("getPublicKeyPropositionByType"))
+  def getPublicKeyByType : Route = (post & path("getPublicKeyByType"))
   {
-    case class GetPublicKeysPropositionsByTypeRequest(proptype: String = "")
+    case class getPublicKeyByTypeRequest(proptype: String = "")
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetPublicKeysPropositionsByTypeRequest](body)match {
+        ApiInputParser.parseInput[getPublicKeyByTypeRequest](body)match {
           case Success(req) =>
             val wallet = sidechainNodeView.getNodeWallet
             val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(req.proptype).asSubclass(classOf[SidechainTypes#SCS])

@@ -76,7 +76,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       withNodeView{ sidechainNodeView =>
         ApiInputParser.parseInput[GetMempoolRequest](body)match {
           case Success(req) =>
-            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getAllTransactions()
+            var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions
             if(req.format.getOrElse(true)){
               ApiResponse(
                 "result" -> Json.obj(
