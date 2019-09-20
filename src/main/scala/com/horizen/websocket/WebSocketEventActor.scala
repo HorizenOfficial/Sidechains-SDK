@@ -3,7 +3,7 @@ package com.horizen.websocket
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import com.horizen.WebSocketClientSettings
-import com.horizen.websocket.WebSocketClient.ReceivableMessages.UpdateTipEvent
+//import com.horizen.websocket.WebSocketClient.ReceivableMessages.UpdateTipEvent
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -25,9 +25,9 @@ class UpdateTipEventActor(f : UpdateTipEvent => Unit)(implicit ec : ExecutionCon
   override final def receive: Receive =
   {
     onEvent orElse
-    {
-      case a : Any => log.error("Strange input: " + a)
-    }
+      {
+        case a : Any => log.error("Strange input: " + a)
+      }
   }
 }
 

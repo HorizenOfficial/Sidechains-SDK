@@ -10,7 +10,7 @@ import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage, WebSock
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.horizen.WebSocketClientSettings
-import com.horizen.websocket.WebSocketChannel.ReceivableMessages.{ReceiveMessage, SendMessage}
+import com.horizen.websocket.WebSocketChannel.ReceivableMessages.{ConnectionError, OpenChannel, ReceiveMessage, SendMessage}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.duration.FiniteDuration
@@ -22,32 +22,29 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
 
   private var webSocketRequest : WebSocketRequest = null
 
-  override def preStart(): Unit = {
-    openWebSocketChannel
-  }
-
   private def manageMessageRequest: Receive = {
+    case OpenChannel =>
+      openWebSocketChannel
+
     case SendMessage(message) =>
-      sendMessage("UpdateTip request")
       sendMessage(message)
   }
 
   override def receive: Receive = {
     manageMessageRequest orElse
       {
-        case a : Any => log.error("Strange input: " + a)
+        case a : Any => log.error(getClass.getName + " has received a strange input: " + a)
       }
   }
 
   val incoming: Sink[Message, Future[Done]] =
     Sink.foreach[Message] {
       case tm: TextMessage =>
-        log.info(s"Sending response to web socket client: "+ tm.getStrictText)
         webSocketClient ! ReceiveMessage(tm.getStrictText)
       case bm: BinaryMessage =>
         // ignore binary messages but drain content to avoid the stream being clogged
         bm.dataStream.runWith(Sink.ignore)
-      case _ => log.error("Unexpected message type")
+      case _ => log.error("Web socket channel: Unexpected message type")
     }
 
   def openWebSocketChannel = {
@@ -55,6 +52,11 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
     val timeout = FiniteDuration(
       webSocketConfiguration.connectionTimeout,
       TimeUnit.valueOf(webSocketConfiguration.connectionTimeUnit))
+    future.onComplete{
+      case Success(value) =>
+      case Failure(exception) =>
+        webSocketClient ! ConnectionError(exception)
+    }
     /**
       * Note : if we don't use a barrier, we can have a scenario in which the stream is not ready to process incoming messages.
       * Therefore the message is enqueued but processed later, when the stream will be ready.
@@ -87,11 +89,11 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
 
           upgradeResponse._2.flatMap { upgrade =>
             if (upgrade.response.status == StatusCodes.SwitchingProtocols) {
-              log.info(s"Connection established: ${upgrade.response.status}")
+              log.info(s"Connection established: ${webSocketRequest.uri.toString()}")
 
               closed.onComplete{
                 case Success(value) =>
-                  log.info("closed")
+                  log.info(s"Connection closed: ${webSocketRequest.uri.toString()}")
                 case Failure(exception) =>
                   Future.failed(exception)
               }
@@ -99,8 +101,7 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
               Future.successful()
 
             } else {
-              var exception = new RuntimeException(s"Connection failed: ${upgrade.response.status}")
-              log.error(exception.getMessage)
+              var exception = new RuntimeException(s"Connection failed: ${webSocketRequest.uri.toString()}")
               Future.failed(exception)
             }
           }
@@ -108,22 +109,19 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
 
         }catch {
           case e : Throwable =>
-            log.error(e.getMessage)
             Future.failed(e)
         }
 
       case Failure(exception) =>
-        log.error(exception.getMessage)
         Future.failed(exception)
     }
   }
 
   private def sendMessage (msg : String) =
-    startQueue(webSocketRequest)._1._1.offer(TextMessage(msg)).onComplete{
-      case Success(value) =>
-        log.info(value.toString)
-      case Failure(exception) =>
-        log.error("sendMessage: "+exception.getMessage)
+    try {
+      startQueue(webSocketRequest)._1._1.offer(TextMessage(msg))
+    }catch{
+      case e : Throwable => webSocketClient ! ReceiveMessage(msg, e)
     }
 
 }
@@ -131,7 +129,9 @@ class WebSocketChannel(webSocketClient :ActorRef, webSocketConfiguration : WebSo
 object WebSocketChannel{
   object ReceivableMessages{
     case class SendMessage(message : String)
-    case class ReceiveMessage(message : String)
+    case class ReceiveMessage(message : String, throwable : Throwable = null)
+    case class OpenChannel()
+    case class ConnectionError(throwable : Throwable)
   }
 }
 
