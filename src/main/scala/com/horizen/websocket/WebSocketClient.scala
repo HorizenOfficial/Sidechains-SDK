@@ -3,9 +3,9 @@ package com.horizen.websocket
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import com.horizen.WebSocketClientSettings
-import com.horizen.websocket.WebSocketEventActor.ReceivableMessages.{Subscribe, UnSubscribe}
+//import com.horizen.websocket.WebSocketEventActor.ReceivableMessages.{Subscribe, UnSubscribe}
 import com.horizen.websocket.WebSocketChannel.ReceivableMessages.{OpenChannel, ReceiveMessage, SendMessage}
-import com.horizen.websocket.WebSocketClient.ReceivableMessages.{SubscribeForEvent, UnSubscribeForEvent}
+import com.horizen.websocket.WebSocketClient.ReceivableMessages.{SubscribeOnUpdateTipEvent, UnsubscribeOnUpdateTipEvent}
 import io.circe.{Json, parser}
 import scorex.util.ScorexLogging
 
@@ -16,9 +16,10 @@ import scala.util.{Failure, Success, Try}
 class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
                      (implicit system : ActorSystem, materializer : ActorMaterializer, ec : ExecutionContext) extends Actor with ScorexLogging{
 
-  private var webSocketChannel : ActorRef = null
+  private var webSocketChannel : ActorRef = _
   private var requestPool : TrieMap[String, Promise[ChannelMessage]] = TrieMap()
-  private var eventActorPool : TrieMap[String, ActorRef] = TrieMap()
+  //private var eventActorPool : TrieMap[String, ActorRef] = TrieMap()
+  private var updateTipEventHandlers: Set[UpdateTipEventHandler] = Set()
 
   override def preStart(): Unit = {
     webSocketChannel = WebSocketChannelRef(self, webSocketConfiguration)
@@ -64,7 +65,18 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
           log.error(exception.getMessage)
       }
 
-    case SubscribeForEvent(f) =>
+    case SubscribeOnUpdateTipEvent(handler) =>
+      if(updateTipEventHandlers.contains(handler))
+        sender() ! Failure(new Exception("Handler is already subscribed for update tip event."))
+      else {
+        updateTipEventHandlers = updateTipEventHandlers +  handler
+        sender() ! Success(Unit)
+      }
+
+    case UnsubscribeOnUpdateTipEvent(handler) =>
+      updateTipEventHandlers = updateTipEventHandlers - handler
+
+    /*case SubscribeForEvent(f) =>
       try{
         var eventActor = createWebSocketEventActor(f)
         eventActor ! Subscribe
@@ -79,7 +91,7 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
           actoreRef ! UnSubscribe
           eventActorPool -= actorName
         case None =>
-      }
+      }*/
 
   }
 
@@ -134,19 +146,21 @@ class WebSocketClient(webSocketConfiguration : WebSocketClientSettings)
     }
   }
 
-  def createWebSocketEventActor(f : ChannelMessageEvent => Unit) =
+  /*def createWebSocketEventActor(f : ChannelMessageEvent => Unit) =
   {
     var newEventActor = system.actorOf(Props(new WebSocketEventActor(f)), String.valueOf(System.currentTimeMillis()))
     var name = newEventActor.path.name
     eventActorPool += (name ->  newEventActor)
     newEventActor
-  }
+  }*/
 }
 
 object WebSocketClient{
   object ReceivableMessages{
-    case class SubscribeForEvent(f : ChannelMessageEvent => Unit)
-    case class UnSubscribeForEvent(actorName : String)
+    case class SubscribeOnUpdateTipEvent(handler: UpdateTipEventHandler)
+    case class UnsubscribeOnUpdateTipEvent(handler: UpdateTipEventHandler)
+    /*case class SubscribeForEvent(f : ChannelMessageEvent => Unit)
+    case class UnSubscribeForEvent(actorName : String)*/
   }
 }
 
