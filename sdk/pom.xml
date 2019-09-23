@@ -17,6 +17,12 @@
 			<name>Scala-Tools Maven2 Repository</name>
 			<url>http://scala-tools.org/repo-releases</url>
 		</repository>
+
+		<repository>
+			<id>spring-plugin-repo</id>
+			<name>Spring Plugin Repository</name>
+			<url>https://repo.spring.io/plugins-release</url>
+		</repository>
 	</repositories>
 
 	<pluginRepositories>
@@ -136,6 +142,33 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
+		<dependency>
+			<groupId>org.iq80.leveldb</groupId>
+			<artifactId>leveldb</artifactId>
+			<version>0.12</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-api -->
+		<dependency>
+			<groupId>org.iq80.leveldb</groupId>
+			<artifactId>leveldb-api</artifactId>
+			<version>0.12</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.ethereum/leveldbjni-all -->
+		<dependency>
+			<groupId>org.ethereum</groupId>
+			<artifactId>leveldbjni-all</artifactId>
+			<version>1.18.3</version>
+		</dependency>
+
+		<!--dependency>
+			<groupId>org.fusesource.leveldbjni</groupId>
+			<artifactId>leveldbjni</artifactId>
+			<version>1.8</version>
+		</dependency-->
 	</dependencies>
 
 	<build>
