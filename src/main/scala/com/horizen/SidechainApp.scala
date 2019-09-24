@@ -79,11 +79,9 @@ class SidechainApp(val settingsFilename: String)
     sidechainTransactionsCompanion, params)
 
   //TODO remove these test settings
-  if(sidechainSettings.scorexSettings.network.nodeName.equals("testNode1")) {
-    sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
-    sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+  if(sidechainSecretStorage.isEmpty) {
+    sidechainSecretStorage.add(sidechainSettings.nodeKey)
   }
-
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
@@ -116,7 +114,8 @@ class SidechainApp(val settingsFilename: String)
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilsApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
   override val swaggerConfig: String = ""
