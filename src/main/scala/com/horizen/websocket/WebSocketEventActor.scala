@@ -1,40 +1,44 @@
 package com.horizen.websocket
 
+<<<<<<< HEAD
+import akka.actor.Actor
+import com.horizen.websocket.WebSocketEventActor.ReceivableMessages.{Subscribe, UnSubscribe}
+=======
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import com.horizen.WebSocketClientSettings
 //import com.horizen.websocket.WebSocketClient.ReceivableMessages.UpdateTipEvent
+>>>>>>> websocket_client
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
 
-class UpdateTipEventActor(f : UpdateTipEvent => Unit)(implicit ec : ExecutionContext) extends Actor with ScorexLogging {
-
-  override final def preStart(): Unit =
-  {
-    context.system.eventStream.subscribe(self, classOf[UpdateTipEvent])
-  }
+class WebSocketEventActor(f : ChannelMessageEvent => Unit)(implicit ec : ExecutionContext) extends Actor with ScorexLogging {
 
   protected final def onEvent : Receive =
   {
-    case event :UpdateTipEvent =>
-      log.info(s"Received event...")
+    case event : ChannelMessageEvent =>
       f(event)
+
+    case Subscribe =>
+      context.system.eventStream.subscribe(self, classOf[ChannelMessageEvent])
+
+    case UnSubscribe =>
+      context.system.eventStream.unsubscribe(self, classOf[ChannelMessageEvent])
   }
 
   override final def receive: Receive =
   {
     onEvent orElse
       {
-        case a : Any => log.error("Strange input: " + a)
+        case a : Any => log.error(getClass.getName + " has received a strange input: " + a)
       }
   }
 }
 
-object UpdateTipEventActorRef{
-  def props(f : UpdateTipEvent => Unit)(implicit system: ActorSystem, ec: ExecutionContext): Props =
-    Props(new UpdateTipEventActor(f))
-
-  def apply(f : UpdateTipEvent => Unit)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(f))
+object WebSocketEventActor{
+  object ReceivableMessages{
+    case class Subscribe()
+    case class UnSubscribe()
+  }
 }

@@ -102,9 +102,13 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
             val sidechainHistory = sidechainNodeView.getNodeHistory
             val blockIdOptional = sidechainHistory.getBlockIdByHeight(req.height)
             if(blockIdOptional.isPresent)
+<<<<<<< HEAD
+              ApiResponse("result" -> Json.obj(("id" -> blockIdOptional.get().asJson)))
+=======
               ApiResponse(
                 "result" -> Json.obj("id" -> blockIdOptional.get().asJson)
               )
+>>>>>>> websocket_client
             else
               {
                 // TO-DO Change the errorCode
@@ -130,6 +134,17 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if(height > 0)
+<<<<<<< HEAD
+          ApiResponse("result" -> Json.obj(
+            ("blockInfo" -> sidechainHistory.getBestBlock.toJson),
+            ("height" -> height.asJson))
+          )
+        else
+          ApiResponse("result" -> Json.obj(
+            ("blockInfo" -> Json.Null),
+            ("height" -> height.asJson)
+          ))
+=======
           ApiResponse(
             "result" -> Json.obj(
               "blockInfo" -> sidechainHistory.getBestBlock.toJson,
@@ -143,6 +158,7 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
               "height" -> height.asJson
             )
           )
+>>>>>>> websocket_client
     }
   }
 
@@ -155,11 +171,17 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     val blockTemplateTry = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
     blockTemplateTry match {
       case Success(block) =>
+<<<<<<< HEAD
+        ApiResponse("result" -> Json.obj(
+          ("blockHex" -> BytesUtils.toHexString(block.bytes).asJson),
+          ("blockInfo" -> block.toJson))
+=======
         ApiResponse(
           "result" -> Json.obj(
             "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
             "blockInfo" -> block.toJson
           )
+>>>>>>> websocket_client
         )
       case Failure(e) =>
         // TO-DO Change the errorCode
@@ -190,9 +212,13 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
                 val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
                 Await.result(submitResultFuture, timeout.duration) match {
                   case Success(id) =>
+<<<<<<< HEAD
+                    ApiResponse("result" -> Json.obj(("id" -> Json.fromString(id))))
+=======
                     ApiResponse(
                       "result" -> Json.obj("id" -> Json.fromString(id))
                     )
+>>>>>>> websocket_client
                   case Failure(e) =>
                     // TO-DO Change the errorCode
                     ApiResponse(
