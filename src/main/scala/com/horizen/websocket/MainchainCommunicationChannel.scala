@@ -8,7 +8,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.horizen.WebSocketClientSettings
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer}
-import com.horizen.websocket.WebSocketClient.ReceivableMessages.{SubscribeForEvent, UnSubscribeForEvent}
+import com.horizen.websocket.WebSocketClient.ReceivableMessages.{SubscribeOnUpdateTipEvent, UnsubscribeOnUpdateTipEvent}
 import io.circe.{Json, parser}
 import scorex.util.ScorexLogging
 
@@ -17,19 +17,41 @@ import scala.util.{Failure, Success, Try}
 
 class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSettings)
                                    (implicit system : ActorSystem, materializer : ActorMaterializer, ec : ExecutionContext)
-  extends ScorexLogging {
+  extends IMainchainCommunicationChannel with ScorexLogging {
 
-  private var webSocketClient: ActorRef = null
+  private var webSocketClient: ActorRef = _
 
   implicit val timeout: Timeout = Timeout(
     webSocketConfiguration.responseTimeout,
     TimeUnit.valueOf(webSocketConfiguration.responseTimeUnit))
 
-  def openCommunicationChannel() = {
+  def openCommunicationChannel(): Unit = {
     webSocketClient = WebSocketClientRef(webSocketConfiguration)
   }
 
-  def getBlock(heightOrHash : Either[Int, String]): Try[MainchainBlockReference] = {
+  override def getBlockByHeight(height: Int): Try[MainchainBlockReference] = getBlock(Left(height))
+
+  override def getBlockByHash(hash: String): Try[MainchainBlockReference] = getBlock(Right(hash))
+
+  override def getBlockHashesAfterHeight(length: Int, afterHeight: Int): Try[Seq[String]] = getBlockHashes(length, Left(afterHeight))
+
+  override def getBlockHashesAfterHash(length: Int, afterHash: String): Try[Seq[String]] = getBlockHashes(length, Right(afterHash))
+
+  override def subscribeOnUpdateTipEvent(handler: UpdateTipEventHandler): Try[Unit] = Try {
+    val subscribeResult = webSocketClient ? SubscribeOnUpdateTipEvent(handler)
+
+    Await.result(subscribeResult, timeout.duration).asInstanceOf[Try[Unit]] match {
+      case Success(_) =>
+      case Failure(e) => throw e
+    }
+  }
+
+  override def unsubscribeOnUpdateTipEvent(handler: UpdateTipEventHandler): Unit = {
+    webSocketClient ! UnsubscribeOnUpdateTipEvent(handler)
+  }
+
+
+  private def getBlock(heightOrHash : Either[Int, String]): Try[MainchainBlockReference] = {
 
     var blockBytes: Array[Byte] = Array[Byte]()
 
@@ -51,7 +73,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   }
 
-  def getBlockHashes(lenght: Int, afterHeightOrAfterHash : Either[Int, String]): Try[Seq[String]] = {
+  private def getBlockHashes(lenght: Int, afterHeightOrAfterHash : Either[Int, String]): Try[Seq[String]] = {
 
     var hashes: Seq[String] = Seq[String]()
 
@@ -98,7 +120,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     val correlationId = generateCorrelationId()
 
     val fut = Await.result(
-      (webSocketClient ? GetSingleBlock(correlationId, heightOrHash)),
+      webSocketClient ? GetSingleBlock(correlationId, heightOrHash),
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
@@ -117,8 +139,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     val correlationId = generateCorrelationId()
 
     val fut = Await.result(
-      (webSocketClient ? GetMultipleBlockHashes(
-        correlationId, lenght, afterHeightOrAfterHash)),
+      webSocketClient ? GetMultipleBlockHashes(correlationId, lenght, afterHeightOrAfterHash),
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
@@ -137,7 +158,7 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
     val correlationId = generateCorrelationId()
 
     val fut = Await.result(
-      (webSocketClient ? GetSyncInfo(correlationId, hashes, lenght)),
+      webSocketClient ? GetSyncInfo(correlationId, hashes, lenght),
       timeout.duration)
       .asInstanceOf[Future[ChannelMessage]]
 
@@ -151,23 +172,20 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   }
 
-  def subscribeOnEvent[E <: WebSocketEvent](f: E => Unit, clazz: Class[E]): String = {
-    val fut =
-      (
-        webSocketClient ? SubscribeForEvent({
-          event => {
-            parseWebSocketEvent(event) match {
-              case Success(value) =>
-                value match {
-                  case e: E =>
-                    f(e)
-                  case _ =>
-                }
-              case Failure(exception) => log.error(exception.getMessage)
+  /*def subscribeOnEvent[E <: WebSocketEvent](f: E => Unit, clazz: Class[E]): String = {
+    val fut = webSocketClient ? SubscribeForEvent({
+      event => {
+        parseWebSocketEvent(event) match {
+          case Success(value) =>
+            value match {
+              case e: E =>
+                f(e)
+              case _ =>
             }
-          }
-        })
-        )
+          case Failure(exception) => log.error(exception.getMessage)
+        }
+      }
+    })
 
     var result = Await.result(fut, timeout.duration).asInstanceOf[Future[String]]
 
@@ -177,9 +195,9 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
 
   }
 
-  def unSubscribeOnEvent(actorName: String) = {
+  def unSubscribeOnEvent(actorName: String): Unit = {
     webSocketClient ! UnSubscribeForEvent(actorName)
-  }
+  }*/
 
   private def parseWebSocketEvent(channelMessageEvent: ChannelMessageEvent): Try[WebSocketEvent] = {
     parser.decode[Map[String, Json]](channelMessageEvent.message) match {
@@ -219,7 +237,6 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
         errorCode match {
           case -1 => Success(Right(ErrorResponse(errorCode, errorMessage)))
           case _ =>
-          {
             var reqType =
               try{
                 map.get("type").get.asNumber.get.toInt.getOrElse(-1)
@@ -260,7 +277,6 @@ class MainchainCommunicationChannel(webSocketConfiguration : WebSocketClientSett
               }
               case _ => Failure(new IllegalStateException("No response can be parsed"))
             }
-          }
         }
       case Left(value) => Failure(value)
     }
