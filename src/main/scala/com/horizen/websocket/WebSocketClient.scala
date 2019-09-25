@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import com.horizen.WebSocketClientSettings
 //import com.horizen.websocket.WebSocketEventActor.ReceivableMessages.{Subscribe, UnSubscribe}
-import com.horizen.websocket.WebSocketChannel.ReceivableMessages.{OpenChannel, ReceiveMessage, SendMessage}
+import com.horizen.websocket.WebSocketChannelOld.ReceivableMessages.{OpenChannel, ReceiveMessage, SendMessage}
 import com.horizen.websocket.WebSocketClient.ReceivableMessages.{SubscribeOnUpdateTipEvent, UnsubscribeOnUpdateTipEvent}
 import io.circe.{Json, parser}
 import scorex.util.ScorexLogging
