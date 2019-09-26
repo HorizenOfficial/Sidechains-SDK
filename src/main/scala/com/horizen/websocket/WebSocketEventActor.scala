@@ -1,14 +1,8 @@
 package com.horizen.websocket
 
-<<<<<<< HEAD
 import akka.actor.Actor
 import com.horizen.websocket.WebSocketEventActor.ReceivableMessages.{Subscribe, UnSubscribe}
-=======
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.stream.ActorMaterializer
-import com.horizen.WebSocketClientSettings
-//import com.horizen.websocket.WebSocketClient.ReceivableMessages.UpdateTipEvent
->>>>>>> websocket_client
+
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
