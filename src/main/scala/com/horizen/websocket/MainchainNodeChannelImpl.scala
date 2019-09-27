@@ -1,5 +1,6 @@
 package com.horizen.websocket
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer}
+import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 
 import scala.util.Try
@@ -15,7 +16,7 @@ case class BlockResponsePayload(height: Int, hash: String, block: String) extend
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 
 
-class MainchainNodeChannelImpl(client: CommunicationClient) extends MainchainNodeChannel { // to do: define EC inside?
+class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
 
   override def getBlockByHeight(height: Int): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
@@ -34,7 +35,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient) extends MainchainNod
   private def processBlockResponsePayload(future: Future[BlockResponsePayload]): Try[MainchainBlockReference] = Try {
     val response: BlockResponsePayload = Await.result(future, client.requestTimeoutDuration())
     val blockBytes = BytesUtils.fromHexString(response.block)
-    MainchainBlockReferenceSerializer.parseBytes(blockBytes)
+    MainchainBlockReference.create(blockBytes, params).get
   }
 
   override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[Seq[String]] = Try {
