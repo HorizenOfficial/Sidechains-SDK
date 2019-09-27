@@ -22,8 +22,16 @@ import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
 
+case class ForgingInfo(parentId: Block.BlockId,
+                       timestamp: Block.Timestamp,
+                       mainchainBlockRefToInclude: Seq[MainchainBlockReference],
+                       txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
+                       ownerPrivateKey: PrivateKey25519)
+
+
 class Forger(settings: SidechainSettings,
              sidechainNodeViewHolderRef: ActorRef,
+             mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams) extends Actor with ScorexLogging {
 
@@ -39,19 +47,37 @@ class Forger(settings: SidechainSettings,
     Await.result(future, timeoutDuration).asInstanceOf[View]
   }
 
+  protected def getNextBlockForgingInfo(): Try[ForgingInfo] = Try {
+    val view = getNodeView
+    val parentId: Block.BlockId = view.history.bestBlockId
+    val timestamp: Long = Instant.now.getEpochSecond
+    val mainchainBlockRefToInclude: Seq[MainchainBlockReference] =
+      mainchainSynchronizer.getNewMainchainBlockReferences(view.history, SidechainBlock.MAX_MC_BLOCKS_NUMBER)
+    val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
+      view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
+        .withFilter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+        .toSeq
+    // TO DO: secret choosing logic should be revieved during Ouroboros Praos implementation.
+    val ownerPrivateKey:PrivateKey25519 = view.vault.secrets().headOption match {
+      case Some(secret) =>
+        secret.asInstanceOf[PrivateKey25519] // TO DO: problems with types
+      case None =>
+        // TO DO: do we need to generate new secret here or return error?
+        val secret = PrivateKey25519Creator.getInstance().generateSecret(view.vault.secrets().size.toString.getBytes())
+        view.vault.addSecret(secret)
+        secret
+    }
+    ForgingInfo(parentId, timestamp, mainchainBlockRefToInclude, txsToInclude, ownerPrivateKey)
+  }
+
   protected def tryGetBlockTemplate: Receive = {
     case Forger.ReceivableMessages.TryGetBlockTemplate =>
-      val future = sidechainNodeViewHolderRef ? getNextBlockForgingInfo
-      try {
-        val tryForgingInfo: Try[ForgingInfo] = Await.result(future, timeoutDuration).asInstanceOf[Try[ForgingInfo]]
-        tryForgingInfo match {
-          case Success(pfi) =>
-            sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params)
-          case Failure(e) =>
-            sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
-        }
-      } catch {
-        case _ => sender ! Failure(new Exception(s"Unable to collect information for block template creation: Timeout exception"))
+      getNextBlockForgingInfo() match {
+        case Success(pfi) =>
+          sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params)
+        case Failure(e) =>
+          sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
       }
   }
 
@@ -72,23 +98,17 @@ class Forger(settings: SidechainSettings,
 
   protected def tryForgeNextBlock: Receive = {
     case Forger.ReceivableMessages.TryForgeNextBlock =>
-      val future = sidechainNodeViewHolderRef ? getNextBlockForgingInfo
-      try {
-        val tryForgingInfo: Try[ForgingInfo] = Await.result(future, timeoutDuration).asInstanceOf[Try[ForgingInfo]]
-        tryForgingInfo match {
-          case Success(pfi) =>
-            SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params) match {
-              case Success(block) =>
-                sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
-                sender() ! Success(block.id)
-              case Failure(e) =>
-                sender() ! Failure(e)
-            }
-          case Failure(e) =>
-            sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
-        }
-      } catch {
-        case e: Exception => sender ! Failure(new Exception(s"Unable to collect information for block template creation: Timeout exception"))
+      getNextBlockForgingInfo() match {
+        case Success(pfi) =>
+          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params) match {
+            case Success(block) =>
+              sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
+              sender() ! Success(block.id)
+            case Failure(e) =>
+              sender() ! Failure(e)
+          }
+        case Failure(e) =>
+          sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
       }
   }
 
@@ -107,14 +127,7 @@ object Forger extends ScorexLogging {
     case object TryGetBlockTemplate
     case object TryForgeNextBlock
     case class TrySubmitBlock(blockBytes: Array[Byte])
-    case class ForgingInfo(parentId: Block.BlockId,
-                           timestamp: Block.Timestamp,
-                           mainchainBlockRefToInclude: Seq[MainchainBlockReference],
-                           txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                           ownerPrivateKey: PrivateKey25519)
   }
-
-  import ReceivableMessages.ForgingInfo
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
@@ -126,45 +139,16 @@ object Forger extends ScorexLogging {
       SidechainMemoryPool,
       Forger.View](f)
   }
-
-  val getNextBlockForgingInfo: GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Try[ForgingInfo]] = {
-    val f: View => Try[ForgingInfo] = {
-      view: View => Try {
-        val parentId: Block.BlockId = view.history.bestBlockId
-        val timestamp: Long = Instant.now.getEpochSecond
-        val mainchainBlockRefToInclude: Seq[MainchainBlockReference] = Seq() // TO DO: implement after web client for MC node
-        val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-          view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
-          .withFilter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
-          .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
-          .toSeq
-        val ownerPrivateKey:PrivateKey25519 = view.vault.secrets().headOption match {
-          case Some(secret) =>
-            secret.asInstanceOf[PrivateKey25519] // TO DO: problems with types
-          case None =>
-            // TO DO: do we need to generate new secret here or return error?
-            val secret = PrivateKey25519Creator.getInstance().generateSecret(view.vault.secrets().size.toString.getBytes())
-            view.vault.addSecret(secret)
-            secret
-        }
-        ForgingInfo(parentId, timestamp, mainchainBlockRefToInclude, txsToInclude, ownerPrivateKey)
-      }
-    }
-    GetDataFromCurrentView[SidechainHistory,
-      SidechainState,
-      SidechainWallet,
-      SidechainMemoryPool,
-      Try[ForgingInfo]](f)
-  }
 }
 
 object ForgerRef {
-  def props(settings: SidechainSettings, viewHolderRef: ActorRef,
-            companion: SidechainTransactionsCompanion, params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, companion, params))
+  def props(settings: SidechainSettings, viewHolderRef: ActorRef, mainchainSynchronizer: MainchainSynchronizer,
+            companion: SidechainTransactionsCompanion, params: NetworkParams): Props =
+    Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, params))
 
-  def apply(settings: SidechainSettings, viewHolderRef: ActorRef, companion: SidechainTransactionsCompanion, params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, companion, params))
+  def apply(settings: SidechainSettings, viewHolderRef: ActorRef, mainchainSynchronizer: MainchainSynchronizer, companion: SidechainTransactionsCompanion, params: NetworkParams)
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params))
 
-  def apply(name: String, settings: SidechainSettings, viewHolderRef: ActorRef, companion: SidechainTransactionsCompanion, params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, companion, params), name)
+  def apply(name: String, settings: SidechainSettings, viewHolderRef: ActorRef, mainchainSynchronizer: MainchainSynchronizer, companion: SidechainTransactionsCompanion, params: NetworkParams)
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params), name)
 }

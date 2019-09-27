@@ -27,11 +27,13 @@ import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
-import com.horizen.forge.ForgerRef
+import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
+import com.horizen.websocket.{MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketHandler}
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
 import scala.io.Source
+import scala.util.Try
 
 class SidechainApp(val settingsFilename: String)
   extends Application
@@ -105,7 +107,27 @@ class SidechainApp(val settingsFilename: String)
       ))
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, sidechainTransactionsCompanion, params)
+  // TO DO: put real instance of WebSocketChannel and change the way of creation the following items.
+  val websocketChannel = new WebSocketChannel {
+    var handler: WebSocketHandler = _
+    override def isOpen: Boolean = false
+
+    override def open(): Try[Unit] = Try {}
+
+    override def close(): Try[Unit] = Try {}
+
+    override def sendMessage(message: String): Unit = {
+      if(handler != null) {
+        handler.onSendMessageErrorOccurred(message, new Exception("no implementation"))
+      }
+    }
+
+    override def setWebSocketHandler(handler: WebSocketHandler): Unit = this.handler = handler
+  }
+  val communicationClient = new WebSocketCommunicationClient(websocketChannel)
+  val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
+  val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
+  val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
   val sidechainBlockActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())

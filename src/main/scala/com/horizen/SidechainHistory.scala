@@ -415,6 +415,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   private def getBestMCBlockHeaderIncludedInSCBlock : MainchainBlockReference = ???
 
   override def getBestMainchainBlockReferenceInfo: MainchainBlockReferenceInfo = {
+    new MainchainBlockReferenceInfo(new Array[Byte](32), 100, new Array[Byte](32))
+    /*
     // best MC block header which has already been included in a SC block
     var mcBlockReference = getBestMCBlockHeaderIncludedInSCBlock
     var hashOfMcBlockReference = mcBlockReference.hash
@@ -432,6 +434,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
       height,
       scBlockId
     )
+    */
   }
 
   override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): MainchainBlockReference = ???
