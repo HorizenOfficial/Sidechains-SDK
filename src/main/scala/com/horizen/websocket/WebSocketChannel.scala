@@ -11,7 +11,7 @@ trait WebSocketHandler {
 
 
 trait WebSocketChannel {
-  def isOpen: Boolean
+  def isOpened: Boolean
   def open(): Try[Unit]
   def close(): Try[Unit] // to do: think about usage of this
   def sendMessage(message: String): Unit

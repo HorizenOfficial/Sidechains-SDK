@@ -19,7 +19,7 @@ class WebSocketCommunicationClient(webSocketChannel: WebSocketChannel)
 
 
   override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
-    if(!webSocketChannel.isOpen) {
+    if(!webSocketChannel.isOpened) {
       webSocketChannel.open() // to do: manage failure situation
     }
     val requestId = generateRequestId
