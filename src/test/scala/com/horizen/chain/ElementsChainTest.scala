@@ -6,7 +6,7 @@ import org.scalatest.junit.JUnitSuite
 
 import scala.util.Try
 
-case class testData (parent: Integer, id: Integer) extends ChainData[Integer] {
+case class testData (parent: Integer, id: Integer) extends LinkedElement[Integer] {
   override def getParentId: Integer = parent
 }
 
@@ -34,9 +34,9 @@ object dataGenerator {
   }
 }
 
-class ChainedDataTest extends JUnitSuite {
+class ElementsChainTest extends JUnitSuite {
 
-  private def checkStorageElementIsPresent[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], id: ID, data: DATA, height: Integer): Unit = {
+  private def checkStorageElementIsPresent[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], id: ID, data: DATA, height: Integer): Unit = {
     assertEquals("ChainStorage expected to find id ", true, chainStorage.contains(id))
     assertEquals("ChainStorage expected to find id of existent height", id, chainStorage.idByHeight(height).get)
     assertEquals("ChainStorage expected to find data of existent height", data, chainStorage.dataByHeight(height).get)
@@ -45,7 +45,7 @@ class ChainedDataTest extends JUnitSuite {
     assertEquals("Chain storage expected to find parent for element", data.getParentId, chainStorage.parentOf(id).get)
   }
 
-  private def checkStorageElementIsNotPresent[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], id: ID, data: DATA, height: Integer): Unit = {
+  private def checkStorageElementIsNotPresent[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], id: ID, data: DATA, height: Integer): Unit = {
     assertNotEquals("ChainStorage expected to not find id ", true, chainStorage.contains(id))
     assertNotEquals("ChainStorage expected to not find id of non existent height", id, chainStorage.idByHeight(height).getOrElse(-1))
     assertNotEquals("ChainStorage expected to not find data of non existent height", data, chainStorage.dataByHeight(height).getOrElse(-1))
@@ -54,28 +54,28 @@ class ChainedDataTest extends JUnitSuite {
     assertEquals("Chain storage expected not to find parent non for missing element", None, chainStorage.parentOf(id))
   }
 
-  private def checkBestElementIs[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], bestId: ID, bestData: DATA, bestHeight: Integer): Unit = {
+  private def checkBestElementIs[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], bestId: ID, bestData: DATA, bestHeight: Integer): Unit = {
     assertEquals(s"ChainStorage expected to have height ${bestHeight}", bestHeight, chainStorage.height)
     assertEquals("ChainStorage expected to have valid best id", bestId, chainStorage.bestId.get)
     assertEquals("ChainStorage expected to have valid best data", bestData, chainStorage.bestData.get)
   }
 
-  private def checkBestElementIsNot[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], bestId: ID, bestData: DATA): Unit = {
+  private def checkBestElementIsNot[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], bestId: ID, bestData: DATA): Unit = {
     assertNotEquals("ChainStorage expected to not have valid best id", bestId, chainStorage.bestId.get)
     assertNotEquals("ChainStorage expected to not have valid best data", bestData, chainStorage.bestData.get)
   }
 
-  private def checkAddNewBestBlockIsSuccessfully[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], id: ID, data: DATA): Unit = {
-    val res = chainStorage.setNewBestBlock(id, data)
+  private def checkAddNewBestBlockIsSuccessfully[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], id: ID, data: DATA): Unit = {
+    val res = Try {chainStorage.setNewBestBlock(id, data)}
     assertEquals("Adding new block had been failed", true, res.isSuccess)
   }
 
-  private def checkAddNewBestBlockIsFailed[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], id: ID, data: DATA): Unit = {
-    val res = chainStorage.setNewBestBlock(id, data)
+  private def checkAddNewBestBlockIsFailed[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], id: ID, data: DATA): Unit = {
+    val res = Try {chainStorage.setNewBestBlock(id, data)}
     assertEquals("Adding new block had been failed", true, res.failed.get.isInstanceOf[IllegalArgumentException])
   }
 
-  private def checkChainIsEmpty[ID, DATA <: ChainData[ID]](chainStorage: ChainedData[ID, DATA], id: ID, data: DATA): Unit = {
+  private def checkChainIsEmpty[ID, DATA <: LinkedElement[ID]](chainStorage: ElementsChain[ID, DATA], id: ID, data: DATA): Unit = {
     assertEquals("Empty ChainStorage expected to have height 0", 0, chainStorage.height)
     assertTrue("Empty ChainStorage expected to have no tip", chainStorage.bestId.isEmpty)
     assertTrue("Empty ChainStorage expected to have no tipInfo", chainStorage.bestData.isEmpty)
@@ -85,20 +85,20 @@ class ChainedDataTest extends JUnitSuite {
     assertTrue("Empty ChainStorage expected not to find modifier for inconsistent height", chainStorage.dataByHeight(1).isEmpty)
     assertTrue("Empty ChainStorage expected not to find modifier id for inconsistent height", chainStorage.idByHeight(0).isEmpty)
     assertTrue("Empty ChainStorage expected not to find modifier id for inconsistent height", chainStorage.idByHeight(1).isEmpty)
-    assertTrue("Empty ChainStorage expected to return empty chain from nonexistent modifier", chainStorage.chainFrom(id).isEmpty)
+    assertTrue("Empty ChainStorage expected to return empty chain from nonexistent modifier", chainStorage.chainAfter(id).isEmpty)
     assertEquals("No parent shall be found for empty chain", None, chainStorage.parentOf(id))
   }
 
   @Test
   def emptyChainStorage(): Unit = {
-    val chainStorage = new ChainedData[Integer, testData]()
+    val chainStorage = new ElementsChain[Integer, testData]()
 
     checkChainIsEmpty[Integer, testData](chainStorage, -1, testData(0, 0))
   }
 
   @Test
   def addUnconnectedData(): Unit = {
-    val chainStorage = new ChainedData[Integer, testData]()
+    val chainStorage = new ElementsChain[Integer, testData]()
 
     val (id1, data1) = dataGenerator.reset().getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id1, data1)
@@ -110,30 +110,30 @@ class ChainedDataTest extends JUnitSuite {
 
   @Test
   def addingAndRemovingData(): Unit = {
-    val chainStorage = new ChainedData[Integer, testData]()
+    val chainStorage = new ElementsChain[Integer, testData]()
 
     val (id1, data1) = dataGenerator.reset().getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id1, data1)
     checkStorageElementIsPresent(chainStorage, id1, data1, 1)
     checkBestElementIs(chainStorage, id1, data1, 1)
-    assertEquals("Chain from shall be equal", Seq(id1), chainStorage.chainFrom(id1))
+    assertEquals("Chain from shall be equal", Seq(id1), chainStorage.chainAfter(id1))
     assertEquals("Id shall be found for height 0", None, chainStorage.idByHeight(0))
 
     val (id2, data2) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id2, data2)
     checkStorageElementIsPresent(chainStorage, id2, data2, 2)
     checkBestElementIs(chainStorage, id2, data2, 2)
-    assertEquals("Chain from shall be equal", Seq(id1, id2), chainStorage.chainFrom(id1))
+    assertEquals("Chain from shall be equal", Seq(id1, id2), chainStorage.chainAfter(id1))
 
     val (id3, data3) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id3, data3)
-    assertEquals("Chain from shall be equal", Seq(id2, id3), chainStorage.chainFrom(id2))
+    assertEquals("Chain from shall be equal", Seq(id2, id3), chainStorage.chainAfter(id2))
 
     val (id4, data4) = dataGenerator.getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id4, data4)
     checkStorageElementIsPresent(chainStorage, id4, data4, 4)
     checkBestElementIs(chainStorage, id4, data4, 4)
-    assertEquals("Chain from shall be equal", Seq(id4), chainStorage.chainFrom(id4))
+    assertEquals("Chain from shall be equal", Seq(id4), chainStorage.chainAfter(id4))
 
     val (newId4, newData4) = dataGenerator.setParentId(3).getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, newId4, newData4)
@@ -141,8 +141,10 @@ class ChainedDataTest extends JUnitSuite {
     checkBestElementIsNot(chainStorage, id4, data4)
     checkStorageElementIsPresent(chainStorage, newId4, newData4, 4)
     checkBestElementIs(chainStorage, newId4, newData4, 4)
-    assertEquals("Chain from shall be equal", Seq(), chainStorage.chainFrom(id4))
+    assertEquals("Chain from shall be equal", Seq(), chainStorage.chainAfter(id4))
     assertEquals("Searching by predicate had been failed", Some(data3), chainStorage.getLastDataByPredicate(data => data.getParentId == data3.getParentId))
+    assertEquals("Searching by predicate had been failed", Some(data2), chainStorage.getLastDataByPredicateBeforeHeight(2)(data => data.getParentId == data2.getParentId))
+
 
     val (newId2, newData2) = dataGenerator.setParentId(1).getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, newId2, newData2)
@@ -161,7 +163,7 @@ class ChainedDataTest extends JUnitSuite {
 
   @Test
   def clearStorage(): Unit = {
-    val chainStorage = new ChainedData[Integer, testData]()
+    val chainStorage = new ElementsChain[Integer, testData]()
 
     val (id1, data1) = dataGenerator.reset().getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id1, data1)
@@ -184,7 +186,7 @@ class ChainedDataTest extends JUnitSuite {
 
   @Test
   def clearStorageCutByZeroElementParent(): Unit = {
-    val chainStorage = new ChainedData[Integer, testData]()
+    val chainStorage = new ElementsChain[Integer, testData]()
 
     val (id1, data1) = dataGenerator.reset().getNextData
     checkAddNewBestBlockIsSuccessfully(chainStorage, id1, data1)
@@ -198,11 +200,8 @@ class ChainedDataTest extends JUnitSuite {
     checkAddNewBestBlockIsSuccessfully(chainStorage, id3, data3)
     checkStorageElementIsPresent(chainStorage, id3, data3,3)
 
-    chainStorage.cutToId(data1.getParentId)
-    checkChainIsEmpty[Integer, testData](chainStorage, -1, testData(0, 0))
-    checkStorageElementIsNotPresent(chainStorage, id1, data1,1)
-    checkStorageElementIsNotPresent(chainStorage, id2, data2,2)
-    checkStorageElementIsNotPresent(chainStorage, id3, data3,3)
+    val res= Try{    chainStorage.cutToId(data1.getParentId)}
+    assertTrue("Cut to parent of first element shall have no effect", res.isFailure)
   }
 
 }

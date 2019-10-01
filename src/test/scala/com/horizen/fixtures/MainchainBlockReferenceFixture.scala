@@ -13,7 +13,7 @@ import scala.collection.mutable
 trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   def setSeed(seed: Long): Unit = util.Random.setSeed(seed)
 
-  private def generateBytes(size: Int = 32): Array[Byte] = {
+  def generateBytes(size: Int = 32): Array[Byte] = {
     val res: Array[Byte] = new Array[Byte](size)
     util.Random.nextBytes(res)
     res
@@ -57,7 +57,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
 
       override lazy val hash: Array[Byte] = blockHash match {
         case Some(data) => data
-        case _ => header.hash // identically to super.hash. Super.hash can't be used du compiler limitations
+        case _ => header.hash // identically to super.hash. Super.hash can't be used due compiler limitations
       }
     }
 

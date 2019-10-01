@@ -57,7 +57,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       res = res :+ SidechainBlock.create(
         parentId,
         Instant.now.getEpochSecond - 1000 + i * 10,
-        generateMainchainReferences(),
+        Seq(), //generateMainchainReferences(/*parent = res.flatMap(sb => sb.mainchainBlocks.map(mcBlock => new ByteArrayWrapper(mcBlock.hash))).lastOption*/),
         Seq(),
         PrivateKey25519Creator.getInstance().generateSecret("seed%d".format(basicSeed.toInt + i).getBytes),
         companion,

@@ -55,7 +55,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different block info expected", genesisBlock.parentId, historyStorage.blockInfoById(genesisBlock.id).get.parentId)
     assertTrue("HistoryStorage genesis block expected to be a part of active chain", historyStorage.isInActiveChain(genesisBlock.id))
     assertEquals("HistoryStorage different block expected form active chain", genesisBlock.id, historyStorage.activeChainBlockId(expectedHeight).get)
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id), historyStorage.activeChainAfter(genesisBlock.id))
 
 
     // Add one more block
@@ -71,7 +71,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different block expected", secondBlock.id, historyStorage.blockById(secondBlock.id).get.id)
     assertFalse("HistoryStorage next block expected NOT to be a part of active chain", historyStorage.isInActiveChain(secondBlock.id))
     assertEquals("HistoryStorage different block expected form active chain", genesisBlock.id, historyStorage.activeChainBlockId(1).get)
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id), historyStorage.activeChainAfter(genesisBlock.id))
 
     // Update best block -> active chain related data should change
     assertTrue("HistoryStorage best block expected to be updated", historyStorage.setAsBestBlock(secondBlock, historyStorage.blockInfoById(secondBlock.id).get).isSuccess)
@@ -81,7 +81,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different bestBlock expected", secondBlock.id, historyStorage.bestBlock.id)
     assertTrue("HistoryStorage block expected to be a part of active chain", historyStorage.isInActiveChain(secondBlock.id))
     assertEquals("HistoryStorage different block expected form active chain", secondBlock.id, historyStorage.activeChainBlockId(expectedHeight).get)
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, secondBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, secondBlock.id), historyStorage.activeChainAfter(genesisBlock.id))
 
 
     // Add one more block
@@ -98,8 +98,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertEquals("HistoryStorage different bestBlock expected", thirdBlock.id, historyStorage.bestBlock.id)
     assertTrue("HistoryStorage block expected to be a part of active chain", historyStorage.isInActiveChain(thirdBlock.id))
     assertEquals("HistoryStorage different block expected form active chain", thirdBlock.id, historyStorage.activeChainBlockId(expectedHeight).get)
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, secondBlock.id, thirdBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(secondBlock.id, thirdBlock.id), historyStorage.activeChainFrom(secondBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, secondBlock.id, thirdBlock.id), historyStorage.activeChainAfter(genesisBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(secondBlock.id, thirdBlock.id), historyStorage.activeChainAfter(secondBlock.id))
 
 
 
@@ -124,8 +124,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     assertTrue("HistoryStorage block expected to be a part of active chain", historyStorage.isInActiveChain(forkBlock.id))
     assertFalse("HistoryStorage block expected NOT to be a part of active chain", historyStorage.isInActiveChain(thirdBlock.id))
     assertEquals("HistoryStorage different block expected form active chain", forkBlock.id, historyStorage.activeChainBlockId(expectedHeight).get)
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, forkBlock.id), historyStorage.activeChainFrom(genesisBlock.id))
-    assertEquals("HistoryStorage different block chain expected form active chain", Seq(forkBlock.id), historyStorage.activeChainFrom(forkBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(genesisBlock.id, forkBlock.id), historyStorage.activeChainAfter(genesisBlock.id))
+    assertEquals("HistoryStorage different block chain expected form active chain", Seq(forkBlock.id), historyStorage.activeChainAfter(forkBlock.id))
 
 
 

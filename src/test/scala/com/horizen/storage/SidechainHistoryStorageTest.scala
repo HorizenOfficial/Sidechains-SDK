@@ -50,7 +50,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
             i + startingHeight,
             blockList(i).parentId,
             ModifierSemanticValidity.Unknown,
-            SidechainBlockInfo.referencesFromBlock(blockList(i)))
+            SidechainBlockInfo.mainchainReferencesFromBlock(blockList(i)))
           .bytes)
       )
 
@@ -63,7 +63,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   }
 
   private def checkMainchainReferences(historyStorage: SidechainHistoryStorage, blocks: Seq[SidechainBlock], blockIndex: Int): Unit = {
-    val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlocks.length).sum + params.genesisMainchainBlockHeight
+    val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlocks.length).sum + params.mainchainCreationBlockHeight
 
     blocks(blockIndex).mainchainBlocks.zipWithIndex.foreach { case (mcBlock, mainchainReferenceIndex) =>
       assertEquals("Storage shall return correct sidechain block by mainchain block reference hash",
@@ -72,11 +72,11 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       assertTrue("Storage shall return correct mainchain block reference by mainchain block reference id",
         mcBlock.header.mainchainHeaderBytes.sameElements(historyStorage.getMainchainBlockReferenceByHash(mcBlock.hash).get.header.mainchainHeaderBytes))
 
-      val mainchainHeight = mainchainLength + mainchainReferenceIndex + 1
-      val receivedInfoByHeight = historyStorage.getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(mainchainHeight).get
+      val mainchainHeight = mainchainLength + mainchainReferenceIndex
+      val receivedInfoByHeight = historyStorage.getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainHeight).get
       val receivedInfoByHash = historyStorage.getMainchainBlockReferenceInfoByHash(mcBlock.hash)
 
-      val allInfos = Seq(receivedInfoByHeight, receivedInfoByHeight)
+      val allInfos = Seq(receivedInfoByHeight, receivedInfoByHash.get)
 
       allInfos.foreach{receivedInfo =>
         assertEquals(
@@ -106,6 +106,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // declare real genesis block id
     class HistoryTestParams extends MainNetParams {
       override val sidechainGenesisBlockId: ModifierId = activeChainBlockList.head.id
+      override val mainchainCreationBlockHeight: Int = 24
     }
     params = new HistoryTestParams()
 
@@ -252,13 +253,13 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     // Test 11: get activeChainFrom
     // active chain from genesis block
-    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainFrom(activeChainBlockList.head.id).size)
+    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainAfter(activeChainBlockList.head.id).size)
     // active chain from 5th block
-    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainFrom(activeChainBlockList(4).id).size)
+    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainAfter(activeChainBlockList(4).id).size)
     // active chain last block id height
-    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainFrom(activeChainBlockList.last.id).size)
+    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainAfter(activeChainBlockList.last.id).size)
     // active chain from fork last block id
-    assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainFrom(forkChainBlockList.last.id).isEmpty)
+    assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id).isEmpty)
 
 
     // Test 8: get semanticValidity
@@ -343,7 +344,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           activeChainBlockList.size,
           activeChainBlockList.last.parentId,
           tipNewValidity,
-          SidechainBlockInfo.referencesFromBlock(activeChainBlockList.last))
+          SidechainBlockInfo.mainchainReferencesFromBlock(activeChainBlockList.last))
         .bytes)
     ))
 
@@ -357,7 +358,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkChainBlockList.size + 1,
           forkChainBlockList.last.parentId,
           forkTipNewValidity,
-          SidechainBlockInfo.referencesFromBlock(forkChainBlockList.last)
+          SidechainBlockInfo.mainchainReferencesFromBlock(forkChainBlockList.last)
         ).bytes)
     ))
 
@@ -408,7 +409,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update best block exception")
 
     val newBestBlock = forkChainBlockList.head
-    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, ModifierSemanticValidity.Valid, SidechainBlockInfo.referencesFromBlock(newBestBlock))
+    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock))
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(
       new ByteArrayWrapper(Array.fill(32)(-1: Byte)),

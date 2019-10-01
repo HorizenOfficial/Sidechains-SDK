@@ -152,7 +152,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
           // fork length is more than params.maxHistoryRewritingLength
           (Seq[ModifierId](), Seq[ModifierId]())
         else
-          (newBestChain, storage.activeChainFrom(newBestChain.head))
+          (newBestChain, storage.activeChainAfter(newBestChain.head))
 
       case None => (Seq[ModifierId](), Seq[ModifierId]())
     }
@@ -245,7 +245,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        storage.activeChainFrom(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
+        storage.activeChainAfter(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
       case None =>
         //log.warn("Found chain without common block ids from remote")
         Seq()
@@ -416,8 +416,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     storage.getBestMainchainBlockReferenceInfo.asJava
   }
 
-  override def getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(height: Int): JOptional[MainchainBlockReferenceInfo] = {
-    storage.getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(height).asJava
+  override def getMainchainBlockReferenceInfoByMainchainBlockHeight(height: Int): JOptional[MainchainBlockReferenceInfo] = {
+    storage.getMainchainBlockReferenceInfoByMainchainBlockHeight(height).asJava
   }
 
   override def getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReferenceInfo] = {

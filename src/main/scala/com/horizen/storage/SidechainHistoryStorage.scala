@@ -32,8 +32,10 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   private val activeChain: ActiveChain = loadActiveChain()
 
   private def loadActiveChain(): ActiveChain = {
-    if (height == 0)
-      return ActiveChain()
+    if (height == 0) {
+      return ActiveChain(params.mainchainCreationBlockHeight)
+    }
+
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer(height)
 
     activeChainBlocksInfo.append((bestBlockId, blockInfoById(bestBlockId).get))
@@ -48,9 +50,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       firstSidechainBlockInfo <- orderedChainBlocks.headOption
       firstSidechainBlock <- blockById(firstSidechainBlockInfo._1)
       firstMainchainBlockReference <- firstSidechainBlock.mainchainBlocks.headOption
-    } yield firstMainchainBlockReference.header.hashPrevBlock
+    } yield byteArrayToMainchainBlockReferenceId(firstMainchainBlockReference.header.hashPrevBlock)
 
-    ActiveChain(orderedChainBlocks, mainchainBlockParent.map(d => byteArrayToMainchainBlockReferenceId(d)))
+    ActiveChain(orderedChainBlocks, mainchainBlockParent.getOrElse(throw new IllegalStateException("Loaded active chain miss mainchain parent")), params.mainchainCreationBlockHeight)
   }
 
   private def validityKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"validity$blockId"))
@@ -89,7 +91,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def blockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = {
     if (activeChain != null && activeChain.contains(blockId))
-      return activeChain.dataById(blockId)
+      return activeChain.blockInfoById(blockId)
 
     storage.get(blockInfoKey(blockId)).asScala match {
       case Some(baw) => SidechainBlockInfoSerializer.parseBytesTry(baw.data) match {
@@ -120,7 +122,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def activeChainBlockId(height: Int): Option[ModifierId] = activeChain.idByHeight(height)
 
-  def activeChainFrom(blockId: ModifierId): Seq[ModifierId] = activeChain.chainFrom(blockId)
+  def activeChainAfter(blockId: ModifierId): Seq[ModifierId] = activeChain.chainAfter(blockId)
 
   def getSidechainBlockByMainchainBlockReferenceHash(mainchainBlockReferenceHash: Array[Byte]): Option[SidechainBlock] = {
     activeChain.idByMcId(byteArrayToMainchainBlockReferenceId(mainchainBlockReferenceHash)).flatMap(blockById)
@@ -131,20 +133,16 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     sidechainBlock.flatMap(_.mainchainBlocks.find(d => mainchainBlockReferenceHash.sameElements(d.hash)))
   }
 
-  def getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(mainchainHeight: Int): Option[MainchainBlockReferenceInfo] = {
-    getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoGenesisHeight(mainchainHeight - params.genesisMainchainBlockHeight)
-  }
-
-  def getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoGenesisHeight(mainchainGenesisHeight: Int): Option[MainchainBlockReferenceInfo] = {
+  def getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainHeight: Int): Option[MainchainBlockReferenceInfo] = {
     for {
-      mcId <- activeChain.mcIdByMcHeight(mainchainGenesisHeight)
+      mcId <- activeChain.mcIdByMcHeight(mainchainHeight)
       id <- activeChain.idByMcId(mcId)
-      mcData <- activeChain.dataOfMcByMcId(mcId)
-    } yield buildMainchainBlockReferenceInfo(mcId, mcData, mainchainGenesisHeight, id)
+      mcData <- activeChain.mcBlockReferenceDataByMcId(mcId)
+    } yield buildMainchainBlockReferenceInfo(mcId, mcData, mainchainHeight, id)
   }
 
   def getBestMainchainBlockReferenceInfo: Option[MainchainBlockReferenceInfo] = {
-    getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoGenesisHeight(activeChain.heightOfMc)
+    getMainchainBlockReferenceInfoByMainchainBlockHeight(activeChain.heightOfMc)
   }
 
   def getMainchainBlockReferenceInfoByHash(mainchainIdBytes: Array[Byte]): Option[MainchainBlockReferenceInfo] = {
@@ -152,7 +150,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     for {
       height <- activeChain.mcHeightByMcId(mcId)
       sidechainBlockId <- activeChain.idByMcId(mcId)
-      mcData <- activeChain.dataOfMcByMcId(mcId)
+      mcData <- activeChain.mcBlockReferenceDataByMcId(mcId)
     } yield buildMainchainBlockReferenceInfo(mcId, mcData, height, sidechainBlockId)
   }
 
@@ -160,7 +158,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
                                                referenceInfo: MainchainBlockReferenceData,
                                                genesisHeight: Int,
                                                sidechainBlockId: ModifierId): MainchainBlockReferenceInfo = {
-    new MainchainBlockReferenceInfo(mcId, referenceInfo.getParentId, genesisHeight + params.genesisMainchainBlockHeight, idToBytes(sidechainBlockId))
+    new MainchainBlockReferenceInfo(mcId, referenceInfo.getParentId, genesisHeight, idToBytes(sidechainBlockId))
   }
 
   def update(block: SidechainBlock, chainScore: Long): Try[SidechainHistoryStorage] = Try {
@@ -174,7 +172,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       chainScore,
       block.parentId,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.referencesFromBlock(block)
+      SidechainBlockInfo.mainchainReferencesFromBlock(block)
     )
 
     toUpdate.add(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes)))
@@ -200,7 +198,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
     // if it's not a part of active chain, retrieve previous info from disk storage
-    val oldInfo: SidechainBlockInfo = activeChain.dataById(block.id).getOrElse(blockInfoById(block.id).get)
+    val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id).get)
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(

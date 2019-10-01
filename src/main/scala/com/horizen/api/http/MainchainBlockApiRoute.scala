@@ -5,7 +5,6 @@ import java.util.Optional
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.block.MainchainBlockReference
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
@@ -28,10 +27,9 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
   override val route : Route = (pathPrefix("mainchain"))
             {getBestMainchainBlockReferenceInfo ~
               getGenesisMainchainBlockReferenceInfo ~
-              getMainchainBlockReferenceInfoByHash ~ //string -> bytes utils from hex string
+              getMainchainBlockReferenceInfoByHash ~
               getMainchainBlockReferenceInfoByHeight ~
-              getMainchainBlockReferenceByHash ~
-              createMainchainBlockReference}
+              getMainchainBlockReferenceByHash}
 
   private def mainchainBlockReferenceToApiResponse(mcRef: Optional[MainchainBlockReferenceInfo], formatFlag: Boolean = true): Option[(String, Json)] = {
     (formatFlag, mcRef.asScala) match {
@@ -66,7 +64,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
         val history = sidechainNodeView.getNodeHistory;
-        val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(1)
+        val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockHeight(1)
 
         mainchainBlockReferenceToApiResponse(mcBlockRef)
           .map(ApiResponse(_))
@@ -102,7 +100,7 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
 
   def getMainchainBlockReferenceInfoByHeight : Route = (post & path("getMainchainBlockReferenceInfoByHeight"))
   {
-    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: Integer, format: Boolean = false)
+    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHeight: Integer, format: Boolean = false)
 
     entity(as[String]) { body =>
       withNodeView{ sidechainNodeView =>
@@ -110,10 +108,10 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
           case Success(req) =>
             val history = sidechainNodeView.getNodeHistory
 
-            val height = req.mainchainBlockReferenceHash
+            val height = req.mainchainBlockReferenceHeight
             val format = req.format
 
-            val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(height)
+            val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockHeight(height)
             mainchainBlockReferenceToApiResponse(mcBlockRef, format)
               .map(ApiResponse(_))
               .getOrElse(ApiError(StatusCodes.BadRequest, "No reference info had been found for given hash"))
@@ -156,33 +154,4 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
       }
     }
   }
-
-  /**
-    * Try to parse MC block data and create a MC block reference to be included into a SC block. Useful in combination with getblocktemplate.
-    * False = raw, True = JSON
-    */
-  def createMainchainBlockReference : Route = (post & path("createMainchainBlockReference"))
-  {
-    case class CreateMainchainBlockReferenceRequest(mainchainBlockData: String, format: Boolean = false)
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[CreateMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
-            val mcBlockData = req.mainchainBlockData.getBytes
-            val format = req.format
-
-            val optMcBlockRef = MainchainBlockReference.create(mcBlockData, params)
-            (optMcBlockRef, format) match {
-              case (Success(ref), false) => ApiResponse("result" -> ref.bytes)
-              case (Success(ref), true) => ApiResponse("result" -> ref.toJson)
-              case _ =>  ApiError(StatusCodes.BadRequest, "No Mainchain reference had been created from given data")
-            }
-
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
-      }
-    }
-  }
-
 }

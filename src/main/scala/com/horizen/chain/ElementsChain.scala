@@ -3,23 +3,26 @@ package com.horizen.chain
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Try
 
 
-class ChainedData[ID, DATA <: ChainData[ID]](private var lastId: Option[ID] = None,
-                                             private var data: ArrayBuffer[DATA] = ArrayBuffer[DATA](),
-                                             private var idToHeight: mutable.HashMap[ID, Int] = mutable.HashMap[ID, Int]()) {
+trait LinkedElement[T] {
+  def getParentId: T
+}
+
+class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID] = None,
+                                                   private var data: ArrayBuffer[DATA] = ArrayBuffer[DATA](),
+                                                   private var idToHeightMap: mutable.HashMap[ID, Int] = mutable.HashMap[ID, Int]()) {
   def height: Int = data.size
 
   def bestData: Option[DATA] = data.lastOption
 
   def bestId: Option[ID] = lastId
 
-  def contains(id: ID): Boolean = idToHeight.contains(id)
+  def contains(id: ID): Boolean = idToHeightMap.contains(id)
 
   def parentOf(id: ID): Option[ID] = dataById(id).map(_.getParentId)
 
-  def heightById(id: ID): Option[Int] = idToHeight.get(id)
+  def heightById(id: ID): Option[Int] = idToHeightMap.get(id)
 
   def dataByHeight(requestedHeight: Int): Option[DATA] = data.lift(requestedHeight - 1)
 
@@ -37,19 +40,14 @@ class ChainedData[ID, DATA <: ChainData[ID]](private var lastId: Option[ID] = No
     }
   }
 
-  def setNewBestBlock(newId: ID, newData: DATA): Try[Unit] = {
-    cutToId(newData.getParentId).map(_ => appendData(newId, newData))
+  def setNewBestBlock(newId: ID, newData: DATA): Unit = {
+    cutToId(newData.getParentId)
+    appendData(newId, newData)
   }
 
-  def cutToId(newBestId: ID): Try[Unit] = Try {
+  def cutToId(newBestId: ID): Unit = {
     if (height > 0) {
-      if (newBestId == data(0).getParentId) {
-        // Some inconsistency here:
-        // in common case, if cut to id A: then A is stay as required parent for new data
-        // cut to the parent of the first element: then parent of the first element is no longer required as parent
-        clear()
-      }
-      else if (!newBestId.equals(bestId.get)) {
+       if (!newBestId.equals(bestId.get)) {
         // we get an id, that is a part of another chain
         val newHeight = heightById(newBestId).getOrElse(throw new IllegalArgumentException("Parent id is not a part of chain. Failed to reorganize chain."))
         cutToSize(newHeight)
@@ -63,13 +61,17 @@ class ChainedData[ID, DATA <: ChainData[ID]](private var lastId: Option[ID] = No
       throw new IllegalArgumentException("Try to append block with incorrect parent")
     }
 
+    if (newData.getParentId == newId) {
+      throw new IllegalArgumentException("Try to add incorrect data: element has himself as a parent")
+    }
+
     data.append(newData)
-    idToHeight.put(newId, height)
+    idToHeightMap.put(newId, height)
 
     lastId = Some(newId)
   }
 
-  def chainFrom(id: ID): Seq[ID] = {
+  def chainAfter(id: ID): Seq[ID] = {
     if (contains(id) && height > 0) {
       var res: Seq[ID] = Seq()
 
@@ -88,15 +90,15 @@ class ChainedData[ID, DATA <: ChainData[ID]](private var lastId: Option[ID] = No
   def clear(): Unit = {
     lastId = None
     data = ArrayBuffer[DATA]()
-    idToHeight = mutable.HashMap[ID, Int]()
+    idToHeightMap = mutable.HashMap[ID, Int]()
   }
 
-  def getLastDataByPredicate(p: DATA => Boolean): Option[DATA] = getLastDataByPredicateForHeight(height, p)
+  def getLastDataByPredicate(p: DATA => Boolean): Option[DATA] = getLastDataByPredicateBeforeHeight(height)(p)
 
   @tailrec
-  private def getLastDataByPredicateForHeight(heightCounter: Integer, p: DATA => Boolean): Option[DATA] = {
-    dataByHeight(heightCounter) match {
-      case Some(dataForHeight) => if (p(dataForHeight)) Some(dataForHeight) else getLastDataByPredicateForHeight(heightCounter - 1, p)
+  final def getLastDataByPredicateBeforeHeight(height: Integer)(p: DATA => Boolean): Option[DATA] = {
+    dataByHeight(height) match {
+      case Some(dataForHeight) => if (p(dataForHeight)) Some(dataForHeight) else getLastDataByPredicateBeforeHeight(height - 1)(p)
       case None => None
     }
   }
@@ -119,7 +121,7 @@ class ChainedData[ID, DATA <: ChainData[ID]](private var lastId: Option[ID] = No
     val tailSize = data.size - newSize
 
     val idsToRemove = getLastIdsForHeight(tailSize - 1, height, Seq(bestId.get)).reverse
-    idToHeight --= idsToRemove
+    idToHeightMap --= idsToRemove // remove cut ids from (id -> height) map
 
     val removedData = data.takeRight(tailSize)
     data.reduceToSize(newSize)

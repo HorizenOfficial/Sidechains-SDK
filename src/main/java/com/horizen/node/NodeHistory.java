@@ -28,7 +28,7 @@ public interface NodeHistory {
 
     Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByHash(byte[] mainchainBlockReferenceHash);
 
-    Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByMainchainBlockReferenceInfoHeight(int height);
+    Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByMainchainBlockHeight(int height);
 
     Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
 }

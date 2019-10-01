@@ -18,7 +18,7 @@ case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
                               semanticValidity: ModifierSemanticValidity,
-                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId]) extends BytesSerializable with ChainData[ModifierId] {
+                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId]) extends BytesSerializable with LinkedElement[ModifierId] {
 
   override def getParentId: ModifierId = parentId
 
@@ -32,7 +32,7 @@ case class SidechainBlockInfo(height: Int,
 }
 
 object SidechainBlockInfo {
-  def referencesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainBlockReferenceId] = {
+  def mainchainReferencesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainBlockReferenceId] = {
     sidechainBlock.mainchainBlocks.map(d => byteArrayToMainchainBlockReferenceId(d.hash))
   }
 }
