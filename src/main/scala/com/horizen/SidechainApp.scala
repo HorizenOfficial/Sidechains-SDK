@@ -3,6 +3,7 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import java.io.{File => JFile}
+import java.net.InetSocketAddress
 
 import scala.collection.immutable.Map
 import scala.collection
@@ -28,10 +29,12 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.ForgerRef
+import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
 import scala.io.Source
+import scala.util.Try
 
 class SidechainApp(val settingsFilename: String)
   extends Application
@@ -140,6 +143,32 @@ class SidechainApp(val settingsFilename: String)
 
   // waiting WS client interface
   private def getMainchainConnectionInfo  = ???
+
+  // retrieve information for using a web socket connector
+  val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
+    schema = "ws",
+    remoteAddress = new InetSocketAddress("localhost", 8080),
+    connectionTimeout = 1,
+    reconnectionMaxAttempts = 1)
+  val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
+
+  // create the cweb socket connector and configure it
+  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl()
+  webSocketConnector.setConfiguration(webSocketConfiguration)
+  webSocketConnector.setReconnectionHandler(webSocketReconnectionHandler)
+  webSocketConnector.setMessageHandler(webSocketMessageHandler)
+
+  // start the web socket connector
+  val channel : Try[WebSocketChannel] = webSocketConnector.start()
+
+  // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+  if(channel.isSuccess)
+    {
+      val communicationClient : WebSocketCommunicationClient = webSocketMessageHandler.asInstanceOf[WebSocketCommunicationClient]
+      communicationClient.setWebSocketChannel(channel.get)
+    }
+
 }
 
 object SidechainApp /*extends App*/ {
