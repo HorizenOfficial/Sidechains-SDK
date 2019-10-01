@@ -23,6 +23,7 @@ import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute}
 import scorex.core.app.Application
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
+import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
@@ -32,6 +33,7 @@ import com.horizen.websocket.{MainchainNodeChannelImpl, WebSocketChannel, WebSoc
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
+import scala.collection.immutable.Map
 import scala.io.Source
 import scala.util.Try
 
@@ -61,6 +63,8 @@ class SidechainApp(val settingsFilename: String)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
   protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
+
+  val mainNetParams = new MainNetParams()
 
   case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
 
@@ -133,7 +137,7 @@ class SidechainApp(val settingsFilename: String)
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
+    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, mainNetParams),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),

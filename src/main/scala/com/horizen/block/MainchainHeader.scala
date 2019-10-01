@@ -1,18 +1,17 @@
 package com.horizen.block
 
-import com.horizen.utils.{BytesUtils, Utils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-
-import scala.util.Try
 import java.time.Instant
 
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import com.horizen.serialization.JsonSerializable
+import com.horizen.utils.{BytesUtils, Utils}
 import io.circe.Json
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable
+import scala.util.Try
 
 //
 // Representation of MC header
@@ -88,6 +87,8 @@ class MainchainHeader(
     Json.fromFields(values)
 
   }
+
+  override def bytes: Array[Byte] = mainchainHeaderBytes
 }
 
 
@@ -121,6 +122,7 @@ object MainchainHeader {
     val nonce: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
+    // @TODO check: getReversedVarInt works correctly with BytesUtils.fromVarInt (not reversed)
     val solutionLength =  BytesUtils.getReversedVarInt(headerBytes, currentOffset)
     currentOffset += solutionLength.size()
 
