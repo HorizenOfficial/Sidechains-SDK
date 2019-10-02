@@ -1,8 +1,9 @@
 package com.horizen.websocket
 
 import java.net.URI
+import java.util.concurrent.locks.ReentrantLock
 
-import javax.websocket.{ClientEndpoint, CloseReason, MessageHandler, Session}
+import javax.websocket.{CloseReason, MessageHandler, Session}
 import org.glassfish.tyrus.client.{ClientManager, ClientProperties}
 import scorex.util.ScorexLogging
 
@@ -16,6 +17,7 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
   private var userSession : Session = _
   private var reconnectionHandler : WebSocketReconnectionHandler = _
   private var channel : WebSocketChannelImpl = _
+  private val lock = new ReentrantLock()
 
   override def isStarted : Boolean =
     userSession != null && userSession.isOpen
@@ -33,7 +35,7 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
           var counter = 0
 
           // Default value is 5 seconds
-          override def getDelay: Long = configuration.connectionTimeout
+          override def getDelay: Long = configuration.reconnectionDelay
 
           // will be executed whenever @OnClose annotated method (or Endpoint.onClose(..)) is executed on client side.
           // this should happen when established connection is lost for any reason
@@ -43,9 +45,19 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
               log.info("onDisconnect. Reason: " + closeReason.toString + " Reconnecting... (attempt " + counter + ")")
               if (reconnectionHandler != null) {
                 if (closeReason.getCloseCode.getCode == 1000)
-                  reconnectionHandler.onDisconnection(DisconnectionCode.ON_SUCCESS, closeReason.getReasonPhrase)
+                  {
+                    lock.lock()
+                    val res = reconnectionHandler.onDisconnection(DisconnectionCode.ON_SUCCESS, closeReason.getReasonPhrase)
+                    lock.unlock()
+                    res
+                  }
                 else
-                  reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
+                {
+                  lock.lock()
+                  val res = reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
+                  lock.unlock()
+                  res
+                }
               }
               else true
             } else false
@@ -56,8 +68,12 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
             counter = counter + 1
             if (counter <= configuration.reconnectionMaxAttempts) {
               log.info("onConnectFailure. Reconnecting... (attempt " + counter + ") " + exception.getMessage)
-              if (reconnectionHandler != null)
-                reconnectionHandler.onConnectionFailed(exception)
+              if (reconnectionHandler != null) {
+                lock.lock()
+                val res = reconnectionHandler.onConnectionFailed(exception)
+                lock.unlock()
+                res
+              }
               else true
             } else false
           }
@@ -111,16 +127,12 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
   }
 
   override def stop(): Try[Unit] = Try {
-    log.info("Closing connection.")
-    var count = 0
+    log.info("Stopping web socket connector...")
     userSession.close()
-    while(isStarted || count < 3){
-      Thread.sleep(1000)
-      count = count +1
-    }
     configuration = null
     reconnectionHandler = null
     messageHandler = null
+    log.info("Web socket connector stopped.")
   }
 
   override def setMessageHandler(handler: WebSocketMessageHandler): Boolean = {

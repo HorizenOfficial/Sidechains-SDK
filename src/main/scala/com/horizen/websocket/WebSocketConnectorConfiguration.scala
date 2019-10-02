@@ -5,7 +5,8 @@ import java.net.InetSocketAddress
 case class WebSocketConnectorConfiguration(
                                           schema : String = "ws",
                                           remoteAddress: InetSocketAddress,
-                                          connectionTimeout : Int,
+                                          connectionTimeout : Int, // milliseconds
+                                          reconnectionDelay : Long, // seconds
                                           reconnectionMaxAttempts : Int) {
 
 }

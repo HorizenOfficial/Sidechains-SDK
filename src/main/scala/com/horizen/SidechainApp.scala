@@ -29,7 +29,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.ForgerRef
-import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
+import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, DisconnectionCode, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
@@ -148,7 +148,8 @@ class SidechainApp(val settingsFilename: String)
   val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
     schema = "ws",
     remoteAddress = new InetSocketAddress("localhost", 8080),
-    connectionTimeout = 1,
+    connectionTimeout = 100,
+    reconnectionDelay = 1,
     reconnectionMaxAttempts = 1)
   val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
   val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
