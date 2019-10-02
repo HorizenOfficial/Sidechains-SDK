@@ -184,16 +184,9 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   }
 
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
-    Try {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
       newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id).get).get
       new SidechainHistory(newStorage, params)
-    } match {
-      case Success(newHistory) => newHistory
-      case Failure(e) =>
-        //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
-        new SidechainHistory(storage, params)
-    }
   }
 
   override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
