@@ -3,10 +3,10 @@ package com.horizen.block
 import java.math.BigInteger
 
 import com.google.common.primitives.UnsignedInts
-import com.horizen.SidechainHistory
 import com.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils}
+import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -150,8 +150,8 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(26).mcblockhash, Seq(powRelatedDataList(27)))) // SCBlock with 1 MCBlockRef
 
     // mock History methods used in test
-    val history = mock[SidechainHistory]
-    Mockito.when(history.modifierById(ArgumentMatchers.any[ModifierId]()))
+    val storage = mock[SidechainHistoryStorage]
+    Mockito.when(storage.blockById(ArgumentMatchers.any[ModifierId]()))
       .thenAnswer(answer => {
         Some(scblocks.filter(block => block.id.equals(answer.getArgument(0))).head)
       })
@@ -178,19 +178,19 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     // Test 1: Check SCBlock without MainchainBlockReference
     var block = createSCBlockForPowTest(scblocks.last.id, "", Seq())
     assertTrue("SC block without MainchainBlockReference expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, history, new PowtestParams()))
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 2: Check SCBlock with 1 valid MainchainBlockReference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)))
     assertTrue("SC block with 1 valid MainchainBlockReference expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, history, new PowtestParams()))
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 3: Check SCBlock with multiple MainchainBlockReference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29)))
     assertTrue("SC block with 2 valid MainchainBlockReferences expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, history, new PowtestParams()))
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 4: Check SCBlock, that contains 1 MainchainBlockReference with invalid target(bits)
@@ -198,13 +198,13 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       PowRelatedData("0000000001c3eb8acfd95d591016300c9fc6422115cc14bd8e7402d6836df19e", 1559026662, 0x1c1104d4) // 0x1c1104d2 is valid one
     ))
     assertFalse("SC block, that contains 1 MainchainBlockReference with invalid target(bits), expected to have invalid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, history, new PowtestParams()))
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 5: Check SCBlock, that contains 1 MainchainBlockReference with invalid prev block reference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28))) // 20 -> 27
     assertFalse("SC block, that contains 1 MainchainBlockReference with invalid prev block reference, expected to have invalid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, history, new PowtestParams()))
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
   }
 
   def createSCBlockForPowTest(prevSCBlockId: String, prevMCBlockHash: String, powRelatedDataSeq: Seq[PowRelatedData]): SidechainBlock = {
