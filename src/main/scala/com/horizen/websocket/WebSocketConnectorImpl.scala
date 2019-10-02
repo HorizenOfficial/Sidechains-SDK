@@ -18,11 +18,15 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
   private var reconnectionHandler : WebSocketReconnectionHandler = _
   private var channel : WebSocketChannelImpl = _
   private val lock = new ReentrantLock()
+  private val reconnectionHandlerCondition = lock.newCondition()
+  private var reconnectionHandlerCanBeNull : Boolean = false
 
   override def isStarted : Boolean =
     userSession != null && userSession.isOpen
 
   override def start(): Try[WebSocketChannelImpl] = Try {
+    reconnectionHandlerCanBeNull = false
+
     if (userSession == null || !userSession.isOpen) {
 
       if(configuration != null){
@@ -34,7 +38,9 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
 
           var counter = 0
 
-          // Default value is 5 seconds
+          /**
+            * Delay before next connection attempt. Default value is 5 seconds
+            */
           override def getDelay: Long = configuration.reconnectionDelay
 
           // will be executed whenever @OnClose annotated method (or Endpoint.onClose(..)) is executed on client side.
@@ -43,23 +49,35 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
             counter = counter + 1
             if (counter <= configuration.reconnectionMaxAttempts) {
               log.info("onDisconnect. Reason: " + closeReason.toString + " Reconnecting... (attempt " + counter + ")")
-              if (reconnectionHandler != null) {
-                if (closeReason.getCloseCode.getCode == 1000)
+              lock.lock()
+              try {
+                if (reconnectionHandler != null) {
+                  if (closeReason.getCloseCode.getCode == 1000)
                   {
-                    lock.lock()
                     val res = reconnectionHandler.onDisconnection(DisconnectionCode.ON_SUCCESS, closeReason.getReasonPhrase)
-                    lock.unlock()
+                    reconnectionHandlerCanBeNull = true
+                    reconnectionHandlerCondition.signal()
                     res
                   }
-                else
-                {
-                  lock.lock()
-                  val res = reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
-                  lock.unlock()
-                  res
+                  else
+                    {
+                      /**
+                        * When 'stop' method is called in a 'normal' way (when the server is still started), then it's called 'onDisconnect(DisconnectionCode.ON_SUCCESS)'.
+                        * If, instead, the server stops for any reason, then it's called onDisconnect(DisconnectionCode.UNEXPECTED)'.
+                        * If we call 'stop' when the server is not started, then the 'reconnectionHandlerCanBeNull' will not be set to 'true'.
+                        * Therefore, 'stop' method will never complete.
+                        * So, we notify it properly.
+                        */
+                      val res = reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
+                      reconnectionHandlerCanBeNull = true
+                      reconnectionHandlerCondition.signal()
+                      res
+                    }
                 }
+                else true
+              }finally {
+                lock.unlock()
               }
-              else true
             } else false
           }
 
@@ -68,13 +86,9 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
             counter = counter + 1
             if (counter <= configuration.reconnectionMaxAttempts) {
               log.info("onConnectFailure. Reconnecting... (attempt " + counter + ") " + exception.getMessage)
-              if (reconnectionHandler != null) {
-                lock.lock()
-                val res = reconnectionHandler.onConnectionFailed(exception)
-                lock.unlock()
-                res
-              }
-              else true
+                if (reconnectionHandler != null)
+                  reconnectionHandler.onConnectionFailed(exception)
+                else true
             } else false
           }
         }
@@ -130,7 +144,23 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
     log.info("Stopping web socket connector...")
     userSession.close()
     configuration = null
-    reconnectionHandler = null
+
+    /**
+      * During the lifecycle of the connector, we provide to it all needed information once.
+      * Therefore, when we close the connection we set to null all handlers, in order to correctly start again the connector.
+      * With this logic, when we set to null the reconnection handler, it can not have anymore the possibility to run its 'onDisconnect' method.
+      * That method must be called before to set to null the reference to the object.
+      * For do this we need a synchronization between two methods:'onDisconnect' and 'stop'.
+      */
+    lock.lock()
+    try {
+      while(!reconnectionHandlerCanBeNull)
+        reconnectionHandlerCondition.await()
+
+      reconnectionHandler = null
+    } finally {
+      lock.unlock()
+    }
     messageHandler = null
     log.info("Web socket connector stopped.")
   }
