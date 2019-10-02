@@ -1,19 +1,38 @@
 package com.horizen.websocket
 
+import scala.concurrent.Future
 import scala.util.Try
 
+object DisconnectionCode extends Enumeration {
 
-trait WebSocketHandler {
-  def onReceivedMessage(message: String): Unit
-  def onSendMessageErrorOccurred(message: String, cause: Throwable): Unit
-  def onConnectionError(cause: Throwable): Unit // to do: think about this
+  val ON_SUCCESS = Value(0)
+  val UNEXPECTED = Value(1)
+
 }
 
+trait WebSocketMessageHandler {
+  def onReceivedMessage(message: String): Unit
+  def onSendMessageErrorOccurred(message: String, cause: Throwable): Unit
+}
+
+trait WebSocketReconnectionHandler {
+  def onConnectionFailed(cause: Throwable) : Boolean
+  def onDisconnection(code : DisconnectionCode.Value, reason : String) : Boolean
+}
+
+trait WebSocketConnector[C <: WebSocketChannel] {
+
+  def isStarted() : Boolean
+  def start() : Try[C]
+  def asyncStart() : Future[Try[C]]
+  def stop() : Try[Unit]
+
+  def setConfiguration(configuration : WebSocketConnectorConfiguration) : Boolean
+  def setReconnectionHandler(handler : WebSocketReconnectionHandler) : Boolean
+  def setMessageHandler(handler: WebSocketMessageHandler) : Boolean
+
+}
 
 trait WebSocketChannel {
-  def isOpen: Boolean
-  def open(): Try[Unit]
-  def close(): Try[Unit] // to do: think about usage of this
   def sendMessage(message: String): Unit
-  def setWebSocketHandler(handler: WebSocketHandler)
 }

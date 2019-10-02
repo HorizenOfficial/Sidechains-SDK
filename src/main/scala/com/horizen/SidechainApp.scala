@@ -3,18 +3,19 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import java.io.{File => JFile}
+import java.net.InetSocketAddress
 
 import scala.collection.immutable.Map
 import scala.collection
 import akka.actor.ActorRef
-import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilsApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, Storage}
+import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
@@ -29,7 +30,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.websocket.{MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketHandler}
+import com.horizen.websocket._
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
@@ -111,25 +112,33 @@ class SidechainApp(val settingsFilename: String)
       ))
 
   val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  // TO DO: put real instance of WebSocketChannel and change the way of creation the following items.
-  val websocketChannel = new WebSocketChannel {
-    var handler: WebSocketHandler = _
-    override def isOpen: Boolean = false
 
-    override def open(): Try[Unit] = Try {}
+  // TO DO: separate websocket initialization code
+  // retrieve information for using a web socket connector
+  val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
+    schema = "ws",
+    remoteAddress = new InetSocketAddress("localhost", 8080),
+    connectionTimeout = 100,
+    reconnectionDelay = 1,
+    reconnectionMaxAttempts = 1)
+  val webSocketCommunicationClient : WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
 
-    override def close(): Try[Unit] = Try {}
+  // create the cweb socket connector and configure it
+  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl()
+  webSocketConnector.setConfiguration(webSocketConfiguration)
+  webSocketConnector.setReconnectionHandler(webSocketReconnectionHandler)
+  webSocketConnector.setMessageHandler(webSocketCommunicationClient)
 
-    override def sendMessage(message: String): Unit = {
-      if(handler != null) {
-        handler.onSendMessageErrorOccurred(message, new Exception("no implementation"))
-      }
-    }
+  // start the web socket connector
+  val channel : Try[WebSocketChannel] = webSocketConnector.start()
 
-    override def setWebSocketHandler(handler: WebSocketHandler): Unit = this.handler = handler
+  // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+  if(channel.isSuccess) {
+    webSocketCommunicationClient.setWebSocketChannel(channel.get)
   }
-  val communicationClient = new WebSocketCommunicationClient(websocketChannel)
-  val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
+
+  val mainchainNodeChannel = new MainchainNodeChannelImpl(webSocketCommunicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
   val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
   val sidechainBlockActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
@@ -166,6 +175,7 @@ class SidechainApp(val settingsFilename: String)
 
   // waiting WS client interface
   private def getMainchainConnectionInfo  = ???
+
 }
 
 object SidechainApp /*extends App*/ {

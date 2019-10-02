@@ -23,3 +23,7 @@ trait CommunicationClient {
 
   def requestTimeoutDuration(): FiniteDuration
 }
+
+trait WebSocketChannelCommunicationClient extends CommunicationClient {
+  def setWebSocketChannel(channel : WebSocketChannel)
+}

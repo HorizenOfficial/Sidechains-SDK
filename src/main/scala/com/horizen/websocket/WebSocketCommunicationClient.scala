@@ -1,4 +1,6 @@
 package com.horizen.websocket
+import java.util.concurrent.locks.{Lock, ReentrantLock}
+
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
@@ -9,19 +11,18 @@ import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import scala.concurrent.duration._
 
-class WebSocketCommunicationClient(webSocketChannel: WebSocketChannel)
-                                   extends CommunicationClient with WebSocketHandler with ScorexLogging {
-
-  webSocketChannel.setWebSocketHandler(this)
+class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
 
   private var requestsPool : TrieMap[String, (Promise[ResponsePayload], Class[ResponsePayload])] = TrieMap()
   private var eventHandlersPool : TrieMap[Int, Seq[(EventHandler[EventPayload], Class[EventPayload])]] = TrieMap()
+  private val lock : Lock = new ReentrantLock()
+  private var webSocketChannel: WebSocketChannel = _
 
+  override def setWebSocketChannel(channel: WebSocketChannel): Unit =
+    webSocketChannel = channel
 
   override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
-    if(!webSocketChannel.isOpen) {
-      webSocketChannel.open() // to do: manage failure situation
-    }
+    // to-do. Check if the channel is not null
     val requestId = generateRequestId
     val mapper = new ObjectMapper()
     var json = mapper.createObjectNode()
@@ -57,7 +58,7 @@ class WebSocketCommunicationClient(webSocketChannel: WebSocketChannel)
   }
 
   override def onReceivedMessage(message: String): Unit = {
-    // to do: lock
+    lock.lock()
     try {
       val mapper = new ObjectMapper()
       val json = mapper.readTree(message)
@@ -73,7 +74,7 @@ class WebSocketCommunicationClient(webSocketChannel: WebSocketChannel)
       case ex: Throwable =>
         log.error("On receive message processing exception occurred = %s", ex.getMessage)
     }
-    // to do: unlock
+    lock.unlock()
   }
 
   private def processEvent(json: JsonNode): Unit = {
@@ -128,10 +129,6 @@ class WebSocketCommunicationClient(webSocketChannel: WebSocketChannel)
         promise.failure(cause)
         requestsPool -= requestId
     }
-  }
-
-  override def onConnectionError(cause: Throwable): Unit = {
-    // to do: reconnect or else
   }
 
   private def generateRequestId: String = {
