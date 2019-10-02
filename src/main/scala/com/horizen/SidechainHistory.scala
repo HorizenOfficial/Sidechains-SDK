@@ -42,8 +42,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     // TO DO: validate against Praos consensus rules.
     if(!block.semanticValidity(params))
       throw new IllegalArgumentException("Semantic validation failed for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
-    if(!ProofOfWorkVerifier.checkNextWorkRequired(block, this, params))
-      throw new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
+    //if(!ProofOfWorkVerifier.checkNextWorkRequired(block, this, params))
+    //  throw new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
