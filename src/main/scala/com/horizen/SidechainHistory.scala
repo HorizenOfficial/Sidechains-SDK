@@ -8,18 +8,18 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.utils.BytesUtils
 import scorex.core.NodeViewModifier
+import scorex.core.block.BlockValidator
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
-import scorex.util.{ModifierId, idToBytes}
+import scorex.util.ModifierId
 
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams)
+class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams, validators: Seq[BlockValidator[SidechainBlock]])
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
@@ -39,11 +39,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
-    // TO DO: validate against Praos consensus rules.
-    if(!block.semanticValidity(params))
-      throw new IllegalArgumentException("Semantic validation failed for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
-    if(!ProofOfWorkVerifier.checkNextWorkRequired(block, this, params))
-      throw new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id))))
+
+    validators.map(_.validate(block)).foreach {
+      case Failure(e) =>
+        throw e
+      case _ =>
+    }
 
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
@@ -99,7 +100,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
         }
       }
     }
-    new SidechainHistory(newStorage.get, params) -> progressInfo
+    new SidechainHistory(newStorage.get, params, validators) -> progressInfo
   }
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
@@ -186,18 +187,18 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
       newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id).get).get
-      new SidechainHistory(newStorage, params)
+      new SidechainHistory(newStorage, params, validators)
   }
 
   override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
     val newHistory: SidechainHistory = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
-      new SidechainHistory(newStorage, params)
+      new SidechainHistory(newStorage, params, validators)
     } match {
       case Success(history) => history
       case Failure(e) =>
         //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
-        new SidechainHistory(storage, params)
+        new SidechainHistory(storage, params, validators)
     }
 
     // In case when we try to apply some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
@@ -426,19 +427,22 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 object SidechainHistory
 {
   private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
-                                      params: NetworkParams) : Option[SidechainHistory] = {
+                                      params: NetworkParams,
+                                      validators: Seq[BlockValidator[SidechainBlock]]) : Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
-      Some(new SidechainHistory(historyStorage, params))
+      Some(new SidechainHistory(historyStorage, params, validators))
     else
       None
   }
 
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
-                                      params: NetworkParams, genesisBlock: SidechainBlock) : Try[SidechainHistory] = Try {
+                                      params: NetworkParams,
+                                      genesisBlock: SidechainBlock,
+                                      validators: Seq[BlockValidator[SidechainBlock]]) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty)
-      new SidechainHistory(historyStorage, params)
+      new SidechainHistory(historyStorage, params, validators)
         .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
     else
       throw new RuntimeException("History storage is not empty!")
