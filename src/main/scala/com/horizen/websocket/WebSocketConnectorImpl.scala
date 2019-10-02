@@ -52,15 +52,11 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
               lock.lock()
               try {
                 if (reconnectionHandler != null) {
+                  var doNextAttempt : Boolean = true
+
                   if (closeReason.getCloseCode.getCode == 1000)
-                  {
-                    val res = reconnectionHandler.onDisconnection(DisconnectionCode.ON_SUCCESS, closeReason.getReasonPhrase)
-                    reconnectionHandlerCanBeNull = true
-                    reconnectionHandlerCondition.signal()
-                    res
-                  }
+                    doNextAttempt = reconnectionHandler.onDisconnection(DisconnectionCode.ON_SUCCESS, closeReason.getReasonPhrase)
                   else
-                    {
                       /**
                         * When 'stop' method is called in a 'normal' way (when the server is still started), then it's called 'onDisconnect(DisconnectionCode.ON_SUCCESS)'.
                         * If, instead, the server stops for any reason, then it's called onDisconnect(DisconnectionCode.UNEXPECTED)'.
@@ -68,11 +64,11 @@ class WebSocketConnectorImpl extends WebSocketConnector[WebSocketChannelImpl] wi
                         * Therefore, 'stop' method will never complete.
                         * So, we notify it properly.
                         */
-                      val res = reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
-                      reconnectionHandlerCanBeNull = true
-                      reconnectionHandlerCondition.signal()
-                      res
-                    }
+                      doNextAttempt = reconnectionHandler.onDisconnection(DisconnectionCode.UNEXPECTED, closeReason.getReasonPhrase)
+
+                  reconnectionHandlerCanBeNull = true
+                  reconnectionHandlerCondition.signal()
+                  doNextAttempt
                 }
                 else true
               }finally {
