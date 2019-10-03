@@ -16,7 +16,11 @@ trait WebSocketMessageHandler {
 }
 
 trait WebSocketReconnectionHandler {
+
+  // when client fails to connect to remote endpoint
   def onConnectionFailed(cause: Throwable) : Boolean
+
+  // when established connection is lost for any reason
   def onDisconnection(code : DisconnectionCode.Value, reason : String) : Boolean
 }
 
