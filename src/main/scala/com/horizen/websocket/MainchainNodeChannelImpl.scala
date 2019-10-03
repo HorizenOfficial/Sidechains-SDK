@@ -1,5 +1,5 @@
 package com.horizen.websocket
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer}
+import com.horizen.block.MainchainBlockReference
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 

@@ -2,6 +2,7 @@ package com.horizen.websocket
 import java.util.concurrent.locks.{Lock, ReentrantLock}
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
 
@@ -13,6 +14,8 @@ import scala.concurrent.duration._
 
 class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
 
+  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
+
   private var requestsPool : TrieMap[String, (Promise[ResponsePayload], Class[ResponsePayload])] = TrieMap()
   private var eventHandlersPool : TrieMap[Int, Seq[(EventHandler[EventPayload], Class[EventPayload])]] = TrieMap()
   private val lock : Lock = new ReentrantLock()
@@ -23,20 +26,22 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
 
   override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
     // to-do. Check if the channel is not null
-    val requestId = generateRequestId
-    val mapper = new ObjectMapper()
-    var json = mapper.createObjectNode()
-    json.put("msgType", 1)
-    json.put("requestType", requestType)
-    json.put("requestId", requestId)
-    json.put("requestPayload", mapper.valueToTree[JsonNode](request))
+    if(webSocketChannel != null){
+      val requestId = generateRequestId
+      var json = mapper.createObjectNode()
+      json.put("msgType", 1)
+      json.put("requestType", requestType)
+      json.put("requestId", requestId)
+      json.put("requestPayload", mapper.valueToTree[JsonNode](request))
 
-    val message = json.toString
-    val promise = Promise[Resp]
-    requestsPool += (requestId -> (promise.asInstanceOf[Promise[ResponsePayload]], responseClazz.asInstanceOf[Class[ResponsePayload]]))
+      val message = json.toString
+      val promise = Promise[Resp]
+      requestsPool += (requestId -> (promise.asInstanceOf[Promise[ResponsePayload]], responseClazz.asInstanceOf[Class[ResponsePayload]]))
 
-    webSocketChannel.sendMessage(message)
-    promise.future
+      webSocketChannel.sendMessage(message)
+      promise.future
+    }else
+      Promise[Resp].failure(new IllegalStateException("The web socket channel must be not null.")).future
   }
 
   override def registerEventHandler[E <: EventPayload](eventType: Int, handler: EventHandler[E], eventClazz: Class[E]): Try[Unit] = Try {
@@ -60,28 +65,47 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   override def onReceivedMessage(message: String): Unit = {
     lock.lock()
     try {
-      val mapper = new ObjectMapper()
       val json = mapper.readTree(message)
       json.get("msgType").asInt() match {
         case 0 => // Event
           processEvent(json)
         case 2 => // Response
           processResponse(json)
+        case 3 =>
+          processError(json)
         case msgType =>
-          log.error("Unknown message received with type = %d", msgType)
+          log.error("Unknown message received with type = " + msgType)
       }
     } catch {
       case ex: Throwable =>
-        log.error("On receive message processing exception occurred = %s", ex.getMessage)
+        log.error("On receive message processing exception occurred = " + ex.getMessage)
     }
     lock.unlock()
+  }
+
+  private def processError(json : JsonNode) : Unit = {
+    case class Error(msgType : Int, requestId : String, errorCode : Int, message : String)
+    val requestId = json.get("requestId").asText("")
+    requestsPool.get(requestId) match {
+      case Some((promise, _)) =>
+        try {
+          val resp = mapper.convertValue(json, classOf[Error])
+          promise.failure(new RuntimeException(resp.message))
+        } catch {
+          case e : Throwable =>
+            promise.failure(new RuntimeException(json.toString))
+        }
+        requestsPool -= requestId
+
+      case None =>
+        log.error("Unknown response received: " + json.toString)
+    }
   }
 
   private def processEvent(json: JsonNode): Unit = {
     val eventType = json.get("eventType").asInt(-1)
     eventHandlersPool.get(eventType) match {
       case Some(handlers) =>
-        val mapper = new ObjectMapper()
         val eventPayload = json.get("eventPayload")
         for(h <- handlers) {
           try {
@@ -104,7 +128,6 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
       requestsPool.get(requestId) match {
         case Some((promise, responseClazz)) =>
           try {
-            val mapper = new ObjectMapper()
             val resp = mapper.convertValue(json.get("responsePayload"), responseClazz)
             promise.success(resp)
           } catch {
@@ -113,7 +136,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
           requestsPool -= requestId
 
         case None =>
-          log.error("Unknown response received with requested id = %d", requestId)
+          log.error("Unknown response received with requested id = " + requestId)
       }
 
   }
@@ -121,7 +144,6 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   override def onSendMessageErrorOccurred(message: String, cause: Throwable): Unit = Try {
     log.error("Error from web socket channel", cause)
 
-    val mapper = new ObjectMapper()
     val json = mapper.readTree(message)
     val requestId = json.get("requestId").asText("")
     requestsPool.get(requestId) match {
