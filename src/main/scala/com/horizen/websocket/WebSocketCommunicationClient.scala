@@ -63,6 +63,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   }
 
   override def onReceivedMessage(message: String): Unit = {
+    // maybe it's not needed but in future this method could be call in asynchronous way
     lock.lock()
     try {
       val json = mapper.readTree(message)
