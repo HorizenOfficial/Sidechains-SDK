@@ -117,7 +117,7 @@ class SidechainApp(val settingsFilename: String)
   // retrieve information for using a web socket connector
   val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
     schema = "ws",
-    remoteAddress = new InetSocketAddress("localhost", 8080),
+    remoteAddress = new InetSocketAddress("localhost", 8888),
     connectionTimeout = 100,
     reconnectionDelay = 1,
     reconnectionMaxAttempts = 1)
