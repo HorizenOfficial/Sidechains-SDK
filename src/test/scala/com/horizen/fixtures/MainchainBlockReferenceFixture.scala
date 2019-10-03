@@ -57,7 +57,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
 
       override lazy val hash: Array[Byte] = blockHash match {
         case Some(data) => data
-        case _ => header.hash // identically to super.hash. Super.hash can't be used due compiler limitations
+        case _ => header.hash // identically to super.hash. super.hash can't be used due compiler limitations
       }
     }
 
