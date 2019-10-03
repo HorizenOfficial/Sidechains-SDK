@@ -20,14 +20,14 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def getBlockByHeight(height: Int): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
-      client.sendRequest(2, GetBlockByHeightRequestPayload(height), classOf[BlockResponsePayload])
+      client.sendRequest(0, GetBlockByHeightRequestPayload(height), classOf[BlockResponsePayload])
 
     processBlockResponsePayload(future).get
   }
 
   override def getBlockByHash(hash: String): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
-      client.sendRequest(2, GetBlockByHashRequestPayload(hash), classOf[BlockResponsePayload])
+      client.sendRequest(0, GetBlockByHashRequestPayload(hash), classOf[BlockResponsePayload])
 
     processBlockResponsePayload(future).get
   }
@@ -40,17 +40,17 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[Seq[String]] = Try {
     val future: Future[NewBlocksResponsePayload] =
-      client.sendRequest(5, GetNewBlocksRequestPayload(locatorHashes, limit), classOf[NewBlocksResponsePayload])
+      client.sendRequest(2, GetNewBlocksRequestPayload(locatorHashes, limit), classOf[NewBlocksResponsePayload])
 
     val response: NewBlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
     response.hashes
   }
 
   override def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit] = {
-    client.registerEventHandler(1, handler, classOf[OnUpdateTipEventPayload])
+    client.registerEventHandler(0, handler, classOf[OnUpdateTipEventPayload])
   }
 
   override def unsubscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Unit = {
-    client.unregisterEventHandler(1, handler)
+    client.unregisterEventHandler(0, handler)
   }
 }
