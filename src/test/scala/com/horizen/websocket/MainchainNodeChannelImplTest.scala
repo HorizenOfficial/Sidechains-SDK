@@ -1,9 +1,8 @@
 package com.horizen.websocket
 
 import com.horizen.params.MainNetParams
-import com.horizen.websocket.{RequestPayload, ResponsePayload}
 import org.scalatest.junit.JUnitSuite
-import org.junit.{Before, Test}
+import org.junit.Test
 import org.junit.Assert._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
@@ -12,7 +11,7 @@ import org.mockito._
 
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
 import scala.io.Source
 import scala.util.Success
 
