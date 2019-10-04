@@ -12,8 +12,8 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
     val locatorHashes: Seq[String] = Seq(BytesUtils.toHexString(history.getBestMainchainBlockReferenceInfo().get.getMainchainBlockReferenceHash))
     mainchainNodeChannel.getNewBlockHashes(locatorHashes, limit) match {
       case Success(hashes) =>
-        val references = hashes.map(hash => mainchainNodeChannel.getBlockByHash(hash)).filter(_.isSuccess).map(_.get)
-        if(references.size != hashes.size)
+        val references = hashes.tail.map(hash => mainchainNodeChannel.getBlockByHash(hash)).filter(_.isSuccess).map(_.get)
+        if(references.size != hashes.size - 1)
           Seq()
         else
           references

@@ -96,6 +96,7 @@ class MainchainBlockReference(
       )
     }
 
+    values.put("hash", Json.fromString(this.header.hashHex))
     values.put("header", this.header.toJson)
     if (this.sidechainRelatedAggregatedTransaction.isDefined)
       values.put("sidechainRelatedAggregatedTransaction", this.sidechainRelatedAggregatedTransaction.get.toJson)

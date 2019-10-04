@@ -12,7 +12,7 @@ import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, StorageParams}
+import com.horizen.params.{MainNetParams, RegTestParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage._
@@ -30,6 +30,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.{ModifierId, ScorexLogging}
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
+import com.horizen.utils.BytesUtils
 import com.horizen.websocket._
 import scorex.core.transaction.Transaction
 
@@ -40,8 +41,7 @@ import scala.util.Try
 
 class SidechainApp(val settingsFilename: String)
   extends Application
-  with ScorexLogging
-{
+    with ScorexLogging {
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
@@ -55,22 +55,22 @@ class SidechainApp(val settingsFilename: String)
   log.debug(s"Starting application with settings \n$sidechainSettings")
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
+
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(SidechainSyncInfoMessageSpec)
 
-  protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
+  protected val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
   protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  val mainNetParams = new MainNetParams()
 
-  case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
+  case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
 
   }
-  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id)
+  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id, BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"))
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
@@ -86,7 +86,7 @@ class SidechainApp(val settingsFilename: String)
     sidechainTransactionsCompanion, params)
 
   //TODO remove these test settings
-  if(sidechainSettings.scorexSettings.network.nodeName.equals("testNode1")) {
+  if (sidechainSettings.scorexSettings.network.nodeName.equals("testNode1")) {
     sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
     sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
   }
@@ -111,42 +111,42 @@ class SidechainApp(val settingsFilename: String)
         modifierSerializers
       ))
 
-  val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+  val sidechainTransactioActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
   // TO DO: separate websocket initialization code
   // retrieve information for using a web socket connector
-  val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
+  val webSocketConfiguration: WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
     schema = "ws",
     remoteAddress = new InetSocketAddress("localhost", 8888),
     connectionTimeout = 100,
     reconnectionDelay = 1,
     reconnectionMaxAttempts = 1)
-  val webSocketCommunicationClient : WebSocketCommunicationClient = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
+  val webSocketCommunicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
 
   // create the cweb socket connector and configure it
-  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl()
+  val webSocketConnector: WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl()
   webSocketConnector.setConfiguration(webSocketConfiguration)
   webSocketConnector.setReconnectionHandler(webSocketReconnectionHandler)
   webSocketConnector.setMessageHandler(webSocketCommunicationClient)
 
   // start the web socket connector
-  val channel : Try[WebSocketChannel] = webSocketConnector.start()
+  val channel: Try[WebSocketChannel] = webSocketConnector.start()
 
   // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-  if(channel.isSuccess) {
+  if (channel.isSuccess) {
     webSocketCommunicationClient.setWebSocketChannel(channel.get)
   }
 
   val mainchainNodeChannel = new MainchainNodeChannelImpl(webSocketCommunicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-  val sidechainBlockForgerActorRef : ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
-  val sidechainBlockActorRef : ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockForgerActorRef: ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, mainNetParams),
+    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, params),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
@@ -162,7 +162,7 @@ class SidechainApp(val settingsFilename: String)
   }
 
   //TODO additional initialization (see HybridApp)
-  private def openStorage(storagePath: JFile) : Storage = {
+  private def openStorage(storagePath: JFile): Storage = {
     storagePath.mkdirs()
     val storage = new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
     storageList += storage
@@ -171,10 +171,10 @@ class SidechainApp(val settingsFilename: String)
 
   // Note: ignore this at the moment
   // waiting WS client interface
-  private def setupMainchainConnection  = ???
+  private def setupMainchainConnection = ???
 
   // waiting WS client interface
-  private def getMainchainConnectionInfo  = ???
+  private def getMainchainConnectionInfo = ???
 
 }
 
