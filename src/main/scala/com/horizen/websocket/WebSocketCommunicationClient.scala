@@ -63,6 +63,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   }
 
   override def onReceivedMessage(message: String): Unit = {
+    // maybe it's not needed but in future this method could be call in asynchronous way
     lock.lock()
     try {
       val json = mapper.readTree(message)
@@ -113,12 +114,12 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
             h._1.onEvent(resp)
           }
           catch {
-            case ex =>  log.error("Event parsing was failed by handler: %s", ex.getMessage)
+            case ex =>  log.error("Event parsing was failed by handler: " + ex.getMessage)
           }
         }
 
       case _ =>
-        log.error("Event without defined handler received. Event type = %d", eventType)
+        log.error("Event without defined handler received. Event type = " + eventType)
     }
 
   }
@@ -159,5 +160,5 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
     BytesUtils.toHexString(bytes)
   }
 
-  override def requestTimeoutDuration(): FiniteDuration = 2 seconds
+  override def requestTimeoutDuration(): FiniteDuration = 5 seconds
 }

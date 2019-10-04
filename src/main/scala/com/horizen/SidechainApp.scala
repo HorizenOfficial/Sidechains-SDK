@@ -175,7 +175,6 @@ class SidechainApp(val settingsFilename: String)
 
   // waiting WS client interface
   private def getMainchainConnectionInfo = ???
-
 }
 
 object SidechainApp /*extends App*/ {
