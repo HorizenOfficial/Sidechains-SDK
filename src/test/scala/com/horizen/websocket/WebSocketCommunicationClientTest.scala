@@ -263,6 +263,14 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
 
     val event = OnUpdateTipEventPayload(265, "012eca4e7c57850527716dbbfa63798260c16c8d022d57e86499f4d845ed46a9", "the block hex")
     Mockito.verify(mockedEventHandler, Mockito.times(3)).onEvent(ArgumentMatchers.eq(event))
+
+    webSocketClient.unregisterEventHandler[OnUpdateTipEventPayload](0, mockedEventHandler)
+
+    // the event handler 'onEvent' must not be called anymore
+    webSocketClient.onReceivedMessage(eventFromServer)
+    webSocketClient.onReceivedMessage(eventFromServer)
+    Mockito.verify(mockedEventHandler, Mockito.times(3)).onEvent(ArgumentMatchers.eq(event))
+
   }
 
 }
