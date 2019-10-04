@@ -5,8 +5,6 @@ import java.util.{HashMap => JHashMap}
 import java.io.{File => JFile}
 import java.net.InetSocketAddress
 
-import scala.collection.immutable.Map
-import scala.collection
 import akka.actor.ActorRef
 import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
@@ -17,26 +15,26 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
+import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute}
+import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-import scorex.util.{ModifierId, ScorexLogging}
+
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.utils.BytesUtils
 import com.horizen.websocket._
 import scorex.core.transaction.Transaction
+import scorex.core.{ModifierTypeId, NodeViewModifier}
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.mutable
 import scala.collection.immutable.Map
-import scala.io.Source
 import scala.util.Try
 
 class SidechainApp(val settingsFilename: String)
@@ -67,9 +65,9 @@ class SidechainApp(val settingsFilename: String)
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
-  case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
+    case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
 
-  }
+    }
   val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id, BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"))
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
@@ -96,7 +94,9 @@ class SidechainApp(val settingsFilename: String)
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
+    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
+    Seq(new SidechainBlockValidator(params)/*, new MainchainPoWValidator(sidechainHistoryStorage, params)*/)
+  )
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =

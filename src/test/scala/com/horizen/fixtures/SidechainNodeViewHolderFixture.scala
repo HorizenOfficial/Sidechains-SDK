@@ -4,23 +4,24 @@ import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.box.BoxSerializer
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainTypes}
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, StorageParams}
+import com.horizen.params.RegTestParams
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, Storage}
+import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
 import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.BytesUtils
+import com.horizen.validation.SidechainBlockValidator
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
-import scorex.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainTypes}
+import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
@@ -44,10 +45,10 @@ trait SidechainNodeViewHolderFixture
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
+  case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
 
   }
-  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id)
+  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id, BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"))
 
   val sidechainSecretStorage = new SidechainSecretStorage(
     getStorage(),
@@ -69,16 +70,17 @@ trait SidechainNodeViewHolderFixture
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
+    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
+    Seq(new SidechainBlockValidator(params)))
 
-  val sidechainTransactioActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+  val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
   def getSidechainNodeViewHolderRef : ActorRef = {
     nodeViewHolderRef
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactioActorRef)
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef)
   }
 
 }

@@ -1,27 +1,24 @@
 package com.horizen
 
-import java.io.FileOutputStream
-import java.net.InetSocketAddress
 import java.lang.{Byte => JByte, Long => JLong}
+import java.net.InetSocketAddress
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap}
 
-import javafx.util.{Pair => JPair}
-import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import com.horizen.block.{MainchainBlockReference, SidechainBlock, SidechainBlockSerializer}
+
+import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.{NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.params.RegTestParams
-import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.{ScorexSettings, SettingsReaders}
+import com.typesafe.config.Config
+import javafx.util.{Pair => JPair}
+import net.ceedubs.ficus.Ficus._
+import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import scorex.core.settings.ScorexSettings.readConfigFromPath
-import scorex.util.ScorexLogging
-import scorex.util._
+import scorex.core.settings.{ScorexSettings, SettingsReaders}
+import scorex.util.{ScorexLogging, _}
 
 case class WebSocketClientSettings(
                                     remoteAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),

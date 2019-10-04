@@ -1,12 +1,13 @@
 package com.horizen.block
 
 import java.math.BigInteger
-import scala.util.control.Breaks._
 
 import com.google.common.primitives.UnsignedInts
-import com.horizen.SidechainHistory
 import com.horizen.params.NetworkParams
+import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.Utils
+
+import scala.util.control.Breaks._
 
 object ProofOfWorkVerifier {
 
@@ -26,7 +27,7 @@ object ProofOfWorkVerifier {
   }
 
   // Check that PoW target (bits) is correct for all MainchainBlockReferences included into SidechainBlock.
-  def checkNextWorkRequired(block: SidechainBlock, sidechainHistory: SidechainHistory, params: NetworkParams): Boolean = {
+  def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
     if(block.mainchainBlocks.isEmpty)
       return true
 
@@ -54,7 +55,7 @@ object ProofOfWorkVerifier {
         }
 
         // get previous block
-        currentBlock = sidechainHistory.modifierById(currentBlock.parentId) match {
+        currentBlock = sidechainHistoryStorage.blockById(currentBlock.parentId) match {
           case b: Some[SidechainBlock] => b.get
           case _ => return false
         }
