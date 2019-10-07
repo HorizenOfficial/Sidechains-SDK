@@ -2,6 +2,8 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
+import com.horizen.api.http.schema.WalletRestScheme.ReqBalancePost
+import com.horizen.serialization.SerializationUtil
 
 class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
 
@@ -33,6 +35,14 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allPublicKeys") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status shouldEqual StatusCodes.BadRequest
+      }
+    }
+
+    "reply OK at /balance" in {
+      Post(basePath + "balance")
+        .withEntity(
+          SerializationUtil.serialize(ReqBalancePost(None))) ~> sidechainWalletApiRoute ~> check {
+        println(response)
       }
     }
 

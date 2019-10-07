@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
 
 class SidechainNodeViewUtilMocks extends MockitoSugar {
@@ -17,6 +18,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
   def getNodeWalletMock() : NodeWallet = {
     val wallet : NodeWallet = mock[NodeWallet]
+    Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => 1000)
+    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => 5500)
     wallet
   }
 
