@@ -9,7 +9,7 @@ object SidechainApiRejectionHandler {
   implicit val rejectionHandler = RejectionHandler.newBuilder()
     .handle{
 
-      case ValidationRejection(msg, cause) =>
+      case ValidationRejection(msg, _) =>
         SidechainApiError(StatusCodes.BadRequest, "Validation failed").complete(msg)
 
       case MissingFormFieldRejection(fieldName) =>
@@ -18,13 +18,13 @@ object SidechainApiRejectionHandler {
       case MissingQueryParamRejection(param) =>
         SidechainApiError(StatusCodes.BadRequest, "Missing Parameter").complete(s"The required ($param) was not found.")
 
-      case MalformedQueryParamRejection(param, msg, exp) =>
+      case MalformedQueryParamRejection(param, _, _) =>
         SidechainApiError(StatusCodes.BadRequest, "Malformed Parameter").complete(s"The required ($param) was not found.")
 
-      case MalformedRequestContentRejection(msg, exp) =>
+      case MalformedRequestContentRejection(msg, _) =>
         SidechainApiError(StatusCodes.BadRequest, "Malformed Request").complete(msg)
 
-      case MethodRejection(method) =>
+      case MethodRejection(_) =>
         SidechainApiError(StatusCodes.MethodNotAllowed, "HTTP method not allowed.")
 
       case RequestEntityExpectedRejection =>
