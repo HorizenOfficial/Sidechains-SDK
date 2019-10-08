@@ -21,7 +21,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     var block: Try[MainchainBlockReference] = null
 
 
-    val params = new MainNetParams()
+    val params = MainNetParams()
 
     // Test 1: Block #473173
     // mcblock473173 data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660
@@ -92,8 +92,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000002"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
 
-    case class CustomParams(override val sidechainId: Array[Byte]) extends RegTestParams
-    val params = CustomParams(scId.data)
+    val params = RegTestParams(scId.data)
 
 
     // Test: parse MC block with tx version -4 with 1 forward transfer.
@@ -142,9 +141,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   def blocksWithScSupportParsing_TxWithScCreation(): Unit = {
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
-
-    case class CustomParams(override val sidechainId: Array[Byte]) extends RegTestParams
-    val params = CustomParams(scId.data)
+    val params = RegTestParams(scId.data)
 
 
     // Test: parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
@@ -210,9 +207,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     val anotherScIdHex = "0000000000000000000000000000000000000000000000000000000000000002"
     val anotherScId = new ByteArrayWrapper(BytesUtils.fromHexString(anotherScIdHex))
-
-    case class CustomParams(override val sidechainId: Array[Byte]) extends RegTestParams
-    val params = CustomParams(scId.data)
+    val params = RegTestParams(scId.data)
 
 
     // Test: parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.

@@ -49,7 +49,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       }
     )
 
-    val params = new MainNetParams()
+    val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
 
     val mcRefTry = mcnode.getBlockByHeight(height)
@@ -90,7 +90,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       }
     )
 
-    val params = new MainNetParams()
+    val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
 
     val mcRefTry = mcnode.getBlockByHash(hash)
@@ -143,7 +143,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     }
     )
 
-    val params = new MainNetParams()
+    val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
 
     val hashesTry = mcnode.getNewBlockHashes(reqHashes, limit)
@@ -180,7 +180,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       }
     )
 
-    val params = new MainNetParams()
+    val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
 
     val res = mcnode.subscribeOnUpdateTipEvent(handler)

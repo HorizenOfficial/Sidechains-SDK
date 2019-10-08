@@ -18,7 +18,7 @@ import scala.collection.mutable.ListBuffer
 
 class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture with MockitoSugar {
 
-  val params = new MainNetParams()
+  val params = MainNetParams()
 
   @Test
   def ProofOfWorkVerifierTest_CheckPoW(): Unit = {

@@ -9,7 +9,7 @@ import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.RegTestParams
+import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
@@ -45,10 +45,8 @@ trait SidechainNodeViewHolderFixture
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
 
-  }
-  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id, BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"))
+  val params: NetworkParams = RegTestParams(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"), sidechainSettings.genesisBlock.get.id)
 
   val sidechainSecretStorage = new SidechainSecretStorage(
     getStorage(),

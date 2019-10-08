@@ -23,10 +23,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
 
-  class HistoryTestParams extends MainNetParams {
-    override val sidechainGenesisBlockId: ModifierId = genesisBlock.id
-  }
-  val params: NetworkParams = new HistoryTestParams()
+  val params: NetworkParams = MainNetParams(new Array[Byte](32), genesisBlock.id)
 
   @Test
   def mainWorkflow() : Unit = {

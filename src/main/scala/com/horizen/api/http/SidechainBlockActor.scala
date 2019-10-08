@@ -27,7 +27,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 
   private var submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
 
-  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
+  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
 
   override def preStart(): Unit = {

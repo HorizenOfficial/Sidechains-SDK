@@ -19,7 +19,7 @@ class WebSocketChannelImpl extends WebSocketChannel with ScorexLogging {
             if(webSocketHandler != null)
               webSocketHandler.onSendMessageErrorOccurred(message, sendResult.getException)
           }
-          else log.info("Message sent")
+          else log.info(String.format("Message sent: %s", message))
         }}
       )
     } catch {

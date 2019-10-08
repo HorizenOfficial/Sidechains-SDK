@@ -39,7 +39,7 @@ class Forger(settings: SidechainSettings,
   import Forger._
   import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
+  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   protected def getNodeView: View = {

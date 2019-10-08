@@ -43,10 +43,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   @Before
   def setUp(): Unit = {
     // declare real genesis block id
-    class HistoryTestParams extends MainNetParams {
-      override val sidechainGenesisBlockId: ModifierId = genesisBlock.id
-    }
-    params = new HistoryTestParams()
+    params = MainNetParams(new Array[Byte](32), genesisBlock.id)
 
     // TO DO: remove this after refactoring of Node objects restore/genesis creation methods. NO MOCKS!
     Mockito.when(sidechainSettings.genesisBlock)

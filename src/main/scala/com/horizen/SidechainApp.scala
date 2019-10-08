@@ -10,7 +10,7 @@ import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, RegTestParams, StorageParams}
+import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage._
@@ -24,7 +24,6 @@ import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-
 import akka.http.scaladsl.server.{ExceptionHandler, Route}
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.utils.BytesUtils
@@ -65,10 +64,7 @@ class SidechainApp(val settingsFilename: String)
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
-    case class CustomParams(override val sidechainGenesisBlockId: ModifierId, override val sidechainId: Array[Byte]) extends RegTestParams {
-
-    }
-  val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id, BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"))
+  val params: NetworkParams = RegTestParams(BytesUtils.fromHexString(sidechainSettings.genesisData.scId), sidechainSettings.genesisBlock.get.id)
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),

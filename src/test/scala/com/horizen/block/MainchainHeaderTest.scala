@@ -15,7 +15,7 @@ import scala.util.Try
 
 class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
 
-  val params = new MainNetParams()
+  val params = MainNetParams()
 
   @Test
   def MainchainHeaderTest_SuccessCreationTest(): Unit = {
