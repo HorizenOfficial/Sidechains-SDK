@@ -132,16 +132,22 @@ public final class BytesUtils {
         switch (vi.size()) {
             case 1:
                 res[0] = (byte) (vi.value() & 255L);
+                break;
+
             case 3:
                 res[0] = (byte)253;
                 res[1] = (byte) (vi.value() & 255L);
                 res[2] = (byte) ((vi.value() >> 8) & 255L);
+                break;
+
             case 5:
                 res[0] = (byte)254;
                 res[1] = (byte) (vi.value() & 255L);
                 res[2] = (byte) ((vi.value() >> 8) & 255L);
                 res[3] = (byte) ((vi.value() >> 16) & 255L);
                 res[4] = (byte) ((vi.value() >> 24) & 255L);
+                break;
+
             case 9:
                 res[0] = (byte)255;
                 res[1] = (byte) (vi.value() & 255L);
@@ -152,6 +158,9 @@ public final class BytesUtils {
                 res[6] = (byte) ((vi.value() >> 40) & 255L);
                 res[7] = (byte) ((vi.value() >> 48) & 255L);
                 res[8] = (byte) ((vi.value() >> 56) & 255L);
+                break;
+
+            default: throw new IllegalArgumentException("Incorrect size of VarInt had been detected:" + vi.size());
         }
         return res;
     }

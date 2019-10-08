@@ -14,6 +14,20 @@ case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: 
 
 trait MainchainHeaderFixture {
 
+  def mainchainHeaderToBytes(obj: MainchainHeader): Array[Byte] = {
+    Bytes.concat(
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.version)),
+      BytesUtils.reverseBytes(obj.hashPrevBlock),
+      BytesUtils.reverseBytes(obj.hashMerkleRoot),
+      BytesUtils.reverseBytes(obj.hashSCMerkleRootsMap),
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.time)),
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.bits)),
+      BytesUtils.reverseBytes(obj.nonce),
+      BytesUtils.fromVarInt(new VarInt(obj.solution.length, VarInt.getVarIntSize(obj.solution.length))),
+      obj.solution
+    )
+  }
+
   def getHeaderWithPoW(bits: Int, hash: Array[Byte]) : MainchainHeaderForPoWTest = {
     MainchainHeaderForPoWTest(bits, hash)
   }
