@@ -1,12 +1,14 @@
 package com.horizen.fixtures
 
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.block.MainchainBlockReference
+import com.horizen.chain.{MainchainBlockReferenceId, SidechainBlockInfo, byteArrayToMainchainBlockReferenceId}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.collection.mutable.ArrayBuffer
+import scala.annotation.tailrec
+import scala.collection.mutable
 
-trait SidechainBlockInfoFixture {
+trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
   def getRandomModifier(): ModifierId = {
     val parentBytes: Array[Byte] = new Array[Byte](32)
@@ -14,15 +16,9 @@ trait SidechainBlockInfoFixture {
     bytesToId(parentBytes)
   }
 
-
-  def getRandomModifier(seed: Long): ModifierId = {
-    util.Random.setSeed(seed)
-    getRandomModifier()
-  }
-
   def getRandomModifiersSeq(count: Int): Seq[ModifierId] = {
     var modifiers: Seq[ModifierId] = Seq()
-    for(i <- 0 until count)
+    for (i <- 0 until count)
       modifiers = modifiers :+ getRandomModifier()
     modifiers
   }
@@ -32,22 +28,84 @@ trait SidechainBlockInfoFixture {
     getRandomModifiersSeq(count)
   }
 
-  def generateBlockInfoData(count: Int, basicSeed: Long = 112345L): ArrayBuffer[(ModifierId, SidechainBlockInfo)] = {
-    util.Random.setSeed(basicSeed)
+  ///////
+  private val initialMainchainReference = byteArrayToMainchainBlockReferenceId(generateBytes())
+  private val initialSidechainBlockId = bytesToId(generateBytes())
+  private val initialSidechainBlockInfo =
+    SidechainBlockInfo(
+      1,
+      1,
+      getRandomModifier(),
+      ModifierSemanticValidity.Valid,
+      generateMainchainReferences(Seq(generateMainchainBlockReference()), parent = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)))
 
-    var id: ModifierId = getRandomModifier()
-    var height: Int = 1
-    var score: Long = 1L
-    val validity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
+  val generatedData =
+    new mutable.HashMap[ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceId])]()
+  generatedData.put(initialSidechainBlockId, (initialSidechainBlockInfo, Option(initialMainchainReference)))
 
-    val res: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = ArrayBuffer()
-    for(i <- 0 until count) {
-      val info = SidechainBlockInfo(height, score, id, validity)
-      id = getRandomModifier()
-      res.append(id -> info)
-      height += 1
-      score += 1L
+  private def findParentMainchainReference(id: ModifierId): Option[MainchainBlockReferenceId] = {
+    val data = generatedData.get(id)
+
+    data.flatMap(parentData => parentData._1.mainchainBlockReferenceHashes.lastOption)
+      .orElse(data.flatMap(p => p._2))
+      .orElse(Some(initialMainchainReference))
+  }
+
+  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq()): (ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceId])) = {
+    val id = getRandomModifier()
+    val parentData: (SidechainBlockInfo, Option[MainchainBlockReferenceId]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId)._2)
+    val parentSidechainBlock = parentData._1
+    val generatedScBlockInfo = SidechainBlockInfo(
+      parentSidechainBlock.height + 1,
+      parentSidechainBlock.score + 1,
+      parent,
+      ModifierSemanticValidity.Valid,
+      (refs ++ generateMainchainReferences(parent = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash))
+    )
+
+    (id, (generatedScBlockInfo, findParentMainchainReference(parent)))
+  }
+
+  def getNewDataForParent(parent: ModifierId,
+                          refs: Seq[MainchainBlockReference] = Seq()): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId]) = {
+    val (newId, data) = generateEntry(parent, refs)
+    generatedData.put(newId, data)
+    generatedData.get(newId).map { case (sbInfo, newParent) =>
+      (newId, sbInfo, if (sbInfo.mainchainBlockReferenceHashes.nonEmpty) newParent else None)
+    }.get
+  }
+
+  def getNewDataForParentNoMainchainReferences(parent: ModifierId): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId]) = {
+    val (newId, data) = generateEntry(parent)
+    val dataWithoutReferences =
+      data.copy(_1 = data._1.copy(mainchainBlockReferenceHashes = Seq()), _2 = None)
+    generatedData.put(newId, dataWithoutReferences)
+    generatedData.get(newId).map { case (sbInfo, newParent) =>
+      (newId, sbInfo, if (sbInfo.mainchainBlockReferenceHashes.nonEmpty) newParent else None)
+    }.get
+  }
+
+  @tailrec
+  final def generateDataSequence(count: Int,
+                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = Seq()
+                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = {
+    if (count > 0) {
+      val parent = generatedData.last._1
+      generateDataSequence(count - 1, generatedData :+ getNewDataForParent(parent))
     }
-    res
+    else {
+      generatedData
+    }
+  }
+
+  final def generateDataSequenceWithGenesisBlock(count: Int,
+                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = Seq()
+                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = {
+    if (count > 0) {
+      generateDataSequence(count - 1, Seq((initialSidechainBlockId, initialSidechainBlockInfo, Some(initialMainchainReference))))
+    }
+    else {
+      Seq()
+    }
   }
 }
