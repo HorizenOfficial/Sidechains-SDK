@@ -7,14 +7,14 @@ class SidechainUtilApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/util/"
 
-  "The API" should {
+  "The Api should to" should {
 
     "reject and reply with http error" in {
       Get(basePath) ~> sidechainUtilApiRoute ~> check {
         rejection shouldBe MethodRejection(HttpMethods.POST)
       }
       Get(basePath) ~> Route.seal(sidechainUtilApiRoute) ~> check {
-        status shouldBe StatusCodes.MethodNotAllowed
+        status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
       }
     }
 

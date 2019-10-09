@@ -1,34 +1,31 @@
 package com.horizen.api.http
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import akka.testkit.{TestActorRef, TestKit}
+import akka.testkit
+import akka.testkit.{TestActor, TestProbe}
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.{SidechainHistory, SidechainNodeViewHolder, SidechainSettings, SidechainSyncInfo}
-import com.horizen.forge.Forger
-import com.horizen.node.SidechainNodeView
-import com.horizen.params.MainNetParams
-import com.horizen.transaction.Transaction
-import org.mockito.internal.creation.MockSettingsImpl
-import org.mockito.{ArgumentMatchers, MockSettings, Mockito}
+import com.horizen.SidechainSettings
+import com.horizen.serialization.ApplicationJsonSerializer
+import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
-import scorex.core.PersistentNodeViewModifier
-import scorex.core.network.NetworkController
-import scorex.core.network.peer.PeerManager
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
+
+  val sidechainApiMockConfiguration : SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
+
+  val mapper : ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
+  mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
 
   val utilMocks = new SidechainNodeViewUtilMocks()
 
@@ -44,35 +41,38 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
 
-  val mockedSidechainNodeViewHolder : SidechainNodeViewHolder = mock[SidechainNodeViewHolder]
-  //(
-   // new MockSettingsImpl[SidechainNodeViewHolder]().useConstructor(mockedSidechainSettings.leftSide)
-  //)
-  def f: SidechainNodeView => Route = ???
-  Mockito.when(mockedSidechainNodeViewHolder.receive(
-    ArgumentMatchers.any[GetDataFromCurrentSidechainNodeView(ArgumentMatchers.)]
-  )).thenAnswer(asw => {
-    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => f(utilMocks.getSidechainNodeView())
-  } )
+  val mockedSidechainNodeViewHolder = TestProbe()
+  mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetDataFromCurrentSidechainNodeView(f) => sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+      }
+      TestActor.KeepRunning
+    }
+  })
+  val mockedSidechainNodeViewHolderRef : ActorRef = mockedSidechainNodeViewHolder.ref
 
-  val mockedSidechainNodeViewHolderRef : ActorRef = actorSystem.actorOf(Props(mockedSidechainNodeViewHolder))
+  val mockedSidechainTransactioActor = TestProbe()
+  mockedSidechainTransactioActor.setAutoPilot(TestActor.KeepRunning)
+  val mockedSidechainTransactioActorRef : ActorRef = mockedSidechainTransactioActor.ref
 
-  val mockedSidechainTransactioActor : SidechainTransactionActor[_ <: Transaction] = mock[SidechainTransactionActor[_ <: Transaction]]
-  val mockedSidechainTransactioActorRef : ActorRef = actorSystem.actorOf(Props(mockedSidechainTransactioActor))
+  val mockedPeerManagerActor = TestProbe()
+  mockedPeerManagerActor.setAutoPilot(TestActor.KeepRunning)
+  val mockedPeerManagerRef : ActorRef = mockedPeerManagerActor.ref
 
-  val mockedPeerManagerActor : PeerManager = mock[PeerManager]
-  val mockedPeerManagerRef : ActorRef = actorSystem.actorOf(Props(mockedPeerManagerActor))
-
-  val mockedNetworkControllerActor: NetworkController = mock[NetworkController]
-  val mockedNetworkControllerRef : ActorRef = actorSystem.actorOf(Props(mockedNetworkControllerActor))
+  val mockedNetworkControllerActor = TestProbe()
+  mockedNetworkControllerActor.setAutoPilot(TestActor.KeepRunning)
+  val mockedNetworkControllerRef : ActorRef = mockedNetworkControllerActor.ref
 
   val mockedTimeProvider : NetworkTimeProvider = mock[NetworkTimeProvider]
 
-  val mockedSidechainBlockForgerActor : Forger = mock[Forger]
-  val mockedSidechainBlockForgerActorRef : ActorRef = actorSystem.actorOf(Props(mockedSidechainBlockForgerActor))
+  val mockedSidechainBlockForgerActor = TestProbe()
+  mockedSidechainBlockForgerActor.setAutoPilot(TestActor.KeepRunning)
+  val mockedSidechainBlockForgerActorRef : ActorRef = mockedSidechainBlockForgerActor.ref
 
-  val mockedSidechainBlockActor : SidechainBlockActor[_ <: PersistentNodeViewModifier, _ <: SidechainSyncInfo, _ <: SidechainHistory] = mock[SidechainBlockActor[_ <: PersistentNodeViewModifier, _ <: SidechainSyncInfo, _ <: SidechainHistory]]
-  val mockedsidechainBlockActorRef : ActorRef = actorSystem.actorOf(Props(mockedSidechainBlockActor))
+  val mockedSidechainBlockActor = TestProbe()
+  mockedSidechainBlockActor.setAutoPilot(TestActor.KeepRunning)
+  val mockedsidechainBlockActorRef : ActorRef = mockedSidechainBlockActor.ref
 
   implicit def default() = RouteTestTimeout(3.second)
 

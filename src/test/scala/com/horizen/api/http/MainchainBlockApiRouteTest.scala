@@ -7,32 +7,32 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/mainchain/"
 
-  "The API" should {
+  "The Api should to" should {
 
     "reject and reply with http error" in {
       Get(basePath) ~> mainchainBlockApiRoute ~> check {
         rejection shouldBe MethodRejection(HttpMethods.POST)
       }
       Get(basePath) ~> Route.seal(mainchainBlockApiRoute) ~> check {
-        status shouldBe StatusCodes.MethodNotAllowed
+        status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
       }
     }
 
-    "reply OK at /getBestMainchainBlockReferenceInfo" in {
+    "reply at /getBestMainchainBlockReferenceInfo" in {
       Post(basePath + "getBestMainchainBlockReferenceInfo") ~> Route.seal(mainchainBlockApiRoute) ~> check {
-        status shouldEqual StatusCodes.OK
+        status.intValue() shouldBe StatusCodes.OK.intValue
       }
     }
 
-    "reply OK at /getMainchainBlockReference" in {
+    "reply at /getMainchainBlockReference" in {
       Post(basePath + "getMainchainBlockReference") ~> Route.seal(mainchainBlockApiRoute) ~> check {
-        status shouldEqual StatusCodes.OK
+        status.intValue() shouldBe StatusCodes.OK.intValue
       }
     }
 
-    "reply OK at /createMainchainBlockReference" in {
+    "reply at /createMainchainBlockReference" in {
       Post(basePath + "createMainchainBlockReference") ~> Route.seal(mainchainBlockApiRoute) ~> check {
-        status shouldEqual StatusCodes.OK
+        status.intValue() shouldBe StatusCodes.OK.intValue
       }
     }
 

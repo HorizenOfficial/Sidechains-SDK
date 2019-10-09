@@ -15,6 +15,7 @@ public class ApplicationJsonSerializer {
 
     private ApplicationJsonSerializer(){
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new DefaultScalaModule());
         defaultView = Views.Default.class;
     }
 
