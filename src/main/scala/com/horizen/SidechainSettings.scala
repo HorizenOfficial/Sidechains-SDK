@@ -16,9 +16,11 @@ import com.horizen.params.MainNetParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.storage.{IODBStoreAdapter, Storage}
 import com.horizen.transaction.{RegularTransaction, SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.BytesUtils
 import com.typesafe.config.Config
+import io.iohk.iodb.LSMStore
 import javafx.util.{Pair => JPair}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -107,8 +109,13 @@ object SidechainSettings
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
-  def read(userConfigPath: Option[String]): SidechainSettings = {
-    fromConfig(readConfigFromPath(userConfigPath))
+  def read(userConfigPath: String): SidechainSettings = {
+    fromConfig(readConfigFromPath(Some(userConfigPath)))
+  }
+
+  def getStorage(storePath: File) : Storage = {
+    storePath.mkdirs()
+    new IODBStoreAdapter(new LSMStore(storePath))
   }
 
   private def fromConfig(config: Config): SidechainSettings = {

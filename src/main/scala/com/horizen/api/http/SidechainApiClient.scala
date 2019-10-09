@@ -7,7 +7,7 @@ import scala.io.StdIn
 
 object SidechainApiClient extends App {
   private val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
-  private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
+  private val sidechainSettings = SidechainSettings.read(settingsFilename)
   private val sidechainApiClient = new ApiClient(sidechainSettings.scorexSettings.restApi)
 
   println("Welcome to the Sidechain node command-line client...")

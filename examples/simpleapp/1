@@ -1,0 +1,121 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.horizen:Sidechains-SDK-simpleapp:jar:0.1-SNAPSHOT
+[WARNING] 'dependencies.dependency.systemPath' for org.scorexfoundation:scorex-core_2.12:jar should not point at files within the project directory, ${project.basedir}/../../target/lib/scorex-core_2.12-2.0.0.jar will be unresolvable by dependent projects @ line 74, column 16
+[WARNING] 'dependencies.dependency.systemPath' for com.horizen:Sidechains-SDK:jar should not point at files within the project directory, ${project.basedir}/../../target/Sidechains-SDK-0.1-SNAPSHOT.jar will be unresolvable by dependent projects @ line 82, column 16
+[WARNING] 'build.plugins.plugin.version' for org.scala-tools:maven-scala-plugin is missing. @ line 219, column 12
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] 
+[INFO] ----------------< com.horizen:Sidechains-SDK-simpleapp >----------------
+[INFO] Building Sidechains-SDK-simpleapp 0.1-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The POM for org.slf4j:slf4j-api:jar:1.8.0-beta1-SNAPSHOT is missing, no dependency information available
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK-simpleapp ---
+[INFO] Deleting D:\Repositories\Sidechains-SDK\examples\simpleapp\target
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:resources (copy-resources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:compile (compile-scala-sources) @ Sidechains-SDK-simpleapp ---
+[INFO] Checking for multiple versions of scala
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK-simpleapp:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  org.scalatest:scalatest_2.12:3.0.5 requires scala version: 2.12.4
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[INFO] D:\Repositories\Sidechains-SDK\examples\simpleapp\src\main\java:-1: info: compiling
+[INFO] Compiling 2 source files to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\classes at 1570622499896
+[INFO] prepare-compile in 0 s
+[INFO] compile in 2 s
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:resources (default-resources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK-simpleapp ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 2 source files to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\classes
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:testCompile (compile-scala-tests) @ Sidechains-SDK-simpleapp ---
+[INFO] Checking for multiple versions of scala
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK-simpleapp:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  org.scalatest:scalatest_2.12:3.0.5 requires scala version: 2.12.4
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[WARNING] No source files found.
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:testResources (default-testResources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory D:\Repositories\Sidechains-SDK\examples\simpleapp\src\test\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:testCompile (default-testCompile) @ Sidechains-SDK-simpleapp ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ Sidechains-SDK-simpleapp ---
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ Sidechains-SDK-simpleapp ---
+[INFO] Building jar: D:\Repositories\Sidechains-SDK\examples\simpleapp\target\Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- maven-dependency-plugin:3.1.1:copy-dependencies (copy-dependencies) @ Sidechains-SDK-simpleapp ---
+[INFO] Copying guava-21.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\guava-21.0.jar
+[INFO] Copying akka-testkit_2.12-2.5.23.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-testkit_2.12-2.5.23.jar
+[INFO] Copying circe-parser_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-parser_2.12-0.9.0.jar
+[INFO] Copying aopalliance-1.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\aopalliance-1.0.jar
+[INFO] Copying bcprov-jdk15on-1.60.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\bcprov-jdk15on-1.60.jar
+[INFO] Copying scala-java8-compat_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-java8-compat_2.12-0.8.0.jar
+[INFO] Copying jawn-parser_2.12-0.11.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jawn-parser_2.12-0.11.0.jar
+[INFO] Copying akka-http-circe_2.12-1.19.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http-circe_2.12-1.19.0.jar
+[INFO] Copying machinist_2.12-0.6.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\machinist_2.12-0.6.2.jar
+[INFO] Copying supertagged_2.12-1.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\supertagged_2.12-1.4.jar
+[INFO] Copying guice-4.2.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\guice-4.2.2.jar
+[INFO] Copying curve25519-java-0.5.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\curve25519-java-0.5.0.jar
+[INFO] Copying cats-core_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-core_2.12-1.0.1.jar
+[INFO] Copying scala-reflect-2.12.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-reflect-2.12.4.jar
+[INFO] Copying cats-macros_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-macros_2.12-1.0.1.jar
+[INFO] Copying slf4j-api-1.8.0-beta2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\slf4j-api-1.8.0-beta2.jar
+[INFO] Copying scala-logging_2.12-3.9.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-logging_2.12-3.9.2.jar
+[INFO] Copying config-1.3.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\config-1.3.1.jar
+[INFO] Copying akka-actor_2.12-2.5.23.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-actor_2.12-2.5.23.jar
+[INFO] Copying akka-parsing_2.12-10.1.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-parsing_2.12-10.1.8.jar
+[INFO] Copying circe-numbers_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-numbers_2.12-0.9.0.jar
+[INFO] Copying scala-library-2.12.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-library-2.12.8.jar
+[INFO] Copying ssl-config-core_2.12-0.3.7.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\ssl-config-core_2.12-0.3.7.jar
+[INFO] Copying circe-jawn_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-jawn_2.12-0.9.0.jar
+[INFO] Copying Sidechains-SDK-0.1-SNAPSHOT.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\Sidechains-SDK-0.1-SNAPSHOT.jar
+[INFO] Copying javax.inject-1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\javax.inject-1.jar
+[INFO] Copying scrypto_2.12-2.1.5.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scrypto_2.12-2.1.5.jar
+[INFO] Copying akka-http_2.12-10.1.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http_2.12-10.1.8.jar
+[INFO] Copying scorex-util_2.12-0.1.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scorex-util_2.12-0.1.4.jar
+[INFO] Copying scala-parser-combinators_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-parser-combinators_2.12-1.1.1.jar
+[INFO] Copying macro-compat_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\macro-compat_2.12-1.1.1.jar
+[INFO] Copying circe-generic_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-generic_2.12-0.9.0.jar
+[INFO] Copying scorex-core_2.12-2.0.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scorex-core_2.12-2.0.0.jar
+[INFO] Copying reactive-streams-1.0.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\reactive-streams-1.0.2.jar
+[INFO] Copying shapeless_2.12-2.3.3.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\shapeless_2.12-2.3.3.jar
+[INFO] Copying ficus_2.12-1.4.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\ficus_2.12-1.4.2.jar
+[INFO] Copying logback-classic-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\logback-classic-1.3.0-alpha4.jar
+[INFO] Copying circe-core_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-core_2.12-0.9.0.jar
+[INFO] Copying akka-http-core_2.12-10.1.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http-core_2.12-10.1.8.jar
+[INFO] Copying cats-kernel_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-kernel_2.12-1.0.1.jar
+[INFO] Copying logback-core-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\logback-core-1.3.0-alpha4.jar
+[INFO] Copying akka-protobuf_2.12-2.5.23.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-protobuf_2.12-2.5.23.jar
+[INFO] Copying lz4-1.3.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\lz4-1.3.0.jar
+[INFO] Copying akka-stream_2.12-2.5.23.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-stream_2.12-2.5.23.jar
+[INFO] Copying iodb_2.12-0.3.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\iodb_2.12-0.3.2.jar
+[INFO] Copying commons-net-3.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\commons-net-3.6.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  6.793 s
+[INFO] Finished at: 2019-10-09T15:01:44+03:00
+[INFO] ------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 package com.horizen
 
-import java.io.{File => JFile}
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
@@ -18,7 +17,6 @@ import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
-import io.iohk.iodb.LSMStore
 import scorex.core.api.http.{ApiRoute, PeersApiRoute}
 import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
@@ -32,7 +30,23 @@ import scorex.util.{ModifierId, ScorexLogging}
 import scala.collection.mutable
 import scala.collection.immutable.Map
 
-class SidechainApp(val settingsFilename: String)
+import com.google.inject.Inject
+import com.google.inject.name.Named
+
+class SidechainApp @Inject()
+  (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
+   @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
+   @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
+   @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
+   @Named("ApplicationState") val applicationState: ApplicationState,
+   @Named("MainNetParams") val mainNetParams: MainNetParams,
+   @Named("SecretStorage") val secretStorage: Storage,
+   @Named("WalletBoxStorage") val walletBoxStorage: Storage,
+   @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
+   @Named("StateStorage") val stateStorage: Storage,
+   @Named("HistoryStorage") val historyStorage: Storage,
+  )
   extends Application
   with ScorexLogging
 {
@@ -40,8 +54,8 @@ class SidechainApp(val settingsFilename: String)
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
-  override implicit lazy val settings: ScorexSettings = SidechainSettings.read(Some(settingsFilename)).scorexSettings
+  //private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
+  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
   private val storageList = mutable.ListBuffer[Storage]()
 
@@ -53,33 +67,40 @@ class SidechainApp(val settingsFilename: String)
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(SidechainSyncInfoMessageSpec)
 
-  protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
-  protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
-  protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
-  protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  val mainNetParams = new MainNetParams()
+  protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
+  protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  //protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
+  //protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
+
+  //val mainNetParams = new MainNetParams()
 
   case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
 
   }
+
   val params: CustomParams = CustomParams(sidechainSettings.genesisBlock.get.id)
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
+    registerStorage(secretStorage),
     sidechainSecretsCompanion)
   protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
-    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
+    registerStorage(walletBoxStorage),
     sidechainBoxesCompanion)
   protected val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
-    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/walletTransaction")),
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/walletTransaction")),
+    registerStorage(walletTransactionStorage),
     sidechainTransactionsCompanion)
   protected val sidechainStateStorage = new SidechainStateStorage(
-    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
+    registerStorage(stateStorage),
     sidechainBoxesCompanion)
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
-    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
+    registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
 
   //TODO remove these test settings
@@ -91,7 +112,7 @@ class SidechainApp(val settingsFilename: String)
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
+    applicationWallet, applicationState, sidechainSettings.genesisBlock.get,
     Seq(new SidechainBlockValidator(params)/*, new MainchainPoWValidator(sidechainHistoryStorage, params)*/)
   )
 
@@ -131,10 +152,7 @@ class SidechainApp(val settingsFilename: String)
     storageList.foreach(_.close())
   }
 
-  //TODO additional initialization (see HybridApp)
-  private def openStorage(storagePath: JFile) : Storage = {
-    storagePath.mkdirs()
-    val storage = new IODBStoreAdapter(new LSMStore(storagePath, StorageParams.storageKeySize))
+  private def registerStorage(storage: Storage) : Storage = {
     storageList += storage
     storage
   }
@@ -145,13 +163,4 @@ class SidechainApp(val settingsFilename: String)
 
   // waiting WS client interface
   private def getMainchainConnectionInfo  = ???
-}
-
-object SidechainApp /*extends App*/ {
-  def main(args: Array[String]) : Unit = {
-    val settingsFilename = args.headOption.getOrElse("src/main/resources/settings.conf")
-    val app = new SidechainApp(settingsFilename)
-    app.run()
-    app.log.info("Sidechain application successfully started...")
-  }
 }
