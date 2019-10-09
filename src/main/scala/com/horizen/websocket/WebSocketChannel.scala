@@ -22,6 +22,9 @@ trait WebSocketReconnectionHandler {
 
   // when established connection is lost for any reason
   def onDisconnection(code : DisconnectionCode.Value, reason : String) : Boolean
+
+  // Delay before next connection attempt (in seconds)
+  def getDelay: Long
 }
 
 trait WebSocketConnector[C <: WebSocketChannel] {
@@ -30,10 +33,6 @@ trait WebSocketConnector[C <: WebSocketChannel] {
   def start() : Try[C]
   def asyncStart() : Future[Try[C]]
   def stop() : Try[Unit]
-
-  def setConfiguration(configuration : WebSocketConnectorConfiguration) : Boolean
-  def setReconnectionHandler(handler : WebSocketReconnectionHandler) : Boolean
-  def setMessageHandler(handler: WebSocketMessageHandler) : Boolean
 
 }
 

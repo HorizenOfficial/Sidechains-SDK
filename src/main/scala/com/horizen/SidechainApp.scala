@@ -35,6 +35,7 @@ import scorex.core.transaction.Transaction
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Try
+import scala.concurrent.duration._
 
 class SidechainApp(val settingsFilename: String)
   extends Application
@@ -146,19 +147,17 @@ class SidechainApp(val settingsFilename: String)
 
   // retrieve information for using a web socket connector
   val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
-    schema = "ws",
-    remoteAddress = new InetSocketAddress("localhost", 8888),
-    connectionTimeout = 100,
-    reconnectionDelay = 1,
+    bindAddress = "ws://localhost:8888",
+    connectionTimeout = 100 milliseconds,
+    reconnectionDelay = 1 seconds,
     reconnectionMaxAttempts = 1)
   val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler()
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(webSocketConfiguration)
 
   // create the cweb socket connector and configure it
-  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl()
-  webSocketConnector.setConfiguration(webSocketConfiguration)
-  webSocketConnector.setReconnectionHandler(webSocketReconnectionHandler)
-  webSocketConnector.setMessageHandler(webSocketMessageHandler)
+  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl(
+    webSocketConfiguration, webSocketMessageHandler, webSocketReconnectionHandler
+  )
 
   // start the web socket connector
   val channel : Try[WebSocketChannel] = webSocketConnector.start()
