@@ -2,32 +2,30 @@ package com.horizen.block
 
 import java.io.ByteArrayOutputStream
 import java.time.Instant
-import java.util
 
-import com.google.common.primitives.{Bytes, Ints, Longs}
-import com.horizen.{ScorexEncoding, SidechainTypes}
+import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{Box, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
+import com.horizen.serialization.JsonSerializable
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.utils.ListSerializer
+import com.horizen.{ScorexEncoding, SidechainTypes}
 import io.circe.Json
 import scorex.core.block.Block
-import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
-import scorex.util.ModifierId
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.utils.ScorexEncoder
+import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
+import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.HashMap
-import scala.util.{Success, Try}
+import scala.util.Try
 
 class SidechainBlock (override val parentId: ModifierId,
                       override val timestamp: Block.Timestamp,
@@ -119,7 +117,6 @@ class SidechainBlock (override val parentId: ModifierId,
   }
 
   override def toJson: Json = {
-    val arr: util.ArrayList[Json] = new util.ArrayList[Json]
     val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
     val encoder: ScorexEncoder = new ScorexEncoder
 

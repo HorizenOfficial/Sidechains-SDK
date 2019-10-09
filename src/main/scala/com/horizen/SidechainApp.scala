@@ -1,37 +1,36 @@
 package com.horizen
 
+import java.io.{File => JFile}
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-import java.io.{File => JFile}
 
-import scala.collection.immutable.Map
-import scala.collection
 import akka.actor.ActorRef
-import com.horizen.api.http.{MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilsApiRoute, SidechainWalletApiRoute}
+import akka.http.scaladsl.server.ExceptionHandler
+import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.forge.ForgerRef
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
+import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
+import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute}
+import scorex.core.api.http.{ApiRoute, PeersApiRoute}
 import scorex.core.app.Application
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
+import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-import scorex.util.{ModifierId, ScorexLogging}
-import akka.http.scaladsl.server.{ExceptionHandler, Route}
-import com.horizen.forge.ForgerRef
 import scorex.core.transaction.Transaction
+import scorex.core.{ModifierTypeId, NodeViewModifier}
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.mutable
-import scala.io.Source
+import scala.collection.immutable.Map
 
 class SidechainApp(val settingsFilename: String)
   extends Application
@@ -59,6 +58,8 @@ class SidechainApp(val settingsFilename: String)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
   protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
+
+  val mainNetParams = new MainNetParams()
 
   case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
 
@@ -90,7 +91,9 @@ class SidechainApp(val settingsFilename: String)
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
+    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
+    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
+  )
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
@@ -112,7 +115,7 @@ class SidechainApp(val settingsFilename: String)
   implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
+    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, mainNetParams),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),

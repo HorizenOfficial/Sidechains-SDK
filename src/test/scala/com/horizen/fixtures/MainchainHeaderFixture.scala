@@ -2,6 +2,7 @@ package com.horizen.fixtures
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.block.MainchainHeader
+import com.horizen.block.MainchainHeader.SCMAP_BLOCK_VERSION
 import com.horizen.utils.{BytesUtils, VarInt}
 
 // Just for PoW verification testing
@@ -13,6 +14,28 @@ case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: 
 
 
 trait MainchainHeaderFixture {
+
+  def mainchainHeaderToBytes(obj: MainchainHeader): Array[Byte] = {
+    val hashOfSCMerkleRootsMap = obj.version match {
+      case SCMAP_BLOCK_VERSION =>
+        BytesUtils.reverseBytes(obj.hashSCMerkleRootsMap)
+      case _ =>
+        new Array[Byte](0)
+    }
+
+    Bytes.concat(
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.version)),
+      BytesUtils.reverseBytes(obj.hashPrevBlock),
+      BytesUtils.reverseBytes(obj.hashMerkleRoot),
+      BytesUtils.reverseBytes(obj.hashReserved),
+      BytesUtils.reverseBytes(hashOfSCMerkleRootsMap),
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.time)),
+      BytesUtils.reverseBytes(Ints.toByteArray(obj.bits)),
+      BytesUtils.reverseBytes(obj.nonce),
+      BytesUtils.fromVarInt(new VarInt(obj.solution.length, VarInt.getVarIntSize(obj.solution.length))),
+      obj.solution
+    )
+  }
 
   def getHeaderWithPoW(bits: Int, hash: Array[Byte]) : MainchainHeaderForPoWTest = {
     MainchainHeaderForPoWTest(bits, hash)
