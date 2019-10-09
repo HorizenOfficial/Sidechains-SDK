@@ -1,39 +1,47 @@
 package com.horizen.chain
 
-import java.io.{File, FileOutputStream}
+import java.io.File
 import java.nio.file.Files
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
-import org.scalatest.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
+import org.scalatest.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
-import scorex.util.ModifierId
-import scorex.util.{bytesToId, idToBytes}
-
+import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
+  setSeed(1000L)
 
   val height = 100
   val score: Long = 1L << 32 + 1
-  val parentId: ModifierId = getRandomModifier(1000L)
+  val parentId: ModifierId = getRandomModifier()
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
 
   @Test
   def creation(): Unit = {
     val clonedParentId: ModifierId = bytesToId(idToBytes(parentId))
+    val refs = generateMainchainReferences(Seq(generateMainchainBlockReference()))
+    val refIds = refs.map(d => byteArrayToMainchainBlockReferenceId(d.hash))
 
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds)
 
     assertEquals("SidechainBlockInfo height is different", height, info.height)
     assertEquals("SidechainBlockInfo score is different", score, info.score)
     assertEquals("SidechainBlockInfo parentId is different", clonedParentId, info.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different",  ModifierSemanticValidity.Valid, info.semanticValidity)
+    assertEquals("SidechainBlockInfo mainchain lock reference size is different", refIds.length, info.mainchainBlockReferenceHashes.length)
+    refIds.zipWithIndex.foreach{case (ref, index) =>
+      assertEquals("SidechainBlockInfo reference is different", ref, info.mainchainBlockReferenceHashes(index))
+    }
   }
 
   @Test
   def serialization(): Unit = {
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity)
+    val refs = generateMainchainReferences(Seq(generateMainchainBlockReference()))
+    val refIds = refs.map(d => byteArrayToMainchainBlockReferenceId(d.hash))
+
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds)
     val bytes = info.bytes
 
 
@@ -46,10 +54,17 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo parentId is different", info.parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", info.semanticValidity, serializedInfoTry.get.semanticValidity)
 
-    /*val out = Some(new FileOutputStream("src/test/resources/sidechainblockinfo_bytes"))
-    out.get.write(bytes)
-    out.get.close()*/
+    val references = serializedInfoTry.get.mainchainBlockReferenceHashes
+    assertEquals("Size of mainchain references shall be the same", info.mainchainBlockReferenceHashes.size, references.size)
+    refIds.zipWithIndex.foreach{case (_, index) =>
+      assertEquals("SidechainBlockInfo reference is different", info.mainchainBlockReferenceHashes(index), references(index))
+    }
 
+    /*
+    val out = Some(new FileOutputStream("src/test/resources/sidechainblockinfo_bytes"))
+    out.get.write(bytes)
+    out.get.close()
+*/
 
     // Test 2: try to deserialize broken bytes.
     assertTrue("SidechainBlockInfo expected to be not parsed due to broken data.", SidechainBlockInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
@@ -65,7 +80,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     }
     catch {
       case e: Exception =>
-        assertEquals(e.toString(), true, false)
+        assertEquals(e.toString, true, false)
     }
 
     val serializedInfoTry = SidechainBlockInfoSerializer.parseBytesTry(bytes)
