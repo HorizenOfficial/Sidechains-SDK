@@ -14,7 +14,7 @@ import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, Storage}
+import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
@@ -71,6 +71,9 @@ class SidechainApp(val settingsFilename: String)
   protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
     sidechainBoxesCompanion)
+  protected val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
+    openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/walletTransaction")),
+    sidechainTransactionsCompanion)
   protected val sidechainStateStorage = new SidechainStateStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
     sidechainBoxesCompanion)
@@ -86,7 +89,7 @@ class SidechainApp(val settingsFilename: String)
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
-    sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
+    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get)
 
 

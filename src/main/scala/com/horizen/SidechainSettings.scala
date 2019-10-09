@@ -1,12 +1,12 @@
 package com.horizen
 
-import java.io.FileOutputStream
-import java.net.InetSocketAddress
+import java.io.{File, FileOutputStream}
+import java.net.{InetSocketAddress, URL}
 import java.lang.{Byte => JByte, Long => JLong}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap}
 
 import javafx.util.{Pair => JPair}
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
@@ -28,7 +28,7 @@ case class WebSocketClientSettings(
                                     connectionTimeout : Long = 5000,
                                     connectionTimeUnit :String = "MILLISECONDS")
 
-case class SidechainSettings(scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
+case class SidechainSettings(val config: Config, scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -101,29 +101,49 @@ object SidechainSettings
     with SettingsReaders
 {
 
+  protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
   def read(userConfigPath: Option[String]): SidechainSettings = {
-    fromConfig(readConfigFromPath(userConfigPath, "scorex"))
-    //new SidechainSettings(ScorexSettings.read(userConfigPath))
+    fromConfig(readConfigFromPath(userConfigPath))
   }
 
   private def fromConfig(config: Config): SidechainSettings = {
     val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
-    SidechainSettings(scorexSettings, webSocketClientSettings)
+    SidechainSettings(config, scorexSettings, webSocketClientSettings)
   }
-  /*
-  implicit val networkSettingsValueReader: ValueReader[SDKSettings] =
-    (cfg: Config, path: String) => fromConfig(cfg.getConfig(path))
-  */
 
-  /*
-  private def fromConfig(config: Config): HybridSettings = {
-    log.info(config.toString)
-    val walletSettings = config.as[WalletSettings]("scorex.wallet")
-    val miningSettings = config.as[HybridMiningSettings]("scorex.miner")
-    val scorexSettings = config.as[ScorexSettings]("scorex")
-    HybridSettings(miningSettings, walletSettings, scorexSettings)
-  }*/
+  def readConfigFromPath(userConfigPath: Option[String]): Config = {
+
+    val userConfigFile: Option[File] = userConfigPath.map(filename => new File(filename)).filter(_.exists())
+    val userConfigResource: Option[URL] = userConfigPath.map(filename => getClass.getClassLoader.getResource(filename))
+
+    val userConfig: Option[Config] = if (userConfigFile.isDefined) {
+      Some(ConfigFactory.parseFile(userConfigFile.get))
+    } else if (userConfigResource.isDefined) {
+      Some(ConfigFactory.parseURL(userConfigResource.get))
+    } else None
+
+    val config = userConfig match {
+      case Some(cfg) => ConfigFactory
+        .defaultOverrides()
+        .withFallback(cfg) // user-supplied config
+        .withFallback(ConfigFactory.defaultApplication())
+        .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
+        .withFallback(ConfigFactory.defaultReference()) // "src/main/resources/reference.conf"
+        .resolve()
+      case None => {
+        log.warn("NO CONFIGURATION FILE WAS PROVIDED. STARTING WITH DEFAULT SETTINGS!")
+        ConfigFactory
+          .defaultOverrides()
+          .withFallback(ConfigFactory.defaultApplication())
+          .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
+          .withFallback(ConfigFactory.defaultReference()) // "src/main/resources/reference.conf"
+          .resolve()
+      }
+    }
+
+    config
+  }
 }

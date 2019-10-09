@@ -12,12 +12,14 @@ import com.horizen.node.NodeWallet
 import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
-import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, Storage}
+import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToVersion}
 import scorex.util.ScorexLogging
+
+import com.horizen.utils.BytesUtils
 
 import scala.util.{Failure, Random, Success, Try}
 import scala.collection.JavaConverters._
@@ -41,7 +43,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 }
 
 class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                               applicationWallet: ApplicationWallet)
+                                        walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
                  SidechainTypes#SCBT,
@@ -102,6 +104,11 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys()
+    val pubKeysCol = pubKeys.map(key => new ByteArrayWrapper(key.bytes)).asJavaCollection
+    val transactions = modifier.transactions.filter(tx => {
+      BytesUtils.hasSameElement(tx.boxIdsToOpen(), boxes().map(_.box.id()).asJavaCollection) ||
+      BytesUtils.hasSameElement(pubKeysCol, tx.newBoxes().asScala.map(_.proposition().bytes).asJavaCollection)
+    })
 
     val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
         .map(_.box)
@@ -115,6 +122,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
     walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
+    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions)
     applicationWallet.onChangeBoxes(version, newBoxes.map(_.box).toList.asJava,
       boxIdsToRemove.toList.asJava)
 
@@ -184,19 +192,20 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
 object SidechainWallet
 {
   private[horizen] def restoreWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
+                                     walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
 
     if (!walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet))
+      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet))
     else
       None
   }
 
   private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     applicationWallet: ApplicationWallet, genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
+                                     walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet,
+                                     genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
-      new SidechainWallet(seed, walletBoxStorage, secretStorage, applicationWallet)
+      new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
         .scanPersistent(genesisBlock)
     else
       throw new RuntimeException("WalletBox storage is not empty!")
