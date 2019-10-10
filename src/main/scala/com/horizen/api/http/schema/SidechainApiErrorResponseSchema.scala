@@ -17,7 +17,7 @@ import com.horizen.serialization.Views
   *
   */
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainApiErrorResponseScheme(error : SidechainApiManagedError)
+case class SidechainApiErrorResponseScheme(error: SidechainApiManagedError)
 
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainApiManagedError(code : String, description : String, detail : Option[String] = None)
+case class SidechainApiManagedError(code: String, description: String, detail: Option[String] = None)

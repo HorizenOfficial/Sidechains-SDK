@@ -31,23 +31,23 @@ import com.horizen.serialization.SerializationUtil
 
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                        sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec : ExecutionContext)
-      extends SidechainApiRoute {
+                                        sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute {
 
-  override val route : Route = (pathPrefix("transaction"))
-            {allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~ sendCoinsToAddress ~ sendTransaction}
+  override val route: Route = (pathPrefix("transaction")) {
+    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~ sendCoinsToAddress ~ sendTransaction
+  }
 
-  private var companion : SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+  private var companion: SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   /**
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
     */
-  def allTransactions : Route = (post & path("allTransactions"))
-  {
+  def allTransactions: Route = (post & path("allTransactions")) {
     entity(as[ReqAllTransactionsPost]) { body =>
-      withNodeView{ sidechainNodeView =>
+      withNodeView { sidechainNodeView =>
         var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
-        if(body.format.getOrElse(true)){
+        if (body.format.getOrElse(true)) {
           SidechainApiResponse(
             SerializationUtil.serializeWithResult(
               RespAllTransactionsPost(Option(unconfirmedTxs.asScala.toList), None)
@@ -77,30 +77,29 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * 2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
     * 3) blockHash not set, txIndex = false -> Search in memory pool
     */
-  def findById : Route = (post & path("findById"))
-  {
+  def findById: Route = (post & path("findById")) {
     entity(as[ReqFindByIdPost]) { body =>
-      withNodeView{ sidechainNodeView =>
+      withNodeView { sidechainNodeView =>
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
 
-        def searchTransactionInMemoryPool(id : String) : Option[_ <: Transaction] = {
+        def searchTransactionInMemoryPool(id: String): Option[_ <: Transaction] = {
           var opt = memoryPool.getTransactionByid(id)
-          if(opt.isPresent)
-                Option(opt.get())
-          else None
-        }
-
-        def searchTransactionInBlock(id : String, blockHash : String) : Option[_ <: Transaction] = {
-          var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
-          if(opt.isPresent)
+          if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlockchain(id : String) : Option[_ <: Transaction] = {
+        def searchTransactionInBlock(id: String, blockHash: String): Option[_ <: Transaction] = {
+          var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
+          if (opt.isPresent)
+            Option(opt.get())
+          else None
+        }
+
+        def searchTransactionInBlockchain(id: String): Option[_ <: Transaction] = {
           var opt = history.searchTransactionInsideBlockchain(id)
-          if(opt.isPresent)
+          if (opt.isPresent)
             Option(opt.get())
           else None
         }
@@ -109,46 +108,46 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var format = body.format.getOrElse(false)
         var blockHash = body.blockHash.getOrElse("")
         var txIndex = body.transactionIndex.getOrElse(false)
-        var transaction : Option[Transaction] = None
-        var error : String = ???
+        var transaction: Option[Transaction] = None
+        var error: String = ???
 
 
         // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
-        if(blockHash.isEmpty && txIndex){
+        if (blockHash.isEmpty && txIndex) {
           // Search first in memory pool
           transaction = searchTransactionInMemoryPool(txId)
           // If not found search in the whole blockchain
-          if(transaction.isEmpty)
+          if (transaction.isEmpty)
             transaction = searchTransactionInBlockchain(txId)
-          if(transaction.isEmpty)
+          if (transaction.isEmpty)
             error = s"Transaction $txId not found in memory pool and blockchain"
         }
 
         // Case --> blockHash not set, txIndex = false -> Search in memory pool
-        else if(blockHash.isEmpty && !txIndex){
+        else if (blockHash.isEmpty && !txIndex) {
           // Search in memory pool
           transaction = searchTransactionInMemoryPool(txId)
-          if(transaction.isEmpty)
+          if (transaction.isEmpty)
             error = s"Transaction $txId not found in memory pool"
         }
 
         // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
-        else if(!blockHash.isEmpty){
+        else if (!blockHash.isEmpty) {
           transaction = searchTransactionInBlock(txId, blockHash)
-          if(transaction.isEmpty)
+          if (transaction.isEmpty)
             error = s"Transaction $txId not found in specified block"
         }
 
         transaction match {
           case Some(t) =>
-            if(format){
+            if (format) {
               //TO-DO JSON representation of transaction
               SidechainApiResponse(
                 SerializationUtil.serializeWithResult(
                   TransactionDTO(Option(t), None)
                 )
               )
-            }else{
+            } else {
               SidechainApiResponse(
                 SerializationUtil.serializeWithResult(
                   TransactionDTO(None, Option(new String(companion.toBytes(t))))
@@ -159,8 +158,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             // TO-DO Change the errorCode
             SidechainApiResponse(
               SerializationUtil.serializeErrorWithResult(
-                  NOT_FOUND_ID().apiCode, error, "")
-              )
+                NOT_FOUND_ID().apiCode, error, "")
+            )
         }
       }
     }
@@ -169,26 +168,25 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   /**
     * Return a JSON representation of a transaction given its byte serialization.
     */
-  def decodeTransactionBytes : Route = (post & path("decodeTransactionBytes"))
-  {
+  def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
     entity(as[ReqDecodeTransactionBytesPost]) { body =>
-      withNodeView{ sidechainNodeView =>
-            var bytes = BytesUtils.fromHexString(body.transactionBytes)
-            var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
-            tryTX match{
-              case Success(tx) =>
-                //TO-DO JSON representation of transaction
-                SidechainApiResponse(
-                  SerializationUtil.serializeWithResult(
-                    RespDecodeTransactionBytesPost(tx)
-                  )
-                )
-              case Failure(exp) =>
-                SidechainApiResponse(
-                  SerializationUtil.serializeErrorWithResult(
-                      BYTE_PARSING_FAILURE().apiCode, exp.getMessage, "")
-                  )
-            }
+      withNodeView { sidechainNodeView =>
+        var bytes = BytesUtils.fromHexString(body.transactionBytes)
+        var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
+        tryTX match {
+          case Success(tx) =>
+            //TO-DO JSON representation of transaction
+            SidechainApiResponse(
+              SerializationUtil.serializeWithResult(
+                RespDecodeTransactionBytesPost(tx)
+              )
+            )
+          case Failure(exp) =>
+            SidechainApiResponse(
+              SerializationUtil.serializeErrorWithResult(
+                BYTE_PARSING_FAILURE().apiCode, exp.getMessage, "")
+            )
+        }
       }
     }
   }
@@ -197,26 +195,24 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Create and sign a regular transaction, specifying inputs and outputs.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
-  def createRegularTransaction : Route = (post & path("createRegularTransaction"))
-  {
+  def createRegularTransaction: Route = (post & path("createRegularTransaction")) {
 
     entity(as[ReqCreateRegularTransactionPost]) { body =>
-      withNodeView{ sidechainNodeView =>
+      withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
-        if(inputBoxes.length < body.transactionInputs.size) {
+        if (inputBoxes.length < body.transactionInputs.size) {
           SidechainApiResponse(
             SerializationUtil.serializeErrorWithResult(
-                NOT_FOUND_INPUT().apiCode, s"Unable to find input(s)", "")
+              NOT_FOUND_INPUT().apiCode, s"Unable to find input(s)", "")
           )
         } else {
           var inSum: Long = 0
           var outSum: Long = 0
 
-          val inputs : IndexedSeq[Pair[RegularBox, PrivateKey25519]] = inputBoxes.map(box =>
-          {
+          val inputs: IndexedSeq[Pair[RegularBox, PrivateKey25519]] = inputBoxes.map(box => {
             var secret = wallet.secretByPublicKey(box.proposition())
             var privateKey = secret.get().asInstanceOf[PrivateKey25519]
             wallet.secretByPublicKey(box.proposition()).get().asInstanceOf[PrivateKey25519]
@@ -226,7 +222,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           }
           ).toIndexedSeq
 
-          val outputs : IndexedSeq[Pair[PublicKey25519Proposition, lang.Long]] = body.transactionOutputs.map(element =>
+          val outputs: IndexedSeq[Pair[PublicKey25519Proposition, lang.Long]] = body.transactionOutputs.map(element =>
             new Pair(
               PublicKey25519PropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value))
@@ -235,7 +231,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           inputs.foreach(pair => inSum += pair.getKey.value())
           outputs.foreach(pair => outSum += pair.getValue)
 
-          val fee : Long = inSum - outSum
+          val fee: Long = inSum - outSum
 
           try {
             val regularTransaction = RegularTransaction.create(
@@ -256,11 +252,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
                 )
               )
           } catch {
-            case t : Throwable =>
+            case t: Throwable =>
               SidechainApiResponse(
                 SerializationUtil.serializeErrorWithResult(
-                    GENERIC_FAILURE().apiCode, t.getMessage, "")
-                )
+                  GENERIC_FAILURE().apiCode, t.getMessage, "")
+              )
           }
         }
       }
@@ -271,11 +267,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Create and sign a regular transaction, specifying outputs and fee.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
-  def createRegularTransactionSimplified : Route = (post & path("createRegularTransactionSimplified"))
-  {
+  def createRegularTransactionSimplified: Route = (post & path("createRegularTransactionSimplified")) {
 
     entity(as[ReqCreateRegularTransactionSimplifiedPost]) { body =>
-      withNodeView{ sidechainNodeView =>
+      withNodeView { sidechainNodeView =>
         var outputList = body.transactionOutputs
         var fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
@@ -283,7 +278,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         try {
           var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
 
-          if(body.format.getOrElse(false))
+          if (body.format.getOrElse(false))
             SidechainApiResponse(
               SerializationUtil.serializeWithResult(
                 TransactionDTO(Option(regularTransaction), None)
@@ -296,11 +291,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               )
             )
         } catch {
-          case t : Throwable =>
+          case t: Throwable =>
             SidechainApiResponse(
               SerializationUtil.serializeErrorWithResult(
-                  GENERIC_FAILURE().apiCode, t.getMessage, "")
-              )
+                GENERIC_FAILURE().apiCode, t.getMessage, "")
+            )
         }
       }
     }
@@ -308,11 +303,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
   // Note: method should return Try[RegularTransaction]
   private def createRegularTransactionSimplified_(
-                                                   outputList: List[TransactionOutput], fee: Long, wallet : NodeWallet,
-                                                   sidechainNodeView : SidechainNodeView) : RegularTransaction = {
+                                                   outputList: List[TransactionOutput], fee: Long, wallet: NodeWallet,
+                                                   sidechainNodeView: SidechainNodeView): RegularTransaction = {
 
     val memoryPool = sidechainNodeView.getNodeMemoryPool
-    val boxIdsToExclude : ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
+    val boxIdsToExclude: ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
 
     memoryPool.getTransactionsSortedByFee(memoryPool.getSize).forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
       override def accept(t: transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]): Unit = {
@@ -342,10 +337,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Create and sign a regular transaction, specifying outputs and fee. Then validate and send the transaction.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
-  def sendCoinsToAddress : Route = (post & path("sendCoinsToAddress"))
-  {
+  def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
     entity(as[ReqSendCoinsToAddressPost]) { body =>
-      withNodeView{ sidechainNodeView =>
+      withNodeView { sidechainNodeView =>
         var outputList = body.outputs
         var fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
@@ -354,23 +348,23 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           var regularTransaction = createRegularTransactionSimplified_(outputList, fee.getOrElse(0L), wallet, sidechainNodeView)
           validateAndSendTransaction(regularTransaction)
         } catch {
-          case t : Throwable =>
+          case t: Throwable =>
             SidechainApiResponse(
               SerializationUtil.serializeErrorWithResult(
-                  GENERIC_FAILURE().apiCode, t.getMessage, "")
-              )
+                GENERIC_FAILURE().apiCode, t.getMessage, "")
+            )
         }
       }
     }
   }
 
-  private def validateAndSendTransaction(transaction : Transaction) = {
-    withNodeView{
+  private def validateAndSendTransaction(transaction: Transaction) = {
+    withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
           sidechainTransactionActorRef ? BroadcastTransaction(transaction),
           settings.timeout).asInstanceOf[Future[Unit]]
-        onComplete(barrier){
+        onComplete(barrier) {
           case Success(result) =>
             SidechainApiResponse(
               SerializationUtil.serializeWithResult(
@@ -380,8 +374,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case Failure(exp) =>
             SidechainApiResponse(
               SerializationUtil.serializeErrorWithResult(
-                  GENERIC_FAILURE().apiCode, exp.getMessage, "")
-              )
+                GENERIC_FAILURE().apiCode, exp.getMessage, "")
+            )
         }
     }
   }
@@ -390,8 +384,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Validate and send a transaction, given its serialization as input.
     * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
     */
-  def sendTransaction : Route = (post & path("sendTransaction"))
-  {
+  def sendTransaction: Route = (post & path("sendTransaction")) {
 
     entity(as[ReqSendTransactionPost]) { body =>
       withNodeView { sidechainNodeView =>
@@ -402,8 +395,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case Failure(exception) =>
             SidechainApiResponse(
               SerializationUtil.serializeErrorWithResult(
-                  GENERIC_FAILURE().apiCode, exception.getMessage, "")
-              )
+                GENERIC_FAILURE().apiCode, exception.getMessage, "")
+            )
         }
       }
     }

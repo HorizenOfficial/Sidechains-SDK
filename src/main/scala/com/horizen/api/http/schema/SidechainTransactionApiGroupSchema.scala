@@ -12,17 +12,17 @@ import com.horizen.transaction.Transaction
   * - For REST response: 'Resp' + resource path + method
   *
   * Example
-  *  We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
-  *  The full uri path will be:
+  * We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
+  * The full uri path will be:
   *
-  *  1) http://host:port/myGroup/path_1
-  *  2) http://host:port/myGroup/path_2
+  * 1) http://host:port/myGroup/path_1
+  * 2) http://host:port/myGroup/path_2
   *
-  *  Classes implemented will be (assumed the HTTP method used is POST for all resources):
-  *  1)
+  * Classes implemented will be (assumed the HTTP method used is POST for all resources):
+  * 1)
   *     1.1) class ReqPath_1Post
   *     1.2) class RespPath_1Post
-  *  2)
+  * 2)
   *     2.1) class ReqPath_2Post
   *     2.2) class RespPath_2Post
   *
@@ -36,7 +36,7 @@ object TransactionRestScheme {
   case class ReqAllTransactionsPost(format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespAllTransactionsPost(transactions : Option[List[Transaction]], transactionIds : Option[List[String]])
+  case class RespAllTransactionsPost(transactions: Option[List[Transaction]], transactionIds: Option[List[String]])
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqFindByIdPost(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
@@ -58,23 +58,22 @@ object TransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqCreateRegularTransactionPost(transactionInputs: List[TransactionInput],
-                                                        transactionOutputs: List[TransactionOutput],
-                                                        format: Option[Boolean])
-  {
+                                             transactionOutputs: List[TransactionOutput],
+                                             format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(transactionOutputs.nonEmpty, "Empty outputs list")
   }
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqCreateRegularTransactionSimplifiedPost(transactionOutputs: List[TransactionOutput],
-                                                                  fee: Long,
-                                                                  format: Option[Boolean]){
+                                                       fee: Long,
+                                                       format: Option[Boolean]) {
     require(transactionOutputs.nonEmpty, "Empty outputs list")
     require(fee >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqSendCoinsToAddressPost(outputs: List[TransactionOutput], fee: Option[Long]){
+  case class ReqSendCoinsToAddressPost(outputs: List[TransactionOutput], fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }

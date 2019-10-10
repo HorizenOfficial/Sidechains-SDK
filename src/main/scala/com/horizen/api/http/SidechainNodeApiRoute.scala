@@ -20,10 +20,11 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
+                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
-  override val route : Route = (pathPrefix("node"))
-    {connect ~ allPeers ~ connectedPeers ~ blacklistedPeers}
+  override val route: Route = (pathPrefix("node")) {
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers
+  }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
 
@@ -41,8 +42,8 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         SerializationUtil.serializeWithResult(resultList)
       )
 
-    }catch {
-      case e : Throwable => SidechainApiError(e)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 
@@ -65,16 +66,15 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         SerializationUtil.serializeWithResult(resultList)
       )
 
-    }catch {
-      case e : Throwable => SidechainApiError(e)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 
-  def connect : Route = (post & path("connect"))
-  {
-    entity(as[ReqConnectPost]){
+  def connect: Route = (post & path("connect")) {
+    entity(as[ReqConnectPost]) {
       body =>
-        var address = body.host+":"+body.port
+        var address = body.host + ":" + body.port
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
         maybeAddress match {
           case None =>
@@ -87,7 +87,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
             SidechainApiResponse(
               SerializationUtil.serializeWithResult(
-                RespConnectPost(host+":"+port)
+                RespConnectPost(host + ":" + port)
               )
             )
         }
@@ -104,8 +104,8 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       SidechainApiResponse(
         SerializationUtil.serializeWithResult(resultList)
       )
-    }catch {
-      case e : Throwable => SidechainApiError(e)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 

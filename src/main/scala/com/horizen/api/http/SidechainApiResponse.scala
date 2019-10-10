@@ -9,9 +9,11 @@ import scala.concurrent.Future
 class SidechainApiResponse(statusCode: StatusCode) {
 
   def apply(result: String): Route = withString(result)
+
   def apply(result: Future[String]): Route = Directives.onSuccess(result)(withString)
 
   def defaultRoute: Route = withString(defaultMessage)
+
   def defaultMessage: String = statusCode.reason
 
   def withString(s: String): Route = complete(s)
@@ -27,8 +29,11 @@ object SidechainApiResponse {
   implicit def toRoute(route: SidechainApiResponse): Route = route.defaultRoute
 
   def apply(result: String): Route = OK(result)
+
   def apply(result: Future[String]): Route = OK(result)
+
   def apply(result: Either[Throwable, String]): Route = result.fold(SidechainApiError.apply, OK.apply)
 
   object OK extends SidechainApiResponse(StatusCodes.OK)
+
 }

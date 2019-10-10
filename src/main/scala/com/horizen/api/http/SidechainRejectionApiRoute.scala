@@ -19,19 +19,23 @@ import scala.concurrent.ExecutionContext
   * When the application starts, all routes are concatenated in a single composed route.
   * These rejection routes should be concatenated as first.
   */
-case class SidechainRejectionApiRoute(basePath : String, path : String,
+case class SidechainRejectionApiRoute(basePath: String, path: String,
                                       override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                     (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
+                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override def route: Route = {
     if (path.isEmpty) {
       (pathPrefix(basePath)) {
-        {reject}
+        {
+          reject
+        }
       }
     } else {
       (pathPrefix(basePath) & path(path)) {
-        {reject}
+        {
+          reject
+        }
       }
     }
 

@@ -13,17 +13,17 @@ import com.horizen.serialization.Views
   * - For REST response: 'Resp' + resource path + method
   *
   * Example
-  *  We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
-  *  The full uri path will be:
+  * We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
+  * The full uri path will be:
   *
-  *  1) http://host:port/myGroup/path_1
-  *  2) http://host:port/myGroup/path_2
+  * 1) http://host:port/myGroup/path_1
+  * 2) http://host:port/myGroup/path_2
   *
-  *  Classes implemented will be (assumed the HTTP method used is POST for all resources):
-  *  1)
+  * Classes implemented will be (assumed the HTTP method used is POST for all resources):
+  * 1)
   *     1.1) class ReqPath_1Post
   *     1.2) class RespPath_1Post
-  *  2)
+  * 2)
   *     2.1) class ReqPath_2Post
   *     2.2) class RespPath_2Post
   *
@@ -37,7 +37,7 @@ object WalletRestScheme {
   case class ReqAllBoxesPost(boxTypeClass: Option[String], excludeBoxIds: Option[Seq[String]])
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespAllBoxesPost(boxes : List[Box[Proposition]])
+  case class RespAllBoxesPost(boxes: List[Box[Proposition]])
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqBalancePost(boxType: Option[String])
@@ -46,7 +46,7 @@ object WalletRestScheme {
   case class RespBalancePost(balance: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespCreateNewPublicKeyPost(proposition : Proposition)
+  case class RespCreateNewPublicKeyPost(proposition: Proposition)
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqAllPropositionsPost(proptype: Option[String])

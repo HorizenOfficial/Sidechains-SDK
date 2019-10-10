@@ -7,7 +7,7 @@ import akka.http.scaladsl.server._
 object SidechainApiRejectionHandler {
 
   implicit val rejectionHandler = RejectionHandler.newBuilder()
-    .handle{
+    .handle {
 
       case ValidationRejection(msg, _) =>
         SidechainApiError(StatusCodes.BadRequest, "Validation failed").complete(msg)
@@ -31,6 +31,8 @@ object SidechainApiRejectionHandler {
         SidechainApiError(StatusCodes.BadRequest, "Request entity expected but not supplied")
 
     }
-      .handleNotFound { SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.") }
-      .result()
+    .handleNotFound {
+      SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
+    }
+    .result()
 }

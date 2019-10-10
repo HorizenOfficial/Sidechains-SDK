@@ -9,34 +9,32 @@ import scorex.core.settings.RESTApiSettings
 import scala.concurrent.ExecutionContext
 
 case class SidechainUtilApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
+                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
-  override val route : Route = (pathPrefix("util"))
-            {errorCodes}
+  override val route: Route = (pathPrefix("util")) {
+    errorCodes
+  }
 
-  def dbLog : Route = (post & path("dbLog"))
-  {
+  def dbLog: Route = (post & path("dbLog")) {
     SidechainApiResponse.OK
   }
 
-  def setMockTime : Route = (post & path("setMockTime"))
-  {
+  def setMockTime: Route = (post & path("setMockTime")) {
     SidechainApiResponse.OK
   }
 
-  def errorCodes : Route = (post & path("errorCodes"))
-  {
+  def errorCodes: Route = (post & path("errorCodes")) {
     try {
       var codes = SidechainApiErrorCodeUtil.predefinedApiErrorCodes
-      var res : Seq[SidechainApiErrorCodeSchema] = codes.map(err =>
+      var res: Seq[SidechainApiErrorCodeSchema] = codes.map(err =>
         SidechainApiErrorCodeSchema(err.groupName, err.groupCode, err.internalName, err.internalCode, err.apiCode))
 
       SidechainApiResponse(
         SerializationUtil.serializeWithResult(SidechainApiErrorCodeList(res.toList))
       )
 
-    }catch {
-      case e : Throwable => SidechainApiError(e)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 

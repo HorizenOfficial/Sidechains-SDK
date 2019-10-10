@@ -13,15 +13,14 @@ public class ApplicationJsonSerializer {
     private ObjectMapper objectMapper;
     private static ApplicationJsonSerializer instance;
 
-    private ApplicationJsonSerializer(){
+    private ApplicationJsonSerializer() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new DefaultScalaModule());
         defaultView = Views.Default.class;
     }
 
-    public static ApplicationJsonSerializer getInstance(){
-        if(instance == null)
-        {
+    public static ApplicationJsonSerializer getInstance() {
+        if (instance == null) {
             instance = new ApplicationJsonSerializer();
             instance.setDefaultConfiguration();
         }
@@ -29,7 +28,7 @@ public class ApplicationJsonSerializer {
         return instance;
     }
 
-    public static ApplicationJsonSerializer newInstance(){
+    public static ApplicationJsonSerializer newInstance() {
         ApplicationJsonSerializer newInstance = new ApplicationJsonSerializer();
         newInstance.setDefaultConfiguration();
 

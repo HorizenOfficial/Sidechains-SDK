@@ -16,12 +16,12 @@ public abstract class ApplicationApiGroup {
 
     public final SidechainNodeView getSidechaiNodeView() throws Exception {
         Try<SidechainNodeView> tryView = applicationNodeViewProvider.getSidechainNodeView();
-        if(tryView.isSuccess())
+        if (tryView.isSuccess())
             return tryView.get();
         else throw new IllegalStateException(tryView.failed().get());
     }
 
-    public final void setApplicationNodeViewProvider(ApplicationNodeViewProvider applicationNodeViewProvider){
+    public final void setApplicationNodeViewProvider(ApplicationNodeViewProvider applicationNodeViewProvider) {
         this.applicationNodeViewProvider = applicationNodeViewProvider;
     }
 

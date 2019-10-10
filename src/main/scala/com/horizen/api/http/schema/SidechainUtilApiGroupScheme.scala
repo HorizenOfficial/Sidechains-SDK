@@ -11,17 +11,17 @@ import com.horizen.serialization.Views
   * - For REST response: 'Resp' + resource path + method
   *
   * Example
-  *  We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
-  *  The full uri path will be:
+  * We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
+  * The full uri path will be:
   *
-  *  1) http://host:port/myGroup/path_1
-  *  2) http://host:port/myGroup/path_2
+  * 1) http://host:port/myGroup/path_1
+  * 2) http://host:port/myGroup/path_2
   *
-  *  Classes implemented will be (assumed the HTTP method used is POST for all resources):
-  *  1)
+  * Classes implemented will be (assumed the HTTP method used is POST for all resources):
+  * 1)
   *     1.1) class ReqPath_1Post
   *     1.2) class RespPath_1Post
-  *  2)
+  * 2)
   *     2.1) class ReqPath_2Post
   *     2.2) class RespPath_2Post
   *
@@ -29,7 +29,7 @@ import com.horizen.serialization.Views
   * In case of requests/responses with the same inputs/outputs format, an unique class will be implemented, without following the above naming convection.
   */
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainApiErrorCodeList(sidechainErrorCodes : List[SidechainApiErrorCodeSchema])
+case class SidechainApiErrorCodeList(sidechainErrorCodes: List[SidechainApiErrorCodeSchema])
 
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainApiErrorCodeSchema(groupName : String, groupCode : String, internalName : String, internalCode : String, apiCode : String)
+case class SidechainApiErrorCodeSchema(groupName: String, groupCode: String, internalName: String, internalCode: String, apiCode: String)

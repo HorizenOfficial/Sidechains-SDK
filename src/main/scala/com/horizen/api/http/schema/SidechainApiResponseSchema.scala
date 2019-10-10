@@ -16,4 +16,4 @@ import com.horizen.serialization.Views
   * For business logic errors use SidechainApiErrorResponseScheme
   */
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainApiResponseBody(result : Any)
+case class SidechainApiResponseBody(result: Any)

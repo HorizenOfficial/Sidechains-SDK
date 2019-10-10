@@ -12,17 +12,17 @@ import com.horizen.serialization.Views
   * - For REST response: 'Resp' + resource path + method
   *
   * Example
-  *  We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
-  *  The full uri path will be:
+  * We have an Api with group name 'myGroup' and two resources path 'path_1' and 'path_2'.
+  * The full uri path will be:
   *
-  *  1) http://host:port/myGroup/path_1
-  *  2) http://host:port/myGroup/path_2
+  * 1) http://host:port/myGroup/path_1
+  * 2) http://host:port/myGroup/path_2
   *
-  *  Classes implemented will be (assumed the HTTP method used is POST for all resources):
-  *  1)
+  * Classes implemented will be (assumed the HTTP method used is POST for all resources):
+  * 1)
   *     1.1) class ReqPath_1Post
   *     1.2) class RespPath_1Post
-  *  2)
+  * 2)
   *     2.1) class ReqPath_2Post
   *     2.2) class RespPath_2Post
   *
@@ -38,10 +38,10 @@ object BlockRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespFindByIdPost(blockHex: String, block : SidechainBlock)
+  case class RespFindByIdPost(blockHex: String, block: SidechainBlock)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqLastIdsPost(number: Int){
+  case class ReqLastIdsPost(number: Int) {
     require(number > 0, s"Invalid number $number. Number must be > 0")
   }
 
@@ -49,7 +49,7 @@ object BlockRestScheme {
   case class RespLastIdsPost(lastBlockIds: Seq[String])
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqFindIdByHeightPost(height: Int){
+  case class ReqFindIdByHeightPost(height: Int) {
     require(height > 0, s"Invalid height $height. Height must be > 0")
   }
 
@@ -57,10 +57,10 @@ object BlockRestScheme {
   case class RespFindIdByHeightPost(blockId: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespBestPost(block: SidechainBlock, height : Int)
+  case class RespBestPost(block: SidechainBlock, height: Int)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespTemplatePost(block: SidechainBlock, blockHex : String)
+  case class RespTemplatePost(block: SidechainBlock, blockHex: String)
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqSubmitPost(blockHex: String) {
@@ -71,11 +71,11 @@ object BlockRestScheme {
   case class RespSubmitPost(blockId: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqGeneratePost(number: Int){
+  case class ReqGeneratePost(number: Int) {
     require(number > 0, s"Invalid number $number. Number must be > 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespGeneratePost(blockIds : Seq[String])
+  case class RespGeneratePost(blockIds: Seq[String])
 
 }

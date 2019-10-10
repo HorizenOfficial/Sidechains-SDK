@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 
 case class SidechainCompositeHttpService(system: ActorSystem, routes: Seq[SidechainApiRoute], settings: RESTApiSettings, swaggerConf: String,
                                          implicit val sidechainNodeViewHolderRef: ActorRef)
-                                        (implicit val context: ActorRefFactory, implicit val ec : ExecutionContext)
+                                        (implicit val context: ActorRefFactory, implicit val ec: ExecutionContext)
   extends CorsHandler {
 
   implicit val actorSystem: ActorSystem = system
@@ -20,7 +20,7 @@ case class SidechainCompositeHttpService(system: ActorSystem, routes: Seq[Sidech
     redirect("/swagger", StatusCodes.PermanentRedirect)
   }
 
-  val swaggerServiceRoute : Route = {
+  val swaggerServiceRoute: Route = {
     (get & path("api-docs" / "swagger.conf")) {
       complete(HttpEntity(ContentTypes.`application/json`, swaggerConf))
     }

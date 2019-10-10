@@ -13,15 +13,15 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-case class ApplicationApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, applicationApiGroup : ApplicationApiGroup)
-                              (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
-                    extends SidechainApiRoute
-                    with ScorexEncoding {
+case class ApplicationApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, applicationApiGroup: ApplicationApiGroup)
+                              (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute
+    with ScorexEncoding {
 
 
   override def route: Route = convertRoutes
 
-  private def convertRoutes : Route = {
+  private def convertRoutes: Route = {
 
     applicationApiGroup.setApplicationNodeViewProvider(new ApplicationNodeViewProvider {
 
@@ -29,22 +29,24 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, sidechain
 
     })
 
-    var listOfAppApis : List[Route] = applicationApiGroup.getRoutes.asScala.toList.map(r => r.asScala)
+    var listOfAppApis: List[Route] = applicationApiGroup.getRoutes.asScala.toList.map(r => r.asScala)
 
-    pathPrefix(applicationApiGroup.basePath())
-          { listOfAppApis.reduceOption(_ ~ _).getOrElse(RouteDirectives.reject) }
+    pathPrefix(applicationApiGroup.basePath()) {
+      listOfAppApis.reduceOption(_ ~ _).getOrElse(RouteDirectives.reject)
+    }
   }
 
-  private def retrieveSidechainNodeView() : Try[SidechainNodeView] = {
+  private def retrieveSidechainNodeView(): Try[SidechainNodeView] = {
     def f(v: SidechainNodeView) = v
-    def fut = ((sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
-      .mapTo[SidechainNodeView])
+
+    def fut = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
+      .mapTo[SidechainNodeView]
 
     try {
       var result = Await.result(fut, settings.timeout)
       Success(result)
-    }catch {
-      case e : Throwable => Failure(e)
+    } catch {
+      case e: Throwable => Failure(e)
     }
   }
 

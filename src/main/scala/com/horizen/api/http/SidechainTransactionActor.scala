@@ -10,17 +10,17 @@ import scorex.util.ScorexLogging
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
-class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext)
+class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var transactionMap : TrieMap[String, Promise[Unit]] = TrieMap()
+  private var transactionMap: TrieMap[String, Promise[Unit]] = TrieMap()
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[T]])
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
-  protected def broadcastTransaction : Receive = {
+  protected def broadcastTransaction: Receive = {
     case BroadcastTransaction(transaction) =>
       val promise = Promise[Unit]
       val future = promise.future
@@ -30,7 +30,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
       sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
   }
 
-  protected def sidechainNodeViewHolderEvents : Receive = {
+  protected def sidechainNodeViewHolderEvents: Receive = {
     case SuccessfulTransaction(transaction) =>
       transactionMap.remove(transaction.id) match {
         case Some(promise) => promise.success()
@@ -45,20 +45,23 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
 
   override def receive: Receive = {
     broadcastTransaction orElse
-    sidechainNodeViewHolderEvents orElse
-    {
-      case a : Any => log.error("Strange input: " + a)
+      sidechainNodeViewHolderEvents orElse {
+      case a: Any => log.error("Strange input: " + a)
     }
   }
 }
 
 object SidechainTransactionActor {
-  object ReceivableMessages{
-    case class BroadcastTransaction[T <: Transaction](transaction : T)
+
+  object ReceivableMessages {
+
+    case class BroadcastTransaction[T <: Transaction](transaction: T)
+
   }
+
 }
 
-object SidechainTransactionActorRef{
+object SidechainTransactionActorRef {
   def props(sidechainNodeViewHolderRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
     Props(new SidechainTransactionActor(sidechainNodeViewHolderRef))

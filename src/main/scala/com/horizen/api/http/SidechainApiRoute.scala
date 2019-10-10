@@ -12,23 +12,27 @@ import scorex.util.ScorexLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait SidechainApiRoute  extends ApiDirectives with ActorHelper with PredefinedFromEntityUnmarshallers with ScorexLogging {
+trait SidechainApiRoute extends ApiDirectives with ActorHelper with PredefinedFromEntityUnmarshallers with ScorexLogging {
 
   import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 
   implicit lazy val timeout: Timeout = Timeout(settings.timeout)
+
   def context: ActorRefFactory
+
   def route: Route
+
   override val apiKeyHeaderName: String = "api_key"
 
   val sidechainNodeViewHolderRef: ActorRef
 
-  implicit val ec : ExecutionContext
+  implicit val ec: ExecutionContext
 
   def withNodeView(f: SidechainNodeView => Route): Route = onSuccess(viewAsync())(f)
 
   protected def viewAsync(): Future[SidechainNodeView] = {
     def f(v: SidechainNodeView) = v
+
     (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
       .mapTo[SidechainNodeView]
   }

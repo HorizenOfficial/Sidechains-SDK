@@ -7,7 +7,7 @@ import scala.util.control.NonFatal
 
 object SidechainApiErrorHandler {
 
-  implicit val exceptionHandler : ExceptionHandler = ExceptionHandler{
+  implicit val exceptionHandler: ExceptionHandler = ExceptionHandler {
     case NonFatal(exp) =>
       SidechainApiError(StatusCodes.InternalServerError, "Unexpected error").complete(exp.getMessage)
   }
