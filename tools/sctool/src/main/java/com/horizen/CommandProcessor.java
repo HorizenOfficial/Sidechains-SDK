@@ -103,24 +103,16 @@ public class CommandProcessor {
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n\tgenesisinfo {\n\t\t" +
-                "\"network\" : \"regtest\" | \"testnet\" | \"mainnet\", - network, where the block was generated \n\t\t" +
                 "\"secret\" : \"<secret hex>, - private key to sign the sc genesis block\n\t\t" +
                 "\"info\":\"sc genesis info\" - hex data retrieved from MC RPC call 'getscgenesisinfo'\n\t" +
                 "}");
-        printer.print("Example:\n\tgenesisinfo {\"network\":\"regtest\", \"secret\":\"78fa...e818\", \"info\"0001....ad11\"}");
+        printer.print("Example:\n\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\"0001....ad11\"}");
     }
 
     private void processGenesisInfo(JsonNode json) {
         if(!json.has("info") || !json.get("info").isTextual()
-                || !json.has("network") || !json.get("network").isTextual()
                 || !json.has("secret") || !json.get("secret").isTextual()) {
             printGenesisInfoUsageMsg("wrong arguments syntax.");
-            return;
-        }
-
-        String network = json.get("network").asText();
-        if(!network.equals("regtest") && !network.equals("testnet") && !network.equals("mainnet")) {
-            printer.print("Error: 'network' value is not recognized as a valid one.");
             return;
         }
 
@@ -152,6 +144,9 @@ public class CommandProcessor {
         // Parsing the info: scid, powdata vector, mc block height, mc block hex
         int offset = 0;
         try {
+            byte network = infoBytes[offset];
+            offset += 1;
+
             byte scId[] = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + 32));
             offset += 32;
 
@@ -202,13 +197,13 @@ public class CommandProcessor {
         }
     }
 
-    private NetworkParams getNetworkParams(String network, byte[] scId) {
+    private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
-            case "regtest":
-                return new RegTestParams(scId, null);
-            case "testnet":
-            case "mainnet":
+            case 0: // mainnet
+            case 1: // testnet
                 return new MainNetParams(scId, null);
+            case 2: // regtest
+                return new RegTestParams(scId, null);
         }
         return null;
 
