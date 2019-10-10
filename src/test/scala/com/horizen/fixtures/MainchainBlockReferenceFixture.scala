@@ -68,7 +68,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   def generateDummyMainchainBlockReference(): MainchainBlockReference = {
       val mainchainHeaderBytes: Array[Byte] = new Array[Byte](16)
       util.Random.nextBytes(mainchainHeaderBytes)
-      val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null,  null, 0, util.Random.nextInt(), null, null)
+      val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null, null, 0, util.Random.nextInt(), null, null)
       new MainchainBlockReference(header, null, null)
   }
 

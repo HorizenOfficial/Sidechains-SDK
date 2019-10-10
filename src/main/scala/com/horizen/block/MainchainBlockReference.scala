@@ -10,10 +10,11 @@ import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, Sidech
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.utils.ScorexEncoder
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
 import io.circe.Json
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
+import com.google.common.primitives.Bytes
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -60,8 +61,15 @@ class MainchainBlockReference(
 
       // verify SCMap Merkle root hash equals to one in the header.
       val SCSeq = sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-      val sidechainsMerkleRootsHashesList = SCSeq.map(_._2).toList.asJava
-      val merkleTree: MerkleTree = MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList)
+      val merkleTreeLeaves = SCSeq.map(pair => {
+        BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
+            Bytes.concat(
+              BytesUtils.reverseBytes(pair._1.data),
+              BytesUtils.reverseBytes(pair._2)
+            )
+        ))
+      }).toList.asJava
+      val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
       if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
         return false
 

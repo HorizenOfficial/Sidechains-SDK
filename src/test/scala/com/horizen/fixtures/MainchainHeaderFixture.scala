@@ -15,7 +15,6 @@ case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: 
 trait MainchainHeaderFixture {
 
   def mainchainHeaderToBytes(obj: MainchainHeader): Array[Byte] = {
-
     Bytes.concat(
       BytesUtils.reverseBytes(Ints.toByteArray(obj.version)),
       BytesUtils.reverseBytes(obj.hashPrevBlock),
