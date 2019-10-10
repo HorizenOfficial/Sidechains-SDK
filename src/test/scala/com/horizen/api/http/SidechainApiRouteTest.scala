@@ -8,7 +8,9 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.SidechainSettings
+import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import com.horizen.serialization.ApplicationJsonSerializer
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
@@ -84,5 +86,17 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mainchainBlockApiRoute : Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 
   val basePath : String
+
+  protected def assertsOnSidechainErrorResponseSchema(msg : String, errorCode : String) : Unit = {
+    mapper.readTree(msg).get("error") match {
+      case error =>
+        assertEquals(1, error.findValues("code").size())
+        assertEquals(1, error.findValues("description").size())
+        assertEquals(1, error.findValues("detail").size())
+        assertTrue(error.get("code").isTextual)
+        assertEquals(errorCode, error.get("code").asText())
+      case _ => fail("Serialization failed for object SidechainApiErrorResponseScheme")
+    }
+  }
 
 }

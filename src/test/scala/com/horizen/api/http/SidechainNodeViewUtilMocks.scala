@@ -1,22 +1,50 @@
 package com.horizen.api.http
 
-import java.util
+import java.time.Instant
+import java.util.Optional
+import java.{lang, util}
 
+import com.horizen.SidechainTypes
+import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
 import scorex.crypto.signatures.Curve25519
+import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
 
 class SidechainNodeViewUtilMocks extends MockitoSugar {
 
   def getNodeHistoryMock(sidechainApiMockConfiguration : SidechainApiMockConfiguration) : NodeHistory = {
-    mock[NodeHistory]
+    val history : NodeHistory = mock[NodeHistory]
+
+    val genesisBlock : SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
+      SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+
+    Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>
+    if(sidechainApiMockConfiguration.getHistoryValidBlockIdReturnValue()) Optional.of(genesisBlock)
+    else Optional.empty())
+
+    Mockito.when(history.getLastBlockIds(ArgumentMatchers.any(), ArgumentMatchers.any())).then(_ =>
+    {
+      val ids = new util.ArrayList[String]()
+      ids.add("block_id_1")
+      ids.add("block_id_2")
+      ids.add("block_id_3")
+      ids
+    })
+
+    Mockito.when(history.getBestBlock).thenAnswer(_ => genesisBlock)
+
+    history
   }
 
   def getNodeStateMock(sidechainApiMockConfiguration : SidechainApiMockConfiguration) : NodeState = {

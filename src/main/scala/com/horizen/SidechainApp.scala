@@ -22,18 +22,16 @@ import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-import scorex.util.{ModifierId, ScorexLogging}
-import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import scorex.util.ModifierId
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.horizen.forge.ForgerRef
-import com.horizen.api.http.SidechainCompositeHttpService
 
 import scala.collection.mutable
 import scala.io.Source
 
 class SidechainApp(val settingsFilename: String)
-  extends ScorexApplication
-  with ScorexLogging
-{
+  extends ScorexApplication {
+
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder

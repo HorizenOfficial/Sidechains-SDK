@@ -149,15 +149,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "newPublicKey") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("error") match {
-          case error =>
-            assertEquals(1, error.findValues("code").size())
-            assertEquals(1, error.findValues("description").size())
-            assertEquals(1, error.findValues("detail").size())
-            assertTrue(error.get("code").isTextual)
-            assertEquals(SECRET_NOT_ADDED().apiCode, error.get("code").asText())
-          case _ => fail("Serialization failed for object SidechainApiErrorResponseScheme")
-        }
+        assertsOnSidechainErrorResponseSchema(entityAs[String], SECRET_NOT_ADDED().apiCode)
       }
     }
 
