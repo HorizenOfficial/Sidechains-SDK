@@ -31,10 +31,8 @@ object MainchainTxForwardTransferCrosschainOutput {
 
     val propositionBytes: Array[Byte] = BytesUtils.reverseBytes(forwardTransferOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
-    val prop = BytesUtils.toHexString(propositionBytes)
 
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(forwardTransferOutputBytes.slice(currentOffset, currentOffset + 32))
-
     currentOffset += 32
 
     new MainchainTxForwardTransferCrosschainOutput(forwardTransferOutputBytes.slice(offset, currentOffset), sidechainId, amount, propositionBytes)

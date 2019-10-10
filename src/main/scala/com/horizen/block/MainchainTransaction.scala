@@ -107,26 +107,6 @@ object MainchainTransaction {
         crosschainOutputs = crosschainOutputs :+ output
       }
 
-      // parse Certificate
-      // NOTE: just for MC compatibility. not used now, not completed
-      val certOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-      currentOffset += certOutputsNumber.size()
-
-      // to do: in progress in MC
-      for (i <- 1 to certOutputsNumber.value().intValue()) {
-        val value: Long = BytesUtils.getReversedLong(transactionBytes, currentOffset)
-        currentOffset += 8
-
-        val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-        currentOffset += scriptLength.size()
-
-        val script: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
-        val scriptHex: String = BytesUtils.toHexString(script)
-        currentOffset += scriptLength.value().intValue()
-
-        // possible creation of CTxBackwardTransferCrosschainOut(value, script)
-      }
-
       // put data into crosschainOutputsMap
       crosschainOutputsMap = crosschainOutputs.groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
     }
