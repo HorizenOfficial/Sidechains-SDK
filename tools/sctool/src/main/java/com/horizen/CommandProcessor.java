@@ -72,7 +72,14 @@ public class CommandProcessor {
     }
 
     private void printUsageMsg() {
-        printer.print("Usage:\n\t" + "<command name> [<json data>]\nSupported commands:\n\thelp\n\tgeneratekey <arguments>\n\tgenesisinfo <arguments>\n\texit\n");
+        printer.print("Usage:\n" +
+                    "\t<command name> [<json data>]\n" +
+                "Supported commands:\n" +
+                    "\thelp\n" +
+                    "\tgeneratekey <arguments>\n" +
+                    "\tgenesisinfo <arguments>\n" +
+                    "\texit\n"
+        );
     }
 
     private void printUnsupportedCommandMsg(String command) {
@@ -81,7 +88,8 @@ public class CommandProcessor {
 
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
-        printer.print("Usage:\n\tgeneratekey {\"seed\":\"my seed\"}");
+        printer.print("Usage:\n" +
+                "\tgeneratekey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateKey(JsonNode json) {
@@ -102,11 +110,20 @@ public class CommandProcessor {
 
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);
-        printer.print("Usage:\n\tgenesisinfo {\n\t\t" +
-                "\"secret\" : \"<secret hex>, - private key to sign the sc genesis block\n\t\t" +
-                "\"info\":\"sc genesis info\" - hex data retrieved from MC RPC call 'getscgenesisinfo'\n\t" +
-                "}");
-        printer.print("Example:\n\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\"0001....ad11\"}");
+        printer.print("Usage:\n" +
+                        "\tgenesisinfo {\n" +
+                            "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
+                            "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
+                            "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
+                            "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
+                            "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
+
+                        "\t}"
+        );
+        printer.print("Examples:\n" +
+                        "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
+                        "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
+                            "\t\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
 
     private void processGenesisInfo(JsonNode json) {
@@ -121,25 +138,32 @@ public class CommandProcessor {
         try {
             infoBytes = BytesUtils.fromHexString(infoHex);
         } catch (IllegalArgumentException e) {
-            printer.print("Error: 'info' expected to be a hex string.");
+            printGenesisInfoUsageMsg("'info' expected to be a hex string.");
             return;
         }
 
         String secretHex = json.get("secret").asText();
         if(secretHex.length() != 128) {// size of hex representation of Private25519Key
-            printer.print("Error: 'secret' value size is wrong.");
+            printGenesisInfoUsageMsg("'secret' value size is wrong.");
             return;
         }
         byte secretBytes[];
         try {
             secretBytes = BytesUtils.fromHexString(secretHex);
         } catch (IllegalArgumentException e) {
-            printer.print("Error: 'secret' expected to be a hex string.");
+            printGenesisInfoUsageMsg("'secret' expected to be a hex string.");
             return;
         }
 
         PrivateKey25519 key = PrivateKey25519Serializer.getSerializer().parseBytes(secretBytes);
 
+        boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
+        if(shouldUpdateConfig &&
+                        (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
+                        !json.has("resultconfig") || !json.get("resultconfig").isTextual())) {
+            printGenesisInfoUsageMsg("'updateconfig' is specified but path to configs doesn't not.");
+            return;
+        }
 
         // Parsing the info: scid, powdata vector, mc block height, mc block hex
         int offset = 0;
@@ -178,20 +202,23 @@ public class CommandProcessor {
             ).get().bytes());
 
 
-            // TO DO: add arguments to request to update the put the results to some config file
-            // or even create another method for that.
-            updateTemplateFile("src/main/resources/settings.conf",
-                    "src/main/resources/sc_settings.conf",
-                    mcBlockHeight,
-                    powData,
-                    BytesUtils.toHexString(scId),
-                    sidechainBlockHex);
             ObjectNode resJson = new ObjectMapper().createObjectNode();
             resJson.put("scId", BytesUtils.toHexString(scId));
-            resJson.put("scGenesisBlock", sidechainBlockHex);
-
+            resJson.put("scGenesisBlockHex", sidechainBlockHex);
+            resJson.put("powData", powData);
+            resJson.put("mcBlockHeight", mcBlockHeight);
             String res = resJson.toString();
             printer.print(res);
+
+            if(shouldUpdateConfig)
+                updateTemplateFile(
+                        json.get("sourceconfig").asText(),
+                        json.get("resultconfig").asText(),
+                        mcBlockHeight,
+                        powData,
+                        BytesUtils.toHexString(scId),
+                        sidechainBlockHex
+                );
         } catch (Exception e) {
             printer.print("Error: 'info' data is corrupted.");
         }
@@ -210,31 +237,30 @@ public class CommandProcessor {
     }
 
     private void updateTemplateFile(
-            String pathToTemplate,
+            String pathToSourceConfig,
             String pathToResultConf,
             int mcBlockHeight,
             String powData,
             String scId,
             String scBlockHex) {
-
         try {
-            String templateConf = new String(Files.readAllBytes(Paths.get(pathToTemplate)), StandardCharsets.UTF_8);
+            String templateConf = new String(Files.readAllBytes(Paths.get(pathToSourceConfig)), StandardCharsets.UTF_8);
 
 
             String conf = templateConf +
-                    "\nscorex {\n\t" +
-                    "genesis {\n\t\t" +
-                    "scGenesisBlockHex = \"" + scBlockHex + "\"\n\t\t" +
-                    "scId = \"" + scId + "\"\n\t\t" +
-                    "powData = \"" + powData + "\"\n\t\t" +
-                    "mcBlockHeight = " + mcBlockHeight + "\n\t" +
-                    "}\n" +
+                    "\nscorex {\n" +
+                        "\tgenesis {\n" +
+                            "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
+                            "\t\tscId = \"" + scId + "\"\n" +
+                            "\t\tpowData = \"" + powData + "\"\n" +
+                            "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
+                        "\t}\n" +
                     "}\n";
 
             Files.write(Paths.get(pathToResultConf), conf.getBytes());
 
         } catch (Exception e) {
-            printer.print("Error: unable to create read template conf file.");
+            printer.print("Error: unable to open config file.");
         }
     }
 }
