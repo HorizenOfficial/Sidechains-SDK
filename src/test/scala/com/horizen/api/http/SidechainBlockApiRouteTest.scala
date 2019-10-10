@@ -3,9 +3,12 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.horizen.api.http.schema.BlockRestScheme.{ReqFindByIdPost, ReqFindIdByHeightPost, ReqGeneratePost, ReqLastIdsPost, ReqSubmitPost}
-import com.horizen.api.http.schema.INVALID_ID
+import com.horizen.api.http.schema.{INVALID_HEIGHT, INVALID_ID, NOT_ACCEPTED, NOT_CREATED, TEMPLATE_FAILURE}
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert._
+import scorex.core.idToBytes
+import scorex.core.bytesToId
+import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 
@@ -97,7 +100,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      sidechainApiMockConfiguration.setHistoryValidBlockIdReturnValue(false)
+      sidechainApiMockConfiguration.setShould_history_getBlockById_return_value(false)
       Post(basePath + "findById")
         .withEntity(SerializationUtil.serialize(ReqFindByIdPost("invalid_block_id_00000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -176,44 +179,98 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindIdByHeightPost(1))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.elements().asScala.length)
+            assertTrue(result.get("blockId").isTextual)
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      sidechainApiMockConfiguration.setShould_history_getBlockIdByHeight_return_value(false)
+      Post(basePath + "findIdByHeight")
+        .withEntity(SerializationUtil.serialize(ReqFindIdByHeightPost(20))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], INVALID_HEIGHT().apiCode)
       }
     }
 
-    /*    "reply at /best" in {
-          Post(basePath + "best")
-            .withEntity(SerializationUtil.serialize()) ~> sidechainBlockApiRoute ~> check {
-            status.intValue() shouldBe StatusCodes.OK.intValue
-            responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-
-          }
+    "reply at /best" in {
+      Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(2, result.elements().asScala.length)
+            assertTrue(result.get("height").isInt)
+            assertEquals(230, result.get("height").asInt())
+            assertTrue(result.get("block").isObject)
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
+      }
+      sidechainApiMockConfiguration.setShould_history_getCurrentHeight_return_value(false)
+      Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], INVALID_HEIGHT().apiCode)
+      }
+    }
 
-        "reply at /template" in {
-          Post(basePath + "template")
-            .withEntity(SerializationUtil.serialize()) ~> sidechainBlockApiRoute ~> check {
-            status.intValue() shouldBe StatusCodes.OK.intValue
-            responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+    "reply at /template" in {
+      Post(basePath + "template") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(2, result.elements().asScala.length)
+            assertTrue(result.get("blockHex").isTextual)
+            assertTrue(result.get("block").isObject)
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      sidechainApiMockConfiguration.setShould_forger_TryGetBlockTemplate_reply(false)
+      Post(basePath + "template") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], TEMPLATE_FAILURE().apiCode)
+      }
+    }
 
-          }
-        }*/
-
-    /*    "reply at /submit" in {
-          Post(basePath + "submit")
-            .withEntity(SerializationUtil.serialize(ReqSubmitPost("accepted_block_hex"))) ~> sidechainBlockApiRoute ~> check {
-            status.intValue() shouldBe StatusCodes.OK.intValue
-            responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          }
-          Post(basePath + "submit")
-            .withEntity(SerializationUtil.serialize(ReqSubmitPost("not_accepted_block_hex"))) ~> sidechainBlockApiRoute ~> check {
-            status.intValue() shouldBe StatusCodes.OK.intValue
-            responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          }
-          Post(basePath + "submit")
-            .withEntity(SerializationUtil.serialize(ReqSubmitPost(null))) ~> sidechainBlockApiRoute ~> check {
-            assertEquals(response, (Post(basePath + "submit")
-              .withEntity(SerializationUtil.serialize(ReqSubmitPost("accepted_block_hex"))) ~> sidechainBlockApiRoute).response)
-          }
-        }*/
+    "reply at /submit" in {
+      Post(basePath + "submit")
+        .withEntity(SerializationUtil.serialize(ReqSubmitPost("0000b82c"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.elements().asScala.length)
+            assertTrue(result.get("blockId").isTextual)
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      Post(basePath + "submit")
+        .withEntity(SerializationUtil.serialize(ReqSubmitPost("not_accepted_block_hex"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], NOT_ACCEPTED().apiCode)
+      }
+      sidechainApiMockConfiguration.setShould_blockActor_SubmitSidechainBlock_reply(false)
+      Post(basePath + "submit")
+        .withEntity(SerializationUtil.serialize(ReqSubmitPost("0000b82c"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], NOT_ACCEPTED().apiCode)
+      }
+      Post(basePath + "submit")
+        .withEntity(SerializationUtil.serialize("{}")) ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "submit")
+        .withEntity(SerializationUtil.serialize("{blockHex=\"\"}")) ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
 
     "reply at /generate" in {
       Post(basePath + "generate")
@@ -238,11 +295,35 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      /*      Post(basePath + "generate")
-              .withEntity(SerializationUtil.serialize(ReqGeneratePost(1))) ~> sidechainBlockApiRoute ~> check {
-              status.intValue() shouldBe StatusCodes.OK.intValue
-              responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-            }*/
+      Post(basePath + "generate")
+        .withEntity(SerializationUtil.serialize(ReqGeneratePost(4))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.elements().asScala.length)
+            assertTrue(result.get("blockIds").isArray)
+            assertEquals(4, result.get("blockIds").elements().asScala.length)
+            val elems: Array[String] = result.get("blockIds").elements().asScala.map(node => {
+              assertTrue(node.isTextual)
+              node.asText()
+            }).toArray
+            val expected: Array[ModifierId] = Array(
+              bytesToId("block_id_1".getBytes),
+              bytesToId("block_id_2".getBytes),
+              bytesToId("block_id_3".getBytes),
+              bytesToId("block_id_4".getBytes))
+            elems shouldEqual expected
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      sidechainApiMockConfiguration.setShould_blockActor_GenerateSidechainBlocks_reply(false)
+      Post(basePath + "generate")
+        .withEntity(SerializationUtil.serialize(ReqGeneratePost(4))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], NOT_CREATED().apiCode)
+      }
     }
 
   }

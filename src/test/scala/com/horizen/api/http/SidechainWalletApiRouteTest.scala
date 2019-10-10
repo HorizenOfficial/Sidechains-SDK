@@ -145,7 +145,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         }
       }
       // secret is not added
-      sidechainApiMockConfiguration.setWalletAddSecretReturnValue(false)
+      sidechainApiMockConfiguration.setShould_wallet_addSecret_return_value(false)
       Post(basePath + "newPublicKey") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
