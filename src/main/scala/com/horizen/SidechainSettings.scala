@@ -30,7 +30,8 @@ case class GenesisData(
                         scGenesisBlockHex: String,
                         scId: String,
                         mcBlockHeight: Int,
-                        powData: String
+                        powData: String/*,
+                        mcNetwork: String*/
                       )
 case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: GenesisData, webSocketClientSettings: WebSocketClientSettings) {
 
@@ -46,11 +47,26 @@ case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: Genesi
   val pub2hex = BytesUtils.toHexString(targetSecretKey2.publicImage().bytes())
 
   // TO DO: remove this data from here
-  lazy val genesisBlock : Option[SidechainBlock] = Some(
+  lazy val genesisBlock: Option[SidechainBlock] = Some(
     new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(genesisData.scGenesisBlockHex)
     )
   )
+
+  // TO DO: remove this data from here
+  val genesisPowData: Seq[(Int, Int)] = {
+    var res: Seq[(Int, Int)] = Seq()
+    val powDataBytes: Array[Byte] = BytesUtils.fromHexString(genesisData.powData)
+    var offset = 0
+    while(offset < powDataBytes.length) {
+      res = res :+ (
+        BytesUtils.getReversedInt(powDataBytes, offset),
+        BytesUtils.getReversedInt(powDataBytes, offset + 4)
+      )
+      offset += 8
+    }
+    res
+  }
 }
 
 object SidechainSettings

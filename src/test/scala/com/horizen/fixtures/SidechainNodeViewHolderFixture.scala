@@ -15,7 +15,7 @@ import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
-import com.horizen.validation.SidechainBlockValidator
+import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
@@ -46,7 +46,13 @@ trait SidechainNodeViewHolderFixture
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
-  val params: NetworkParams = RegTestParams(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"), sidechainSettings.genesisBlock.get.id)
+  val params: NetworkParams = RegTestParams(
+    BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+    sidechainSettings.genesisBlock.get.id,
+    sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+    sidechainSettings.genesisPowData,
+    sidechainSettings.genesisData.mcBlockHeight
+  )
 
   val sidechainSecretStorage = new SidechainSecretStorage(
     getStorage(),
@@ -69,7 +75,7 @@ trait SidechainNodeViewHolderFixture
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
-    Seq(new SidechainBlockValidator(params)))
+    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params)))
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 

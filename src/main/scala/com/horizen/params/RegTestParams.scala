@@ -6,7 +6,10 @@ import scorex.util.bytesToId
 
 case class RegTestParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
-                          override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32))
+                          override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)),
+                          override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
+                          override val genesisPoWData: Seq[(Int, Int)] = Seq(),
+                          override val mainchainCreationBlockHeight: Int = 1
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

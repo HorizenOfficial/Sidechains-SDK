@@ -157,6 +157,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       })
 
     // mock Params with Test genesis data
+    // TO DO: review this
     class PowtestParams extends NetworkParams {
       override val EquihashN: Int = 0
       override val EquihashK: Int = 0
@@ -169,7 +170,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val nPowTargetSpacing: Int = 150
       override val sidechainId: Array[Byte] = null
       override val sidechainGenesisBlockId: ModifierId = null
-
+      override val mainchainCreationBlockHeight: Int = 1
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))
     }

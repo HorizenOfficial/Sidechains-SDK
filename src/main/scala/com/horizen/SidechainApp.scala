@@ -64,7 +64,13 @@ class SidechainApp(val settingsFilename: String)
   protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
-  val params: NetworkParams = RegTestParams(BytesUtils.fromHexString(sidechainSettings.genesisData.scId), sidechainSettings.genesisBlock.get.id)
+  val params: NetworkParams = RegTestParams(
+    BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+    sidechainSettings.genesisBlock.get.id,
+    sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+    sidechainSettings.genesisPowData,
+    sidechainSettings.genesisData.mcBlockHeight
+  )
 
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
@@ -91,7 +97,7 @@ class SidechainApp(val settingsFilename: String)
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
-    Seq(new SidechainBlockValidator(params)/*, new MainchainPoWValidator(sidechainHistoryStorage, params)*/)
+    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
   )
 
 

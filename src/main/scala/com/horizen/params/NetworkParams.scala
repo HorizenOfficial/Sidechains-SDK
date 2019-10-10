@@ -33,7 +33,7 @@ trait NetworkParams {
 
 
   // Sidechain genesis params:
-  val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](CommonParams.mainchainBlockHashLength) // hash of the block which include SidechainCreationTx for current SC
-  val genesisPoWData: List[Tuple2[Int, Int]] = List() // Tuple2 with timestamps and bits values of <nPowAveragingWindow> blocks up-to <genesisMainchainBlockHash> block. From oldest MC block to genesis one.
-  val mainchainCreationBlockHeight = 1 // Height of the block which include SidechainCreationTx for current SC
+  val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC
+  val genesisPoWData: Seq[(Int, Int)] // Tuples with timestamps and bits values of <nPowAveragingWindow> blocks up-to <genesisMainchainBlockHash> block. From oldest MC block to genesis one.
+  val mainchainCreationBlockHeight: Int // Height of the block which include SidechainCreationTx for current SC
 }
