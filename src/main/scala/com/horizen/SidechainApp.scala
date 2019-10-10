@@ -3,15 +3,12 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import java.io.{File => JFile}
-import java.net.InetSocketAddress
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.server.ExceptionHandler
 import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.forge.ForgerRef
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
@@ -26,16 +23,14 @@ import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
-import scorex.util.{ModifierId, ScorexLogging}
-import akka.http.scaladsl.server.{ExceptionHandler, Route}
+import akka.http.scaladsl.server.ExceptionHandler
 import com.horizen.forge.ForgerRef
-import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, DisconnectionCode, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
+import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.mutable
-import scala.io.Source
 import scala.util.Try
 import scala.concurrent.duration._
 import scala.collection.immutable.Map
@@ -145,13 +140,6 @@ class SidechainApp(val settingsFilename: String)
     storage
   }
 
-  // Note: ignore this at the moment
-  // waiting WS client interface
-  private def setupMainchainConnection  = ???
-
-  // waiting WS client interface
-  private def getMainchainConnectionInfo  = ???
-
   // retrieve information for using a web socket connector
   val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
     bindAddress = "ws://localhost:8888",
@@ -162,18 +150,18 @@ class SidechainApp(val settingsFilename: String)
   val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(webSocketConfiguration)
 
   // create the cweb socket connector and configure it
-  val webSocketConnector : WebSocketConnector[_ <: WebSocketChannel] = new WebSocketConnectorImpl(
-    webSocketConfiguration, webSocketMessageHandler, webSocketReconnectionHandler
+  val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
+    webSocketConfiguration.bindAddress, webSocketConfiguration.connectionTimeout, webSocketMessageHandler, webSocketReconnectionHandler
   )
 
   // start the web socket connector
-  val channel : Try[WebSocketChannel] = webSocketConnector.start()
+  val connectorStarted : Try[Unit] = webSocketConnector.start()
 
   // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-  if(channel.isSuccess)
+  if(connectorStarted.isSuccess)
     {
       val communicationClient : WebSocketCommunicationClient = webSocketMessageHandler.asInstanceOf[WebSocketCommunicationClient]
-      communicationClient.setWebSocketChannel(channel.get)
+      communicationClient.setWebSocketChannel(webSocketConnector)
     }
 
 }

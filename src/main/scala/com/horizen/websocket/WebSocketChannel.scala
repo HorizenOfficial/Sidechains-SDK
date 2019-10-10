@@ -1,6 +1,7 @@
 package com.horizen.websocket
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 object DisconnectionCode extends Enumeration {
@@ -12,27 +13,34 @@ object DisconnectionCode extends Enumeration {
 
 trait WebSocketMessageHandler {
   def onReceivedMessage(message: String): Unit
+
   def onSendMessageErrorOccurred(message: String, cause: Throwable): Unit
 }
 
 trait WebSocketReconnectionHandler {
 
   // when client fails to connect to remote endpoint
-  def onConnectionFailed(cause: Throwable) : Boolean
+  def onConnectionFailed(cause: Throwable): Boolean
 
   // when established connection is lost for any reason
-  def onDisconnection(code : DisconnectionCode.Value, reason : String) : Boolean
+  def onDisconnection(code: DisconnectionCode.Value, reason: String): Boolean
 
-  // Delay before next connection attempt (in seconds)
-  def getDelay: Long
+  // Delay before next connection attempt
+  def getDelay: FiniteDuration
+
+  def onConnectionSuccess(): Unit
+
 }
 
-trait WebSocketConnector[C <: WebSocketChannel] {
+trait WebSocketConnector extends WebSocketChannel {
 
-  def isStarted() : Boolean
-  def start() : Try[C]
-  def asyncStart() : Future[Try[C]]
-  def stop() : Try[Unit]
+  def isStarted(): Boolean
+
+  def start(): Try[Unit]
+
+  def asyncStart(): Future[Try[Unit]]
+
+  def stop(): Try[Unit]
 
 }
 
