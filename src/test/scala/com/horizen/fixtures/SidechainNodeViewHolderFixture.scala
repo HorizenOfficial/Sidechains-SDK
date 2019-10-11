@@ -9,13 +9,14 @@ import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.params.MainNetParams
 import com.horizen.secret.SecretSerializer
-import com.horizen.state.{ApplicationState, DefaultApplicationState}
+import com.horizen.state.ApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.SidechainBlockValidator
-import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
+import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider

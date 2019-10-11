@@ -12,11 +12,11 @@ import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion
 import com.horizen.forge.ForgerRef
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
-import com.horizen.state.{ApplicationState, DefaultApplicationState}
+import com.horizen.state.{ApplicationState}
 import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
-import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
+import com.horizen.wallet.{ApplicationWallet}
 import scorex.core.api.http.{ApiRoute, PeersApiRoute}
 import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
