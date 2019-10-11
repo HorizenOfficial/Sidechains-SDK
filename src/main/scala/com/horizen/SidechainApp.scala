@@ -40,7 +40,6 @@ class SidechainApp @Inject()
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
-   @Named("MainNetParams") val mainNetParams: MainNetParams,
    @Named("SecretStorage") val secretStorage: Storage,
    @Named("WalletBoxStorage") val walletBoxStorage: Storage,
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
@@ -71,10 +70,8 @@ class SidechainApp @Inject()
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
-  //protected val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
-  //protected val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
-  //val mainNetParams = new MainNetParams()
+  val mainNetParams = new MainNetParams()
 
   case class CustomParams(override val sidechainGenesisBlockId: ModifierId) extends MainNetParams {
 

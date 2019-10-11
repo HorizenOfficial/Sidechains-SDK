@@ -16,7 +16,7 @@ import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Sidechain
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.SidechainBlockValidator
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainTypes}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
@@ -27,7 +27,7 @@ trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
 {
 
-  val sidechainSettings = SidechainSettings.read("src/main/additional-resources/settings/settings.conf")
+  val sidechainSettings = SidechainSettingsReader.read("src/main/additional-resources/settings/settings.conf", None)
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler

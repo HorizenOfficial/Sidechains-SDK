@@ -18,7 +18,6 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToVersion}
 import scorex.util.ScorexLogging
-
 import com.horizen.utils.BytesUtils
 
 import scala.util.{Failure, Random, Success, Try}
@@ -104,22 +103,34 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys()
-    val pubKeysCol = pubKeys.map(key => new ByteArrayWrapper(key.bytes)).asJavaCollection
-    val transactions = modifier.transactions.filter(tx => {
-      BytesUtils.hasSameElement(tx.boxIdsToOpen(), boxes().map(_.box.id()).asJavaCollection) ||
-      BytesUtils.hasSameElement(pubKeysCol, tx.newBoxes().asScala.map(_.proposition().bytes).asJavaCollection)
-    })
+    val boxesInWallet = boxes().map(_.box.id())
+
+    val txBoxes: Seq[(SidechainTypes#SCBT, ByteArrayWrapper)] =
+      (modifier.transactions.map(tx => (tx, tx.boxIdsToOpen().asScala.toSeq)) ++
+        modifier.transactions.map(tx => (tx, tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id())))))
+        .flatMap(tx => {
+          tx._2.foldLeft(Seq[(SidechainTypes#SCBT, ByteArrayWrapper)]())((col, box) => {
+            col :+ (tx._1, box)
+          })
+        })
 
     val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
         .map(_.box)
         .map { box =>
-               val boxTransaction = modifier.transactions.find(t => t.newBoxes().asScala.exists(tb => java.util.Arrays.equals(tb.id, box.id)))
-               val txId = boxTransaction.map(_.id).get
-               val ts = boxTransaction.map(_.timestamp).getOrElse(modifier.timestamp)
+               val boxTransaction = txBoxes.find(t => java.util.Arrays.equals(t._2.data, box.id))
+               val txId = boxTransaction.map(_._1.id).get
+               val ts = boxTransaction.map(_._1.timestamp).getOrElse(modifier.timestamp)
                new WalletBox(box, txId, ts)
     }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
+      .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
+
+    val transactions = txBoxes.filter(t => {
+      newBoxes.exists(_.transactionId.equals(t._1.id)) ||
+      boxIdsToRemove.exists(boxId => java.util.Arrays.equals(boxId, t._2.data))
+    }).map(_._1).distinct
+
     walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
     walletTransactionStorage.update(new ByteArrayWrapper(version), transactions)
