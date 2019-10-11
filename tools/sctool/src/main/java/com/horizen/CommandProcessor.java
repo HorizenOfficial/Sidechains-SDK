@@ -184,6 +184,7 @@ public class CommandProcessor {
             offset += 4;
 
 
+            String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
@@ -207,6 +208,7 @@ public class CommandProcessor {
             resJson.put("scGenesisBlockHex", sidechainBlockHex);
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);
+            resJson.put("mcNetwork", mcNetworkName);
             String res = resJson.toString();
             printer.print(res);
 
@@ -217,11 +219,25 @@ public class CommandProcessor {
                         mcBlockHeight,
                         powData,
                         BytesUtils.toHexString(scId),
-                        sidechainBlockHex
+                        sidechainBlockHex,
+                        mcNetworkName
                 );
         } catch (Exception e) {
             printer.print("Error: 'info' data is corrupted.");
         }
+    }
+
+
+    private String getNetworkName(byte network) {
+        switch(network) {
+            case 0:
+                return "mainnet";
+            case 1:
+                return "testnet";
+            case 2:
+                return "regtest";
+        }
+        return "";
     }
 
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
@@ -242,7 +258,8 @@ public class CommandProcessor {
             int mcBlockHeight,
             String powData,
             String scId,
-            String scBlockHex) {
+            String scBlockHex,
+            String mcNetworkName) {
         try {
             String templateConf = new String(Files.readAllBytes(Paths.get(pathToSourceConfig)), StandardCharsets.UTF_8);
 
@@ -254,6 +271,7 @@ public class CommandProcessor {
                             "\t\tscId = \"" + scId + "\"\n" +
                             "\t\tpowData = \"" + powData + "\"\n" +
                             "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
+                            "\t\tmcNetwork = " + mcNetworkName + "\n" +
                         "\t}\n" +
                     "}\n";
 

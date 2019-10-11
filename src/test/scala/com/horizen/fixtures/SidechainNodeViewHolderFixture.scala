@@ -9,7 +9,7 @@ import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
@@ -46,13 +46,23 @@ trait SidechainNodeViewHolderFixture
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
-  val params: NetworkParams = RegTestParams(
-    BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-    sidechainSettings.genesisBlock.get.id,
-    sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
-    sidechainSettings.genesisPowData,
-    sidechainSettings.genesisData.mcBlockHeight
-  )
+  val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
+    case "regtest" => RegTestParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainSettings.genesisBlock.get.id,
+      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+      sidechainSettings.genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight
+    )
+    case "mainnet" | "testnet" => MainNetParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainSettings.genesisBlock.get.id,
+      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+      sidechainSettings.genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight
+    )
+    case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
+  }
 
   val sidechainSecretStorage = new SidechainSecretStorage(
     getStorage(),

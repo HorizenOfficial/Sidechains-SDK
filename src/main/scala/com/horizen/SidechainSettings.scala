@@ -30,8 +30,8 @@ case class GenesisData(
                         scGenesisBlockHex: String,
                         scId: String,
                         mcBlockHeight: Int,
-                        powData: String/*,
-                        mcNetwork: String*/
+                        powData: String,
+                        mcNetwork: String
                       )
 case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: GenesisData, webSocketClientSettings: WebSocketClientSettings) {
 
