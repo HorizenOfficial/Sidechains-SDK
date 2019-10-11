@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
+import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 
 class SidechainUtilApiRouteTest extends SidechainApiRouteTest {
 
@@ -15,6 +15,7 @@ class SidechainUtilApiRouteTest extends SidechainApiRouteTest {
       }
       Get(basePath) ~> Route.seal(sidechainUtilApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 

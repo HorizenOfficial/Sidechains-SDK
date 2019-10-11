@@ -24,6 +24,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Get(basePath) ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "findById") ~> sidechainBlockApiRoute ~> check {
@@ -34,6 +35,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "findById") ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "findLastIds") ~> sidechainBlockApiRoute ~> check {
@@ -44,6 +46,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "findLastIds") ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "findIdByHeight") ~> sidechainBlockApiRoute ~> check {
@@ -54,6 +57,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "findIdByHeight") ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "submit") ~> sidechainBlockApiRoute ~> check {
@@ -64,6 +68,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "submit") ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "generate") ~> sidechainBlockApiRoute ~> check {
@@ -74,6 +79,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "generate") ~> Route.seal(sidechainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 

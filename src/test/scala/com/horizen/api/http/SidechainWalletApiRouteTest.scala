@@ -22,6 +22,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Get(basePath) ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "allBoxes") ~> sidechainWalletApiRoute ~> check {
@@ -32,6 +33,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "balance") ~> sidechainWalletApiRoute ~> check {
@@ -42,6 +44,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "balance") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute ~> check {
@@ -52,6 +55,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allPublicKeys") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 

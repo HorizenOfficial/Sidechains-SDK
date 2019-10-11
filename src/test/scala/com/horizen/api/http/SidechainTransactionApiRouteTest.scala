@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
+import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 
 class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 
@@ -15,6 +15,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Get(basePath) ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "allTransactions") ~> sidechainTransactionApiRoute ~> check {
@@ -25,6 +26,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allTransactions") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "findById") ~> sidechainTransactionApiRoute ~> check {
@@ -35,6 +37,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "findById") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "decodeTransactionBytes") ~> sidechainTransactionApiRoute ~> check {
@@ -45,6 +48,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "decodeTransactionBytes") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
@@ -55,6 +59,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "createRegularTransaction") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "createRegularTransactionSimplified") ~> sidechainTransactionApiRoute ~> check {
@@ -65,6 +70,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "createRegularTransactionSimplified") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
@@ -75,6 +81,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "sendCoinsToAddress") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
       Post(basePath + "sendTransaction") ~> sidechainTransactionApiRoute ~> check {
@@ -85,6 +92,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "sendTransaction") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 
