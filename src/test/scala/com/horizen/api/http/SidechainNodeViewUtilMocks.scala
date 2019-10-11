@@ -108,9 +108,6 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 
-    // not wallet but 'sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)'
-    //Mockito.when(wallet.addNewSecret(ArgumentMatchers.any())).thenAnswer(_ => sidechainApiMockConfiguration.getShould_wallet_addSecret_return_value())
-
     Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
 
     Mockito.when(wallet.allSecrets()).thenAnswer(_ => listOfSecrets.asJava)

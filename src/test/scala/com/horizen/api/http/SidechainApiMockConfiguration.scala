@@ -2,17 +2,20 @@ package com.horizen.api.http
 
 class SidechainApiMockConfiguration {
 
-  private var should_wallet_addSecret_return_value: Boolean = true
+  private var should_nodeViewHolder_LocallyGeneratedSecret_reply: Boolean = true
   private var should_history_getBlockById_return_value: Boolean = true
   private var should_history_getBlockIdByHeight_return_value: Boolean = true
   private var should_history_getCurrentHeight_return_value = true
   private var should_forger_TryGetBlockTemplate_reply = true
   private var should_blockActor_SubmitSidechainBlock_reply = true
   private var should_blockActor_GenerateSidechainBlocks_reply = true
+  private var should_peerManager_GetAllPeers_reply: Boolean = true
+  private var should_networkController_GetConnectedPeers_reply = true
+  private var should_peerManager_GetBlacklistedPeers_reply = true
 
-  def getShould_wallet_addSecret_return_value(): Boolean = should_wallet_addSecret_return_value
+  def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
-  def setShould_wallet_addSecret_return_value(value: Boolean): Unit = should_wallet_addSecret_return_value = value
+  def setShould_nodeViewHolder_LocallyGeneratedSecret_reply(value: Boolean): Unit = should_nodeViewHolder_LocallyGeneratedSecret_reply = value
 
   def getShould_history_getBlockById_return_value(): Boolean = should_history_getBlockById_return_value
 
@@ -37,5 +40,17 @@ class SidechainApiMockConfiguration {
   def getShould_blockActor_GenerateSidechainBlocks_reply(): Boolean = should_blockActor_GenerateSidechainBlocks_reply
 
   def setShould_blockActor_GenerateSidechainBlocks_reply(value: Boolean): Unit = should_blockActor_GenerateSidechainBlocks_reply = value
+
+  def getSshould_peerManager_GetAllPeers_reply(): Boolean = should_peerManager_GetAllPeers_reply
+
+  def setShould_peerManager_GetAllPeers_reply(value: Boolean): Unit = should_peerManager_GetAllPeers_reply = value
+
+  def getShould_networkController_GetConnectedPeers_reply(): Boolean = should_networkController_GetConnectedPeers_reply
+
+  def setShould_networkController_GetConnectedPeers_reply(value: Boolean): Unit = should_networkController_GetConnectedPeers_reply = value
+
+  def getShould_peerManager_GetBlacklistedPeers_reply(): Boolean = should_peerManager_GetBlacklistedPeers_reply
+
+  def setShould_peerManager_GetBlacklistedPeers_reply(value: Boolean): Unit = should_peerManager_GetBlacklistedPeers_reply = value
 
 }

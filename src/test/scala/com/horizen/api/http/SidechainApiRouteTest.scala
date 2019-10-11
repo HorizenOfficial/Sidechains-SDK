@@ -1,5 +1,6 @@
 package com.horizen.api.http
 
+import java.net.{InetAddress, InetSocketAddress}
 import java.time.Instant
 import java.{lang, util}
 
@@ -9,10 +10,9 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.{SidechainSettings, SidechainTypes}
-import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
@@ -26,6 +26,11 @@ import org.mockito.Mockito
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
+import scorex.core.app.Version
+import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
+import scorex.core.network.{Incoming, Outgoing, PeerSpec}
+import scorex.core.network.peer.PeerInfo
+import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, bytesToId}
@@ -44,6 +49,23 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   private val genesisBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
     PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
     SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+
+  private val inetAddr1 = new InetSocketAddress("92.92.92.92", 27017)
+  private val inetAddr2 = new InetSocketAddress("93.93.93.93", 27017)
+  private val inetAddr3 = new InetSocketAddress("94.94.94.94", 27017)
+  val inetAddrBlackListed_1 = new InetSocketAddress("95.95.95.95", 27017)
+  val inetAddrBlackListed_2 = new InetSocketAddress("96.96.96.96", 27017)
+  val peersInfo: Array[PeerInfo] = Array(
+    PeerInfo(PeerSpec("app", Version.initial, "first", Some(inetAddr1), Seq()), System.currentTimeMillis() - 100, Some(Incoming)),
+    PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr2), Seq()), System.currentTimeMillis() + 100, Some(Outgoing)),
+    PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr3), Seq()), System.currentTimeMillis() + 200, Some(Outgoing))
+  )
+  val peers: Map[InetSocketAddress, PeerInfo] = Map(
+    inetAddr1 -> peersInfo(0),
+    inetAddr2 -> peersInfo(1),
+    inetAddr3 -> peersInfo(2)
+  )
+  val connectedPeers: Seq[PeerInfo] = Seq(peersInfo(0), peersInfo(2))
 
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
 
@@ -69,6 +91,10 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case GetDataFromCurrentSidechainNodeView(f) => sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case LocallyGeneratedSecret(_) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
+            sender ! Success()
+          else sender ! Failure(new Exception("Secret not added."))
       }
       TestActor.KeepRunning
     }
@@ -80,11 +106,36 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mockedSidechainTransactioActorRef: ActorRef = mockedSidechainTransactioActor.ref
 
   val mockedPeerManagerActor = TestProbe()
-  mockedPeerManagerActor.setAutoPilot(TestActor.KeepRunning)
+  mockedPeerManagerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetAllPeers =>
+          if (sidechainApiMockConfiguration.getSshould_peerManager_GetAllPeers_reply())
+            sender ! peers
+          else sender ! Failure(new Exception("No peers."))
+        case GetBlacklistedPeers =>
+          if(sidechainApiMockConfiguration.getShould_peerManager_GetBlacklistedPeers_reply())
+            sender ! Seq[InetAddress](inetAddrBlackListed_1.getAddress, inetAddrBlackListed_2.getAddress)
+          else new Exception("No black listed peers.")
+      }
+      TestActor.KeepRunning
+    }
+  })
   val mockedPeerManagerRef: ActorRef = mockedPeerManagerActor.ref
 
   val mockedNetworkControllerActor = TestProbe()
-  mockedNetworkControllerActor.setAutoPilot(TestActor.KeepRunning)
+  mockedNetworkControllerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetConnectedPeers =>
+          if (sidechainApiMockConfiguration.getShould_networkController_GetConnectedPeers_reply())
+            sender ! connectedPeers
+          else sender ! Failure(new Exception("No connected peers."))
+        case ConnectTo(_) =>
+      }
+      TestActor.KeepRunning
+    }
+  })
   val mockedNetworkControllerRef: ActorRef = mockedNetworkControllerActor.ref
 
   val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
@@ -112,7 +163,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
           if (sidechainApiMockConfiguration.getShould_blockActor_SubmitSidechainBlock_reply()) sender ! Future[Try[ModifierId]](Try(genesisBlock.id))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for submit the block.")))
         case GenerateSidechainBlocks(count) =>
-          if(sidechainApiMockConfiguration.getShould_blockActor_GenerateSidechainBlocks_reply())
+          if (sidechainApiMockConfiguration.getShould_blockActor_GenerateSidechainBlocks_reply())
             sender ! Future[Try[Seq[ModifierId]]](Try(Seq(
               bytesToId("block_id_1".getBytes),
               bytesToId("block_id_2".getBytes),

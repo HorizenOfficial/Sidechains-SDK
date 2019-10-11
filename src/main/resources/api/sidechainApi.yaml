@@ -813,7 +813,12 @@ paths:
                 type: object
                 properties:
                   result:
-                    $ref: '#/components/schemas/SidechainPeerNode'
+                    type: object
+                    properties:
+                      peers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -882,7 +887,12 @@ paths:
                 type: object
                 properties:
                   result:
-                    $ref: '#/components/schemas/SidechainPeerNode'
+                    type: object
+                    properties:
+                      peers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:

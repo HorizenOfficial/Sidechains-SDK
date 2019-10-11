@@ -4,7 +4,7 @@ import java.net.{InetAddress, InetSocketAddress}
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.horizen.api.http.schema.SidechainNodeRestSchema.{ReqConnectPost, RespBlacklistedPeersPost, RespConnectPost, SidechainPeerNode}
+import com.horizen.api.http.schema.SidechainNodeRestSchema.{ReqConnectPost, RespAllPeersPost, RespBlacklistedPeersPost, RespConnectPost, SidechainPeerNode}
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -39,7 +39,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       val resultList = Await.result(result, settings.timeout).toList
 
       SidechainApiResponse(
-        SerializationUtil.serializeWithResult(resultList)
+        SerializationUtil.serializeWithResult(RespAllPeersPost(resultList))
       )
 
     } catch {
@@ -63,7 +63,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       val resultList = Await.result(result, settings.timeout).toList
 
       SidechainApiResponse(
-        SerializationUtil.serializeWithResult(resultList)
+        SerializationUtil.serializeWithResult(RespAllPeersPost(resultList))
       )
 
     } catch {

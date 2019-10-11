@@ -32,6 +32,9 @@ import com.horizen.serialization.Views
 object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
+  case class RespAllPeersPost(peers: List[SidechainPeerNode])
+
+  @JsonView(Array(classOf[Views.Default]))
   case class SidechainPeerNode(address: String, lastSeen: Long, name: String, connectionType: Option[String])
 
   @JsonView(Array(classOf[Views.Default]))

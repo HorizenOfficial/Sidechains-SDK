@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.schema.WalletRestScheme.{ReqAllBoxesPost, ReqAllPropositionsPost, ReqBalancePost}
 import com.horizen.serialization.SerializationUtil
-import JacksonSupport._
 import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import org.junit.Assert._
 
@@ -149,7 +148,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         }
       }
       // secret is not added
-      sidechainApiMockConfiguration.setShould_wallet_addSecret_return_value(false)
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
       Post(basePath + "newPublicKey") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
