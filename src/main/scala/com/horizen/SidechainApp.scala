@@ -40,8 +40,8 @@ class SidechainApp(val settingsFilename: String)
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
-  override implicit lazy val settings: ScorexSettings = SidechainSettings.read(Some(settingsFilename)).scorexSettings
+  private val sidechainSettings = SidechainSettingsReader.read(settingsFilename, None)
+  override implicit lazy val settings: ScorexSettings = SidechainSettingsReader.read(settingsFilename, None).scorexSettings
 
   private val storageList = mutable.ListBuffer[Storage]()
 

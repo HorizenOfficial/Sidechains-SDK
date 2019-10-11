@@ -4,34 +4,34 @@ import java.io.File
 import java.lang.{Byte => JByte, Long => JLong}
 import java.net.{InetSocketAddress, URL}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap}
-
+import java.util.{Optional => JOptional}
 import javafx.util.{Pair => JPair}
+
 import com.typesafe.config.{Config, ConfigFactory}
-import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.{NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.params.MainNetParams
-import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.storage.{IODBStoreAdapter, Storage}
 import com.horizen.transaction.{RegularTransaction, SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.BytesUtils
 import com.typesafe.config.Config
-import javafx.util.{Pair => JPair}
+import io.iohk.iodb.LSMStore
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import scorex.core.settings.ScorexSettings.readConfigFromPath
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.util.{ScorexLogging, _}
+import scala.compat.java8.OptionConverters._
 
 case class WebSocketClientSettings(
                                     remoteAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),
                                     connectionTimeout : Long = 5000,
                                     connectionTimeUnit :String = "MILLISECONDS")
 
-case class SidechainSettings(val config: Config, scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
+case class SidechainSettings(scorexSettings: ScorexSettings,
+                             webSocketClientSettings: WebSocketClientSettings)
+{
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -99,7 +99,7 @@ case class SidechainSettings(val config: Config, scorexSettings: ScorexSettings,
   */
 }
 
-object SidechainSettings
+object SidechainSettingsReader
   extends ScorexLogging
     with SettingsReaders
 {
@@ -107,46 +107,51 @@ object SidechainSettings
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
-  def read(userConfigPath: Option[String]): SidechainSettings = {
-    fromConfig(readConfigFromPath(userConfigPath))
-  }
-
-  private def fromConfig(config: Config): SidechainSettings = {
+  def fromConfig(config: Config): SidechainSettings = {
     val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
-    SidechainSettings(config, scorexSettings, webSocketClientSettings)
+    SidechainSettings(scorexSettings, webSocketClientSettings)
   }
 
-  def readConfigFromPath(userConfigPath: Option[String]): Config = {
+  def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {
 
-    val userConfigFile: Option[File] = userConfigPath.map(filename => new File(filename)).filter(_.exists())
-    val userConfigResource: Option[URL] = userConfigPath.map(filename => getClass.getClassLoader.getResource(filename))
+    val userConfigFile: File = new File(userConfigPath)
+    val userConfigResource: Option[URL] = Option(getClass.getClassLoader.getResource(userConfigPath))
 
-    val userConfig: Option[Config] = if (userConfigFile.isDefined) {
-      Some(ConfigFactory.parseFile(userConfigFile.get))
+    val userConfig: Option[Config] = if (userConfigFile.exists()) {
+      Some(ConfigFactory.parseFile(userConfigFile))
     } else if (userConfigResource.isDefined) {
       Some(ConfigFactory.parseURL(userConfigResource.get))
     } else None
 
-    val config = userConfig match {
-      case Some(cfg) => ConfigFactory
-        .defaultOverrides()
-        .withFallback(cfg) // user-supplied config
-        .withFallback(ConfigFactory.defaultApplication())
-        .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
-        .withFallback(ConfigFactory.defaultReference()) // "src/main/resources/reference.conf"
-        .resolve()
-      case None => {
-        log.warn("NO CONFIGURATION FILE WAS PROVIDED. STARTING WITH DEFAULT SETTINGS!")
-        ConfigFactory
-          .defaultOverrides()
-          .withFallback(ConfigFactory.defaultApplication())
-          .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
-          .withFallback(ConfigFactory.defaultReference()) // "src/main/resources/reference.conf"
-          .resolve()
-      }
-    }
+    val applicationConfigFile: Option[File] = applicationConfigPath.map(filename => new File(filename)).filter(_.exists())
+    val applicationConfigResource: Option[URL] = applicationConfigPath.map(filename => getClass.getClassLoader.getResource(filename))
+
+    val applicationConfig: Option[Config] = if (applicationConfigFile.isDefined) {
+      Some(ConfigFactory.parseFile(applicationConfigFile.get))
+    } else if (applicationConfigResource.isDefined) {
+      Some(ConfigFactory.parseURL(applicationConfigResource.get))
+    } else None
+
+    var config: Config = ConfigFactory.defaultOverrides()
+
+    if (userConfig.isDefined)
+      config = config.withFallback(userConfig.get)
+
+    if (applicationConfig.isDefined)
+      config = config.withFallback(applicationConfig.get)
+
+    config = config
+      .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
+      .withFallback(ConfigFactory.defaultReference())
+      .resolve()
 
     config
   }
+
+  def readConfigFromPath(userConfigPath: String, applicationConfigPath: JOptional[String]) : Config =
+    readConfigFromPath(userConfigPath, toScala(applicationConfigPath))
+
+  def read(userConfigPath: String, applicationConfigPath: Option[String]) : SidechainSettings =
+    fromConfig(readConfigFromPath(userConfigPath, applicationConfigPath))
 }
