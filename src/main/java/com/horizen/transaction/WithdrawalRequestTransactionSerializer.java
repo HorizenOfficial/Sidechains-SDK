@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
@@ -26,19 +26,6 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
         _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
-    /*
-    @Override
-    public byte[] toBytes(T obj) {
-        return _boxSerializer.toBytes(obj.newBoxes());
-    }
-
-    @Override
-    public Try<T> parseBytesTry(byte[] bytes) {
-        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(bytes).get();
-        return null;
-    }
-    */
-
     @Override
     public void serialize(T transaction, Writer writer) {
         writer.putBytes(_boxSerializer.toBytes(transaction.newBoxes()));
@@ -49,4 +36,6 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
         List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(reader.getBytes(reader.remaining())).get();
         return null;
     }
+
 }
+*/

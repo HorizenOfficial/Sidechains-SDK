@@ -30,9 +30,9 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         return Arrays.copyOf(_output.forwardTransferOutputBytes(), _output.forwardTransferOutputBytes().length);
     }
 
-    public static Try<ForwardTransfer> parseBytes(byte[] bytes) {
+    public static ForwardTransfer parseBytes(byte[] bytes) {
         MainchainTxForwardTransferCrosschainOutput output = MainchainTxForwardTransferCrosschainOutput.create(bytes, 0).get();
-        return new Success<>(new ForwardTransfer(output));
+        return new ForwardTransfer(output);
     }
 
     @Override

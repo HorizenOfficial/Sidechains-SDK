@@ -11,6 +11,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import akka.pattern.ask
 import akka.util.Timeout
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
@@ -21,11 +22,10 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 (settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var generatedBlockGroups: Map[ModifierId, Seq[ModifierId]] = Map()
-  private var generateBlocksPromises: Map[ModifierId, Promise[Try[Seq[ModifierId]]]] = Map()
+  private var generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
+  private var generatedBlocksPromises: TrieMap[ModifierId, Promise[Try[Seq[ModifierId]]]] = TrieMap()
 
-  private var submitedBlocks: Set[ModifierId] = Set()
-  private var submitBlockPromises: Map[ModifierId, Promise[Try[ModifierId]]] = Map()
+  private var submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
 
   lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
@@ -37,32 +37,41 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   def processBlockFailedEvent(sidechainBlock: SidechainBlock, throwable: Throwable): Unit = {
-    if (submitedBlocks.contains(sidechainBlock.id)) {
+    if (submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
       submitBlockPromises.get(sidechainBlock.id) match {
-        case Some(p) => p.success(Failure(throwable))
+        case Some(p) =>
+          p.failure(throwable)
+          submitBlockPromises -= sidechainBlock.id
         case _ =>
       }
-      submitedBlocks -= sidechainBlock.id
-      submitBlockPromises -= sidechainBlock.id
-      generatedBlockGroups -= sidechainBlock.id
+
+      generatedBlocksPromises.get(sidechainBlock.id) match {
+        case Some(p) =>
+          p.failure(throwable)
+          generatedBlockGroups -= sidechainBlock.id
+          generatedBlocksPromises -= sidechainBlock.id
+        case _ =>
+      }
     }
   }
 
   def processHistoryChangedEvent(history: SidechainHistory): Unit = {
-    val expectedBlocks = submitedBlocks.toSeq
+    val expectedBlocks = submitBlockPromises.keys ++ generatedBlocksPromises.keys
     for (id <- expectedBlocks) {
       if (history.contains(id)) {
         submitBlockPromises.get(id) match {
-          case Some(p) => p.success(Success(id))
+          case Some(p) =>
+            p.success(Success(id))
+            submitBlockPromises -= id
           case _ =>
         }
-        generateBlocksPromises.get(id) match {
-          case Some(p) => p.success(Success(generatedBlockGroups(id)))
+        generatedBlocksPromises.get(id) match {
+          case Some(p) =>
+            p.success(Success(generatedBlockGroups(id)))
+            generatedBlockGroups -= id
+            generatedBlocksPromises -= id
           case _ =>
         }
-        submitedBlocks -= id
-        submitBlockPromises -= id
-        generatedBlockGroups -= id
       }
     }
   }
@@ -89,12 +98,11 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
         Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
           case Success(id) =>
             generatedIds = id +: generatedIds
-            submitedBlocks += id
             if (i == blockCount) {
               // Create a promise, that will wait for blocks applying result from Node
               val prom = Promise[Try[Seq[ModifierId]]]()
               generatedBlockGroups += (id -> generatedIds)
-              generateBlocksPromises += (id -> prom)
+              generatedBlocksPromises += (id -> prom)
               sender() ! prom.future
             }
 
@@ -111,7 +119,6 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
         case Success(id) =>
           // Create a promise, that will wait for block applying result from Node
           val prom = Promise[Try[ModifierId]]()
-          submitedBlocks += id
           submitBlockPromises += (id -> prom)
           sender() ! prom.future
 

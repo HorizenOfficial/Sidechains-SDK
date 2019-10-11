@@ -16,11 +16,14 @@ import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
+import com.horizen.params.MainNetParams
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.TransactionSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.runner.RunWith
 import org.mockito.Mockito
+import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
@@ -31,6 +34,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
+@RunWith(classOf[JUnitRunner])
 abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
@@ -125,10 +129,10 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainUtilApiRoute: Route = SidechainUtilApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val sidechainUtilApiRoute: Route = SidechainUtilsApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
-  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, new MainNetParams()).route
 
   val basePath: String
 

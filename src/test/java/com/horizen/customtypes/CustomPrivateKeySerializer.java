@@ -29,6 +29,6 @@ public class CustomPrivateKeySerializer implements SecretSerializer<CustomPrivat
 
     @Override
     public CustomPrivateKey parse(Reader reader) {
-        return CustomPrivateKey.parseBytes(reader.getBytes(reader.remaining())).get();
+        return CustomPrivateKey.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

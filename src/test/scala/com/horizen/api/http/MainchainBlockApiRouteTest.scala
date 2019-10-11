@@ -2,6 +2,8 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
 class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 

@@ -4,7 +4,8 @@ import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 
 
-public interface Secret extends scorex.core.serialization.BytesSerializable
+public interface Secret
+    extends scorex.core.serialization.BytesSerializable
 {
     byte secretTypeId();
 

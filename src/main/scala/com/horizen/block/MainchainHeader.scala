@@ -1,18 +1,17 @@
 package com.horizen.block
 
-import com.horizen.utils.{BytesUtils, Utils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-
-import scala.util.Try
 import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import com.horizen.utils.{BytesUtils, Utils}
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable
+import scala.util.Try
 
 //
 // Representation of MC header
@@ -27,18 +26,17 @@ import scala.collection.mutable
 @JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
-                       val version: Int,                      // 4 bytes
-                       val hashPrevBlock: Array[Byte],        // 32 bytes
-                       val hashMerkleRoot: Array[Byte],       // 32 bytes
-                       val hashReserved: Array[Byte],         // 32 bytes
+                       val version: Int, // 4 bytes
+                       val hashPrevBlock: Array[Byte], // 32 bytes
+                       val hashMerkleRoot: Array[Byte], // 32 bytes
+                       val hashReserved: Array[Byte], // 32 bytes
                        val hashSCMerkleRootsMap: Array[Byte], // 32 bytes
-                       val time: Int,                         // 4 bytes
-                       val bits: Int,                         // 4 bytes
-                       val nonce: Array[Byte],                // 32 bytes
-                       val solution: Array[Byte]              // depends on NetworkParams
-                    )
-  extends BytesSerializable
-{
+                       val time: Int, // 4 bytes
+                       val bits: Int, // 4 bytes
+                       val nonce: Array[Byte], // 32 bytes
+                       val solution: Array[Byte] // depends on NetworkParams
+                     )
+  extends BytesSerializable {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
 
@@ -50,31 +48,32 @@ class MainchainHeader(
   override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    if(hashPrevBlock == null || hashPrevBlock.length != 32
-        || hashMerkleRoot == null || hashMerkleRoot.length != 32
-        || hashReserved == null || hashReserved.length != 32
-        || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
-        || nonce == null || nonce.length != 32
-        || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
-      )
+    if (hashPrevBlock == null || hashPrevBlock.length != 32
+      || hashMerkleRoot == null || hashMerkleRoot.length != 32
+      || hashReserved == null || hashReserved.length != 32
+      || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
+      || nonce == null || nonce.length != 32
+      || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
+    )
       return false
 
     // Check if timestamp is valid and not too far in the future
-    if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen
+    if (time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen
       return false
 
-    if(!ProofOfWorkVerifier.checkProofOfWork(this, params))
+    if (!ProofOfWorkVerifier.checkProofOfWork(this, params))
       return false
 
     // check equihash for header bytes without solution part
-    if(!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
-        mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
-        solution)
+    if (!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
+      mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
+      solution)
     )
       return false
     true
   }
 
+  override def bytes: Array[Byte] = mainchainHeaderBytes
 }
 
 
@@ -83,7 +82,7 @@ object MainchainHeader {
   val MIN_HEADER_SIZE: Int = 140 // + 32 (for SCMapHash size)
 
   def create(headerBytes: Array[Byte], offset: Int): Try[MainchainHeader] = Try {
-    if(offset < 0 || headerBytes.length - offset < MIN_HEADER_SIZE)
+    if (offset < 0 || headerBytes.length - offset < MIN_HEADER_SIZE)
       throw new IllegalArgumentException("Input data corrupted.")
 
     var currentOffset: Int = offset
@@ -118,7 +117,8 @@ object MainchainHeader {
     val nonce: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val solutionLength =  BytesUtils.getReversedVarInt(headerBytes, currentOffset)
+    // @TODO check: getReversedVarInt works correctly with BytesUtils.fromVarInt (not reversed)
+    val solutionLength = BytesUtils.getReversedVarInt(headerBytes, currentOffset)
     currentOffset += solutionLength.size()
 
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
@@ -129,9 +129,6 @@ object MainchainHeader {
 }
 
 object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
-  //override def toBytes(obj: MainchainHeader): Array[Byte] = obj.mainchainHeaderBytes
-
-  //override def parseBytesTry(bytes: Array[Byte]): Try[MainchainHeader] = MainchainHeader.create(bytes, 0)
 
   override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.bytes)
 

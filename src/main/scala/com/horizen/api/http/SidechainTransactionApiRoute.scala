@@ -46,7 +46,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   def allTransactions: Route = (post & path("allTransactions")) {
     entity(as[ReqAllTransactionsPost]) { body =>
       withNodeView { sidechainNodeView =>
-        var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.allTransactions()
+        var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
         if (body.format.getOrElse(true)) {
           SidechainApiResponse(
             SerializationUtil.serializeWithResult(
@@ -84,7 +84,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val history = sidechainNodeView.getNodeHistory
 
         def searchTransactionInMemoryPool(id: String): Option[_ <: Transaction] = {
-          var opt = memoryPool.getTransactionByid(id)
+          var opt = memoryPool.getTransactionById(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
@@ -196,7 +196,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def createRegularTransaction: Route = (post & path("createRegularTransaction")) {
-
     entity(as[ReqCreateRegularTransactionPost]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
@@ -268,7 +267,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def createRegularTransactionSimplified: Route = (post & path("createRegularTransactionSimplified")) {
-
     entity(as[ReqCreateRegularTransactionSimplifiedPost]) { body =>
       withNodeView { sidechainNodeView =>
         var outputList = body.transactionOutputs
@@ -385,7 +383,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
     */
   def sendTransaction: Route = (post & path("sendTransaction")) {
-
     entity(as[ReqSendTransactionPost]) { body =>
       withNodeView { sidechainNodeView =>
         var transactionBytes = BytesUtils.fromHexString(body.transactionBytes)

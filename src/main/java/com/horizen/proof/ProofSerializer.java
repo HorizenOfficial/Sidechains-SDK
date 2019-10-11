@@ -1,13 +1,15 @@
 package com.horizen.proof;
 
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
-public interface ProofSerializer<P extends Proof> extends ScorexSerializer<P>
+public interface ProofSerializer<P extends Proof>
+    extends ScorexSerializer<P>
 {
-    //@Override
-    //byte[] toBytes(P obj);
+    @Override
+    void serialize(P proof, Writer writer);
 
-    //@Override
-    //Try<P> parseBytesTry(byte[] bytes);
+    @Override
+    P parse(Reader reader);
 }

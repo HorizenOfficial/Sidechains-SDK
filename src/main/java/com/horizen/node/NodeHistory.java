@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface NodeHistory {
     Optional<SidechainBlock> getBlockById(String blockId);
 
-    List<String> getLastBlockIds(String startBlockId, int count);
+    List<String> getLastBlockIds(int count);
 
     SidechainBlock getBestBlock();
 
@@ -24,13 +24,11 @@ public interface NodeHistory {
 
     Optional<Transaction> searchTransactionInsideBlockchain(String transactionId);
 
-    MainchainBlockReferenceInfo getBestMainchainBlockReferenceInfo();
+    Optional<MainchainBlockReferenceInfo> getBestMainchainBlockReferenceInfo();
 
-    MainchainBlockReference getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
+    Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByHash(byte[] mainchainBlockReferenceHash);
 
-    int getHeightOfMainchainBlock(byte[] mcBlockReferenceHash);
+    Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByMainchainBlockHeight(int height);
 
-    Optional<SidechainBlock> getSidechainBlockByMainchainBlockReferenceHash(byte[] mcBlockReferenceHash);
-
-    Try<MainchainBlockReference> createMainchainBlockReference(byte[] mainchainBlockData);
+    Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
 }

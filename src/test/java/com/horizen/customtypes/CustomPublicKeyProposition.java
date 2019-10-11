@@ -4,9 +4,6 @@ import com.horizen.ScorexEncoding;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PropositionSerializer;
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 
 import java.util.Arrays;
 
@@ -33,13 +30,8 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
         return CustomPublicKeyPropositionSerializer.getSerializer();
     }
 
-    public static Try<CustomPublicKeyProposition> parseBytes(byte[] bytes) {
-        try {
-            CustomPublicKeyProposition proposition = new CustomPublicKeyProposition(bytes);
-            return new Success<CustomPublicKeyProposition>(proposition);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static CustomPublicKeyProposition parseBytes(byte[] bytes) {
+        return new CustomPublicKeyProposition(bytes);
     }
 
     @Override

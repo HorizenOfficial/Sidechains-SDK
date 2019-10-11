@@ -31,8 +31,8 @@ class Forger(settings: SidechainSettings,
   import Forger._
   import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 
-  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
-  implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
+  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout / 4
+  implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   protected def getNodeView: View = {
     val future = sidechainNodeViewHolderRef ? getCurrentNodeView
@@ -51,7 +51,7 @@ class Forger(settings: SidechainSettings,
             sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
         }
       } catch {
-        case e: Exception => sender ! Failure(new Exception(s"Unable to collect information for block template creation: Timeout exception"))
+        case _ => sender ! Failure(new Exception(s"Unable to collect information for block template creation: Timeout exception"))
       }
   }
 
@@ -133,8 +133,9 @@ object Forger extends ScorexLogging {
         val parentId: Block.BlockId = view.history.bestBlockId
         val timestamp: Long = Instant.now.getEpochSecond
         val mainchainBlockRefToInclude: Seq[MainchainBlockReference] = Seq() // TO DO: implement after web client for MC node
-        val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = view.pool.take(SidechainBlock.MAX_MC_BLOCKS_NUMBER) // TO DO: problems with types
-          .filter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+        val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
+          view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
+          .withFilter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .toSeq
         val ownerPrivateKey:PrivateKey25519 = view.vault.secrets().headOption match {

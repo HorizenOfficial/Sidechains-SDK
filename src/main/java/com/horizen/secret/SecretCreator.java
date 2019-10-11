@@ -9,5 +9,5 @@ interface SecretCreator<S extends Secret>
     S generateSecret(byte[] seed);
 
     // Generate secret taking in consideration context of previously generated secrets stored in wallet.
-    S generateSecretWithContext(NodeWallet wallet);
+    S generateNextSecret(NodeWallet wallet);
 }

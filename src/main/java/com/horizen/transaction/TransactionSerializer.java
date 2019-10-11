@@ -1,13 +1,16 @@
 package com.horizen.transaction;
 
 import scorex.core.serialization.ScorexSerializer;
+import scorex.util.serialization.Reader;
+import scorex.util.serialization.Writer;
 
-public interface TransactionSerializer<T extends Transaction> extends ScorexSerializer<T>
+public interface TransactionSerializer<T extends Transaction>
+    extends ScorexSerializer<T>
 {
-    //@Override
-    //byte[] toBytes(T obj);
+    @Override
+    void serialize(T transaction, Writer writer);
 
-    //@Override
-    //Try<T> parseBytesTry(byte[] bytes);
+    @Override
+    T parse(Reader reader);
 }
 

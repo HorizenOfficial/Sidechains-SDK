@@ -17,6 +17,7 @@ import java.util.List;
 public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox> {
     private long _timestamp;
 
+    public static final byte TRANSACTION_TYPE_ID = 11;
     public SemanticallyInvalidTransaction(long timestamp) {
         _timestamp = timestamp;
     }
@@ -56,16 +57,13 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
         return SemanticallyInvalidTransactionSerializer.getSerializer();
     }
 
-    public static Try<SemanticallyInvalidTransaction> parseBytes(byte[] bytes) {
-        try {
-            return new Success<>(new SemanticallyInvalidTransaction(BytesUtils.getLong(bytes, 0)));
-        } catch (Exception e) {
-            return new Failure<>(e);
-        }
+    public static SemanticallyInvalidTransaction parseBytes(byte[] bytes) {
+        return new SemanticallyInvalidTransaction(BytesUtils.getLong(bytes, 0));
     }
+
     @Override
     public byte transactionTypeId() {
-        return 11;
+        return TRANSACTION_TYPE_ID;
     }
 
 }

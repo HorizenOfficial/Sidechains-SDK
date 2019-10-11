@@ -120,11 +120,6 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     public byte[] walletSeed() {
         return "seed".getBytes();
     }
-
-    @Override
-    public Boolean addNewSecret(Secret secret) {
-        return false;
-    }
 }
 
 public class RegularTransactionCreatorTest {

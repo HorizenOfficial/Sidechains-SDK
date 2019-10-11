@@ -21,5 +21,7 @@ public interface Storage {
 
     List<ByteArrayWrapper> rollbackVersions();
 
+    boolean isEmpty();
+
     void close();
 }

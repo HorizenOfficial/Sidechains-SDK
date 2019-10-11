@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional, ArrayList => JArrayList, List => JList}
+import java.util.{Comparator, Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.Box
 import com.horizen.node.NodeMemoryPool
@@ -90,8 +90,9 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
         return Failure(new IllegalArgumentException("There is incompatible transaction - " + t.head))
     }
 
+    val currentUnconfimed = unconfirmed.values.toList.asJava
     for (t <- txs) {
-      if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.asJava))
+      if (!t.incompatibilityChecker().isTransactionCompatible(t, currentUnconfimed))
         return Failure(new IllegalArgumentException("There is incompatible transaction - " + t))
     }
 
@@ -125,8 +126,14 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
     this
   }
 
-  override def allTransactions(): JList[SidechainTypes#SCBT] = {
+  override def getTransactions: JList[SidechainTypes#SCBT] = {
     unconfirmed.values.toList.asJava
+  }
+
+  override def getTransactions(c: Comparator[SidechainTypes#SCBT], limit: Int): JList[SidechainTypes#SCBT] = {
+    val txs = unconfirmed.values.toList.asJava
+    txs.sort(c)
+    txs.subList(0, limit)
   }
 
   override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
@@ -135,9 +142,8 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCBT])
 
   override def getSize: Int = unconfirmed.size
 
-  override def getTransactionByid(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
-    var id = scorex.util.bytesToId(transactionId.getBytes)
-    Optional.ofNullable(unconfirmed.get(id).get)
+  override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
+    Optional.ofNullable(unconfirmed.getOrElse(transactionId, null))
   }
 }
 

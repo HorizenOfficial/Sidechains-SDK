@@ -30,7 +30,6 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * The sidechain block by its id.
     */
   def findById: Route = (post & path("findById")) {
-
     entity(as[ReqFindByIdPost]) { body =>
       withNodeView { sidechainNodeView =>
         var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
@@ -56,11 +55,10 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Returns an array of number last sidechain block ids
     */
   def findLastIds: Route = (post & path("findLastIds")) {
-
     entity(as[ReqLastIdsPost]) { body =>
       withNodeView { sidechainNodeView =>
         var sidechainHistory = sidechainNodeView.getNodeHistory
-        var blockIds = sidechainHistory.getLastBlockIds(sidechainHistory.getBestBlock.id, body.number)
+        var blockIds = sidechainHistory.getLastBlockIds(body.number)
         SidechainApiResponse(
           SerializationUtil.serializeWithResult(
             RespLastIdsPost(blockIds.asScala)))
@@ -72,7 +70,6 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Return a sidechain block Id by its height in a blockchain
     */
   def findIdByHeight: Route = (post & path("findIdByHeight")) {
-
     entity(as[ReqFindIdByHeightPost]) { body =>
       withNodeView { sidechainNodeView =>
         var sidechainHistory = sidechainNodeView.getNodeHistory
@@ -98,7 +95,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   def getBestBlockInfo: Route = (post & path("best")) {
     withNodeView {
       sidechainNodeView =>
-        var sidechainHistory = sidechainNodeView.getNodeHistory
+        val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if (height > 0)
           SidechainApiResponse(
@@ -120,9 +117,8 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     */
   def getBlockTemplate: Route = (post & path("template")) {
     val future = forgerRef ? TryGetBlockTemplate
-    val blockTemplate = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
-    // TO DO: replace with ApiResponse(blockTemplate.toJson) in future
-    blockTemplate match {
+    val blockTemplateTry = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
+    blockTemplateTry match {
       case Success(block) =>
         SidechainApiResponse(
           SerializationUtil.serializeWithResult(
@@ -138,7 +134,6 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
   def submitBlock: Route = (post & path("submit")) {
-
     entity(as[ReqSubmitPost]) { body =>
       withNodeView { sidechainNodeView =>
         var blockBytes: Array[Byte] = null
@@ -177,7 +172,6 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * the newly generated blocks.
     */
   def generateBlocks: Route = (post & path("generate")) {
-
     entity(as[ReqGeneratePost]) { body =>
       withNodeView { sidechainNodeView =>
         val future = sidechainBlockActorRef ? GenerateSidechainBlocks(body.number)

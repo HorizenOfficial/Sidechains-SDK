@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import java.io.ByteArrayOutputStream
 import java.util
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
@@ -16,9 +15,9 @@ import com.horizen.utils.{ByteArrayWrapper, _}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.{Failure, Success, Try}
-import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 
 // Mainchain Block structure:
@@ -35,7 +34,7 @@ class MainchainBlockReference(
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
                     @JsonProperty("merkleRoots")
                     @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
-                    val sidechainsMerkleRootsMap: Option[Map[ByteArrayWrapper, Array[Byte]]]
+                    val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]]
                     )
   extends BytesSerializable
 {
@@ -43,8 +42,6 @@ class MainchainBlockReference(
   lazy val hash: Array[Byte] = header.hash
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
-
-  //override def jsonSerializer: JsonSerializer[MainchainBlockReference] = MainchainBlockReferenceJSONSerializer
 
   override type M = MainchainBlockReference
   /*override type J = MainchainBlockReference*/
@@ -96,13 +93,12 @@ class MainchainBlockReference(
 
     true
   }
-
 }
 
 
 object MainchainBlockReference {
   // TO DO: check size
-  val MAX_MAINCHAIN_BLOCK_SIZE = 2048 * 1024 //2048K
+  val MAX_MAINCHAIN_BLOCK_SIZE: Int = 2048 * 1024 //2048K
 
   def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
@@ -117,7 +113,7 @@ object MainchainBlockReference {
             for (tx <- mainchainTxs)
               scIds = scIds ++ tx.getRelatedSidechains
 
-            var aggregatedTransactionsMap: Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
+            val aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
             for (id <- scIds) {
               var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
               for (tx <- mainchainTxs) {
@@ -127,7 +123,7 @@ object MainchainBlockReference {
               aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
             }
 
-            val SCMap: Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
+            val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
               case (k, v) =>
                 (k, v.mc2scMerkleRootHash())
             }
@@ -188,74 +184,56 @@ object MainchainBlockReference {
 object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlockReference] {
   val HASH_BYTES_LENGTH: Int = 32
 
-  override def toBytes(obj: MainchainBlockReference): Array[Byte] = {
-    val mc2scAggregatedTransactionSize: Int = obj.sidechainRelatedAggregatedTransaction match {
-      case Some(tx) => tx.bytes().length
-      case _ => 0
+  override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
+    w.putInt(obj.header.bytes.length)
+    w.putBytes(obj.header.bytes)
+    obj.sidechainRelatedAggregatedTransaction match {
+      case Some(tx) =>
+        w.putInt(tx.bytes().length)
+        w.putBytes(tx.bytes())
+      case _ =>
+        w.putInt(0)
     }
 
-    val SCMapSize: Int = obj.sidechainsMerkleRootsMap match {
-      case Some(scmap) => scmap.size * HASH_BYTES_LENGTH * 2
-      case _ => 0
-    }
-    val SCMapBytes: Array[Byte] = {
-      if(SCMapSize == 0)
-        Array[Byte]()
-      else {
-        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-        obj.sidechainsMerkleRootsMap.get.foreach {
+    obj.sidechainsMerkleRootsMap match {
+      case Some(scmap) =>
+        w.putInt(scmap.size * HASH_BYTES_LENGTH * 2)
+        scmap.foreach {
           case (k, v) =>
-            stream.write(k.data)
-            stream.write(v)
+            w.putBytes(k.data)
+            w.putBytes(v)
         }
-        stream.toByteArray
-      }
+      case _ =>
+        w.putInt(0)
     }
-
-    Bytes.concat(
-      Ints.toByteArray(obj.header.bytes.length),
-      obj.header.bytes,
-      Ints.toByteArray(mc2scAggregatedTransactionSize),
-      if (mc2scAggregatedTransactionSize == 0) Array[Byte]() else obj.sidechainRelatedAggregatedTransaction.get.bytes,
-      Ints.toByteArray(SCMapSize),
-      SCMapBytes
-    )
   }
 
-  override def parseBytesTry(bytes: Array[Byte]): Try[MainchainBlockReference] = Try {
-    if(bytes.length < 4 + MainchainHeader.MIN_HEADER_SIZE + 4 + 4)
+  override def parse(r: Reader): MainchainBlockReference = {
+    if(r.remaining < 4 + MainchainHeader.MIN_HEADER_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
-    var offset: Int = 0
-    val headerSize: Int = BytesUtils.getInt(bytes, offset)
-    offset += 4
+    val headerSize: Int = r.getInt()
+    val header: MainchainHeader = MainchainHeaderSerializer.parseBytes(r.getBytes(headerSize))
 
-    val header: MainchainHeader = MainchainHeaderSerializer.parseBytesTry(bytes.slice(offset, headerSize + offset)).get
-    offset += headerSize
-
-    val mc2scAggregatedTransactionSize: Int = BytesUtils.getInt(bytes, offset)
-    offset += 4
+    val mc2scAggregatedTransactionSize: Int = r.getInt()
 
     val mc2scTx: Option[MC2SCAggregatedTransaction] = {
       if (mc2scAggregatedTransactionSize > 0)
-        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytesTry(bytes.slice(offset, offset + mc2scAggregatedTransactionSize)).get)
+        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(r.getBytes(mc2scAggregatedTransactionSize)))
       else
         None
     }
-    offset += mc2scAggregatedTransactionSize
 
-    val SCMapSize: Int = BytesUtils.getInt(bytes, offset)
-    offset += 4
+    val SCMapSize: Int = r.getInt()
 
-    if(offset + SCMapSize != bytes.length)
+    if(SCMapSize != r.remaining)
       throw new IllegalArgumentException("Input data corrupted.")
 
-    val SCMap: Option[Map[ByteArrayWrapper, Array[Byte]]] = {
+    val SCMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]] = {
       if(SCMapSize > 0) {
-        val scmap = Map[ByteArrayWrapper, Array[Byte]]()
-        while(offset < bytes.length) {
-          scmap.put(new ByteArrayWrapper(bytes.slice(offset, offset + HASH_BYTES_LENGTH)), bytes.slice(offset + HASH_BYTES_LENGTH, offset + HASH_BYTES_LENGTH * 2))
-          offset += HASH_BYTES_LENGTH * 2
+        val scmap = mutable.Map[ByteArrayWrapper, Array[Byte]]()
+        while(r.remaining > 0) {
+          scmap.put(new ByteArrayWrapper(r.getBytes(HASH_BYTES_LENGTH)), r.getBytes(HASH_BYTES_LENGTH))
         }
         Some(scmap)
       }
@@ -265,8 +243,4 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
 
     new MainchainBlockReference(header, mc2scTx, SCMap)
   }
-
-  override def serialize(obj: MainchainBlockReference, w: Writer): Unit = ???
-
-  override def parse(r: Reader): MainchainBlockReference = ???
 }

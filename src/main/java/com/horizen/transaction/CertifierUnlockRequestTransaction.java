@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
@@ -53,14 +53,6 @@ public final class CertifierUnlockRequestTransaction
         return null;
     }
 
-    @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
 
 }
+*/

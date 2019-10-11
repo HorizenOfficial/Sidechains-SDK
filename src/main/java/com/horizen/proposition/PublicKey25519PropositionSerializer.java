@@ -1,13 +1,9 @@
 package com.horizen.proposition;
 
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition>
-{
+public final class PublicKey25519PropositionSerializer implements PropositionSerializer<PublicKey25519Proposition> {
     private static PublicKey25519PropositionSerializer serializer;
 
     static {
@@ -23,22 +19,12 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
     }
 
     @Override
-    public byte[] toBytes(PublicKey25519Proposition proposition) {
-        return proposition.bytes();
+    public void serialize(PublicKey25519Proposition proposition, Writer writer) {
+        writer.putBytes(proposition.bytes());
     }
-
-    @Override
-    public Try<PublicKey25519Proposition> parseBytesTry(byte[] bytes) {
-        return PublicKey25519Proposition.parseBytes(bytes);
-    }
-
-    @Override
-public void serialize(PublicKey25519Proposition proposition, Writer writer) {
-    writer.putBytes(proposition.bytes());
-}
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return PublicKey25519Proposition.parseBytes(reader.getBytes(reader.remaining())).get();
+        return PublicKey25519Proposition.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

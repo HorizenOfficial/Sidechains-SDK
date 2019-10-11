@@ -33,7 +33,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
       if (sidechainApiMockConfiguration.getShould_history_getBlockById_return_value()) Optional.of(genesisBlock)
       else Optional.empty())
 
-    Mockito.when(history.getLastBlockIds(ArgumentMatchers.any(), ArgumentMatchers.any())).then(_ => {
+    Mockito.when(history.getLastBlockIds(ArgumentMatchers.any())).thenAnswer(_ => {
       val ids = new util.ArrayList[String]()
       ids.add("block_id_1")
       ids.add("block_id_2")
@@ -108,7 +108,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 
-    Mockito.when(wallet.addNewSecret(ArgumentMatchers.any())).thenAnswer(_ => sidechainApiMockConfiguration.getShould_wallet_addSecret_return_value())
+    // not wallet but 'sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)'
+    //Mockito.when(wallet.addNewSecret(ArgumentMatchers.any())).thenAnswer(_ => sidechainApiMockConfiguration.getShould_wallet_addSecret_return_value())
 
     Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
 

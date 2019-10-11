@@ -7,9 +7,6 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.serialization.ScorexByteEncoderSerializer;
 import com.horizen.serialization.Views;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
@@ -17,8 +14,7 @@ import java.util.Objects;
 
 @JsonView(Views.Default.class)
 public final class Signature25519
-    implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition>
-{
+        implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
 
@@ -26,8 +22,8 @@ public final class Signature25519
     @JsonProperty("signature")
     byte[] _signatureBytes;
 
-    public Signature25519 (byte[] signatureBytes) {
-        if(signatureBytes.length != SIGNATURE_LENGTH)
+    public Signature25519(byte[] signatureBytes) {
+        if (signatureBytes.length != SIGNATURE_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
                     signatureBytes.length));
 
@@ -49,13 +45,8 @@ public final class Signature25519
         return Signature25519Serializer.getSerializer();
     }
 
-    public static Try<Signature25519> parseBytes(byte[] bytes) {
-        try {
-            Signature25519 signature = new Signature25519(bytes);
-            return new Success<Signature25519>(signature);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static Signature25519 parseBytes(byte[] bytes) {
+        return new Signature25519(bytes);
     }
 
     @Override

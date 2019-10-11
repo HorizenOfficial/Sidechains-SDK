@@ -32,12 +32,11 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
     }
 
     @Override
-    public PrivateKey25519 generateSecretWithContext(NodeWallet wallet) {
+    public PrivateKey25519 generateNextSecret(NodeWallet wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(PrivateKey25519.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
         byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
 
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(seed);
-        return new PrivateKey25519(keyPair._1, keyPair._2);
+        return generateSecret(seed);
     }
 }

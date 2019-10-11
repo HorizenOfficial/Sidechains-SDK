@@ -1,5 +1,5 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
@@ -11,7 +11,8 @@ import scorex.util.serialization.Writer;
 import java.util.HashMap;
 import java.util.List;
 
-public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction> implements TransactionSerializer<T>
+public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlockRequestTransaction>
+    implements TransactionSerializer<T>
 {
     private ListSerializer<NoncedBox<Proposition>> _boxSerializer;
 
@@ -27,19 +28,6 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
         _boxSerializer  = new ListSerializer<NoncedBox<Proposition>>(supportedBoxCompanion);
     }
 
-    /*
-    @Override
-    public byte[] toBytes(T obj) {
-        return _boxSerializer.toBytes(obj.newBoxes());
-    }
-
-    @Override
-    public Try<T> parseBytesTry(byte[] bytes) {
-        List<NoncedBox<Proposition>> boxes = _boxSerializer.parseBytesTry(bytes).get();
-        return null;
-    }
-    */
-
     @Override
     public void serialize(T transaction, Writer writer) {
         writer.putBytes(_boxSerializer.toBytes(transaction.newBoxes()));
@@ -51,3 +39,4 @@ public class CertifierUnlockRequestTransactionSerializer<T extends CertifierUnlo
         return null;
     }
 }
+*/

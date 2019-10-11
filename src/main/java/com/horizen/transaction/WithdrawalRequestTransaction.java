@@ -1,9 +1,8 @@
 package com.horizen.transaction;
-
+/*
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import scorex.core.utils.ScorexEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,14 +51,5 @@ public final class WithdrawalRequestTransaction
         return null;
     }
 
-    @Override
-    public String encodedId() {
-        return super.encodedId();
-    }
-
-    @Override
-    public ScorexEncoder encoder() {
-        return new ScorexEncoder();
-    }
-
 }
+*/

@@ -7,11 +7,15 @@ import com.horizen.secret.PrivateKey25519Creator
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 import JacksonSupport._
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import com.horizen.api.http.schema.WalletRestScheme._
 import com.horizen.serialization.SerializationUtil
+import akka.pattern.ask
+
+import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -25,7 +29,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list. Filter boxes of a given type
     */
   def allBoxes: Route = (post & path("allBoxes")) {
-
     entity(as[ReqAllBoxesPost]) { body =>
       withNodeView { sidechainNodeView =>
         var optBoxTypeClass = body.boxTypeClass
@@ -56,7 +59,6 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the balance for given box type, or all types of boxes
     */
   def balance: Route = (post & path("balance")) {
-
     entity(as[ReqBalancePost]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
@@ -88,19 +90,21 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def newPublicKey: Route = (post & path("newPublicKey")) {
     withNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
-
-      val key = PrivateKey25519Creator.getInstance().generateSecretWithContext(wallet)
-      if (wallet.addNewSecret(key)) {
-        SidechainApiResponse(
-          SerializationUtil.serializeWithResult(
-            RespCreateNewPublicKeyPost(key.publicImage())
+      val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
+      val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+      Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+        case Success(_) =>
+          SidechainApiResponse(
+            SerializationUtil.serializeWithResult(
+              RespCreateNewPublicKeyPost(secret.publicImage())
+            )
           )
-        )
-      } else
-        SidechainApiResponse(
-          SerializationUtil.serializeErrorWithResult(
-            SECRET_NOT_ADDED().apiCode, "Failed to create key pair.", "")
-        )
+        case Failure(e) =>
+          SidechainApiResponse(
+            SerializationUtil.serializeErrorWithResult(
+              SECRET_NOT_ADDED().apiCode, "Failed to create key pair.", e.getMessage)
+          )
+      }
     }
   }
 

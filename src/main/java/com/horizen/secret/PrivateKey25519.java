@@ -55,15 +55,10 @@ public final class PrivateKey25519 implements Secret
         return new PublicKey25519Proposition(_publicKeyBytes);
     }
 
-    public static Try<PrivateKey25519> parseBytes(byte[] bytes) {
-        try {
-            byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
-            byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
-            PrivateKey25519 secret = new PrivateKey25519(privateKeyBytes, publicKeyBytes);
-            return new Success<PrivateKey25519>(secret);
-        } catch (Exception e) {
-            return new Failure(e);
-        }
+    public static PrivateKey25519 parseBytes(byte[] bytes) {
+        byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
+        byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
+        return new PrivateKey25519(privateKeyBytes, publicKeyBytes);
     }
 
     @Override
