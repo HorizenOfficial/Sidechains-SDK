@@ -105,35 +105,32 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     val pubKeys = publicKeys()
     val boxesInWallet = boxes().map(_.box.id())
 
-    val txBoxes: Seq[(SidechainTypes#SCBT, ByteArrayWrapper)] =
+    val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] =
       (modifier.transactions.map(tx => (tx, tx.boxIdsToOpen().asScala.toSeq)) ++
         modifier.transactions.map(tx => (tx, tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id())))))
         .flatMap(tx => {
-          tx._2.foldLeft(Seq[(SidechainTypes#SCBT, ByteArrayWrapper)]())((col, box) => {
-            col :+ (tx._1, box)
+          tx._2.foldLeft(Seq[(ByteArrayWrapper, SidechainTypes#SCBT)]())((col, box) => {
+            col :+ (box, tx._1)
           })
-        })
+        }).toMap
 
     val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
         .map(_.box)
         .map { box =>
-               val boxTransaction = txBoxes.find(t => java.util.Arrays.equals(t._2.data, box.id))
-               val txId = boxTransaction.map(_._1.id).get
-               val ts = boxTransaction.map(_._1.timestamp).getOrElse(modifier.timestamp)
-               new WalletBox(box, txId, ts)
-    }
+               val boxTransaction = txBoxes(new ByteArrayWrapper(box.id()))
+               new WalletBox(box, boxTransaction.id, boxTransaction.timestamp())
+        }
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
       .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
 
-    val transactions = txBoxes.filter(t => {
-      newBoxes.exists(_.transactionId.equals(t._1.id)) ||
-      boxIdsToRemove.exists(boxId => java.util.Arrays.equals(boxId, t._2.data))
-    }).map(_._1).distinct
+    val transactions = (for (boxId <- (newBoxes.map(_.box.id()) ++ boxIdsToRemove))
+      yield txBoxes(new ByteArrayWrapper(boxId))).distinct
 
     walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
     walletTransactionStorage.update(new ByteArrayWrapper(version), transactions)
+
     applicationWallet.onChangeBoxes(version, newBoxes.map(_.box).toList.asJava,
       boxIdsToRemove.toList.asJava)
 

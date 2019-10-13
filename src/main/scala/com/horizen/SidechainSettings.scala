@@ -116,21 +116,17 @@ object SidechainSettingsReader
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {
 
     val userConfigFile: File = new File(userConfigPath)
-    val userConfigResource: Option[URL] = Option(getClass.getClassLoader.getResource(userConfigPath))
 
     val userConfig: Option[Config] = if (userConfigFile.exists()) {
       Some(ConfigFactory.parseFile(userConfigFile))
-    } else if (userConfigResource.isDefined) {
-      Some(ConfigFactory.parseURL(userConfigResource.get))
     } else None
 
-    val applicationConfigFile: Option[File] = applicationConfigPath.map(filename => new File(filename)).filter(_.exists())
-    val applicationConfigResource: Option[URL] = applicationConfigPath.map(filename => getClass.getClassLoader.getResource(filename))
+    val applicationConfigURL: Option[URL] = applicationConfigPath.map(filename => new File(filename))
+      .filter(_.exists()).map(_.toURI.toURL)
+      .orElse(applicationConfigPath.map(r => getClass.getClassLoader.getResource(r)))
 
-    val applicationConfig: Option[Config] = if (applicationConfigFile.isDefined) {
-      Some(ConfigFactory.parseFile(applicationConfigFile.get))
-    } else if (applicationConfigResource.isDefined) {
-      Some(ConfigFactory.parseURL(applicationConfigResource.get))
+    val applicationConfig: Option[Config] = if (applicationConfigURL.isDefined) {
+      Some(ConfigFactory.parseURL(applicationConfigURL.get))
     } else None
 
     var config: Config = ConfigFactory.defaultOverrides()
