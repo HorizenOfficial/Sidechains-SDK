@@ -40,13 +40,13 @@ object WalletRestScheme {
   case class RespAllBoxesPost(boxes: List[Box[Proposition]])
 
   @JsonView(Array(classOf[Views.Default]))
-  case class ReqBalancePost(boxType: Option[String])
+  private[api] case class ReqBalancePost(boxType: Option[String])
 
   @JsonView(Array(classOf[Views.Default]))
   case class RespBalancePost(balance: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  case class RespCreateNewPublicKeyPost(proposition: Proposition)
+  case class RespCreateSecretPost(proposition: Proposition)
 
   @JsonView(Array(classOf[Views.Default]))
   case class ReqAllPropositionsPost(proptype: Option[String])

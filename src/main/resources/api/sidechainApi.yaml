@@ -14,6 +14,8 @@ tags:
     description: Sidechain wallet operations
   - name: node
     description: Sidechain node operations
+  - name: mainchain
+    description: Sidechain mainchain operations
   - name: util
     description: Sidechain utility operations
 
@@ -727,13 +729,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /wallet/newPublicKey:
+  /wallet/createSecret:
     post:
       tags:
         - wallet
       summary: new secret
       description: Create new secret and return corresponding address (public key)
-      operationId: createNewPublicKeyProposition
+      operationId: createSecret
       responses:
         '200':
           description: successful operation
@@ -919,6 +921,160 @@ paths:
                 properties:
                   result:
                     $ref: '#/components/schemas/BlacklistedPeersNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/bestBlockInfo:
+    post:
+      tags:
+        - mainchain
+      summary: find the best MC block header which has already been included in a SC block
+      description: "Returns the best MC block header which has already been included in a SC block. Returns:\n
+        1) Mainchain block reference hash with the most height; \n
+        2) Its height in mainchain; \n
+        3) Sidechain block ID which contains this MC block reference."
+      operationId: bestBlockInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/genesisBlockInfo:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: genesisBlockInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/blockInfoBy:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: blockInfoBy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hash:
+                  type: string
+                height:
+                  type: integer
+                  format: int32
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/blockByHash:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: blockByHash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hash
+              properties:
+                hash:
+                  type: string
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/MainchainBlock'
+                      blockHex:
+                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1115,6 +1271,19 @@ components:
 
     Transaction:
       type: object
+
+    MainchainBlockInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+        parentHash:
+          type: string
+        height:
+          type: integer
+          format: int64
+        sidechainBlockId:
+          type: string
 
     SidechainBlock:
       type: object

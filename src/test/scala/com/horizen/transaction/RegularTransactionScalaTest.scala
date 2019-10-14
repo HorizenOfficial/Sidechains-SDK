@@ -79,15 +79,15 @@ class RegularTransactionScalaTest
     }
 
     try {
-      val inputsNode = node.path("inputs")
+      val inputsNode = node.path("unlockers")
       try {
-        assertEquals("Count of transaction inputs in json must be the same.",
+        assertEquals("Count of transaction unlockers in json must be the same.",
           transaction.unlockers().size(), inputsNode.size)
       } catch {
-        case _ => fail("Transaction inputs in json have invalid format.")
+        case _ => fail("Transaction unlockers in json have invalid format.")
       }
     } catch {
-      case _ => fail("Transaction inputs do not found in json.")
+      case _ => fail("Transaction unlockers do not found in json.")
     }
 
     try {

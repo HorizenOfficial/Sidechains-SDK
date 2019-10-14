@@ -9,10 +9,11 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
-import scorex.core.utils.ScorexEncoder
+import scorex.util.idToBytes
 
 class SidechainBlockTest
   extends JUnitSuite
@@ -35,14 +36,14 @@ class SidechainBlockTest
     try {
       val id = node.path("id").asText()
       assertEquals("Block id json value must be the same.",
-        ScorexEncoder.default.encode(sb.id), id)
+        BytesUtils.toHexString(idToBytes(sb.id)), id)
     }catch {
       case _ => fail("Block id doesn't not found in json.")
     }
     try {
       val parentId = node.path("parentId").asText()
       assertEquals("Block parentId json value must be the same.",
-        ScorexEncoder.default.encode(sb.parentId), parentId)
+        BytesUtils.toHexString(idToBytes(sb.parentId)), parentId)
     }catch {
       case _ => fail("Block parentId doesn't not found in json.")
     }

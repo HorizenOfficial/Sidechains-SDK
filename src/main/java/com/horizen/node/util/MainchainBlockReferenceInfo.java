@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
-import com.horizen.serialization.ScorexByteEncoderSerializer;
+import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import scorex.core.serialization.BytesSerializable;
@@ -19,21 +19,21 @@ import java.util.Objects;
 public final class MainchainBlockReferenceInfo implements BytesSerializable {
 
     // Mainchain block reference hash with the most height
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
-    @JsonProperty("mainchainBlockReferenceHash")
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("hash")
     private byte[] mainchainBlockReferenceHash;
 
     // parent mainchain block reference hash
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
-    @JsonProperty("parentMainchainBlockReferenceHash")
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("parentHash")
     private byte[] parentMainchainBlockReferenceHash;
 
     // Height in mainchain of mainchainBlockReference
-    @JsonProperty("mainchainHeight")
+    @JsonProperty("height")
     private int mainchainHeight;
 
     // Sidechain block ID which contains this MC block reference
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
+    @JsonSerialize(using = ByteUtilsSerializer.class)
     @JsonProperty("sidechainBlockId")
     private byte[] sidechainBlockId;
 

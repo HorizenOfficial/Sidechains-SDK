@@ -13,7 +13,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{ScorexModifierIdEncoderSerializer, Views}
+import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
 import com.horizen.utils.ListSerializer
 import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
@@ -29,7 +29,7 @@ import scala.util.Try
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder"))
 class SidechainBlock (
-                       @JsonProperty("parentId") @JsonSerialize(using = classOf[ScorexModifierIdEncoderSerializer]) override val parentId: ModifierId,
+                       @JsonProperty("parentId") @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
                        @JsonProperty("timestamp") override val timestamp: Block.Timestamp,
                        @JsonProperty("mainchainBlocks") val mainchainBlocks : Seq[MainchainBlockReference],
                        @JsonProperty("sidechainTransactions") val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
@@ -49,7 +49,7 @@ class SidechainBlock (
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
   @JsonProperty("id")
-  @JsonSerialize(using = classOf[ScorexModifierIdEncoderSerializer])
+  @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId =
     bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 

@@ -7,7 +7,7 @@ import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.io.IOException;
 
-public class ScorexByteEncoderSerializer extends JsonSerializer<byte[]> {
+public class ByteUtilsSerializer extends JsonSerializer<byte[]> {
 
     @Override
     public void serialize(byte[] bytes, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

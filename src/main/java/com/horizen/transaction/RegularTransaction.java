@@ -17,9 +17,6 @@ import com.horizen.secret.PrivateKey25519;
 import com.horizen.serialization.Views;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import javafx.util.Pair;
 
 import java.io.ByteArrayOutputStream;
@@ -32,7 +29,6 @@ public final class RegularTransaction
 
     public static final byte TRANSACTION_TYPE_ID = 1;
 
-    @JsonProperty("inputs")
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
 

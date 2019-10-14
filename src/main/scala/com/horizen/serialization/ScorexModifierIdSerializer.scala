@@ -2,12 +2,12 @@ package com.horizen.serialization
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.{JsonSerializer, SerializerProvider}
-import scorex.core.utils.ScorexEncoder
+import com.horizen.utils.BytesUtils
 import scorex.util.ModifierId
+import scorex.util.idToBytes
 
-class ScorexModifierIdEncoderSerializer extends JsonSerializer[ModifierId] {
+class ScorexModifierIdSerializer extends JsonSerializer[ModifierId] {
   override def serialize(t: ModifierId, jsonGenerator: JsonGenerator, serializerProvider: SerializerProvider): Unit = {
-    var encoder = new ScorexEncoder
-    jsonGenerator.writeString(encoder.encode(t))
+    jsonGenerator.writeString(BytesUtils.toHexString(idToBytes(t)))
   }
 }

@@ -6,7 +6,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.ScorexByteEncoderSerializer;
+import com.horizen.serialization.ByteUtilsSerializer;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -39,7 +39,7 @@ public abstract class PublicKey25519NoncedBox<PKP extends PublicKey25519Proposit
     public final long nonce() { return _nonce; }
 
     @JsonProperty("id")
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
+    @JsonSerialize(using = ByteUtilsSerializer.class)
     @Override
     public byte[] id() {
         return Blake2b256.hash(Bytes.concat(_proposition.pubKeyBytes(), Longs.toByteArray(_nonce)));

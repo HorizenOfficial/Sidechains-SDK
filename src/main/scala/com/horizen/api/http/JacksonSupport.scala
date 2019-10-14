@@ -24,7 +24,7 @@ object JacksonSupport {
   implicit def JacksonRequestUnmarshaller[T <: AnyRef](implicit c: ClassTag[T]): FromRequestUnmarshaller[T] = {
     new FromRequestUnmarshaller[T] {
       override def apply(request: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[T] = {
-        request.entity.toStrict(5 seconds).map(_.data.decodeString("UTF-8")).map { str =>
+        request.entity.toStrict(1 seconds).map(_.data.decodeString("UTF-8")).map { str =>
           mapper.readValue(str, c.runtimeClass).asInstanceOf[T]
         }
       }
@@ -34,7 +34,7 @@ object JacksonSupport {
   implicit def JacksonResponseUnmarshaller[T <: AnyRef](implicit c: ClassTag[T]): FromResponseUnmarshaller[T] = {
     new FromResponseUnmarshaller[T] {
       override def apply(response: HttpResponse)(implicit ec: ExecutionContext, materializer: Materializer): Future[T] = {
-        response.entity.toStrict(5 seconds).map(_.data.decodeString("UTF-8")).map { str =>
+        response.entity.toStrict(1 seconds).map(_.data.decodeString("UTF-8")).map { str =>
           mapper.readValue(str, c.runtimeClass).asInstanceOf[T]
         }
       }

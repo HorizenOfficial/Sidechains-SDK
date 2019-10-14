@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.serialization.ScorexByteEncoderSerializer;
+import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import scorex.crypto.signatures.Curve25519;
 
@@ -18,7 +18,7 @@ public final class Signature25519
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
 
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
+    @JsonSerialize(using = ByteUtilsSerializer.class)
     @JsonProperty("signature")
     byte[] _signatureBytes;
 

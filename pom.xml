@@ -172,10 +172,24 @@
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-jackson -->
-		<dependency>
+<!--		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-http-jackson_2.12</artifactId>
 			<version>10.1.8</version>
+		</dependency>-->
+
+		<!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
+		<dependency>
+			<groupId>io.circe</groupId>
+			<artifactId>circe-core_2.12</artifactId>
+			<version>0.9.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/de.heikoseeberger/akka-http-circe -->
+		<dependency>
+			<groupId>de.heikoseeberger</groupId>
+			<artifactId>akka-http-circe_2.12</artifactId>
+			<version>1.19.0</version>
 		</dependency>
 
 	</dependencies>

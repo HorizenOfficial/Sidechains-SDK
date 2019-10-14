@@ -22,7 +22,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("wallet")) {
-    allBoxes ~ balance ~ newPublicKey ~ allPublicKeys
+    allBoxes ~ balance ~ createSecret ~ allPublicKeys
   }
 
   /**
@@ -87,7 +87,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Create new secret and return corresponding address (public key)
     */
-  def newPublicKey: Route = (post & path("newPublicKey")) {
+  def createSecret: Route = (post & path("createSecret")) {
     withNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
       val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
@@ -96,7 +96,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         case Success(_) =>
           SidechainApiResponse(
             SerializationUtil.serializeWithResult(
-              RespCreateNewPublicKeyPost(secret.publicImage())
+              RespCreateSecretPost(secret.publicImage())
             )
           )
         case Failure(e) =>

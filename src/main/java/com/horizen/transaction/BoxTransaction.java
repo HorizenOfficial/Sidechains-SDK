@@ -23,6 +23,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public final static int MAX_TRANSACTION_UNLOCKERS = 1000;
     public final static int MAX_TRANSACTION_NEW_BOXES = 1000;
 
+    @JsonProperty("unlockers")
     public abstract List<BoxUnlocker<P>> unlockers();
 
     @JsonProperty("newBoxes")

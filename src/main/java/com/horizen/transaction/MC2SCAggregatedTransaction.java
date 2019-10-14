@@ -9,16 +9,12 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.ScorexByteEncoderSerializer;
-import com.horizen.serialization.ScorexStringEncoderSerializer;
+import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
@@ -31,7 +27,7 @@ public final class MC2SCAggregatedTransaction
     public static final byte TRANSACTION_TYPE_ID = 2;
 
     @JsonProperty("mc2scTransactionsMerkleRootHash")
-    @JsonSerialize(using = ScorexByteEncoderSerializer.class)
+    @JsonSerialize(using = ByteUtilsSerializer.class)
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
 
@@ -108,7 +104,6 @@ public final class MC2SCAggregatedTransaction
     }
 
     @JsonProperty("id")
-    @JsonSerialize(using = ScorexStringEncoderSerializer.class)
     @Override
     public String id() {
         return Base16.encode(Blake2b256.hash(_mc2scTransactionsMerkleRootHash));

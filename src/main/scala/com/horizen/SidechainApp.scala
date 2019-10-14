@@ -25,6 +25,8 @@ import scorex.core.settings.ScorexSettings
 import scorex.util.ModifierId
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.horizen.forge.ForgerRef
+import scorex.core.api.http.ApiRoute
+import scorex.core.app.Application
 import scorex.core.transaction.Transaction
 
 import scala.collection.mutable
@@ -32,7 +34,7 @@ import scala.collection.immutable.Map
 import scala.io.Source
 
 class SidechainApp(val settingsFilename: String)
-  extends ScorexApplication {
+  extends Application {
 
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
@@ -132,7 +134,7 @@ class SidechainApp(val settingsFilename: String)
   customApiRoutes.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ (ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute)))
 
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, mainNetParams),
+    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
@@ -150,7 +152,7 @@ class SidechainApp(val settingsFilename: String)
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val sidechainApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute]()
+  override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)

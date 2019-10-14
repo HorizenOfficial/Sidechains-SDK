@@ -1,28 +1,16 @@
 package com.horizen.api.http
 
-import akka.actor.{ActorRef, ActorRefFactory}
+import akka.actor.ActorRef
 import com.horizen.node.SidechainNodeView
-import scorex.core.api.http.ApiDirectives
+import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers
-import akka.util.Timeout
-import scorex.core.utils.ActorHelper
-import scorex.util.ScorexLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait SidechainApiRoute extends ApiDirectives with ActorHelper with PredefinedFromEntityUnmarshallers with ScorexLogging {
+trait SidechainApiRoute extends ApiRoute with ApiDirectives {
 
   import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-
-  implicit lazy val timeout: Timeout = Timeout(settings.timeout)
-
-  def context: ActorRefFactory
-
-  def route: Route
-
-  override val apiKeyHeaderName: String = "api_key"
 
   val sidechainNodeViewHolderRef: ActorRef
 
