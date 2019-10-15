@@ -1,14 +1,16 @@
-package com.horizen.state;
+package com.horizen.examples;
 
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
+import com.horizen.state.ApplicationState;
+import com.horizen.state.SidechainStateReader;
 import scala.util.Success;
 import scala.util.Try;
 
 import java.util.List;
 
-public class DefaultApplicationState implements  ApplicationState {
+public class DefaultApplicationState implements ApplicationState {
     @Override
     public boolean validate(SidechainStateReader stateReader, SidechainBlock block) {
         return true;

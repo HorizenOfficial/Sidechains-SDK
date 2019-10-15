@@ -18,6 +18,7 @@ import com.horizen.transaction.{RegularTransaction, SidechainTransaction, Transa
 import com.horizen.utils.BytesUtils
 import com.typesafe.config.Config
 import io.iohk.iodb.LSMStore
+import javafx.util.{Pair => JPair}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
