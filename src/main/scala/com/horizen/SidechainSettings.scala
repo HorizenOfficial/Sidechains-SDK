@@ -22,7 +22,9 @@ import scorex.util.{ScorexLogging, _}
 case class WebSocketClientSettings(
                                     remoteAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),
                                     connectionTimeout : Long = 5000,
-                                    connectionTimeUnit :String = "MILLISECONDS")
+                                    connectionTimeUnit :String = "MILLISECONDS",
+                                    responseTimeout : Long = 7000,
+                                    responseTimeUnit :String = "MILLISECONDS")
 
 case class SidechainSettings(scorexSettings: ScorexSettings, webSocketClientSettings: WebSocketClientSettings) {
 

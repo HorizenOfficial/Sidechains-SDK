@@ -1,16 +1,14 @@
 package com.horizen
 
-import java.io.{File => JFile}
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
+import java.io.{File => JFile}
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.server.ExceptionHandler
 import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.forge.ForgerRef
 import com.horizen.params.{MainNetParams, StorageParams}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
@@ -25,11 +23,16 @@ import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
 import scorex.core.settings.ScorexSettings
+import akka.http.scaladsl.server.ExceptionHandler
+import com.horizen.forge.ForgerRef
+import com.horizen.websocket.{DefaultWebSocketReconnectionHandler, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorConfiguration, WebSocketConnectorImpl, WebSocketMessageHandler, WebSocketReconnectionHandler}
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.mutable
+import scala.util.Try
+import scala.concurrent.duration._
 import scala.collection.immutable.Map
 
 class SidechainApp(val settingsFilename: String)
@@ -116,7 +119,7 @@ class SidechainApp(val settingsFilename: String)
   override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef, mainNetParams),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
     SidechainUtilsApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
@@ -137,12 +140,30 @@ class SidechainApp(val settingsFilename: String)
     storage
   }
 
-  // Note: ignore this at the moment
-  // waiting WS client interface
-  private def setupMainchainConnection  = ???
+  // retrieve information for using a web socket connector
+  val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
+    bindAddress = "ws://localhost:8888",
+    connectionTimeout = 100 milliseconds,
+    reconnectionDelay = 1 seconds,
+    reconnectionMaxAttempts = 1)
+  val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(webSocketConfiguration)
 
-  // waiting WS client interface
-  private def getMainchainConnectionInfo  = ???
+  // create the cweb socket connector and configure it
+  val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
+    webSocketConfiguration.bindAddress, webSocketConfiguration.connectionTimeout, webSocketMessageHandler, webSocketReconnectionHandler
+  )
+
+  // start the web socket connector
+  val connectorStarted : Try[Unit] = webSocketConnector.start()
+
+  // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+  if(connectorStarted.isSuccess)
+    {
+      val communicationClient : WebSocketCommunicationClient = webSocketMessageHandler.asInstanceOf[WebSocketCommunicationClient]
+      communicationClient.setWebSocketChannel(webSocketConnector)
+    }
+
 }
 
 object SidechainApp /*extends App*/ {
