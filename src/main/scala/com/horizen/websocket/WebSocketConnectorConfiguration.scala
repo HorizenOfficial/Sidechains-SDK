@@ -1,12 +1,11 @@
 package com.horizen.websocket
 
-import java.net.InetSocketAddress
+import scala.concurrent.duration.FiniteDuration
 
 case class WebSocketConnectorConfiguration(
-                                          schema : String = "ws",
-                                          remoteAddress: InetSocketAddress,
-                                          connectionTimeout : Int, // milliseconds
-                                          reconnectionDelay : Long, // seconds
-                                          reconnectionMaxAttempts : Int) {
+                                            bindAddress: String,
+                                            connectionTimeout: FiniteDuration,
+                                            reconnectionDelay: FiniteDuration,
+                                            reconnectionMaxAttempts: Int) {
 
 }

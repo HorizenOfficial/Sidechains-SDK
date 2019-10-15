@@ -1,6 +1,5 @@
 package com.horizen.proposition;
 
-import io.circe.Json;
 import org.junit.Before;
 import org.junit.Test;
 

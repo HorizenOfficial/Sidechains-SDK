@@ -1,7 +1,5 @@
 package com.horizen.proposition;
 
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;

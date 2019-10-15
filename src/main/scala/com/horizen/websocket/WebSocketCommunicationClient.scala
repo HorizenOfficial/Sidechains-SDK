@@ -1,9 +1,9 @@
 package com.horizen.websocket
-import java.util.concurrent.locks.{Lock, ReentrantLock}
+
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
 
 import scala.collection.concurrent.TrieMap
@@ -16,17 +16,17 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
 
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
-  private var requestsPool : TrieMap[String, (Promise[ResponsePayload], Class[ResponsePayload])] = TrieMap()
-  private var eventHandlersPool : TrieMap[Int, Seq[(EventHandler[EventPayload], Class[EventPayload])]] = TrieMap()
-  private val lock : Lock = new ReentrantLock()
+  private var requestsPool: TrieMap[String, (Promise[ResponsePayload], Class[ResponsePayload])] = TrieMap()
+  private var eventHandlersPool: TrieMap[Int, Seq[(EventHandler[EventPayload], Class[EventPayload])]] = TrieMap()
   private var webSocketChannel: WebSocketChannel = _
+  private val counter = new AtomicInteger()
 
   override def setWebSocketChannel(channel: WebSocketChannel): Unit =
     webSocketChannel = channel
 
   override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
     // to-do. Check if the channel is not null
-    if(webSocketChannel != null){
+    if (webSocketChannel != null) {
       val requestId = generateRequestId
       var json = mapper.createObjectNode()
       json.put("msgType", 1)
@@ -40,31 +40,33 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
 
       webSocketChannel.sendMessage(message)
       promise.future
-    }else
+    } else
       Promise[Resp].failure(new IllegalStateException("The web socket channel must be not null.")).future
   }
 
   override def registerEventHandler[E <: EventPayload](eventType: Int, handler: EventHandler[E], eventClazz: Class[E]): Try[Unit] = Try {
-    val eventHandlers = eventHandlersPool.getOrElse(eventType, Seq())
+    synchronized {
+      val eventHandlers = eventHandlersPool.getOrElse(eventType, Seq())
 
-    if(eventHandlers.exists(h => h._1.equals(handler)))
-      throw new IllegalArgumentException(s"Handler is already registered.")
+      if (eventHandlers.exists(h => h._1.equals(handler)))
+        throw new IllegalArgumentException(s"Handler is already registered.")
 
-    val updatedHandlers = eventHandlers :+ (handler.asInstanceOf[EventHandler[EventPayload]], eventClazz.asInstanceOf[Class[EventPayload]])
-    eventHandlersPool += (eventType -> updatedHandlers)
+      val updatedHandlers = eventHandlers :+ (handler.asInstanceOf[EventHandler[EventPayload]], eventClazz.asInstanceOf[Class[EventPayload]])
+      eventHandlersPool += (eventType -> updatedHandlers)
+    }
   }
 
   override def unregisterEventHandler[E <: EventPayload](eventType: Int, handler: EventHandler[E]): Unit = {
-    eventHandlersPool.get(eventType) match {
-      case Some(handlers) =>
-        val updatedHandlers = handlers.filter(h => !h._1.equals(handler))
-        eventHandlersPool += (eventType -> updatedHandlers)
+    synchronized {
+      eventHandlersPool.get(eventType) match {
+        case Some(handlers) =>
+          val updatedHandlers = handlers.filter(h => !h._1.equals(handler))
+          eventHandlersPool += (eventType -> updatedHandlers)
+      }
     }
   }
 
   override def onReceivedMessage(message: String): Unit = {
-    // maybe it's not needed but in future this method could be call in asynchronous way
-    lock.lock()
     try {
       val json = mapper.readTree(message)
       json.get("msgType").asInt() match {
@@ -81,22 +83,20 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
       case ex: Throwable =>
         log.error("On receive message processing exception occurred = " + ex.getMessage)
     }
-    lock.unlock()
   }
 
-  private def processError(json : JsonNode) : Unit = {
-    case class Error(msgType : Int, requestId : String, errorCode : Int, message : String)
+  private def processError(json: JsonNode): Unit = {
+    case class Error(msgType: Int, requestId: String, errorCode: Int, message: String)
     val requestId = json.get("requestId").asText("")
-    requestsPool.get(requestId) match {
+    requestsPool.remove(requestId) match {
       case Some((promise, _)) =>
         try {
           val resp = mapper.convertValue(json, classOf[Error])
           promise.failure(new RuntimeException(resp.message))
         } catch {
-          case e : Throwable =>
+          case e: Throwable =>
             promise.failure(new RuntimeException(json.toString))
         }
-        requestsPool -= requestId
 
       case None =>
         log.error("Unknown response received: " + json.toString)
@@ -108,13 +108,13 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
     eventHandlersPool.get(eventType) match {
       case Some(handlers) =>
         val eventPayload = json.get("eventPayload")
-        for(h <- handlers) {
+        for (h <- handlers) {
           try {
             val resp = mapper.convertValue(eventPayload, h._2)
             h._1.onEvent(resp)
           }
           catch {
-            case ex =>  log.error("Event parsing was failed by handler: " + ex.getMessage)
+            case ex => log.error("Event parsing was failed by handler: " + ex.getMessage)
           }
         }
 
@@ -125,20 +125,19 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   }
 
   private def processResponse(json: JsonNode): Unit = {
-      val requestId = json.get("requestId").asText("")
-      requestsPool.get(requestId) match {
-        case Some((promise, responseClazz)) =>
-          try {
-            val resp = mapper.convertValue(json.get("responsePayload"), responseClazz)
-            promise.success(resp)
-          } catch {
-            case ex => promise.failure(ex)
-          }
-          requestsPool -= requestId
+    val requestId = json.get("requestId").asText("")
+    requestsPool.remove(requestId) match {
+      case Some((promise, responseClazz)) =>
+        try {
+          val resp = mapper.convertValue(json.get("responsePayload"), responseClazz)
+          promise.success(resp)
+        } catch {
+          case ex => promise.failure(ex)
+        }
 
-        case None =>
-          log.error("Unknown response received with requested id = " + requestId)
-      }
+      case None =>
+        log.error("Unknown response received with requested id = " + requestId)
+    }
 
   }
 
@@ -147,17 +146,14 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
 
     val json = mapper.readTree(message)
     val requestId = json.get("requestId").asText("")
-    requestsPool.get(requestId) match {
+    requestsPool.remove(requestId) match {
       case Some((promise, _)) =>
         promise.failure(cause)
-        requestsPool -= requestId
     }
   }
 
   private def generateRequestId: String = {
-    val bytes: Array[Byte] = new Array[Byte](16)
-    scala.util.Random.nextBytes(bytes)
-    BytesUtils.toHexString(bytes)
+    String.valueOf(counter.addAndGet(1))
   }
 
   override def requestTimeoutDuration(): FiniteDuration = 5 seconds

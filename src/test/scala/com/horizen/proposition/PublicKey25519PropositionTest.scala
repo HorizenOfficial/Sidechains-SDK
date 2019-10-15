@@ -1,5 +1,7 @@
 package com.horizen.proposition
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -19,11 +21,16 @@ class PublicKey25519PropositionScalaTest
 
     val prop1 = new PublicKey25519Proposition(publicKey)
 
-    val json = prop1.toJson
+    val serializer = ApplicationJsonSerializer.getInstance()
+    serializer.setDefaultConfiguration()
+
+    val jsonStr = serializer.serialize(prop1)
+
+    val node : JsonNode = serializer.getObjectMapper().readTree(jsonStr)
 
     assertEquals("Json must contain only 1 publicKey.",
-      1, json.\\("publicKey").size)
+      1, node.findValues("publicKey").size())
     assertEquals("PublicKey json value must be the same.",
-      ScorexEncoder.default.encode(prop1.pubKeyBytes()), json.\\("publicKey").head.asString.get)
+      ScorexEncoder.default.encode(prop1.pubKeyBytes()), node.path("publicKey").asText())
   }
 }

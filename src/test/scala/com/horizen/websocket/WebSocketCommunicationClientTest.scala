@@ -87,7 +87,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     val webSocketClient = new WebSocketCommunicationClient()
 
     val mockedChannel = mock[WebSocketChannel]
-    val mockedConnector : WebSocketConnector[WebSocketChannel] = mock[WebSocketConnector[WebSocketChannel]]
+    val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
 
     Mockito.when(mockedConnector.isStarted()).thenAnswer(asw => true)
     Mockito.when(mockedConnector.stop()).thenAnswer(asw => Success())
@@ -105,7 +105,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     val webSocketClient = new WebSocketCommunicationClient()
 
     val mockedChannel = mock[WebSocketChannel]
-    val mockedConnector : WebSocketConnector[WebSocketChannel] = mock[WebSocketConnector[WebSocketChannel]]
+    val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
 
     Mockito.when(mockedConnector.isStarted()).thenAnswer(asw => true)
     Mockito.when(mockedConnector.stop()).thenAnswer(asw => Success())
@@ -165,7 +165,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     val webSocketClient = new WebSocketCommunicationClient()
 
     val mockedChannel = mock[WebSocketChannel]
-    val mockedConnector : WebSocketConnector[WebSocketChannel] = mock[WebSocketConnector[WebSocketChannel]]
+    val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
 
     Mockito.when(mockedConnector.isStarted()).thenAnswer(asw => true)
     Mockito.when(mockedConnector.stop()).thenAnswer(asw => Success())
@@ -200,7 +200,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     val webSocketClient = new WebSocketCommunicationClient()
 
     val mockedChannel = mock[WebSocketChannel]
-    val mockedConnector : WebSocketConnector[WebSocketChannel] = mock[WebSocketConnector[WebSocketChannel]]
+    val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
 
     Mockito.when(mockedConnector.isStarted()).thenAnswer(asw => true)
     Mockito.when(mockedConnector.stop()).thenAnswer(asw => Success())
@@ -235,7 +235,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     val webSocketClient = new WebSocketCommunicationClient()
 
     val mockedChannel = mock[WebSocketChannel]
-    val mockedConnector : WebSocketConnector[WebSocketChannel] = mock[WebSocketConnector[WebSocketChannel]]
+    val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
     val mockedEventHandler : EventHandler[OnUpdateTipEventPayload] = mock[OnUpdateTipEventHandler]
 
     Mockito.when(mockedConnector.isStarted()).thenAnswer(asw => true)

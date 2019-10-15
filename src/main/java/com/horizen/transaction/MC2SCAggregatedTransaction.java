@@ -1,36 +1,43 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
+import com.horizen.serialization.ByteUtilsSerializer;
+import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
-import io.circe.Json;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.crypto.hash.Blake2b256;
 import scorex.util.encode.Base16;
 
 import java.util.*;
 
+@JsonView(Views.Default.class)
 public final class MC2SCAggregatedTransaction
-    extends BoxTransaction<Proposition, Box<Proposition>>
-    implements JsonSerializable
-{
+        extends BoxTransaction<Proposition, Box<Proposition>> {
     public static final byte TRANSACTION_TYPE_ID = 2;
+
+    @JsonProperty("mc2scTransactionsMerkleRootHash")
+    @JsonSerialize(using = ByteUtilsSerializer.class)
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
+
+    @JsonProperty("timestamp")
     private long _timestamp;
+
+    public MC2SCAggregatedTransaction(byte[] _mc2scTransactionsMerkleRootHash) {
+        this._mc2scTransactionsMerkleRootHash = _mc2scTransactionsMerkleRootHash;
+    }
 
     private List<BoxUnlocker<Proposition>> _unlockers;
     private List<Box<Proposition>> _newBoxes;
@@ -66,7 +73,7 @@ public final class MC2SCAggregatedTransaction
     @Override
     // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
     public synchronized List<BoxUnlocker<Proposition>> unlockers() {
-        if(_unlockers == null) {
+        if (_unlockers == null) {
             _unlockers = new ArrayList<>();
             // TO DO: meybe in future we will spend WithdrawalRequestsBoxes for synced back Certificate.
         }
@@ -101,6 +108,7 @@ public final class MC2SCAggregatedTransaction
         return TRANSACTION_TYPE_ID;
     }
 
+    @JsonProperty("id")
     @Override
     public String id() {
         return Base16.encode(Blake2b256.hash(_mc2scTransactionsMerkleRootHash));
@@ -117,12 +125,12 @@ public final class MC2SCAggregatedTransaction
 
     public boolean semanticValidity() {
         // Transaction is valid if it contains all mc2sc transactions and merkle root based on them is equal to the one defined in constructor.
-        if(_mc2scTransactionsMerkleRootHash == null || _mc2scTransactionsMerkleRootHash.length != 32
+        if (_mc2scTransactionsMerkleRootHash == null || _mc2scTransactionsMerkleRootHash.length != 32
                 || _mc2scTransactionsOutputs == null || _mc2scTransactionsOutputs.size() == 0)
             return false;
 
         ArrayList<byte[]> hashes = new ArrayList<>();
-        for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
+        for (SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
             hashes.add(t.hash());
         byte[] merkleRootHash = MerkleTree.createMerkleTree(hashes).rootHash();
 
@@ -142,10 +150,10 @@ public final class MC2SCAggregatedTransaction
     }
 
     public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 48)
+        if (bytes.length < 48)
             throw new IllegalArgumentException("Input data corrupted.");
 
-        if(bytes.length > MAX_TRANSACTION_SIZE)
+        if (bytes.length > MAX_TRANSACTION_SIZE)
             throw new IllegalArgumentException("Input data length is too large.");
 
         int offset = 0;
@@ -164,42 +172,21 @@ public final class MC2SCAggregatedTransaction
     }
 
     public static MC2SCAggregatedTransaction create(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
-        if(mc2scTransactionsOutputs == null)
+        if (mc2scTransactionsOutputs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
-        if(mc2scTransactionsOutputs.size() == 0)
+        if (mc2scTransactionsOutputs.size() == 0)
             throw new IllegalArgumentException("MC2SC Transactions Outputs list is empty.");
 
 
         ArrayList<byte[]> hashes = new ArrayList<>();
-        for(SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs)
+        for (SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs)
             hashes.add(t.hash());
         byte[] mc2scTransactionsMerkleRootHash = MerkleTree.createMerkleTree(hashes).rootHash();
 
         MC2SCAggregatedTransaction transaction = new MC2SCAggregatedTransaction(mc2scTransactionsMerkleRootHash, mc2scTransactionsOutputs, timestamp);
-        if(!transaction.semanticValidity())
+        if (!transaction.semanticValidity())
             throw new IllegalArgumentException("Created transaction is semantically invalid. Proposed merkle root not equal to calculated one.");
         return transaction;
     }
 
-    @Override
-    public Json toJson() {
-        ArrayList<Json> arr = new ArrayList<>();
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-
-        values.put("id", Json.fromString(this.id()));
-        values.put("fee", Json.fromLong(this.fee()));
-        values.put("timestamp", Json.fromLong(this._timestamp));
-
-        values.put("mc2scTransactionsMerkleRootHash", Json.fromString(BytesUtils.toHexString(this._mc2scTransactionsMerkleRootHash)));
-
-        for(Box<Proposition> b : this.newBoxes())
-            arr.add(b.toJson());
-        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static MC2SCAggregatedTransaction parseJson(Json json) {
-        return null;
-    }
 }

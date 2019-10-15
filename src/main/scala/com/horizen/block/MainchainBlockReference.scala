@@ -2,16 +2,17 @@ package com.horizen.block
 
 import java.util
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.{JsonSerializable, JsonSerializer}
 import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.utils.ScorexEncoder
+import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
+import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
-import io.circe.Json
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.google.common.primitives.Bytes
@@ -28,13 +29,16 @@ import scala.collection.mutable
 // Transaction counter  positive integer (number of transactions in block)      1-9 bytes
 // Transactions         the (non empty) list of transactions                    depends on <Transaction counter>
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
+                    @JsonProperty("merkleRoots")
+                    @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
                     val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]]
                     )
   extends BytesSerializable
-  with JsonSerializable
 {
 
   lazy val hash: Array[Byte] = header.hash
@@ -42,7 +46,7 @@ class MainchainBlockReference(
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   override type M = MainchainBlockReference
-  override type J = MainchainBlockReference
+  /*override type J = MainchainBlockReference*/
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
@@ -89,34 +93,6 @@ class MainchainBlockReference(
     }
 
     true
-  }
-
-  override def toJson: Json = {
-
-    val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
-    val encoder: ScorexEncoder = new ScorexEncoder
-
-    def mapMerkleRoot(key: ByteArrayWrapper, value: Array[Byte]): Json = {
-      Json.fromFields(
-        Seq(("key", Json.fromString(encoder.encode(key.data))),
-            ("value", Json.fromString(encoder.encode(value)))
-        )
-      )
-    }
-
-    values.put("hash", Json.fromString(this.header.hashHex))
-    values.put("header", this.header.toJson)
-    if (this.sidechainRelatedAggregatedTransaction.isDefined)
-      values.put("sidechainRelatedAggregatedTransaction", this.sidechainRelatedAggregatedTransaction.get.toJson)
-
-    if (this.sidechainsMerkleRootsMap.isDefined)
-        values.put("merkleRoots",
-          Json.fromValues(
-            this.sidechainsMerkleRootsMap.get.map{case (key, value) => mapMerkleRoot(key, value)}
-          )
-        )
-
-    Json.fromFields(values)
   }
 }
 

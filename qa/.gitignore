@@ -1,0 +1,6 @@
+.idea/
+/python.cmd
+/*.log
+*.py[co]
+/mc_sc_test_template.py
+/sc_test_template.py

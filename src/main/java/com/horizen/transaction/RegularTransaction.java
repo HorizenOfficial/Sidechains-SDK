@@ -1,5 +1,7 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -12,32 +14,29 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
+import com.horizen.serialization.Views;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
-import io.circe.Json;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import javafx.util.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
+@JsonView(Views.Default.class)
 public final class RegularTransaction
     extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
-    implements JsonSerializable
 {
 
     public static final byte TRANSACTION_TYPE_ID = 1;
 
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
+
+    @JsonProperty("signatures")
     private List<Signature25519> _signatures;
+
     private long _fee;
     private long _timestamp;
-
 
     private List<RegularBox> _newBoxes;
     private List<BoxUnlocker<PublicKey25519Proposition>> _unlockers;
@@ -239,33 +238,4 @@ public final class RegularTransaction
         return transaction;
     }
 
-    @Override
-    public Json toJson() {
-        ArrayList<Json> arr = new ArrayList<>();
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-
-        values.put("id", Json.fromString(this.id()));
-        values.put("fee", Json.fromLong(this._fee));
-        values.put("timestamp", Json.fromLong(this._timestamp));
-
-        for(RegularBox b : this._inputs)
-            arr.add(b.toJson());
-        values.put("inputs", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        arr.clear();
-        for(RegularBox b : this.newBoxes())
-            arr.add(b.toJson());
-        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        arr.clear();
-        for(Signature25519 s : this._signatures)
-            arr.add(s.toJson());
-        values.put("signatures", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static RegularTransaction parseJson(Json json) {
-        return null;
-    }
 }

@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
-(settings: SidechainSettings, sidechainNodeViewHolderRef : ActorRef, forgerRef: ActorRef)(implicit ec : ExecutionContext)
+(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
   private var generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
@@ -37,7 +37,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   def processBlockFailedEvent(sidechainBlock: SidechainBlock, throwable: Throwable): Unit = {
-    if(submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
+    if (submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
       submitBlockPromises.get(sidechainBlock.id) match {
         case Some(p) =>
           p.failure(throwable)
@@ -57,8 +57,8 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 
   def processHistoryChangedEvent(history: SidechainHistory): Unit = {
     val expectedBlocks = submitBlockPromises.keys ++ generatedBlocksPromises.keys
-    for(id <- expectedBlocks) {
-      if(history.contains(id)) {
+    for (id <- expectedBlocks) {
+      if (history.contains(id)) {
         submitBlockPromises.get(id) match {
           case Some(p) =>
             p.success(Success(id))
@@ -75,7 +75,8 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
       }
     }
   }
-  protected def sidechainNodeViewHolderEvents : Receive = {
+
+  protected def sidechainNodeViewHolderEvents: Receive = {
     case SemanticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
       processBlockFailedEvent(sidechainBlock, throwable)
 
@@ -88,16 +89,16 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   // Note: It should be used only in regtest
-  protected def generateSidechainBlocks : Receive = {
+  protected def generateSidechainBlocks: Receive = {
     case GenerateSidechainBlocks(blockCount) =>
       // Try to forge blockCount blocks, collect their ids and wait for
       var generatedIds: Seq[ModifierId] = Seq()
-      for(i <- 1 to blockCount) {
+      for (i <- 1 to blockCount) {
         val future = forgerRef ? TryForgeNextBlock
         Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
           case Success(id) =>
             generatedIds = id +: generatedIds
-            if(i == blockCount) {
+            if (i == blockCount) {
               // Create a promise, that will wait for blocks applying result from Node
               val prom = Promise[Try[Seq[ModifierId]]]()
               generatedBlockGroups += (id -> generatedIds)
@@ -127,20 +128,25 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   override def receive: Receive = {
-    sidechainNodeViewHolderEvents orElse generateSidechainBlocks  orElse tryToSubmitBlock orElse {
+    sidechainNodeViewHolderEvents orElse generateSidechainBlocks orElse tryToSubmitBlock orElse {
       case message: Any => log.error("SidechainBlockActor received strange message: " + message)
     }
   }
 }
 
 object SidechainBlockActor {
-  object ReceivableMessages{
+
+  object ReceivableMessages {
+
     case class GenerateSidechainBlocks(blockCount: Int)
+
     case class SubmitSidechainBlock(blockBytes: Array[Byte])
+
   }
+
 }
 
-object SidechainBlockActorRef{
+object SidechainBlockActorRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
     Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgerRef))

@@ -10,17 +10,18 @@ import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActor
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
+import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.secret.SecretSerializer
-import com.horizen.state.{ApplicationState, DefaultApplicationState}
-import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage}
+import com.horizen.state.ApplicationState
+import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
 import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
-import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainTypes}
+import com.horizen.validation.SidechainBlockValidator
+import com.horizen.wallet.ApplicationWallet
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
-import scorex.util.ModifierId
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +29,7 @@ trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
 {
 
-  val sidechainSettings = SidechainSettings.read(Some("src/main/additional-resources/settings/settings.conf"))
+  val sidechainSettings = SidechainSettingsReader.read("src/main/additional-resources/settings/settings.conf", None)
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
@@ -76,6 +77,9 @@ trait SidechainNodeViewHolderFixture
   val sidechainHistoryStorage = new SidechainHistoryStorage(
     getStorage(),
     sidechainTransactionsCompanion, params)
+  val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
+    getStorage(),
+    sidechainTransactionsCompanion)
 
   sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
   sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
@@ -83,7 +87,7 @@ trait SidechainNodeViewHolderFixture
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
-    sidechainWalletBoxStorage, sidechainSecretStorage, params, timeProvider,
+    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
     defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
     Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params)))
 

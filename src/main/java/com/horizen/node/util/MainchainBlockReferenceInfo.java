@@ -1,29 +1,41 @@
 package com.horizen.node.util;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
-import com.horizen.serialization.JsonSerializable;
+import com.horizen.api.http.SuccessResponse;
+import com.horizen.serialization.ByteUtilsSerializer;
+import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
-import io.circe.Json;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public final class MainchainBlockReferenceInfo implements BytesSerializable, JsonSerializable {
+@JsonView(Views.Default.class)
+public final class MainchainBlockReferenceInfo implements BytesSerializable, SuccessResponse {
 
     // Mainchain block reference hash with the most height
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("hash")
     private byte[] mainchainBlockReferenceHash;
 
     // parent mainchain block reference hash
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("parentHash")
     private byte[] parentMainchainBlockReferenceHash;
 
     // Height in mainchain of mainchainBlockReference
+    @JsonProperty("height")
     private int mainchainHeight;
 
     // Sidechain block ID which contains this MC block reference
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("sidechainBlockId")
     private byte[] sidechainBlockId;
 
     public MainchainBlockReferenceInfo(byte[] mainchainBlockReferenceHash,
@@ -83,18 +95,6 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable, Jso
     @Override
     public ScorexSerializer<BytesSerializable> serializer() {
         return MainchainBlockReferenceInfoSerializer.getSerializer();
-    }
-
-    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-
-        values.put("mainchainBlockReferenceHash", Json.fromString(BytesUtils.toHexString(this.mainchainBlockReferenceHash)));
-        values.put("parentMainchainBlockReferenceHash", Json.fromString(BytesUtils.toHexString(this.parentMainchainBlockReferenceHash)));
-        values.put("mainchainHeight", Json.fromInt(this.mainchainHeight));
-        values.put("sidechainBlockId", Json.fromString(BytesUtils.toHexString(this.sidechainBlockId)));
-
-        return Json.obj(values.toSeq());
     }
 
     @Override
