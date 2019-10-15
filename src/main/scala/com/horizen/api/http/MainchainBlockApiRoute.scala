@@ -22,10 +22,10 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
     with ScorexEncoding {
 
   override val route: Route = (pathPrefix("mainchain")) {
-    bestBlockInfo ~
-      genesisBlockInfo ~
-      blockInfoBy ~
-      blockByHash
+    bestBlockReferenceInfo ~
+      genesisBlockReferenceInfo ~
+      blockReferenceInfoBy ~
+      blockReferenceByHash
   }
 
   /**
@@ -34,7 +34,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * 2) Its height in mainchain
     * 3) Sidechain block ID which contains this MC block reference
     */
-  def bestBlockInfo: Route = (post & path("bestBlockInfo")) {
+  def bestBlockReferenceInfo: Route = (post & path("bestBlockReferenceInfo")) {
     withNodeView { sidechainNodeView =>
       sidechainNodeView.getNodeHistory
         .getBestMainchainBlockReferenceInfo.asScala match {
@@ -47,7 +47,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
 
-  def genesisBlockInfo: Route = (post & path("genesisBlockInfo")) {
+  def genesisBlockReferenceInfo: Route = (post & path("genesisBlockReferenceInfo")) {
     withNodeView { sidechainNodeView =>
       sidechainNodeView.getNodeHistory
         .getMainchainBlockReferenceInfoByMainchainBlockHeight(1).asScala match {
@@ -57,7 +57,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
     }
   }
 
-  def blockInfoBy: Route = (post & path("blockInfoBy")) {
+  def blockReferenceInfoBy: Route = (post & path("blockReferenceInfoBy")) {
     entity(as[ReqBlockInfoBy]) { body =>
       withNodeView { sidechainNodeView =>
         body.hash match {
@@ -95,7 +95,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * 2)Its height in MC
     * 3)SC block id which contains this MC block reference
     */
-  def blockByHash: Route = (post & path("blockByHash")) {
+  def blockReferenceByHash: Route = (post & path("blockReferenceByHash")) {
     entity(as[ReqBlockBy]) { body =>
       withNodeView { sidechainNodeView =>
         sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(body.hash.getBytes).asScala match {
@@ -114,10 +114,10 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
 object MainchainRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class MainchainBlockResponse(block: MainchainBlockReference) extends SuccessResponse
+  private[api] case class MainchainBlockResponse(blockReference: MainchainBlockReference) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class MainchainApiResponse(blockInfo: Option[MainchainBlockReferenceInfo], blockHex: Option[String] = None) extends SuccessResponse
+  private[api] case class MainchainApiResponse(blockReferenceInfo: Option[MainchainBlockReferenceInfo], blockHex: Option[String] = None) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqBlockInfoBy(hash: Option[String], height: Option[Integer], format: Boolean = false)

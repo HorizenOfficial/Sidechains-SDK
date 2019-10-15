@@ -16,8 +16,6 @@ tags:
     description: Sidechain node operations
   - name: mainchain
     description: Sidechain mainchain operations
-  - name: util
-    description: Sidechain utility operations
 
 paths:
 
@@ -930,7 +928,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /mainchain/bestBlockInfo:
+  /mainchain/bestBlockReferenceInfo:
     post:
       tags:
         - mainchain
@@ -939,7 +937,7 @@ paths:
         1) Mainchain block reference hash with the most height; \n
         2) Its height in mainchain; \n
         3) Sidechain block ID which contains this MC block reference."
-      operationId: bestBlockInfo
+      operationId: bestBlockReferenceInfo
       responses:
         '200':
           description: successful operation
@@ -951,7 +949,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockInfo:
+                      blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
                       blockHex:
                         type: string
@@ -964,13 +962,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /mainchain/genesisBlockInfo:
+  /mainchain/genesisBlockReferenceInfo:
     post:
       tags:
         - mainchain
       summary: ""
       description: ""
-      operationId: genesisBlockInfo
+      operationId: genesisBlockReferenceInfo
       responses:
         '200':
           description: successful operation
@@ -982,7 +980,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockInfo:
+                      blockReferenceInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
                       blockHex:
                         type: string
@@ -995,13 +993,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /mainchain/blockInfoBy:
+  /mainchain/blockReferenceInfoBy:
     post:
       tags:
         - mainchain
       summary: ""
       description: ""
-      operationId: blockInfoBy
+      operationId: blockReferenceInfoBy
       requestBody:
         content:
           application/json:
@@ -1027,7 +1025,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockInfo:
+                      blocReferencekInfo:
                         $ref: '#/components/schemas/MainchainBlockInfo'
                       blockHex:
                         type: string
@@ -1040,13 +1038,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /mainchain/blockByHash:
+  /mainchain/blockReferenceByHash:
     post:
       tags:
         - mainchain
       summary: ""
       description: ""
-      operationId: blockByHash
+      operationId: blockReferenceByHash
       requestBody:
         content:
           application/json:
@@ -1071,42 +1069,12 @@ paths:
                   result:
                     type: object
                     properties:
-                      block:
+                      blockReference:
                         $ref: '#/components/schemas/MainchainBlock'
                       blockHex:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  # Sidechain utility operations
-  /util/errorCodes:
-    post:
-      tags:
-        - util
-      summary: sidechain business logic error codes
-      description: Returns all defined sidechain business logic error codes
-      operationId: errorCodes
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    properties:
-                      sidechainErrorCodes:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/SidechainApiErrorCode'
         default:
           description: any kind of http error
           content:
@@ -1159,14 +1127,6 @@ components:
         name:
           type: string
         connectionType:
-          type: string
-
-    SidechainApiErrorCode:
-      type: object
-      properties:
-        code:
-          type: string
-        name:
           type: string
 
     Proposition:

@@ -5,7 +5,7 @@ import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
 import akka.actor.ActorRef
-import com.horizen.api.http.{ApplicationApiGroup, ApplicationApiRoute, MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRejectionHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainRejectionApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainUtilsApiRoute, SidechainWalletApiRoute}
+import com.horizen.api.http.{ApplicationApiGroup, ApplicationApiRoute, MainchainBlockApiRoute, SidechainApiErrorHandler, SidechainApiRejectionHandler, SidechainApiRoute, SidechainBlockActorRef, SidechainBlockApiRoute, SidechainNodeApiRoute, SidechainRejectionApiRoute, SidechainTransactionActorRef, SidechainTransactionApiRoute, SidechainWalletApiRoute}
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
@@ -14,7 +14,7 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.state.{ApplicationState, DefaultApplicationState}
 import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
+import com.horizen.validation.SidechainBlockValidator
 import com.horizen.wallet.{ApplicationWallet, DefaultApplicationWallet}
 import io.iohk.iodb.LSMStore
 import scorex.core.{ModifierTypeId, NodeViewModifier}
@@ -138,7 +138,6 @@ class SidechainApp(val settingsFilename: String)
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
-    SidechainUtilsApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
     //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
     //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
