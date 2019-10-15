@@ -1,5 +1,6 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
@@ -13,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
@@ -23,12 +23,16 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public final static int MAX_TRANSACTION_UNLOCKERS = 1000;
     public final static int MAX_TRANSACTION_NEW_BOXES = 1000;
 
+    @JsonProperty("unlockers")
     public abstract List<BoxUnlocker<P>> unlockers();
 
+    @JsonProperty("newBoxes")
     public abstract List<B> newBoxes();
 
+    @JsonProperty("fee")
     public abstract long fee();
 
+    @JsonProperty("timestamp")
     public abstract long timestamp();
 
     public abstract boolean semanticValidity();

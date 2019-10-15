@@ -1,21 +1,10 @@
 package com.horizen.box;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Longs;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.JsonSerializer;
-import io.circe.Json;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-import java.util.Arrays;
-
 public final class RegularBoxSerializer
     implements BoxSerializer<RegularBox>
-    , JsonSerializer<RegularBox>
 {
 
     private static RegularBoxSerializer serializer;
@@ -43,8 +32,4 @@ public final class RegularBoxSerializer
         return RegularBox.parseBytes(reader.getBytes(reader.remaining()));
     }
 
-    @Override
-    public RegularBox parseJson(Json json) {
-        return RegularBox.parseJson(json);
-    }
 }

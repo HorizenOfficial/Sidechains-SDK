@@ -2,7 +2,6 @@ package com.horizen.secret;
 
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.serialization.JsonSerializable;
 
 
 public interface Secret

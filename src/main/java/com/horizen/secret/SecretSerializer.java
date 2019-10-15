@@ -1,7 +1,5 @@
 package com.horizen.secret;
 
-import com.horizen.serialization.JsonSerializer;
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;

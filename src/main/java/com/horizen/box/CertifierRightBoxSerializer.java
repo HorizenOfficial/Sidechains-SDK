@@ -1,7 +1,5 @@
 package com.horizen.box;
 
-import io.circe.Json;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -32,8 +30,4 @@ public class CertifierRightBoxSerializer implements BoxSerializer<CertifierRight
         return CertifierRightBox.parseBytes(reader.getBytes(reader.remaining()));
     }
 
-    @Override
-    public CertifierRightBox parseJson(Json json) {
-        return CertifierRightBox.parseJson(json);
-    }
 }

@@ -10,7 +10,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
-class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : ActorRef)(implicit ec : ExecutionContext)
+class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
   private var transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
@@ -20,7 +20,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
-  protected def broadcastTransaction : Receive = {
+  protected def broadcastTransaction: Receive = {
     case BroadcastTransaction(transaction) =>
       val promise = Promise[ModifierId]
       val future = promise.future
@@ -30,7 +30,7 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
       sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
   }
 
-  protected def sidechainNodeViewHolderEvents : Receive = {
+  protected def sidechainNodeViewHolderEvents: Receive = {
     case SuccessfulTransaction(transaction) =>
       transactionMap.remove(transaction.id) match {
         case Some(promise) => promise.success(transaction.id)
@@ -52,12 +52,16 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef : A
 }
 
 object SidechainTransactionActor {
-  object ReceivableMessages{
-    case class BroadcastTransaction[T <: Transaction](transaction : T)
+
+  object ReceivableMessages {
+
+    case class BroadcastTransaction[T <: Transaction](transaction: T)
+
   }
+
 }
 
-object SidechainTransactionActorRef{
+object SidechainTransactionActorRef {
   def props(sidechainNodeViewHolderRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
     Props(new SidechainTransactionActor(sidechainNodeViewHolderRef))

@@ -1,7 +1,9 @@
 package com.horizen.proof
 
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -19,12 +21,17 @@ class Signature25519ScalaTest
     val prp = key.publicImage
     val pr = key.sign(testMessage)
 
-    val json = pr.toJson
+    val serializer = ApplicationJsonSerializer.getInstance()
+    serializer.setDefaultConfiguration()
+
+    val jsonStr = serializer.serialize(pr)
+
+    val node : JsonNode = serializer.getObjectMapper().readTree(jsonStr)
 
     assertEquals("Json must contain only 1 signature.",
-      1, json.\\("signature").size)
+      1, node.findValues("signature").size())
     assertEquals("",
-      ScorexEncoder.default.encode(pr._signatureBytes), json.\\("signature").head.asString.get)
+      ScorexEncoder.default.encode(pr._signatureBytes), node.path("signature").asText())
   }
 }
 

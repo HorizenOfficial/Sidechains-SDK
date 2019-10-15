@@ -3,53 +3,51 @@ package com.horizen.api.http
 import java.net.{InetAddress, InetSocketAddress}
 
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import scorex.core.api.http.{ApiError, ApiResponse}
+import com.horizen.api.http.SidechainNodeRestSchema._
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Success}
-import io.circe.generic.auto._
-import io.circe.Json
-import io.circe.syntax._
-import scorex.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse}
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
 import scorex.core.utils.NetworkTimeProvider
+import JacksonSupport._
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
+import com.horizen.serialization.Views
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                (implicit val context: ActorRefFactory, override val ec : ExecutionContext) extends SidechainApiRoute {
+                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
-  override val route : Route = (pathPrefix("node"))
-            {connect ~ allPeers ~ connectedPeers ~ blacklistedPeers}
+  override val route: Route = (pathPrefix("node")) {
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers
+  }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
 
-  def allPeers: Route = (path("all") & get) {
+  def allPeers: Route = (path("allPeers") & post) {
     try {
       val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
         _.map { case (address, peerInfo) =>
-          PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
+          SidechainPeerNode(address.toString, peerInfo.lastSeen, peerInfo.peerSpec.nodeName, peerInfo.connectionType.map(_.toString))
         }
       }
-
-      val res = Await.result(result, settings.timeout)
-      ApiResponse("result" -> res.asJson)
-    }catch {
-      case e : Throwable => ApiError(e)
+      val resultList = Await.result(result, settings.timeout).toList
+      ApiResponseUtil.toResponse(RespAllPeers(resultList))
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 
-  def connectedPeers: Route = (path("connected") & get) {
+  def connectedPeers: Route = (path("connectedPeers") & post) {
     try {
       val result = askActor[Seq[PeerInfo]](networkController, GetConnectedPeers).map {
         _.map { peerInfo =>
-          PeerInfoResponse(
+          SidechainPeerNode(
             address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
             lastSeen = peerInfo.lastSeen,
             name = peerInfo.peerSpec.nodeName,
@@ -57,44 +55,66 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
           )
         }
       }
-      val res = Await.result(result, settings.timeout)
-      ApiResponse("result" -> res.asJson)
-    }catch {
-      case e : Throwable => ApiError(e)
+      val resultList = Await.result(result, settings.timeout).toList
+      ApiResponseUtil.toResponse(RespAllPeers(resultList))
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
   }
 
-  def connect : Route = (post & path("connect"))
-  {
-    case class ConnectRequest(address : String)
-    entity(as[String]){
+  def connect: Route = (post & path("connect")) {
+    entity(as[ReqConnect]) {
       body =>
-        ApiInputParser.parseInput[ConnectRequest](body) match {
-          case Success(req) =>
-            var address = req.address
-            val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
-            maybeAddress match {
-              case None => ApiError.BadRequest
-              case Some(addressAndPort) =>
-                val host = InetAddress.getByName(addressAndPort.group(1))
-                val port = addressAndPort.group(2).toInt
-                networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
-                ApiResponse.OK
-            }
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+        var address = body.host + ":" + body.port
+        val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
+        maybeAddress match {
+          case None =>
+            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", None))
+          case Some(addressAndPort) =>
+            val host = InetAddress.getByName(addressAndPort.group(1))
+            val port = addressAndPort.group(2).toInt
+            networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
+            ApiResponseUtil.toResponse(RespConnect(host + ":" + port))
         }
     }
   }
 
-  def blacklistedPeers: Route = (path("blacklisted") & get) {
+  def blacklistedPeers: Route = (path("blacklistedPeers") & post) {
     try {
       val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
-        .map(x => BlacklistedPeers(x.map(_.toString)).asJson)
-      val res = Await.result(result, settings.timeout)
-      ApiResponse("result" -> res.asJson)
-    }catch {
-      case e : Throwable => ApiError(e)
+        .map(x => RespBlacklistedPeers(x.map(_.toString)))
+      val resultList = Await.result(result, settings.timeout)
+      ApiResponseUtil.toResponse(resultList)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
     }
+  }
+
+}
+
+object SidechainNodeRestSchema {
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllPeers(peers: List[SidechainPeerNode]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class SidechainPeerNode(address: String, lastSeen: Long, name: String, connectionType: Option[String])
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqConnect(host: String, port: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespConnect(connectedTo: String) extends SuccessResponse
+
+}
+
+object SidechainNodeErrorResponse {
+
+  case class ErrorInvalidHost(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0401"
   }
 
 }

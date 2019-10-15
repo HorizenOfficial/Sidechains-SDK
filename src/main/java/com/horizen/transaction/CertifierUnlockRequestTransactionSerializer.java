@@ -4,7 +4,6 @@ import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.DynamicTypedSerializer;
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;

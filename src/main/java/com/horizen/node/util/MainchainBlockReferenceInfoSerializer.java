@@ -1,11 +1,10 @@
 package com.horizen.node.util;
 
-import com.horizen.serialization.JsonSerializer;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class MainchainBlockReferenceInfoSerializer implements ScorexSerializer<MainchainBlockReferenceInfo>, JsonSerializer<MainchainBlockReferenceInfo> {
+public class MainchainBlockReferenceInfoSerializer implements ScorexSerializer<MainchainBlockReferenceInfo> {
     private static MainchainBlockReferenceInfoSerializer serializer;
 
     static {

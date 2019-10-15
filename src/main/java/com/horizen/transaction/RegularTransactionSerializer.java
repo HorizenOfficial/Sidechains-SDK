@@ -1,7 +1,5 @@
 package com.horizen.transaction;
 
-import io.circe.Json;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -32,14 +30,5 @@ public class RegularTransactionSerializer implements TransactionSerializer<Regul
         return RegularTransaction.parseBytes(reader.getBytes(reader.remaining()));
     }
 
-    @Override
-    public Json toJson(RegularTransaction transaction) {
-        return transaction.toJson();
-    }
-
-    @Override
-    public RegularTransaction parseJson(Json json) {
-        return RegularTransaction.parseJson(json);
-    }
 }
 

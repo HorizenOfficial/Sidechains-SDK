@@ -5,10 +5,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 object DisconnectionCode extends Enumeration {
-
   val ON_SUCCESS = Value(0)
   val UNEXPECTED = Value(1)
-
 }
 
 trait WebSocketMessageHandler {
@@ -18,7 +16,6 @@ trait WebSocketMessageHandler {
 }
 
 trait WebSocketReconnectionHandler {
-
   // when client fails to connect to remote endpoint
   def onConnectionFailed(cause: Throwable): Boolean
 
@@ -29,11 +26,9 @@ trait WebSocketReconnectionHandler {
   def getDelay: FiniteDuration
 
   def onConnectionSuccess(): Unit
-
 }
 
 trait WebSocketConnector extends WebSocketChannel {
-
   def isStarted(): Boolean
 
   def start(): Try[Unit]
@@ -41,7 +36,6 @@ trait WebSocketConnector extends WebSocketChannel {
   def asyncStart(): Future[Try[Unit]]
 
   def stop(): Try[Unit]
-
 }
 
 trait WebSocketChannel {
