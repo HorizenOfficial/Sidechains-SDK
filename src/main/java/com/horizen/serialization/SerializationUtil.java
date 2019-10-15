@@ -1,8 +1,8 @@
 package com.horizen.serialization;
 
-import com.horizen.api.http.schema.SidechainApiErrorResponseScheme;
-import com.horizen.api.http.schema.SidechainApiManagedError;
-import com.horizen.api.http.schema.SidechainApiResponseBody;
+import com.horizen.api.http.SidechainApiErrorResponseSchema;
+import com.horizen.api.http.SidechainApiManagedError;
+import com.horizen.api.http.SidechainApiResponseBody;
 import scala.Option;
 
 public class SerializationUtil {
@@ -27,7 +27,7 @@ public class SerializationUtil {
                                                   String description,
                                                   String detail) throws Exception {
         return ApplicationJsonSerializer.getInstance().serialize(
-                new SidechainApiErrorResponseScheme(
+                new SidechainApiErrorResponseSchema(
                         new SidechainApiManagedError(code, description, Option.apply(detail))
                 ));
     }
@@ -37,7 +37,7 @@ public class SerializationUtil {
                                                   String description,
                                                   String detail) throws Exception {
         return serializer.serialize(
-                new SidechainApiErrorResponseScheme(
+                new SidechainApiErrorResponseSchema(
                         new SidechainApiManagedError(code, description, Option.apply(detail))
                 ));
     }

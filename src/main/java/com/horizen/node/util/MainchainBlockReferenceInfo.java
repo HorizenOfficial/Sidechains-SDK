@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
+import com.horizen.api.http.SuccessResponse;
 import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
@@ -16,7 +17,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 @JsonView(Views.Default.class)
-public final class MainchainBlockReferenceInfo implements BytesSerializable {
+public final class MainchainBlockReferenceInfo implements BytesSerializable, SuccessResponse {
 
     // Mainchain block reference hash with the most height
     @JsonSerialize(using = ByteUtilsSerializer.class)

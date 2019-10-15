@@ -25,9 +25,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import JacksonSupport._
-import com.horizen.api.http.schema.{BYTE_PARSING_FAILURE, GENERIC_FAILURE, NOT_FOUND_ID, NOT_FOUND_INPUT}
-import com.horizen.api.http.schema.TransactionRestScheme._
-import com.horizen.serialization.SerializationUtil
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.SidechainTransactionErrorResponse._
+import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.serialization.Views
 
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
@@ -44,21 +45,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
     */
   def allTransactions: Route = (post & path("allTransactions")) {
-    entity(as[ReqAllTransactionsPost]) { body =>
+    entity(as[ReqAllTransactions]) { body =>
       withNodeView { sidechainNodeView =>
         var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
         if (body.format.getOrElse(true)) {
-          SidechainApiResponse(
-            SerializationUtil.serializeWithResult(
-              RespAllTransactionsPost(Option(unconfirmedTxs.asScala.toList), None)
-            )
-          )
+          ApiResponseUtil.toResponse(RespAllTransactions(Option(unconfirmedTxs.asScala.toList), None))
         } else {
-          SidechainApiResponse(
-            SerializationUtil.serializeWithResult(
-              RespAllTransactionsPost(None, Option(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
-            )
-          )
+          ApiResponseUtil.toResponse(RespAllTransactions(None, Option(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString))))
         }
       }
     }
@@ -78,7 +71,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * 3) blockHash not set, txIndex = false -> Search in memory pool
     */
   def findById: Route = (post & path("findById")) {
-    entity(as[ReqFindByIdPost]) { body =>
+    entity(as[ReqFindById]) { body =>
       withNodeView { sidechainNodeView =>
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
@@ -142,24 +135,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case Some(t) =>
             if (format) {
               //TO-DO JSON representation of transaction
-              SidechainApiResponse(
-                SerializationUtil.serializeWithResult(
-                  TransactionDTO(Option(t), None)
-                )
-              )
+              ApiResponseUtil.toResponse(TransactionDTO(Option(t), None))
             } else {
-              SidechainApiResponse(
-                SerializationUtil.serializeWithResult(
-                  TransactionDTO(None, Option(new String(companion.toBytes(t))))
-                )
-              )
+              ApiResponseUtil.toResponse(TransactionDTO(None, Option(new String(companion.toBytes(t)))))
             }
           case None =>
             // TO-DO Change the errorCode
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                NOT_FOUND_ID().apiCode, error, "")
-            )
+            ApiResponseUtil.toResponse(ErrorNotFoundTransactionId(error, None))
         }
       }
     }
@@ -169,23 +151,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return a JSON representation of a transaction given its byte serialization.
     */
   def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
-    entity(as[ReqDecodeTransactionBytesPost]) { body =>
+    entity(as[ReqDecodeTransactionBytes]) { body =>
       withNodeView { sidechainNodeView =>
         var bytes = BytesUtils.fromHexString(body.transactionBytes)
         var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
         tryTX match {
           case Success(tx) =>
             //TO-DO JSON representation of transaction
-            SidechainApiResponse(
-              SerializationUtil.serializeWithResult(
-                RespDecodeTransactionBytesPost(tx)
-              )
-            )
+            ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
           case Failure(exp) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                BYTE_PARSING_FAILURE().apiCode, exp.getMessage, "")
-            )
+            ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, Some(exp)))
         }
       }
     }
@@ -196,17 +171,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def createRegularTransaction: Route = (post & path("createRegularTransaction")) {
-    entity(as[ReqCreateRegularTransactionPost]) { body =>
+    entity(as[ReqCreateRegularTransaction]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
-          SidechainApiResponse(
-            SerializationUtil.serializeErrorWithResult(
-              NOT_FOUND_INPUT().apiCode, s"Unable to find input(s)", "")
-          )
+          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
         } else {
           var inSum: Long = 0
           var outSum: Long = 0
@@ -239,23 +211,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               fee, System.currentTimeMillis())
 
             if (body.format.getOrElse(false))
-              SidechainApiResponse(
-                SerializationUtil.serializeWithResult(
-                  TransactionDTO(Option(regularTransaction), None)
-                )
-              )
+              ApiResponseUtil.toResponse(TransactionDTO(Option(regularTransaction), None))
             else
-              SidechainApiResponse(
-                SerializationUtil.serializeWithResult(
-                  TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
-                )
-              )
+              ApiResponseUtil.toResponse(TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction)))))
           } catch {
             case t: Throwable =>
-              SidechainApiResponse(
-                SerializationUtil.serializeErrorWithResult(
-                  GENERIC_FAILURE().apiCode, t.getMessage, "")
-              )
+              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
           }
         }
       }
@@ -267,7 +228,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def createRegularTransactionSimplified: Route = (post & path("createRegularTransactionSimplified")) {
-    entity(as[ReqCreateRegularTransactionSimplifiedPost]) { body =>
+    entity(as[ReqCreateRegularTransactionSimplified]) { body =>
       withNodeView { sidechainNodeView =>
         var outputList = body.transactionOutputs
         var fee = body.fee
@@ -277,23 +238,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
 
           if (body.format.getOrElse(false))
-            SidechainApiResponse(
-              SerializationUtil.serializeWithResult(
-                TransactionDTO(Option(regularTransaction), None)
-              )
-            )
+            ApiResponseUtil.toResponse(TransactionDTO(Option(regularTransaction), None))
           else
-            SidechainApiResponse(
-              SerializationUtil.serializeWithResult(
-                TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
-              )
-            )
+            ApiResponseUtil.toResponse(TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction)))))
         } catch {
           case t: Throwable =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                GENERIC_FAILURE().apiCode, t.getMessage, "")
-            )
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
         }
       }
     }
@@ -336,7 +286,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
-    entity(as[ReqSendCoinsToAddressPost]) { body =>
+    entity(as[ReqSendCoinsToAddress]) { body =>
       withNodeView { sidechainNodeView =>
         var outputList = body.outputs
         var fee = body.fee
@@ -347,10 +297,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           validateAndSendTransaction(regularTransaction)
         } catch {
           case t: Throwable =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                GENERIC_FAILURE().apiCode, t.getMessage, "")
-            )
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
         }
       }
     }
@@ -364,15 +311,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier) {
           case Success(result) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeWithResult(
-                TransactionIdDTO(transaction.id)
-              )
-            )
+            ApiResponseUtil.toResponse(TransactionIdDTO(transaction.id))
           case Failure(exp) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                GENERIC_FAILURE().apiCode, exp.getMessage, "")
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
             )
         }
     }
@@ -390,13 +331,87 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case Success(transaction) =>
             validateAndSendTransaction(transaction)
           case Failure(exception) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                GENERIC_FAILURE().apiCode, exception.getMessage, "")
-            )
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exception)))
         }
       }
     }
+  }
+
+}
+
+
+object SidechainTransactionRestScheme {
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllTransactions(transactions: Option[List[Transaction]], transactionIds: Option[List[String]]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionDTO(transaction: Option[Transaction], transactionBytes: Option[String]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespDecodeTransactionBytes(transaction: Transaction) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionInput(boxId: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionOutput(publicKey: String, value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateRegularTransaction(transactionInputs: List[TransactionInput],
+                                                      transactionOutputs: List[TransactionOutput],
+                                                      format: Option[Boolean]) {
+    require(transactionInputs.nonEmpty, "Empty inputs list")
+    require(transactionOutputs.nonEmpty, "Empty outputs list")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateRegularTransactionSimplified(transactionOutputs: List[TransactionOutput],
+                                                                fee: Long,
+                                                                format: Option[Boolean]) {
+    require(transactionOutputs.nonEmpty, "Empty outputs list")
+    require(fee >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput], fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSendTransactionPost(transactionBytes: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
+
+}
+
+object SidechainTransactionErrorResponse {
+
+  case class ErrorNotFoundTransactionId(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0201"
+  }
+
+  case class ErrorNotFoundTransactionInput(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0202"
+  }
+
+  case class ErrorByteTransactionParsing(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0203"
+  }
+
+  case class GenericTransactionError(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0204"
   }
 
 }

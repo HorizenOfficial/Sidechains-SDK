@@ -14,9 +14,10 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import JacksonSupport._
-import com.horizen.api.http.schema.{INVALID_HEIGHT, INVALID_ID, NOT_ACCEPTED, NOT_CREATED, TEMPLATE_FAILURE}
-import com.horizen.api.http.schema.BlockRestScheme._
-import com.horizen.serialization.SerializationUtil
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.SidechainBlockErrorResponse._
+import com.horizen.api.http.SidechainBlockRestSchema._
+import com.horizen.serialization.Views
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -30,23 +31,17 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * The sidechain block by its id.
     */
   def findById: Route = (post & path("findById")) {
-    entity(as[ReqFindByIdPost]) { body =>
+    entity(as[ReqFindById]) { body =>
       withNodeView { sidechainNodeView =>
         var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
 
         if (optionSidechainBlock.isPresent) {
           var sblock = optionSidechainBlock.get()
           var sblock_serialized = sblock.serializer.toBytes(sblock)
-          SidechainApiResponse(
-            SerializationUtil.serializeWithResult(
-              RespFindByIdPost(BytesUtils.toHexString(sblock_serialized), sblock)
-            ))
+          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock))
         }
         else
-          SidechainApiResponse(
-            SerializationUtil.serializeErrorWithResult(
-              INVALID_ID().apiCode, s"Invalid id: ${body.blockId}", "")
-          )
+          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", None))
       }
     }
   }
@@ -55,13 +50,11 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Returns an array of number last sidechain block ids
     */
   def findLastIds: Route = (post & path("findLastIds")) {
-    entity(as[ReqLastIdsPost]) { body =>
+    entity(as[ReqLastIds]) { body =>
       withNodeView { sidechainNodeView =>
         var sidechainHistory = sidechainNodeView.getNodeHistory
         var blockIds = sidechainHistory.getLastBlockIds(body.number)
-        SidechainApiResponse(
-          SerializationUtil.serializeWithResult(
-            RespLastIdsPost(blockIds.asScala)))
+        ApiResponseUtil.toResponse(RespLastIds(blockIds.asScala))
       }
     }
   }
@@ -70,21 +63,14 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Return a sidechain block Id by its height in a blockchain
     */
   def findIdByHeight: Route = (post & path("findIdByHeight")) {
-    entity(as[ReqFindIdByHeightPost]) { body =>
+    entity(as[ReqFindIdByHeight]) { body =>
       withNodeView { sidechainNodeView =>
         var sidechainHistory = sidechainNodeView.getNodeHistory
         val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
         if (blockIdOptional.isPresent)
-          SidechainApiResponse(
-            SerializationUtil.serializeWithResult(
-              RespFindIdByHeightPost(blockIdOptional.get())
-            )
-          )
+          ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
         else
-          SidechainApiResponse(
-            SerializationUtil.serializeErrorWithResult(
-              INVALID_HEIGHT().apiCode, s"Invalid height: ${body.height}", "")
-          )
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", None))
       }
     }
   }
@@ -98,16 +84,9 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if (height > 0)
-          SidechainApiResponse(
-            SerializationUtil.serializeWithResult(
-              RespBestPost(sidechainHistory.getBestBlock, height)
-            )
-          )
+          ApiResponseUtil.toResponse(RespBest(sidechainHistory.getBestBlock, height))
         else
-          SidechainApiResponse(
-            SerializationUtil.serializeErrorWithResult(
-              INVALID_HEIGHT().apiCode, s"Invalid height: ${height}", "")
-          )
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", None))
     }
   }
 
@@ -120,21 +99,14 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     val blockTemplateTry = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
     blockTemplateTry match {
       case Success(block) =>
-        SidechainApiResponse(
-          SerializationUtil.serializeWithResult(
-            RespTemplatePost(block, BytesUtils.toHexString(block.bytes))
-          )
-        )
+        ApiResponseUtil.toResponse(RespTemplate(block, BytesUtils.toHexString(block.bytes)))
       case Failure(e) =>
-        SidechainApiResponse(
-          SerializationUtil.serializeErrorWithResult(
-            TEMPLATE_FAILURE().apiCode, s"Failed to get block template: ${e.getMessage}", "")
-        )
+        ApiResponseUtil.toResponse(ErrorBlockTemplate(s"Failed to get block template: ${e.getMessage}", None))
     }
   }
 
   def submitBlock: Route = (post & path("submit")) {
-    entity(as[ReqSubmitPost]) { body =>
+    entity(as[ReqSubmit]) { body =>
       withNodeView { sidechainNodeView =>
         var blockBytes: Array[Byte] = null
         Try {
@@ -145,22 +117,12 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
             val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
             Await.result(submitResultFuture, timeout.duration) match {
               case Success(id) =>
-                SidechainApiResponse(
-                  SerializationUtil.serializeWithResult(
-                    RespSubmitPost(id)
-                  )
-                )
+                ApiResponseUtil.toResponse(RespSubmit(id))
               case Failure(e) =>
-                SidechainApiResponse(
-                  SerializationUtil.serializeErrorWithResult(
-                    NOT_ACCEPTED().apiCode, s"Block was not accepted: ${e.getMessage}", "")
-                )
+                ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
             }
           case Failure(e) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                NOT_ACCEPTED().apiCode, s"Block was not accepted: ${e.getMessage}", "")
-            )
+            ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
         }
       }
     }
@@ -172,25 +134,93 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * the newly generated blocks.
     */
   def generateBlocks: Route = (post & path("generate")) {
-    entity(as[ReqGeneratePost]) { body =>
+    entity(as[ReqGenerate]) { body =>
       withNodeView { sidechainNodeView =>
         val future = sidechainBlockActorRef ? GenerateSidechainBlocks(body.number)
         val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
         Await.result(submitResultFuture, timeout.duration) match {
           case Success(ids) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeWithResult(
-                RespGeneratePost(ids.map(id => id.asInstanceOf[String]))
-              )
-            )
+            ApiResponseUtil.toResponse(RespGenerate(ids.map(id => id.asInstanceOf[String])))
           case Failure(e) =>
-            SidechainApiResponse(
-              SerializationUtil.serializeErrorWithResult(
-                NOT_CREATED().apiCode, s"Block was not created: ${e.getMessage}", "")
-            )
+            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
         }
       }
     }
+  }
+
+}
+
+
+object SidechainBlockRestSchema {
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindById(blockId: String) {
+    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindById(blockHex: String, block: SidechainBlock) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqLastIds(number: Int) {
+    require(number > 0, s"Invalid number $number. Number must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespLastIds(lastBlockIds: Seq[String]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindIdByHeight(height: Int) {
+    require(height > 0, s"Invalid height $height. Height must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespBest(block: SidechainBlock, height: Int) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespTemplate(block: SidechainBlock, blockHex: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSubmit(blockHex: String) {
+    require(blockHex.nonEmpty, s"Invalid hex data $blockHex. String must be not empty")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespSubmit(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGenerate(number: Int) {
+    require(number > 0, s"Invalid number $number. Number must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGenerate(blockIds: Seq[String]) extends SuccessResponse
+
+}
+
+object SidechainBlockErrorResponse {
+
+  case class ErrorInvalidBlockId(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0101"
+  }
+
+  case class ErrorInvalidBlockHeight(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0102"
+  }
+
+  case class ErrorBlockTemplate(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0103"
+  }
+
+  case class ErrorBlockNotAccepted(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0104"
+  }
+
+  case class ErrorBlockNotCreated(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0105"
   }
 
 }

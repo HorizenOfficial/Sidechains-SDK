@@ -1071,7 +1071,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockInfo:
+                      block:
                         $ref: '#/components/schemas/MainchainBlock'
                       blockHex:
                         type: string
@@ -1164,15 +1164,9 @@ components:
     SidechainApiErrorCode:
       type: object
       properties:
-        groupName:
+        code:
           type: string
-        groupCode:
-          type: string
-        internalName:
-          type: string
-        internalCode:
-          type: string
-        apiCode:
+        name:
           type: string
 
     Proposition:

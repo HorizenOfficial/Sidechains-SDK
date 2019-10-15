@@ -3,9 +3,7 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.schema.INVALID_HOST_PORT
-import com.horizen.api.http.schema.SidechainNodeRestSchema.{ReqConnectPost, SidechainPeerNode}
-import com.horizen.serialization
+import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert.{assertEquals, assertTrue}
 
@@ -116,7 +114,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
     "reply at /connect" in {
       // valid host
       Post(basePath + "connect")
-        .withEntity(SerializationUtil.serialize(ReqConnectPost("92.92.92.92", 8080))) ~> sidechainNodeApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqConnect("92.92.92.92", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -129,7 +127,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
       // not valid host
       Post(basePath + "connect")
-        .withEntity(SerializationUtil.serialize(ReqConnectPost("my_host", 8080))) ~> sidechainNodeApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqConnect("my_host", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }

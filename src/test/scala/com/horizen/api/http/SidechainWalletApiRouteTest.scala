@@ -2,9 +2,9 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.schema.WalletRestScheme.{ReqAllBoxesPost, ReqAllPropositionsPost, ReqBalancePost}
+import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
+import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.serialization.SerializationUtil
-import com.horizen.api.http.schema.SECRET_NOT_ADDED
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
@@ -61,7 +61,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /allBoxes" in {
         Post(basePath + "allBoxes")
           .withEntity(
-            SerializationUtil.serialize(ReqAllBoxesPost(None, None))) ~> sidechainWalletApiRoute ~> check {
+            SerializationUtil.serialize(ReqAllBoxes(None, None))) ~> sidechainWalletApiRoute ~> check {
           status.intValue() shouldBe StatusCodes.OK.intValue
           responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
           mapper.readTree(entityAs[String]).get("result") match {
@@ -78,13 +78,13 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         }
         Post(basePath + "allBoxes")
           .withEntity(
-            SerializationUtil.serialize(ReqAllBoxesPost(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
+            SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
           status.intValue() shouldBe StatusCodes.InternalServerError.intValue
           responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxesPost(None, Some(Seq("box_1_id", "box_2_id"))))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(None, Some(Seq("box_1_id", "box_2_id"))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -101,7 +101,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxesPost(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -110,7 +110,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /balance" in {
       Post(basePath + "balance")
         .withEntity(
-          SerializationUtil.serialize(ReqBalancePost(None))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqBalance(None))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -125,7 +125,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "balance")
         .withEntity(
-          SerializationUtil.serialize(ReqBalancePost(Some("a_class")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqBalance(Some("a_class")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -152,14 +152,14 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "createSecret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], SECRET_NOT_ADDED().apiCode)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)
       }
     }
 
     "reply at /allPublicKeys" in {
       Post(basePath + "allPublicKeys")
         .withEntity(
-          SerializationUtil.serialize(ReqAllPropositionsPost(None))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllPropositions(None))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -176,7 +176,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allPublicKeys")
         .withEntity(
-          SerializationUtil.serialize(ReqAllPropositionsPost(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllPropositions(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
