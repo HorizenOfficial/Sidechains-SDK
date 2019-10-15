@@ -105,15 +105,12 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     val pubKeys = publicKeys()
     val boxesInWallet = boxes().map(_.box.id())
 
-    val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] =
-      (modifier.transactions.map(tx => (tx, tx.boxIdsToOpen().asScala.toSeq)) ++
-        modifier.transactions.map(tx => (tx, tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id())))))
-        .flatMap(tx => {
-          tx._2.foldLeft(Seq[(ByteArrayWrapper, SidechainTypes#SCBT)]())((col, box) => {
-            col :+ (box, tx._1)
-          })
-        }).toMap
-
+    val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] = modifier.transactions
+      .foldLeft(Map.empty[ByteArrayWrapper, SidechainTypes#SCBT]) {
+        (accMap, tx) => accMap ++ tx.boxIdsToOpen().asScala.map(boxId => boxId -> tx) ++
+          tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
+      }
+    
     val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
         .map(_.box)
         .map { box =>
