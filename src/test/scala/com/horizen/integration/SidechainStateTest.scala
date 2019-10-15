@@ -10,11 +10,10 @@ import scala.collection.JavaConverters._
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
 import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.state.DefaultApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.ByteArrayWrapper

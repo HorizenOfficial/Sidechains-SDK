@@ -3,6 +3,7 @@ package com.horizen.box
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -35,8 +36,8 @@ class RegularBoxScalaTest
     assertEquals("Json must contain only 1 proposition.",
       1, node.findValues("proposition").size())
     assertEquals("Proposition json content must be the same.",
-      serializer.serialize(proposition).replaceAll("\n", "").replaceAll(" ", ""),
-      node.path("proposition").toString.replaceAll("\n", "").replaceAll(" ", ""))
+      BytesUtils.toHexString(proposition.pubKeyBytes()),
+      node.path("proposition").path("publicKey").asText())
 
     assertEquals("Json must contain only 1 id.",
       1, node.findValues("id").size())
