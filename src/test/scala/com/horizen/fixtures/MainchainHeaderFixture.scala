@@ -2,13 +2,12 @@ package com.horizen.fixtures
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.block.MainchainHeader
-import com.horizen.block.MainchainHeader.SCMAP_BLOCK_VERSION
 import com.horizen.utils.{BytesUtils, VarInt}
 
 // Just for PoW verification testing
 case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: Array[Byte], override val hashPrevBlock: Array[Byte] = null, override val time: Int = 0
                                     ) extends MainchainHeader(null, 0, hashPrevBlock,
-  null, null, null, time, bits, null, null) {
+  null, null, time, bits, null, null) {
   override lazy val hash = precalculatedHash
 }
 
@@ -16,19 +15,11 @@ case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: 
 trait MainchainHeaderFixture {
 
   def mainchainHeaderToBytes(obj: MainchainHeader): Array[Byte] = {
-    val hashOfSCMerkleRootsMap = obj.version match {
-      case SCMAP_BLOCK_VERSION =>
-        BytesUtils.reverseBytes(obj.hashSCMerkleRootsMap)
-      case _ =>
-        new Array[Byte](0)
-    }
-
     Bytes.concat(
       BytesUtils.reverseBytes(Ints.toByteArray(obj.version)),
       BytesUtils.reverseBytes(obj.hashPrevBlock),
       BytesUtils.reverseBytes(obj.hashMerkleRoot),
-      BytesUtils.reverseBytes(obj.hashReserved),
-      BytesUtils.reverseBytes(hashOfSCMerkleRootsMap),
+      BytesUtils.reverseBytes(obj.hashSCMerkleRootsMap),
       BytesUtils.reverseBytes(Ints.toByteArray(obj.time)),
       BytesUtils.reverseBytes(Ints.toByteArray(obj.bits)),
       BytesUtils.reverseBytes(obj.nonce),

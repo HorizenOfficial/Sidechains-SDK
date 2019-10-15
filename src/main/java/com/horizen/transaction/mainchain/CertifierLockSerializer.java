@@ -20,8 +20,8 @@ public final class CertifierLockSerializer implements SidechainRelatedMainchainO
     }
 
     @Override
-    public void serialize(CertifierLock transaction, Writer writer) {
-        writer.putBytes(transaction.bytes());
+    public void serialize(CertifierLock certifierLockOutput, Writer writer) {
+        writer.putBytes(certifierLockOutput.bytes());
     }
 
     @Override

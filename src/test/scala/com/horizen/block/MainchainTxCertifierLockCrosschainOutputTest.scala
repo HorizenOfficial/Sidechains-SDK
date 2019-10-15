@@ -15,13 +15,12 @@ class MainchainTxCertifierLockCrosschainOutputTest extends JUnitSuite with Mainc
   @Test
   def creation(): Unit = {
     val amount: Long = 100L
-    val nonce: Long = 123456789L
     val proposition: PublicKey25519Proposition = PrivateKey25519Creator.getInstance().generateSecret("test1".getBytes()).publicImage()
     var sidechainId: Array[Byte] = new Array[Byte](32)
     val activeFromWithdrawalEpoch: Long = 77L
     Random.nextBytes(sidechainId)
 
-    val bytes: Array[Byte] = generateMainchainTxCertifierLockCrosschainOutputBytes(amount, nonce, proposition, sidechainId, activeFromWithdrawalEpoch)
+    val bytes: Array[Byte] = generateMainchainTxCertifierLockCrosschainOutputBytes(amount, proposition, sidechainId, activeFromWithdrawalEpoch)
     val hash: String = BytesUtils.toHexString(BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bytes)))
 
 
@@ -30,8 +29,7 @@ class MainchainTxCertifierLockCrosschainOutputTest extends JUnitSuite with Mainc
 
     assertTrue("Certifier Lock crosschain output expected to be parsed.", output.isSuccess)
     assertEquals("Output Hash is different.", hash, BytesUtils.toHexString(output.get.hash))
-    assertEquals("Output amount is different.", amount, output.get.amount)
-    assertEquals("Output nonce is different.", nonce, output.get.nonce)
+    assertEquals("Output amount is different.", amount, output.get.lockedAmount)
     assertEquals("Output proposition bytes are different.", proposition, new PublicKey25519Proposition(output.get.propositionBytes))
     assertEquals("Output sidechainId is different.", BytesUtils.toHexString(sidechainId), BytesUtils.toHexString(output.get.sidechainId))
     assertEquals("Output withdrawal epoch is different.", activeFromWithdrawalEpoch, output.get.activeFromWithdrawalEpoch)

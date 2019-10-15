@@ -23,7 +23,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     new mutable.HashMap[MainchainBlockReferenceId, MainchainBlockReference]()
 
   private val initialMainchainBlockReferenceHeader = new MainchainHeader(generateBytes(),
-    -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
+    -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
     new Array[Byte](0), new Array[Byte](0))
   private val initialMainchainBlockReference =
     new MainchainBlockReference(initialMainchainBlockReferenceHeader, None, None)
@@ -39,13 +39,12 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     val mainchainHeaderBytes = generateBytes()
 
     val parent = id.getOrElse(lastGeneratedHash)
-    val headerWithNoSerialization = new MainchainHeader(mainchainHeaderBytes, 1, parent, generateBytes(), generateBytes(), generateBytes(), Instant.now.getEpochSecond.toInt, util.Random.nextInt(), generateBytes(), generateBytes(1344))
+    val headerWithNoSerialization = new MainchainHeader(mainchainHeaderBytes, 1, parent, generateBytes(), generateBytes(), Instant.now.getEpochSecond.toInt, util.Random.nextInt(), generateBytes(), generateBytes(1344))
     val header = new MainchainHeader(
       mainchainHeaderToBytes(headerWithNoSerialization),
       headerWithNoSerialization.version,
       headerWithNoSerialization.hashPrevBlock,
       headerWithNoSerialization.hashMerkleRoot,
-      headerWithNoSerialization.hashReserved,
       headerWithNoSerialization.hashSCMerkleRootsMap,
       headerWithNoSerialization.time,
       headerWithNoSerialization.bits,
@@ -69,7 +68,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   def generateDummyMainchainBlockReference(): MainchainBlockReference = {
       val mainchainHeaderBytes: Array[Byte] = new Array[Byte](16)
       util.Random.nextBytes(mainchainHeaderBytes)
-      val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null, null, null, 0, util.Random.nextInt(), null, null)
+      val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null, null, 0, util.Random.nextInt(), null, null)
       new MainchainBlockReference(header, null, null)
   }
 

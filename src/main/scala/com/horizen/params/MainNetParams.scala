@@ -7,7 +7,7 @@ import scorex.util.bytesToId
 class MainNetParams extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
-  val EquihashVarIntLength: Int = 3
+  override val EquihashVarIntLength: Int = 3
   override val EquihashSolutionLength: Int = 1344
 
   override val powLimit: BigInteger = new BigInteger("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)

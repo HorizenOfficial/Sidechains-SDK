@@ -1,224 +1,152 @@
 package com.horizen.block
 
-import com.horizen.box.Box
-import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainRelatedMainchainOutput}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt}
+import scala.util.Try
 
-import scala.collection.mutable.ArrayBuffer
-
-import java.util.{ArrayList => JArrayList, List => JList}
 
 class MainchainTransaction(
                           transactionsBytes: Array[Byte],
-                          offset: Int
+                          version: Int,
+                          crosschainOutputsMap: Map[ByteArrayWrapper, Seq[MainchainTxCrosschainOutput]]
                           ) {
 
-  private val PHGR_TX_VERSION: Int = 2
-  private val GROTH_TX_VERSION: Int = 0xFFFFFFFD // -3
-  private val CROSSCHAIN_OUTPUTS_TX_VERSION: Int = 0xFFFFFFFC // -4
+  lazy val bytes: Array[Byte] = transactionsBytes.clone()
 
-  private var _size: Int = 0
-  private var _version: Int = 0
-//  Bitcoin segwit support
-//  private var _marker: Byte = 0
-//  private var _flag: Byte = 0
-//  private var _useSegwit: Boolean = false
-  private var _inputs: ArrayBuffer[MainchainTxInput] = ArrayBuffer()
-  private var _outputs: ArrayBuffer[MainchainTxOutput] = ArrayBuffer()
-  private var _sidechainRelatedMainchainOutputMap: Map[ByteArrayWrapper, JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]] = Map() // key sidechainID
-  private var _lockTime: Int = 0
-
-  parse()
-
-  lazy val bytes: Array[Byte] = transactionsBytes.slice(offset, offset + _size)
-
-  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bytes))
+  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
-  def size = _size
+  def size: Int = transactionsBytes.length
+
+  def getRelatedSidechains: Set[ByteArrayWrapper] = crosschainOutputsMap.keySet
+
+  def getCrosschainOutputs(sidechainId: ByteArrayWrapper): Seq[MainchainTxCrosschainOutput] = crosschainOutputsMap.getOrElse(sidechainId, Seq())
+}
 
 
-  private def parse() = {
+object MainchainTransaction {
+  private val PHGR_TX_VERSION: Int = 2
+  private val GROTH_TX_VERSION: Int = 0xFFFFFFFD // -3
+  private val SC_TX_VERSION: Int = 0xFFFFFFFC // -4
+
+  def create(transactionBytes: Array[Byte], offset: Int): Try[MainchainTransaction] = Try {
+    var crosschainOutputsMap: Map[ByteArrayWrapper, Seq[MainchainTxCrosschainOutput]] = Map() // key sidechainID
     var currentOffset: Int = offset
 
-    _version = BytesUtils.getReversedInt(transactionsBytes, currentOffset)
+    val version = BytesUtils.getReversedInt(transactionBytes, currentOffset)
     currentOffset += 4
 
-//    Bitcoin segwit support
-//    _marker = transactionsBytes(currentOffset)
-//    currentOffset += 1
-//
-//    _flag = transactionsBytes(currentOffset)
-//    currentOffset += 1
-
     // parse inputs
-    val inputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+    val inputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
     currentOffset += inputsNumber.size()
 
     for (i <- 1 to inputsNumber.value().intValue()) {
-      val prevTxHash: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + 32)
+      val prevTxHash: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + 32)
       currentOffset += 32
 
-      val prevTxOuputIndex: Int = BytesUtils.getInt(transactionsBytes, currentOffset)
+      val prevTxOuputIndex: Int = BytesUtils.getInt(transactionBytes, currentOffset)
       currentOffset += 4
 
-      val scriptLength: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
       currentOffset += scriptLength.size()
 
-      val txScript: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
+      val txScript: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
       currentOffset += scriptLength.value().intValue()
 
-      val sequence: Int = BytesUtils.getInt(transactionsBytes, currentOffset)
+      val sequence: Int = BytesUtils.getInt(transactionBytes, currentOffset)
       currentOffset += 4
 
-      _inputs += MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
+      // possible creation of MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
     }
 
     // parse outputs
-    val outputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+    val outputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
     currentOffset += outputsNumber.size()
 
     for (i <- 1 to outputsNumber.value().intValue()) {
-      val value: Long = BytesUtils.getReversedLong(transactionsBytes, currentOffset)
+      val value: Long = BytesUtils.getReversedLong(transactionBytes, currentOffset)
       currentOffset += 8
 
-      val scriptLength: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
       currentOffset += scriptLength.size()
 
-      val script: Array[Byte] = transactionsBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
+      val script: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
       val scriptHex: String = BytesUtils.toHexString(script)
       currentOffset += scriptLength.value().intValue()
 
-      _outputs = _outputs :+ MainchainTxOutput(value, script)
+      // possible creation of MainchainTxOutput(value, script)
     }
 
-    if(_version == CROSSCHAIN_OUTPUTS_TX_VERSION) {
-      var crosschainOutputDataList: Seq[Tuple2[ByteArrayWrapper, MainchainTxCrosschainOutput]] = Seq()
+    if(version == SC_TX_VERSION) {
+      var crosschainOutputs: Seq[MainchainTxCrosschainOutput] = Seq()
 
-      // parse Forward Transfer outputs
-      val forwardTransferOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-      currentOffset += forwardTransferOutputsNumber.size()
-      for (i <- 1 to forwardTransferOutputsNumber.value().intValue()) {
-        val output = MainchainTxForwardTransferCrosschainOutput.create(transactionsBytes, currentOffset).get
-        currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
-        crosschainOutputDataList = crosschainOutputDataList :+ Tuple2(new ByteArrayWrapper(output.sidechainId), output)
+      // parse SidechainCreation outputs
+      val creationOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      currentOffset += creationOutputsNumber.size()
+      for (i <- 1 to creationOutputsNumber.value().intValue()) {
+        val output = MainchainTxSidechainCreationCrosschainOutput.create(transactionBytes, currentOffset).get
+        currentOffset += MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE
+        crosschainOutputs = crosschainOutputs :+ output
       }
 
       // parse Certifier Lock outputs
-      val certifierLockOutputsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+      val certifierLockOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
       currentOffset += certifierLockOutputsNumber.size()
       for (i <- 1 to certifierLockOutputsNumber.value().intValue()) {
-        val output = MainchainTxCertifierLockCrosschainOutput.create(transactionsBytes, currentOffset).get
+        val output = MainchainTxCertifierLockCrosschainOutput.create(transactionBytes, currentOffset).get
         currentOffset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE
-        crosschainOutputDataList = crosschainOutputDataList :+ Tuple2(new ByteArrayWrapper(output.sidechainId), output)
+        crosschainOutputs = crosschainOutputs :+ output
       }
 
-      // put data into _sidechainRelatedMainchainOutputMap
-      for(crosschainOutputOutputData <- crosschainOutputDataList) {
-        // Add empty List for new SidechainId
-        if(!_sidechainRelatedMainchainOutputMap.contains(crosschainOutputOutputData._1))
-          _sidechainRelatedMainchainOutputMap = _sidechainRelatedMainchainOutputMap + Tuple2(
-            crosschainOutputOutputData._1,
-            new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]()
-          )
-
-
-        // Put SidechainRelatedOutput type for proper SidechainId
-        _sidechainRelatedMainchainOutputMap(crosschainOutputOutputData._1).add(
-          crosschainOutputOutputData._2 match {
-            case ft: MainchainTxForwardTransferCrosschainOutput => new ForwardTransfer(ft)
-            case cl: MainchainTxCertifierLockCrosschainOutput => new CertifierLock(cl)
-          })
+      // parse Forward Transfer outputs
+      val forwardTransferOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      currentOffset += forwardTransferOutputsNumber.size()
+      for (i <- 1 to forwardTransferOutputsNumber.value().intValue()) {
+        val output = MainchainTxForwardTransferCrosschainOutput.create(transactionBytes, currentOffset).get
+        currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
+        crosschainOutputs = crosschainOutputs :+ output
       }
+
+      // put data into crosschainOutputsMap
+      crosschainOutputsMap = crosschainOutputs.groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
     }
 
-//    if(_marker == 0)
-//      _useSegwit = true
-//
-//    // parse witness
-//    // Note: actually witness data is not important for us. So we will just parse it for knowing its size.
-//    if(_useSegwit) {
-//      val witnessNumber: Long = inputsNumber.value()
-//      for (i <- 1 to witnessNumber.intValue()) {
-//        val pushCount: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-//        currentOffset += pushCount.size()
-//        for( j <- 1 to pushCount.value().intValue()) {
-//          val pushSize: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
-//          currentOffset += pushSize.size() + pushSize.value().intValue()
-//        }
-//      }
-//    }
-
-    // TO DO: check. maybe need to use getInt
-    _lockTime = BytesUtils.getReversedInt(transactionsBytes, currentOffset)
-    if(_lockTime != 0)
-      _lockTime + 4
+    // parse lockTime. TO DO: check. maybe need to use getInt
+    BytesUtils.getReversedInt(transactionBytes, currentOffset)
     currentOffset += 4
 
 
     // check if it's a transaction with JoinSplits and parse them if need
     // Note: actually joinsplit data is not important for us. So we will just parse it for knowing its size
-    if (_version >= PHGR_TX_VERSION || _version == GROTH_TX_VERSION) {
-      val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionsBytes, currentOffset)
+    if (version >= PHGR_TX_VERSION || version == GROTH_TX_VERSION) {
+      val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
       currentOffset += joinSplitsNumber.size()
+      if(joinSplitsNumber.value().intValue() != 0) {
+        var joinSplitsOffset: Int = 8 + // int64_t vpub_old
+          8 + // int64_t vpub_new
+          32 + // uint256 anchor
+          32 * 2 + // std::array<uint256, ZC_NUM_JS_INPUTS> nullifiers, where ZC_NUM_JS_INPUTS = 2
+          32 * 2 + // std::array<uint256, ZC_NUM_JS_OUTPUTS> commitments, where ZC_NUM_JS_OUTPUTS = 2
+          32 + // uint256 ephemeralKey
+          32 + // uint256 randomSeed
+          32 * 2 // std::array<uint256, ZC_NUM_JS_INPUTS> macs
 
-      var joinSplitsOffset: Int = 0
-      joinSplitsOffset += 8        // int64_t vpub_old
-                       + 8        // int64_t vpub_new
-                       + 32       // uint256 anchor
-                       + 32 * 2   // std::array<uint256, ZC_NUM_JS_INPUTS> nullifiers, where ZC_NUM_JS_INPUTS = 2
-                       + 32 * 2   // std::array<uint256, ZC_NUM_JS_OUTPUTS> commitments, where ZC_NUM_JS_OUTPUTS = 2
-                       + 32       // uint256 ephemeralKey
-                       + 32       // uint256 randomSeed
-                       + 32 * 2  // std::array<uint256, ZC_NUM_JS_INPUTS> macs
+        if (version >= PHGR_TX_VERSION) // parse PHGRProof
+          joinSplitsOffset += 33 * 7 + 65 // PHGRProof consists of 7 CompressedG1  (33 bytes each) + 1 CompressedG2 (65 bytes)
+        else // version == GROTH_TX_VERSION -> parse GrothProof
+          joinSplitsOffset += 192 // typedef std::array<unsigned char, GROTH_PROOF_SIZE> GrothProof, where GROTH_PROOF_SIZE = 48 + 96 + 48
 
-      if(_version >= PHGR_TX_VERSION) // parse PHGRProof
-        joinSplitsOffset += 33 * 7 + 65 // PHGRProof consists of 7 CompressedG1  (33 bytes each) + 1 CompressedG2 (65 bytes)
-      else // _version == _version == GROTH_TX_VERSION -> parse GrothProof
-        joinSplitsOffset += 192         // typedef std::array<unsigned char, GROTH_PROOF_SIZE> GrothProof, where GROTH_PROOF_SIZE = 48 + 96 + 48
+        joinSplitsOffset += 601 * 2 // std::array<ZCNoteEncryption::Ciphertext, ZC_NUM_JS_OUTPUTS>, where typedef std::array<unsigned char, CLEN> Ciphertext and CLEN = 1 + 8 + 32 + 32 + 512 + 16
 
-      joinSplitsOffset += 601 * 2 // std::array<ZCNoteEncryption::Ciphertext, ZC_NUM_JS_OUTPUTS>, where typedef std::array<unsigned char, CLEN> Ciphertext and CLEN = 1 + 8 + 32 + 32 + 512 + 16
-      joinSplitsOffset += 360 // TO DO: check from where these 360 byte are taken
+        joinSplitsOffset *= joinSplitsNumber.value().intValue()
 
-      joinSplitsOffset *= joinSplitsNumber.value().intValue()
+        joinSplitsOffset += 32 + 64 // uint256 joinSplitPubKey;  +  typedef boost::array<unsigned char, 64> joinsplit_sig_t
 
-      if(joinSplitsNumber.value() > 0) {
-        joinSplitsOffset += 32 // uint256 joinSplitPubKey;
-                       + 64 // typedef boost::array<unsigned char, 64> joinsplit_sig_t
+
+        currentOffset += joinSplitsOffset
       }
-
-      currentOffset += joinSplitsOffset
     }
 
-    _size = currentOffset - offset
+    new MainchainTransaction(transactionBytes.slice(offset, currentOffset), version, crosschainOutputsMap)
   }
-
-  def getRelatedSidechains: Set[ByteArrayWrapper] = {
-    _sidechainRelatedMainchainOutputMap.keySet
-  }
-
-  def getSidechainRelatedOutputs(sidechainId: ByteArrayWrapper): JList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
-    _sidechainRelatedMainchainOutputMap.getOrElse(sidechainId, new JArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]())
-  }
-
-  // TO DO: implement later, when structure will be known
-  // def getSidechainRelatedFraudReports(sidechainId: Array[Byte]):: java.util.List[FraudReport] = ???
-  // def getSidechainRelatedCertificateReferences(sidechainId: Array[Byte]):: java.util.List[CertificateReference] = ???
 }
-
-
-// Note: Witness data is ignored during parsing.
-case class MainchainTxInput(
-                        prevTxHash: Array[Byte],
-                        prevTxOutIndex: Int,
-                        txScript: Array[Byte],
-                        sequence: Int
-                      )
-
-
-case class MainchainTxOutput(
-                              value: Long,
-                              script: Array[Byte]
-                            )

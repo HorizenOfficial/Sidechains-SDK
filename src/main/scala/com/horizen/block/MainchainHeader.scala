@@ -16,8 +16,7 @@ import scala.util.Try
 //
 // Representation of MC header
 //
-// Note: Horizen MC Block header should be updated by SCMap merkle root hash.
-// SCMap merkle root is a merkle root of particular SC related transactions merkle roots.
+// hashSCMerkleRootsMap is a merkle root hash of particular SC related crosschain outputs data merkle roots.
 //
 // SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
 // hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
@@ -26,10 +25,9 @@ import scala.util.Try
 @JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
-                       val version: Int, // 4 bytes
-                       val hashPrevBlock: Array[Byte], // 32 bytes
-                       val hashMerkleRoot: Array[Byte], // 32 bytes
-                       val hashReserved: Array[Byte], // 32 bytes
+                       val version: Int,                      // 4 bytes
+                       val hashPrevBlock: Array[Byte],        // 32 bytes
+                       val hashMerkleRoot: Array[Byte],       // 32 bytes
                        val hashSCMerkleRootsMap: Array[Byte], // 32 bytes
                        val time: Int, // 4 bytes
                        val bits: Int, // 4 bytes
@@ -48,13 +46,12 @@ class MainchainHeader(
   override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    if (hashPrevBlock == null || hashPrevBlock.length != 32
-      || hashMerkleRoot == null || hashMerkleRoot.length != 32
-      || hashReserved == null || hashReserved.length != 32
-      || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
-      || nonce == null || nonce.length != 32
-      || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
-    )
+    if(hashPrevBlock == null || hashPrevBlock.length != 32
+        || hashMerkleRoot == null || hashMerkleRoot.length != 32
+        || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
+        || nonce == null || nonce.length != 32
+        || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
+      )
       return false
 
     // Check if timestamp is valid and not too far in the future
@@ -78,11 +75,10 @@ class MainchainHeader(
 
 
 object MainchainHeader {
-  val SCMAP_BLOCK_VERSION: Int = 0xFFFFFFFC // -4
-  val MIN_HEADER_SIZE: Int = 140 // + 32 (for SCMapHash size)
+  val HEADER_SIZE: Int = 140
 
   def create(headerBytes: Array[Byte], offset: Int): Try[MainchainHeader] = Try {
-    if (offset < 0 || headerBytes.length - offset < MIN_HEADER_SIZE)
+    if(offset < 0 || headerBytes.length - offset < HEADER_SIZE)
       throw new IllegalArgumentException("Input data corrupted.")
 
     var currentOffset: Int = offset
@@ -96,17 +92,8 @@ object MainchainHeader {
     val merkleRoot: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val hashReserved: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
+    val hashSCMerkleRootsMap: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
-
-    val hashSCMerkleRootsMap: Array[Byte] = version match {
-      case SCMAP_BLOCK_VERSION =>
-        val tmpOffset = currentOffset
-        currentOffset += 32
-        headerBytes.slice(tmpOffset, currentOffset)
-      case _ =>
-        new Array[Byte](32)
-    }
 
     val time: Int = BytesUtils.getReversedInt(headerBytes, currentOffset)
     currentOffset += 4
@@ -124,12 +111,11 @@ object MainchainHeader {
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
     currentOffset += solutionLength.value().intValue()
 
-    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashReserved, hashSCMerkleRootsMap, time, bits, nonce, solution)
+    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashSCMerkleRootsMap, time, bits, nonce, solution)
   }
 }
 
 object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
-
   override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.bytes)
 
   override def parse(r: Reader): MainchainHeader = MainchainHeader.create(r.getBytes(r.remaining), 0).get

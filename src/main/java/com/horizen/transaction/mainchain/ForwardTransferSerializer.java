@@ -20,8 +20,8 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
     }
 
     @Override
-    public void serialize(ForwardTransfer transaction, Writer writer) {
-        writer.putBytes(transaction.bytes());
+    public void serialize(ForwardTransfer forwardTransferOutput, Writer writer) {
+        writer.putBytes(forwardTransferOutput.bytes());
     }
 
     @Override

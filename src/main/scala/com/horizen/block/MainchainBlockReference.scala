@@ -4,16 +4,18 @@ import java.util
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
+import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation}
 import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
-import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
-import com.horizen.utils.{ByteArrayWrapper, _}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import scorex.core.serialization.BytesSerializable
+import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
+import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
+import com.google.common.primitives.Bytes
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -49,46 +51,45 @@ class MainchainBlockReference(
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    if(header == null || !header.semanticValidity(params))
+    if (header == null || !header.semanticValidity(params))
       return false
 
-    // check Block version
-    if(header.version == MainchainHeader.SCMAP_BLOCK_VERSION) {
-      if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
-        // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
-        if (sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
-          return false
-      }
-      else {
-        if (sidechainsMerkleRootsMap.isEmpty)
-          return false
-
-        // verify SCMap Merkle root hash equals to one in the header.
-        val SCSeq = sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-        val sidechainsMerkleRootsHashesList = SCSeq.map(_._2).toList.asJava
-        val merkleTree: MerkleTree = MerkleTree.createMerkleTree(sidechainsMerkleRootsHashesList)
-        if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
-          return false
-
-        val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
-        if (sidechainMerkleRootHash.isEmpty) {
-          // there is no related outputs for current Sidechain, AggTx expected to be not defined.
-          return sidechainRelatedAggregatedTransaction.isEmpty
-        } else {
-          if (sidechainRelatedAggregatedTransaction.isEmpty)
-            return false
-
-          // verify AggTx
-          if (!util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
-            || !sidechainRelatedAggregatedTransaction.get.semanticValidity())
-            return false
-        }
-      }
-    } else {
-      // Old Block version has no SCMap and AggTx, also Header.hashSCMerkleRootsMap bytes should be zero
-      if(!util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)
-          || sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
+    if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
+      // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
+      if (sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
         return false
+    }
+    else {
+      if (sidechainsMerkleRootsMap.isEmpty)
+        return false
+
+      // verify SCMap Merkle root hash equals to one in the header.
+      val SCSeq = sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+      val merkleTreeLeaves = SCSeq.map(pair => {
+        BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
+            Bytes.concat(
+              BytesUtils.reverseBytes(pair._1.data),
+              BytesUtils.reverseBytes(pair._2)
+            )
+        ))
+      }).toList.asJava
+      val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
+      if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
+        return false
+
+      val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
+      if (sidechainMerkleRootHash.isEmpty) {
+        // there is no related outputs for current Sidechain, AggTx expected to be not defined.
+        return sidechainRelatedAggregatedTransaction.isEmpty
+      } else {
+        if (sidechainRelatedAggregatedTransaction.isEmpty)
+          return false
+
+        // verify AggTx
+        if (!util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
+          || !sidechainRelatedAggregatedTransaction.get.semanticValidity())
+          return false
+      }
     }
 
     true
@@ -106,38 +107,32 @@ object MainchainBlockReference {
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, mainchainTxs)) =>
-        header.version match {
-          case MainchainHeader.SCMAP_BLOCK_VERSION => {
-            // Calculate SCMap and verify it
-            var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
-            for (tx <- mainchainTxs)
-              scIds = scIds ++ tx.getRelatedSidechains
+        // Calculate SCMap and verify it
+        var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
+        for (tx <- mainchainTxs)
+          scIds = scIds ++ tx.getRelatedSidechains
 
-            val aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
-            for (id <- scIds) {
-              var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
-              for (tx <- mainchainTxs) {
-                sidechainRelatedTransactionsOutputs.addAll(tx.getSidechainRelatedOutputs(id))
-                // TO DO: put Certificate and FraudReports processing later.
-              }
-              aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
+        if (scIds.isEmpty)
+          Success(new MainchainBlockReference(header, None, None))
+        else {
+          var aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
+          for (id <- scIds) {
+            var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
+            for (tx <- mainchainTxs) {
+              sidechainRelatedTransactionsOutputs.addAll(getSidechainRelatedTransactionsOutputs(tx, id).asJava)
             }
-
-            val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
-              case (k, v) =>
-                (k, v.mc2scMerkleRootHash())
-            }
-
-            val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
-
-            Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap)))
+            aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
           }
 
-          case _ =>
-            Success(new MainchainBlockReference(header, None, None))
+          val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
+            case (k, v) =>
+              (k, v.mc2scMerkleRootHash())
+          }
 
+          val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
+
+          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap)))
         }
-
       case Failure(e) =>
         Failure(e)
     }
@@ -150,6 +145,21 @@ object MainchainBlockReference {
       else
         tryBlock
     }
+  }
+
+  private def getSidechainRelatedTransactionsOutputs(tx: MainchainTransaction, sidechainId: ByteArrayWrapper): Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = {
+    var indexInTx: Int = -1
+    tx.getCrosschainOutputs(sidechainId).map(output => {
+      indexInTx += 1
+      output match {
+        case creationOutput: MainchainTxSidechainCreationCrosschainOutput =>
+          new SidechainCreation(creationOutput, tx.hash, indexInTx)
+        case forwartTransferOutput: MainchainTxForwardTransferCrosschainOutput =>
+          new ForwardTransfer(forwartTransferOutput, tx.hash, indexInTx)
+        case certifierLockOutput: MainchainTxCertifierLockCrosschainOutput =>
+          new CertifierLock(certifierLockOutput, tx.hash, indexInTx)
+      }
+    })
   }
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
@@ -167,7 +177,7 @@ object MainchainBlockReference {
         var transactions: Seq[MainchainTransaction] = Seq[MainchainTransaction]()
 
         while(offset < mainchainBlockBytes.length) {
-          val tx: MainchainTransaction = new MainchainTransaction(mainchainBlockBytes, offset)
+          val tx: MainchainTransaction = MainchainTransaction.create(mainchainBlockBytes, offset).get
           transactions = transactions :+ tx
           offset += tx.size
         }
@@ -209,7 +219,7 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   }
 
   override def parse(r: Reader): MainchainBlockReference = {
-    if(r.remaining < 4 + MainchainHeader.MIN_HEADER_SIZE + 4 + 4)
+    if(r.remaining < 4 + MainchainHeader.HEADER_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
     val headerSize: Int = r.getInt()

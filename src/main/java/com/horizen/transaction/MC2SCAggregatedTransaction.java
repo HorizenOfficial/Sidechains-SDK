@@ -13,6 +13,7 @@ import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
+import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
 import scorex.core.serialization.ScorexSerializer;
@@ -44,10 +45,11 @@ public final class MC2SCAggregatedTransaction
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
-                    new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
-                        put((byte) 1, (ScorexSerializer) ForwardTransferSerializer.getSerializer());
-                        put((byte) 2, (ScorexSerializer) CertifierLockSerializer.getSerializer());
-                    }}, new HashMap<>()
+                new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
+                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
+                    put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
+                }}, new HashMap<>()
             ));
 
     private MC2SCAggregatedTransaction(byte[] mc2scTransactionsMerkleRootHash, List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
@@ -82,8 +84,11 @@ public final class MC2SCAggregatedTransaction
     public List<Box<Proposition>> newBoxes() {
         if (_newBoxes == null) {
             _newBoxes = new ArrayList<>();
-            for (SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs)
-                _newBoxes.add(t.getBox());
+            for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs) {
+                Optional<Box<Proposition>> boxOptional = t.getBox();
+                if(boxOptional.isPresent())
+                    _newBoxes.add(boxOptional.get());
+            }
         }
         return Collections.unmodifiableList(_newBoxes);
     }
@@ -153,7 +158,7 @@ public final class MC2SCAggregatedTransaction
 
         int offset = 0;
 
-        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, Utils.SHA256_LENGTH);
+        byte[] merkleRoot = Arrays.copyOfRange(bytes, offset, offset + Utils.SHA256_LENGTH);
         offset += Utils.SHA256_LENGTH;
 
         long timestamp = BytesUtils.getLong(bytes, offset);
