@@ -1,7 +1,9 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
+import com.horizen.serialization.Views;
 
 /**
  * Just to not farget what is a Box interface
@@ -19,17 +21,19 @@ import com.horizen.serialization.JsonSerializable;
 
  */
 
-
+@JsonView(Views.Default.class)
 public interface Box<P extends Proposition>
     extends scorex.core.transaction.box.Box<P>
-    , JsonSerializable
 {
+    @JsonProperty("value")
     @Override
     long value();
 
+    @JsonProperty("proposition")
     @Override
     P proposition();
 
+    @JsonProperty("id")
     @Override
     byte[] id();
 
@@ -39,5 +43,6 @@ public interface Box<P extends Proposition>
     @Override
     BoxSerializer serializer();
 
+    @JsonProperty("typeId")
     byte boxTypeId();
 }

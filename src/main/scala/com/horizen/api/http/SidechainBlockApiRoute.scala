@@ -1,13 +1,8 @@
 package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
-import io.circe.generic.auto._
-import io.circe.Json
-import io.circe.syntax._
 import scorex.util.ModifierId
 import akka.pattern.ask
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
@@ -18,48 +13,35 @@ import com.horizen.utils.BytesUtils
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import JacksonSupport._
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.SidechainBlockErrorResponse._
+import com.horizen.api.http.SidechainBlockRestSchema._
+import com.horizen.serialization.Views
 
-case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
-                                  (implicit val context: ActorRefFactory, override val ec : ExecutionContext)
-      extends SidechainApiRoute {
+case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
+                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute {
 
-  override val route : Route = pathPrefix("block")
-            {getBlock ~ getLastBlockIds ~ getBlockIdByHeight ~ getBestBlockInfo ~ getBlockTemplate ~ submitBlock  ~ generateBlocks}
+  override val route: Route = pathPrefix("block") {
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getBlockTemplate ~ submitBlock ~ generateBlocks
+  }
 
   /**
     * The sidechain block by its id.
     */
-  def getBlock : Route = (post & path("getBlock")) {
-    case class GetBlockRequest(id: String) {
-      require(id.length == 64, s"Invalid id $id. Id length must be 64")
-    }
+  def findById: Route = (post & path("findById")) {
+    entity(as[ReqFindById]) { body =>
+      withNodeView { sidechainNodeView =>
+        var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
 
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetBlockRequest](body) match {
-          case Success(req) =>
-            val optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(req.id)
-
-            if (optionSidechainBlock.isPresent) {
-              val block = optionSidechainBlock.get()
-              ApiResponse(
-                "result" -> Json.obj(
-                  "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
-                  "blockInfo" -> block.toJson
-                )
-              )
-            }
-            else {
-              // TO-DO Change the errorCode
-              ApiResponse(
-                "error" -> Json.obj(
-                  "errorCode" -> Json.fromInt(999999),
-                  "errorDescription" -> Json.fromString(s"Invalid id: ${req.id}")
-                )
-              )
-            }
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+        if (optionSidechainBlock.isPresent) {
+          var sblock = optionSidechainBlock.get()
+          var sblock_serialized = sblock.serializer.toBytes(sblock)
+          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock))
         }
+        else
+          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", None))
       }
     }
   }
@@ -67,23 +49,12 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
   /**
     * Returns an array of number last sidechain block ids
     */
-  def getLastBlockIds : Route = (post & path("getLastBlocks")) {
-    case class GetLastBlocks(number: Int){
-      require(number > 0, s"Invalid number $number. Number must be > 0")
-    }
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetLastBlocks](body) match {
-          case Success(req) =>
-            val sidechainHistory = sidechainNodeView.getNodeHistory
-            val blockIds = sidechainHistory.getLastBlockIds(req.number)
-
-            ApiResponse(
-              "result" -> Json.obj("ids" -> blockIds.asScala.asJson)
-            )
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
+  def findLastIds: Route = (post & path("findLastIds")) {
+    entity(as[ReqLastIds]) { body =>
+      withNodeView { sidechainNodeView =>
+        var sidechainHistory = sidechainNodeView.getNodeHistory
+        var blockIds = sidechainHistory.getLastBlockIds(body.number)
+        ApiResponseUtil.toResponse(RespLastIds(blockIds.asScala))
       }
     }
   }
@@ -91,32 +62,15 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
   /**
     * Return a sidechain block Id by its height in a blockchain
     */
-  def getBlockIdByHeight : Route = (post & path("getBlockHash")) {
-    case class GetBlockHashRequest(height: Int){
-      require(height > 0, s"Invalid height $height. Height must be > 0")
-    }
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetBlockHashRequest](body)match {
-          case Success(req) =>
-            val sidechainHistory = sidechainNodeView.getNodeHistory
-            val blockIdOptional = sidechainHistory.getBlockIdByHeight(req.height)
-            if(blockIdOptional.isPresent)
-              ApiResponse(
-                "result" -> Json.obj("id" -> blockIdOptional.get().asJson)
-              )
-            else
-              {
-                // TO-DO Change the errorCode
-                ApiResponse(
-                  "error" -> Json.obj(
-                    "errorCode" -> Json.fromInt(999999),
-                    "errorDescription" -> Json.fromString(s"Invalid height: ${req.height}")
-                  )
-                )
-              }
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
+  def findIdByHeight: Route = (post & path("findIdByHeight")) {
+    entity(as[ReqFindIdByHeight]) { body =>
+      withNodeView { sidechainNodeView =>
+        var sidechainHistory = sidechainNodeView.getNodeHistory
+        val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
+        if (blockIdOptional.isPresent)
+          ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
+        else
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", None))
       }
     }
   }
@@ -124,25 +78,15 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
   /**
     * Return here best sidechain block id and height in active chain
     */
-  def getBestBlockInfo : Route = (post & path("getBestBlockInfo")) {
-    withNodeView{
+  def getBestBlockInfo: Route = (post & path("best")) {
+    withNodeView {
       sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
-        if(height > 0)
-          ApiResponse(
-            "result" -> Json.obj(
-              "blockInfo" -> sidechainHistory.getBestBlock.toJson,
-              "height" -> height.asJson
-            )
-          )
+        if (height > 0)
+          ApiResponseUtil.toResponse(RespBest(sidechainHistory.getBestBlock, height))
         else
-          ApiResponse(
-            "result" -> Json.obj(
-              "blockInfo" -> Json.Null,
-              "height" -> height.asJson
-            )
-          )
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", None))
     }
   }
 
@@ -150,69 +94,35 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     * Return Sidechain block candidate for being next tip, already signed by Forger
     * Note: see todos, think about returning an unsigned block
     */
-  def getBlockTemplate : Route = (post & path("getBlockTemplate")) {
+  def getBlockTemplate: Route = (post & path("template")) {
     val future = forgerRef ? TryGetBlockTemplate
     val blockTemplateTry = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
     blockTemplateTry match {
       case Success(block) =>
-        ApiResponse(
-          "result" -> Json.obj(
-            "blockHex" -> BytesUtils.toHexString(block.bytes).asJson,
-            "blockInfo" -> block.toJson
-          )
-        )
+        ApiResponseUtil.toResponse(RespTemplate(block, BytesUtils.toHexString(block.bytes)))
       case Failure(e) =>
-        // TO-DO Change the errorCode
-        ApiResponse(
-          "error" -> Json.obj(
-            "errorCode" -> Json.fromInt(999999),
-            "errorDescription" -> Json.fromString(s"Failed to get block remplate: ${e.getMessage}")
-          )
-        )
+        ApiResponseUtil.toResponse(ErrorBlockTemplate(s"Failed to get block template: ${e.getMessage}", None))
     }
   }
-  
-  def submitBlock : Route = (post & path("submitBlock"))
-  {
-    case class GetSubmitBlockRequest(blockHex: String) {
-      require(blockHex.nonEmpty, s"Invalid hex data $blockHex. String must be not empty")
-    }
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetSubmitBlockRequest](body) match {
-          case Success(req) =>
-            var blockBytes: Array[Byte] = null
-            Try {
-              blockBytes = BytesUtils.fromHexString(req.blockHex)
-            } match {
-              case Success(_) =>
-                val future = sidechainBlockActorRef ? SubmitSidechainBlock(blockBytes)
-                val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
-                Await.result(submitResultFuture, timeout.duration) match {
-                  case Success(id) =>
-                    ApiResponse(
-                      "result" -> Json.obj("id" -> Json.fromString(id))
-                    )
-                  case Failure(e) =>
-                    // TO-DO Change the errorCode
-                    ApiResponse(
-                      "error" -> Json.obj(
-                        "errorCode" -> Json.fromInt(999999),
-                        "errorDescription" -> Json.fromString(s"Block was not accepted: ${e.getMessage}")
-                      )
-                    )
-                }
-              case Failure(e) =>
-                // TO-DO Change the errorCode
-                ApiResponse(
-                  "error" -> Json.obj(
-                    "errorCode" -> Json.fromInt(999999),
-                    "errorDescription" -> Json.fromString(s"Block was not accepted: ${e.getMessage}")
-                  )
-                )
-            }
 
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+  def submitBlock: Route = (post & path("submit")) {
+    entity(as[ReqSubmit]) { body =>
+      withNodeView { sidechainNodeView =>
+        var blockBytes: Array[Byte] = null
+        Try {
+          blockBytes = BytesUtils.fromHexString(body.blockHex)
+        } match {
+          case Success(_) =>
+            val future = sidechainBlockActorRef ? SubmitSidechainBlock(blockBytes)
+            val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
+            Await.result(submitResultFuture, timeout.duration) match {
+              case Success(id) =>
+                ApiResponseUtil.toResponse(RespSubmit(id))
+              case Failure(e) =>
+                ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
+            }
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
         }
       }
     }
@@ -223,35 +133,94 @@ case class SidechainBlockApiRoute (override val settings: RESTApiSettings, sidec
     * It should automatically asks MC nodes for new blocks in order to be referenced inside the generated blocks, and assigns them automatically to
     * the newly generated blocks.
     */
-  def generateBlocks : Route = (post & path("generate"))
-  {
-    case class GenerateRequest(number: Int){
-      require(number > 0, s"Invalid number $number. Number must be > 0")
-    }
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GenerateRequest](body) match {
-          case Success(req) =>
-            val future = sidechainBlockActorRef ? GenerateSidechainBlocks(req.number)
-            val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
-            Await.result(submitResultFuture, timeout.duration) match {
-              case Success(ids) =>
-                ApiResponse(
-                  "result" -> Json.obj("ids" -> ids.map(id => id.asInstanceOf[String]).asJson)
-                )
-              case Failure(e) =>
-                // TO-DO Change the errorCode
-                ApiResponse(
-                  "error" -> Json.obj(
-                    "errorCode" -> Json.fromInt(999999),
-                    "errorDescription" -> Json.fromString(s"Block was not created: ${e.getMessage}")
-                  )
-                )
-            }
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+  def generateBlocks: Route = (post & path("generate")) {
+    entity(as[ReqGenerate]) { body =>
+      withNodeView { sidechainNodeView =>
+        val future = sidechainBlockActorRef ? GenerateSidechainBlocks(body.number)
+        val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
+        Await.result(submitResultFuture, timeout.duration) match {
+          case Success(ids) =>
+            ApiResponseUtil.toResponse(RespGenerate(ids.map(id => id.asInstanceOf[String])))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
         }
       }
     }
+  }
+
+}
+
+
+object SidechainBlockRestSchema {
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindById(blockId: String) {
+    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindById(blockHex: String, block: SidechainBlock) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqLastIds(number: Int) {
+    require(number > 0, s"Invalid number $number. Number must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespLastIds(lastBlockIds: Seq[String]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindIdByHeight(height: Int) {
+    require(height > 0, s"Invalid height $height. Height must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespBest(block: SidechainBlock, height: Int) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespTemplate(block: SidechainBlock, blockHex: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSubmit(blockHex: String) {
+    require(blockHex.nonEmpty, s"Invalid hex data $blockHex. String must be not empty")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespSubmit(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGenerate(number: Int) {
+    require(number > 0, s"Invalid number $number. Number must be > 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGenerate(blockIds: Seq[String]) extends SuccessResponse
+
+}
+
+object SidechainBlockErrorResponse {
+
+  case class ErrorInvalidBlockId(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0101"
+  }
+
+  case class ErrorInvalidBlockHeight(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0102"
+  }
+
+  case class ErrorBlockTemplate(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0103"
+  }
+
+  case class ErrorBlockNotAccepted(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0104"
+  }
+
+  case class ErrorBlockNotCreated(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0105"
   }
 
 }

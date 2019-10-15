@@ -1,29 +1,33 @@
 package com.horizen.proposition;
 
-import io.circe.Json;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.horizen.serialization.ByteUtilsSerializer;
+import com.horizen.serialization.Views;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.ScorexEncoding;
-import com.horizen.serialization.JsonSerializable;
 
-import scorex.core.utils.ScorexEncoder;
 import scorex.crypto.hash.Blake2b256;
 import scorex.crypto.signatures.Curve25519;
 import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
 
+@JsonView(Views.Default.class)
 public final class PublicKey25519Proposition
     extends ScorexEncoding
     implements ProofOfKnowledgeProposition<PrivateKey25519>
-    , JsonSerializable
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
     public static final int KEY_LENGTH = Curve25519.KeyLength();;
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("publicKey")
     private byte[] _pubKeyBytes;
 
     public PublicKey25519Proposition(byte[] pubKeyBytes)
@@ -114,17 +118,5 @@ public final class PublicKey25519Proposition
         return KEY_LENGTH;
     }
 
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("publicKey", Json.fromString(encoder.encode(this._pubKeyBytes)));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static PublicKey25519Proposition parseJson(Json json) {
-        return null;
-    }
 }
 

@@ -4,8 +4,6 @@ import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.DynamicTypedSerializer;
-import io.circe.Json;
-import scala.util.Try;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
@@ -39,14 +37,5 @@ public class WithdrawalRequestTransactionSerializer<T extends WithdrawalRequestT
         return null;
     }
 
-    @Override
-    public Json toJson(T transaction) {
-        return transaction.toJson();
-    }
-
-    @Override
-    public T parseJson(Json json) {
-        return null;
-    }
 }
 */

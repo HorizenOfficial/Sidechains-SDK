@@ -68,7 +68,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
       s"${version} expected")
     //TODO IN FUTURE GENESIS BLOCK MUST BE ALSO VALIDATED
-    if (mod.parentId != SidechainSettings.genesisParentBlockId)
+    if (mod.parentId != SidechainSettingsReader.genesisParentBlockId)
       mod.transactions.foreach(tx => validate(tx).get)
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")

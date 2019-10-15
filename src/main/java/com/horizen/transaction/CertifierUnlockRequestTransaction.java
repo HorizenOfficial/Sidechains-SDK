@@ -3,9 +3,6 @@ package com.horizen.transaction;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
-import io.circe.Json;
 import scorex.core.utils.ScorexEncoder;
 
 import java.util.ArrayList;
@@ -13,7 +10,6 @@ import java.util.List;
 
 public final class CertifierUnlockRequestTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
-    implements JsonSerializable
 {
 
     public static final byte TRANSACTION_TYPE_ID = 5;
@@ -57,24 +53,6 @@ public final class CertifierUnlockRequestTransaction
         return null;
     }
 
-    @Override
-    public Json toJson() {
-        ArrayList<Json> arr = new ArrayList<>();
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = this.encoder();
 
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("fee", Json.fromLong(this.fee()));
-
-        for(NoncedBox<Proposition> b : this.newBoxes())
-            arr.add(b.toJson());
-        values.put("newBoxes", Json.arr(scala.collection.JavaConverters.collectionAsScalaIterableConverter(arr).asScala().toSeq()));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static CertifierUnlockRequestTransaction parseJson(Json json) {
-        return  null;
-    }
 }
 */

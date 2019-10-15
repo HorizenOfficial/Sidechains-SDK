@@ -1,42 +1,31 @@
 package com.horizen.api.http
 
-import java.util.Optional
-
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.params.NetworkParams
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import io.circe.Json
-import io.circe.generic.auto._
-import scorex.core.api.http.{ApiError, ApiResponse}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import JacksonSupport._
+import com.horizen.api.http.MainchainErrorResponse._
+import com.horizen.api.http.MainchainRestSchema._
+import com.horizen.block.{MainchainBlockReference, MainchainHeader}
+import com.horizen.node.util.MainchainBlockReferenceInfo
 
+case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute
+    with ScorexEncoding {
 
-case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
-                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-      extends SidechainApiRoute
-      with ScorexEncoding {
-
-  override val route : Route = (pathPrefix("mainchain"))
-            {getBestMainchainBlockReferenceInfo ~
-              getGenesisMainchainBlockReferenceInfo ~
-              getMainchainBlockReferenceInfoByHash ~
-              getMainchainBlockReferenceInfoByHeight ~
-              getMainchainBlockReferenceByHash}
-
-  private def mainchainBlockReferenceToApiResponse(mcRef: Optional[MainchainBlockReferenceInfo], formatFlag: Boolean = true): Option[(String, Json)] = {
-    (formatFlag, mcRef.asScala) match {
-      case (true, Some(mainchainBlockReferenceInfo)) => Some("mainchainBlockReference" -> mainchainBlockReferenceInfo.toJson)
-      case (false, Some(mainchainBlockReferenceInfo)) => Some("mainchainBlockReferenceHex" -> Json.fromString(BytesUtils.toHexString(mainchainBlockReferenceInfo.bytes())))
-      case _ => None
-    }
+  override val route: Route = (pathPrefix("mainchain")) {
+    bestBlockReferenceInfo ~
+      genesisBlockReferenceInfo ~
+      blockReferenceInfoBy ~
+      blockReferenceByHash
   }
 
   /**
@@ -45,83 +34,60 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     * 2) Its height in mainchain
     * 3) Sidechain block ID which contains this MC block reference
     */
-  def getBestMainchainBlockReferenceInfo: Route = (post & path("getBestMainchainBlockReferenceInfo"))
-  {
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        val history = sidechainNodeView.getNodeHistory;
-        val mcBlockRef = history.getBestMainchainBlockReferenceInfo
-        mainchainBlockReferenceToApiResponse(mcBlockRef)
-          .map(ApiResponse(_))
-          .getOrElse(ApiError(StatusCodes.BadRequest, "No best block are present in the mainchain"))
+  def bestBlockReferenceInfo: Route = (post & path("bestBlockReferenceInfo")) {
+    withNodeView { sidechainNodeView =>
+      sidechainNodeView.getNodeHistory
+        .getBestMainchainBlockReferenceInfo.asScala match {
+        case Some(mcBlockRef) =>
+          ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
+          ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", None))
       }
     }
   }
 
 
-  def getGenesisMainchainBlockReferenceInfo: Route = (post & path("getGenesisMainchainBlockReferenceInfo"))
-  {
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        val history = sidechainNodeView.getNodeHistory;
-        val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockHeight(1)
-
-        mainchainBlockReferenceToApiResponse(mcBlockRef)
-          .map(ApiResponse(_))
-          .getOrElse(ApiError(StatusCodes.BadRequest, "No genesis mainchain block is present"))
+  def genesisBlockReferenceInfo: Route = (post & path("genesisBlockReferenceInfo")) {
+    withNodeView { sidechainNodeView =>
+      sidechainNodeView.getNodeHistory
+        .getMainchainBlockReferenceInfoByMainchainBlockHeight(1).asScala match {
+        case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", None))
       }
     }
   }
 
-  def getMainchainBlockReferenceInfoByHash : Route = (post & path("getMainchainBlockReferenceInfoByHash"))
-  {
-    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: String, format: Boolean = false)
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
-            val history = sidechainNodeView.getNodeHistory
-
-            val mcBlockRefHash = req.mainchainBlockReferenceHash.getBytes
-            val format = req.format
-
-            val mcBlockRef = history.getMainchainBlockReferenceInfoByHash(mcBlockRefHash)
-            mainchainBlockReferenceToApiResponse(mcBlockRef, format)
-              .map(ApiResponse(_))
-              .getOrElse(ApiError(StatusCodes.BadRequest, "No reference info had been found for given hash"))
-
-          case Failure(exp) =>
-            ApiError(StatusCodes.BadRequest, exp.getMessage)
+  def blockReferenceInfoBy: Route = (post & path("blockReferenceInfoBy")) {
+    entity(as[ReqBlockInfoBy]) { body =>
+      withNodeView { sidechainNodeView =>
+        body.hash match {
+          case Some(mcBlockRefHash) =>
+            sidechainNodeView.getNodeHistory
+              .getMainchainBlockReferenceInfoByHash(mcBlockRefHash.getBytes).asScala match {
+              case Some(mcBlockRef) =>
+                if (body.format)
+                  ApiResponseUtil.toResponse(mcBlockRef)
+                else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
+                ))
+              case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", None))
+            }
+          case None =>
+            body.height match {
+              case Some(h) =>
+                sidechainNodeView.getNodeHistory.getMainchainBlockReferenceInfoByMainchainBlockHeight(h).asScala match {
+                  case Some(mcBlockRef) =>
+                    if (body.format)
+                      ApiResponseUtil.toResponse(mcBlockRef)
+                    else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
+                    ))
+                  case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", None))
+                }
+              case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", None))
+            }
         }
       }
     }
   }
-
-  def getMainchainBlockReferenceInfoByHeight : Route = (post & path("getMainchainBlockReferenceInfoByHeight"))
-  {
-    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHeight: Integer, format: Boolean = false)
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
-            val history = sidechainNodeView.getNodeHistory
-
-            val height = req.mainchainBlockReferenceHeight
-            val format = req.format
-
-            val mcBlockRef = history.getMainchainBlockReferenceInfoByMainchainBlockHeight(height)
-            mainchainBlockReferenceToApiResponse(mcBlockRef, format)
-              .map(ApiResponse(_))
-              .getOrElse(ApiError(StatusCodes.BadRequest, "No reference info had been found for given hash"))
-
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
-        }
-      }
-    }
-  }
-
 
   /**
     * Returns:
@@ -129,29 +95,50 @@ case class MainchainBlockApiRoute (override val settings: RESTApiSettings, sidec
     * 2)Its height in MC
     * 3)SC block id which contains this MC block reference
     */
-  def getMainchainBlockReferenceByHash: Route = (post & path("getMainchainBlockReferenceByHash"))
-  {
-    case class GetMainchainBlockReferenceRequest(mainchainBlockReferenceHash: String, format: Boolean = false)
-
-    entity(as[String]) { body =>
-      withNodeView{ sidechainNodeView =>
-        ApiInputParser.parseInput[GetMainchainBlockReferenceRequest](body)match {
-          case Success(req) =>
-            val history = sidechainNodeView.getNodeHistory
-
-            val mcBlockRefHash = req.mainchainBlockReferenceHash.getBytes
-            val format = req.format
-
-            val mcBlockRef = history.getMainchainBlockReferenceByHash(mcBlockRefHash)
-
-            (mcBlockRef.asScala, format) match {
-              case (Some(ref), false) => ApiResponse("result" -> ref.bytes)
-              case (Some(ref), true) => ApiResponse("result" -> ref.toJson)
-              case _ =>  ApiError(StatusCodes.BadRequest, "No Mainchain reference had been found for given hash")
-            }
-          case Failure(exp) => ApiError(StatusCodes.BadRequest, exp.getMessage)
+  def blockReferenceByHash: Route = (post & path("blockReferenceByHash")) {
+    entity(as[ReqBlockBy]) { body =>
+      withNodeView { sidechainNodeView =>
+        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(body.hash.getBytes).asScala match {
+          case Some(mcBlockRef) =>
+            if (body.format)
+              ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))
+            else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes))
+            ))
+          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", None))
         }
       }
     }
   }
+}
+
+object MainchainRestSchema {
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class MainchainBlockResponse(blockReference: MainchainBlockReference) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class MainchainApiResponse(blockReferenceInfo: Option[MainchainBlockReferenceInfo], blockHex: Option[String] = None) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqBlockInfoBy(hash: Option[String], height: Option[Integer], format: Boolean = false)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqBlockBy(hash: String, format: Boolean = false)
+
+}
+
+object MainchainErrorResponse {
+
+  case class ErrorMainchainBlockNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0501"
+  }
+
+  case class ErrorMainchainBlockReferenceNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0502"
+  }
+
+  case class ErrorMainchainInvalidParameter(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0503"
+  }
+
 }

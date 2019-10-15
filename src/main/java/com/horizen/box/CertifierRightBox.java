@@ -1,15 +1,9 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
-import io.circe.Json;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
-import scorex.core.utils.ScorexEncoder;
 
 import java.util.Arrays;
 
@@ -20,6 +14,7 @@ public final class CertifierRightBox
 
     public static final byte BOX_TYPE_ID = 2;
     // CertifierRightBox can be opened starting from specified Withdrawal epoch.
+    @JsonProperty("activeFromWithdrawalEpoch")
     private long _activeFromWithdrawalEpoch;
 
     public CertifierRightBox(PublicKey25519Proposition proposition,
@@ -74,25 +69,6 @@ public final class CertifierRightBox
         long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength()+ 8, PublicKey25519Proposition.getLength() + 16));
         long minimumWithdrawalEpoch = Longs.fromByteArray(Arrays.copyOfRange(bytes, PublicKey25519Proposition.getLength() + 16, PublicKey25519Proposition.getLength() + 24));
         return new CertifierRightBox(t, nonce, value, minimumWithdrawalEpoch);
-    }
-
-    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("id", Json.fromString(encoder.encode(this.id())));
-        values.put("proposition", this._proposition.toJson());
-        values.put("value", Json.fromLong(this._value));
-        values.put("nonce", Json.fromLong(this._nonce));
-        values.put("activeFromWithdrawalEpoch", Json.fromLong(this._activeFromWithdrawalEpoch));
-        values.put("typeId", Json.fromLong(this.boxTypeId()));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static CertifierRightBox parseJson(Json json) {
-        return null;
     }
 
 }

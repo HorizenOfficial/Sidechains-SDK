@@ -37,6 +37,32 @@ trait TransactionFixture extends BoxFixture {
     RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
   }
 
+  def getRegularTransaction(inputBoxes: Seq[RegularBox], inputSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
+    val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+    val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
+    var totalFrom = 0L
+
+    for(box <- inputBoxes) {
+      val value = 10 + Random.nextInt(10)
+      from.add(new JPair(box, inputSecrets.find(_.publicImage().equals(box.proposition())).get))
+      totalFrom += value
+    }
+
+    val minimumFee = 0L
+    val maxTo = totalFrom - minimumFee
+    var totalTo = 0L
+
+    for(proposition <- outputPropositions) {
+      val value = maxTo / outputPropositions.size
+      to.add(new JPair(proposition, value))
+      totalTo += value
+    }
+
+    val fee = totalFrom - totalTo
+
+    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+  }
+
   def getTransaction () : RegularTransaction = {
     val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()

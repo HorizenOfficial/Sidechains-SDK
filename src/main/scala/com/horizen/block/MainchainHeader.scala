@@ -2,10 +2,10 @@ package com.horizen.block
 
 import java.time.Instant
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
-import com.horizen.serialization.JsonSerializable
+import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils}
-import io.circe.Json
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
@@ -21,27 +21,27 @@ import scala.util.Try
 // SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
 // hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
 //
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
                        val version: Int,                      // 4 bytes
                        val hashPrevBlock: Array[Byte],        // 32 bytes
                        val hashMerkleRoot: Array[Byte],       // 32 bytes
                        val hashSCMerkleRootsMap: Array[Byte], // 32 bytes
-                       val time: Int,                         // 4 bytes
-                       val bits: Int,                         // 4 bytes
-                       val nonce: Array[Byte],                // 32 bytes
-                       val solution: Array[Byte]              // depends on NetworkParams
-                    )
-  extends BytesSerializable
-  with JsonSerializable
-{
+                       val time: Int, // 4 bytes
+                       val bits: Int, // 4 bytes
+                       val nonce: Array[Byte], // 32 bytes
+                       val solution: Array[Byte] // depends on NetworkParams
+                     )
+  extends BytesSerializable {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(mainchainHeaderBytes))
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   override type M = MainchainHeader
-  override type J = MainchainHeader
+  /*override type J = MainchainHeader*/
 
   override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
 
@@ -55,37 +55,19 @@ class MainchainHeader(
       return false
 
     // Check if timestamp is valid and not too far in the future
-    if(time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen
+    if (time <= 0 || time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen
       return false
 
-    if(!ProofOfWorkVerifier.checkProofOfWork(this, params))
+    if (!ProofOfWorkVerifier.checkProofOfWork(this, params))
       return false
 
     // check equihash for header bytes without solution part
-    if(!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
-        mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
-        solution)
+    if (!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
+      mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
+      solution)
     )
       return false
     true
-  }
-
-  override def toJson: Json = {
-    val values: mutable.HashMap[String, Json] = new mutable.HashMap[String, Json]
-    val encoder: ScorexEncoder = new ScorexEncoder
-
-    values.put("mainchainHeaderBytes", Json.fromString(encoder.encode(this.mainchainHeaderBytes)))
-    values.put("version", Json.fromInt(this.version))
-    values.put("hashPrevBlock", Json.fromString(encoder.encode(this.hashPrevBlock)))
-    values.put("hashMerkleRoot", Json.fromString(encoder.encode(this.hashMerkleRoot)))
-    values.put("hashSCMerkleRootsMap", Json.fromString(encoder.encode(this.hashSCMerkleRootsMap)))
-    values.put("time", Json.fromInt(this.time))
-    values.put("bits", Json.fromInt(this.bits))
-    values.put("nonce", Json.fromString(encoder.encode(this.nonce)))
-    values.put("solution", Json.fromString(encoder.encode(this.solution)))
-
-    Json.fromFields(values)
-
   }
 
   override def bytes: Array[Byte] = mainchainHeaderBytes
@@ -123,7 +105,7 @@ object MainchainHeader {
     currentOffset += 32
 
     // @TODO check: getReversedVarInt works correctly with BytesUtils.fromVarInt (not reversed)
-    val solutionLength =  BytesUtils.getReversedVarInt(headerBytes, currentOffset)
+    val solutionLength = BytesUtils.getReversedVarInt(headerBytes, currentOffset)
     currentOffset += solutionLength.size()
 
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())

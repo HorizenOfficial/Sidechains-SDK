@@ -1,29 +1,29 @@
 package com.horizen.proof;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.serialization.JsonSerializable;
-import com.horizen.serialization.JsonSerializer;
-import io.circe.Json;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
-import scorex.core.utils.ScorexEncoder;
+import com.horizen.serialization.ByteUtilsSerializer;
+import com.horizen.serialization.Views;
 import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 import java.util.Objects;
 
+@JsonView(Views.Default.class)
 public final class Signature25519
-    implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition>
-    , JsonSerializable
-{
+        implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
     public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
+
+    @JsonSerialize(using = ByteUtilsSerializer.class)
+    @JsonProperty("signature")
     byte[] _signatureBytes;
 
-    public Signature25519 (byte[] signatureBytes) {
-        if(signatureBytes.length != SIGNATURE_LENGTH)
+    public Signature25519(byte[] signatureBytes) {
+        if (signatureBytes.length != SIGNATURE_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
                     signatureBytes.length));
 
@@ -63,20 +63,6 @@ public final class Signature25519
         int result = Objects.hash(SIGNATURE_LENGTH);
         result = 31 * result + Arrays.hashCode(_signatureBytes);
         return result;
-    }
-
-    @Override
-    public Json toJson() {
-        scala.collection.mutable.HashMap<String,Json> values = new scala.collection.mutable.HashMap<>();
-        ScorexEncoder encoder = new ScorexEncoder();
-
-        values.put("signature", Json.fromString(encoder.encode(this._signatureBytes)));
-
-        return Json.obj(values.toSeq());
-    }
-
-    public static Signature25519 parseJson(Json json) {
-        return null;
     }
 
 }
