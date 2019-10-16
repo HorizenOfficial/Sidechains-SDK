@@ -5,8 +5,8 @@ import java.lang.{Byte => JByte, Long => JLong}
 import java.net.{InetSocketAddress, URL}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap}
 import java.util.{Optional => JOptional}
-import javafx.util.{Pair => JPair}
 
+import javafx.util.{Pair => JPair}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.{NoncedBox, RegularBox}
@@ -23,14 +23,16 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
 import scorex.util.{ScorexLogging, _}
-import scala.compat.java8.OptionConverters._
 
-case class WebSocketClientSettings(
-                                    remoteAddress: InetSocketAddress = new InetSocketAddress("127.0.0.1", 8888),
-                                    connectionTimeout : Long = 5000,
-                                    connectionTimeUnit :String = "MILLISECONDS",
-                                    responseTimeout : Long = 7000,
-                                    responseTimeUnit :String = "MILLISECONDS")
+import scala.compat.java8.OptionConverters._
+import scala.concurrent.duration.FiniteDuration
+
+case class WebSocketConnectorConfiguration(
+                        bindAddress: String,
+                        connectionTimeout: FiniteDuration,
+                        reconnectionDelay: FiniteDuration,
+                        reconnectionMaxAttempts: Int
+                        )
 
 case class GenesisData(
                         scGenesisBlockHex: String,
@@ -39,7 +41,8 @@ case class GenesisData(
                         powData: String,
                         mcNetwork: String
                       )
-case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: GenesisData, webSocketClientSettings: WebSocketClientSettings) {
+
+case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: GenesisData, webSocketConnectorConfiguration: WebSocketConnectorConfiguration) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -85,10 +88,10 @@ object SidechainSettingsReader
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocket")
+    val webSocketConnectorConfiguration = config.as[WebSocketConnectorConfiguration]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
     val genesisSetting = config.as[GenesisData]("scorex.genesis")
-    SidechainSettings(scorexSettings, genesisSetting, webSocketClientSettings)
+    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

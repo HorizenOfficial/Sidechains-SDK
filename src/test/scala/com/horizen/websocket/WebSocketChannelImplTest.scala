@@ -1,5 +1,6 @@
 package com.horizen.websocket
 
+import com.horizen.WebSocketConnectorConfiguration
 import org.glassfish.tyrus.server.Server
 import org.junit.{Before, Test}
 import org.junit.Assert.{assertEquals, assertFalse, _}
@@ -31,7 +32,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     server.start()
 
-    val conf = new WebSocketConnectorConfiguration(
+    val conf = WebSocketConnectorConfiguration(
       bindAddress = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,

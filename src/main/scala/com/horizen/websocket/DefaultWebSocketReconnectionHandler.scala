@@ -1,6 +1,7 @@
 package com.horizen.websocket
 
 import scorex.util.ScorexLogging
+import com.horizen.WebSocketConnectorConfiguration
 
 import scala.concurrent.duration.FiniteDuration
 

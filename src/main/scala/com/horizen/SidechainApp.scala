@@ -60,7 +60,6 @@ class SidechainApp @Inject()
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  //private val sidechainSettings = SidechainSettings.read(Some(settingsFilename))
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
   private val storageList = mutable.ListBuffer[Storage]()
@@ -146,20 +145,18 @@ class SidechainApp @Inject()
         modifierSerializers
       ))
 
-  val sidechainTransactioActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+  val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
   // retrieve information for using a web socket connector
-  val webSocketConfiguration : WebSocketConnectorConfiguration = new WebSocketConnectorConfiguration(
-    bindAddress = "ws://localhost:8888",
-    connectionTimeout = 100 milliseconds,
-    reconnectionDelay = 1 seconds,
-    reconnectionMaxAttempts = 1)
   val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(webSocketConfiguration)
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.webSocketConnectorConfiguration)
 
   // create the cweb socket connector and configure it
   val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
-    webSocketConfiguration.bindAddress, webSocketConfiguration.connectionTimeout, webSocketMessageHandler, webSocketReconnectionHandler
+    sidechainSettings.webSocketConnectorConfiguration.bindAddress,
+    sidechainSettings.webSocketConnectorConfiguration.connectionTimeout,
+    webSocketMessageHandler,
+    webSocketReconnectionHandler
   )
 
   // start the web socket connector
@@ -199,7 +196,7 @@ class SidechainApp @Inject()
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactioActorRef),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
     //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
     //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
