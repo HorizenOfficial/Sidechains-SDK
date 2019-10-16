@@ -3,6 +3,11 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.MainchainErrorResponse._
+import com.horizen.api.http.MainchainRestSchema._
+import com.horizen.block.MainchainBlockReference
+import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
@@ -10,11 +15,6 @@ import scorex.core.utils.ScorexEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
-import JacksonSupport._
-import com.horizen.api.http.MainchainErrorResponse._
-import com.horizen.api.http.MainchainRestSchema._
-import com.horizen.block.{MainchainBlockReference, MainchainHeader}
-import com.horizen.node.util.MainchainBlockReferenceInfo
 
 case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -63,7 +63,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
         body.hash match {
           case Some(mcBlockRefHash) =>
             sidechainNodeView.getNodeHistory
-              .getMainchainBlockReferenceInfoByHash(mcBlockRefHash.getBytes).asScala match {
+              .getMainchainBlockReferenceInfoByHash(BytesUtils.fromHexString(mcBlockRefHash)).asScala match {
               case Some(mcBlockRef) =>
                 if (body.format)
                   ApiResponseUtil.toResponse(mcBlockRef)
@@ -98,7 +98,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
   def blockReferenceByHash: Route = (post & path("blockReferenceByHash")) {
     entity(as[ReqBlockBy]) { body =>
       withNodeView { sidechainNodeView =>
-        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(body.hash.getBytes).asScala match {
+        sidechainNodeView.getNodeHistory.getMainchainBlockReferenceByHash(BytesUtils.fromHexString(body.hash)).asScala match {
           case Some(mcBlockRef) =>
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))
