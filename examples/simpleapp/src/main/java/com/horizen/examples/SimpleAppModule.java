@@ -1,7 +1,9 @@
 package com.horizen.examples;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 
 import com.google.inject.AbstractModule;
@@ -9,6 +11,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
 import com.horizen.SidechainSettings;
+import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
 import com.horizen.params.MainNetParams;
 import com.horizen.proposition.Proposition;
@@ -21,6 +24,7 @@ import com.horizen.state.*;
 import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
+import javafx.util.Pair;
 
 public class SimpleAppModule
     extends AbstractModule
@@ -48,6 +52,17 @@ public class SimpleAppModule
         File walletTransactionStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletTransaction");
         File stateStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/state");
         File historyStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/history");
+
+
+        // Here I can add my custom rest api and/or override existing one
+        List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
+
+        // Here I can reject some of existing API routes
+        // Each pair consisto of "group name" -> "route name"
+        // For example new Pair("wallet, "allBoxes");
+        List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
+
+
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -86,5 +101,13 @@ public class SimpleAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
                 .toInstance(IODBStorageUtil.getStorage(historyStore));
+
+        bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
+                .annotatedWith(Names.named("CustomApiGroups"))
+                .toInstance(customApiGroups);
+
+        bind(new TypeLiteral<List<Pair<String, String>>> () {})
+                .annotatedWith(Names.named("RejectedApiPaths"))
+                .toInstance(rejectedApiPaths);
     }
 }

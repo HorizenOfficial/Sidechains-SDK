@@ -1,9 +1,8 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
-import java.io.{File => JFile}
-import java.net.InetSocketAddress
+import java.util.{List => JList, HashMap => JHashMap}
+import javafx.util.{Pair => JPair}
 
 import akka.actor.ActorRef
 import com.horizen.api.http._
@@ -20,21 +19,19 @@ import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
-import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
+import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
-import scorex.util.ModifierId
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
-import akka.http.scaladsl.server.ExceptionHandler
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.websocket._
 import scorex.core.transaction.Transaction
 import scorex.util.ScorexLogging
+import scala.collection.JavaConverters._
 
 import scala.collection.mutable
 import scala.util.Try
-import scala.concurrent.duration._
 import scala.collection.immutable.Map
 import scala.io.Source
 import com.google.inject.Inject
@@ -53,6 +50,8 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
+   @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[JPair[String, String]]
   )
   extends Application with ScorexLogging
 {
@@ -184,23 +183,13 @@ class SidechainApp @Inject()
 
 
   // Init API
-  // TO DO: move custom stuff to Simple App
-  // I'm a developer and I want to add my custom rest api
-  var customApiRoutes : Seq[ApplicationApiGroup] = Seq[ApplicationApiGroup](
-    //new MySecondCustomApi(sidechainSettings),
-    //new MyCustomApi()
-  )
-
-  // I'm a developer and I want to exclude from my api some core routes
-  var rejectedApiPaths : Seq[(String, String)] = Seq[(String, String)]()
-
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
-  rejectedApiPaths.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ (SidechainRejectionApiRoute(path._1, path._2, settings.restApi, nodeViewHolderRef)))
+  rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  customApiRoutes.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ (ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute)))
+  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute))
 
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
