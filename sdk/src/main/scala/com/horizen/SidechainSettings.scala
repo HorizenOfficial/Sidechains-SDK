@@ -43,7 +43,8 @@ case class GenesisDataSettings(
                       )
 
 case class WalletSettings(
-                         seed: String
+                         seed: String,
+                         genesisSecrets: Seq[String]
                          )
 
 
@@ -54,15 +55,6 @@ case class SidechainSettings(
                               wallet: WalletSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
-
-  // TO DO: remove key related data. Basic secrets list should be a part of config file.
-  val secretKey = PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(123).getBytes)
-
-  val targetSecretKey1 = PrivateKey25519Creator.getInstance().generateSecret("target1".getBytes)
-  val targetSecretKey2 = PrivateKey25519Creator.getInstance().generateSecret("target2".getBytes)
-
-  val pub1hex = BytesUtils.toHexString(targetSecretKey1.publicImage().bytes())
-  val pub2hex = BytesUtils.toHexString(targetSecretKey2.publicImage().bytes())
 
   // TO DO: remove this data from here
   lazy val genesisBlock: Option[SidechainBlock] = Some(

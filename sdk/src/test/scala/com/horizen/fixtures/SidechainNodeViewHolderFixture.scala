@@ -11,7 +11,7 @@ import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
-import com.horizen.secret.SecretSerializer
+import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -81,8 +81,11 @@ trait SidechainNodeViewHolderFixture
     getStorage(),
     sidechainTransactionsCompanion)
 
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+  // Append genesis secrets if we start the node first time
+  if(sidechainSecretStorage.isEmpty) {
+    for(secretHex <- sidechainSettings.wallet.genesisSecrets)
+      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+  }
 
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,

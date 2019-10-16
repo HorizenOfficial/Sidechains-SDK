@@ -11,7 +11,7 @@ import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, StorageParams}
-import com.horizen.secret.SecretSerializer
+import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
@@ -79,6 +79,7 @@ class SidechainApp @Inject()
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
+  // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -97,6 +98,7 @@ class SidechainApp @Inject()
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
+  // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
     registerStorage(secretStorage),
@@ -118,10 +120,11 @@ class SidechainApp @Inject()
     registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
 
-  //TODO remove these test settings
-  if (sidechainSettings.scorexSettings.network.nodeName.equals("testNode1")) {
-    sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
-    sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+
+  // Append genesis secrets if we start the node first time
+  if(sidechainSecretStorage.isEmpty) {
+    for(secretHex <- sidechainSettings.wallet.genesisSecrets)
+      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
@@ -145,36 +148,38 @@ class SidechainApp @Inject()
         modifierSerializers
       ))
 
-  val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
+  // Retrieve information for using a web socket connector
+  val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
 
-  // retrieve information for using a web socket connector
-  val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
-
-  // create the cweb socket connector and configure it
+  // Create the web socket connector and configure it
   val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
     sidechainSettings.websocket.bindAddress,
     sidechainSettings.websocket.connectionTimeout,
-    webSocketMessageHandler,
+    communicationClient,
     webSocketReconnectionHandler
   )
 
-  // start the web socket connector
+  // Start the web socket connector
   val connectorStarted : Try[Unit] = webSocketConnector.start()
 
-  // if the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
   if(connectorStarted.isSuccess)
-  {
-    val communicationClient : WebSocketCommunicationClient = webSocketMessageHandler.asInstanceOf[WebSocketCommunicationClient]
     communicationClient.setWebSocketChannel(webSocketConnector)
-  }
-  val mainchainNodeChannel = new MainchainNodeChannelImpl(webSocketMessageHandler.asInstanceOf[WebSocketCommunicationClient], params)
+
+  // Init Forger with a proper web socket client
+  val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
+
+
+  // Init Transactions and Block actors for Api routes classes
+  val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
-  implicit val serializerReg: SerializerRegistry = SerializerRegistry(Seq())
 
+  // Init API
+  // TO DO: move custom stuff to Simple App
   // I'm a developer and I want to add my custom rest api
   var customApiRoutes : Seq[ApplicationApiGroup] = Seq[ApplicationApiGroup](
     //new MySecondCustomApi(sidechainSettings),
