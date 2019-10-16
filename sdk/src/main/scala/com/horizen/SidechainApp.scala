@@ -126,10 +126,10 @@ class SidechainApp @Inject()
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
-    "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
+    sidechainSettings.wallet.seed.getBytes(),
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
     applicationWallet, applicationState, sidechainSettings.genesisBlock.get,
-    Seq(new SidechainBlockValidator(params)/*, new MainchainPoWValidator(sidechainHistoryStorage, params)*/)
+    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
   )
 
 
@@ -149,12 +149,12 @@ class SidechainApp @Inject()
 
   // retrieve information for using a web socket connector
   val webSocketMessageHandler : WebSocketMessageHandler = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.webSocketConnectorConfiguration)
+  val webSocketReconnectionHandler : WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
 
   // create the cweb socket connector and configure it
   val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
-    sidechainSettings.webSocketConnectorConfiguration.bindAddress,
-    sidechainSettings.webSocketConnectorConfiguration.connectionTimeout,
+    sidechainSettings.websocket.bindAddress,
+    sidechainSettings.websocket.connectionTimeout,
     webSocketMessageHandler,
     webSocketReconnectionHandler
   )
@@ -198,14 +198,6 @@ class SidechainApp @Inject()
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
-    //ChainApiRoute(settings.restApi, nodeViewHolderRef, miner),
-    //TransactionApiRoute(settings.restApi, nodeViewHolderRef),
-    //DebugApiRoute(settings.restApi, nodeViewHolderRef, miner),
-    //WalletApiRoute(settings.restApi, nodeViewHolderRef),
-    //StatsApiRoute(settings.restApi, nodeViewHolderRef),
-    //UtilsApiRoute(settings.restApi),
-    //NodeViewApiRoute[SidechainTypes#SCBT](settings.restApi, nodeViewHolderRef),
-    //PeersApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,

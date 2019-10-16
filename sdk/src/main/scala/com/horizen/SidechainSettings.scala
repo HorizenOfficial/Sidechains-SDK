@@ -27,14 +27,14 @@ import scorex.util.{ScorexLogging, _}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
 
-case class WebSocketConnectorConfiguration(
+case class WebSocketSettings(
                         bindAddress: String,
                         connectionTimeout: FiniteDuration,
                         reconnectionDelay: FiniteDuration,
                         reconnectionMaxAttempts: Int
                         )
 
-case class GenesisData(
+case class GenesisDataSettings(
                         scGenesisBlockHex: String,
                         scId: String,
                         mcBlockHeight: Int,
@@ -42,7 +42,16 @@ case class GenesisData(
                         mcNetwork: String
                       )
 
-case class SidechainSettings(scorexSettings: ScorexSettings, genesisData: GenesisData, webSocketConnectorConfiguration: WebSocketConnectorConfiguration) {
+case class WalletSettings(
+                         seed: String
+                         )
+
+
+case class SidechainSettings(
+                              scorexSettings: ScorexSettings,
+                              genesisData: GenesisDataSettings,
+                              websocket: WebSocketSettings,
+                              wallet: WalletSettings) {
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
 
@@ -88,10 +97,11 @@ object SidechainSettingsReader
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketConnectorConfiguration = config.as[WebSocketConnectorConfiguration]("scorex.websocket")
+    val webSocketConnectorConfiguration = config.as[WebSocketSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
-    val genesisSetting = config.as[GenesisData]("scorex.genesis")
-    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration)
+    val genesisSetting = config.as[GenesisDataSettings]("scorex.genesis")
+    val walletSetting = config.as[WalletSettings]("scorex.wallet")
+    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration, walletSetting)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {
