@@ -1,1 +1,0 @@
-java -cp "${project.build.finalName}.${project.packaging};lib\*" com.horizen.SidechainApp settings.conf
