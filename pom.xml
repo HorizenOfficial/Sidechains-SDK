@@ -254,12 +254,11 @@
 					<include>mctx_v1_coinbase</include>     <!-- from https://explorer.zen-solutions.io/api/rawtx/e2f681e0431bc5f77299373632350ac493211fa8f3d0491a2d6c5e0284f5d377 -->
 					<include>mctx_v2</include>              <!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
 					<include>mctx_v-3</include>             <!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
-					<include>mctx_v-4_single_ft</include>								<!-- generated on regtest on 10.09.2019 -->
-					<include>mctx_v-4_multiple_ft</include>								<!-- generated on regtest on 10.09.2019 -->
-					<include>mctx_v-4_sc_creation</include> 							<!-- generated on regtest on 11.09.2019 -->
-					<include>mcblock_sc_support_regtest_ft</include> 					<!-- generated on regtest on 10.09.2019 -->
-					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 11.09.2019 -->
-					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 11.09.2019 -->
+					<include>mctx_v-4_single_ft</include>								<!-- generated on regtest on 15.10.2019 -->
+					<include>mctx_v-4_multiple_ft</include>								<!-- generated on regtest on 15.10.2019 -->
+					<include>mctx_v-4_sc_creation</include> 							<!-- generated on regtest on 15.10.2019 -->
+					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
+					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
                 </includes>
             </testResource>
         </testResources>

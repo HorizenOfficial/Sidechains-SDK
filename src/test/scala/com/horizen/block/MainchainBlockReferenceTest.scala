@@ -88,57 +88,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   @Test
-  def blocksWithScSupportParsing_TxWithFT(): Unit = {
-    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000002"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
-
-    val params = RegTestParams(scId.data)
-
-
-    // Test: parse MC block with tx version -4 with 1 forward transfer.
-    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_ft").getLines().next()
-    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params)
-
-    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
-    val mcblock = mcblockTry.get
-
-    assertEquals("Block Hash is different.", "027285eac925e011a6a7644562a25319ce3af265400205a88c08558f39577953", mcblock.hashHex)
-    assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
-    assertEquals("Hash of previous block is different.", "0e79aa08f24fc4af741d10ba6a21f0ba4d4cfb0d808497c58aaffac9c00e7407", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "6771345566a9ac7ff8c07dae6613c5118bdf76320bfa6e750ceec54f5201259d", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "75a8dbe7311509ba67fee413dfbc075b7c8ff83ec00db36ace02fa8c586550f2", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
-    assertEquals("Block creation time is different", 1568108710, mcblock.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f09", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
-    assertEquals("Block nonce is different.", "0000d9e51e188dd519001d0390cb93d875058608d38cf06d953e56c056bf0039", BytesUtils.toHexString(mcblock.header.nonce))
-    assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
-    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
-
-
-    assertTrue("New Block occurred, SCMap expected to be defined.", mcblock.sidechainsMerkleRootsMap.isDefined)
-    val scMap = mcblock.sidechainsMerkleRootsMap.get
-    assertEquals("SidechainsMerkleRootsMap size is different.", 1, scMap.size)
-    assertTrue(s"SidechainsMerkleRootsMap expected to contain sc id '${scIdHex}.", scMap.contains(scId))
-    assertEquals(s"SidechainsMerkleRootsMap sc id '${scIdHex} root hash is different.",
-      "75a8dbe7311509ba67fee413dfbc075b7c8ff83ec00db36ace02fa8c586550f2", BytesUtils.toHexString(scMap(scId)))
-
-
-    assertTrue("New Block occurred, MC2SCAggTx expected to be defined.", mcblock.sidechainRelatedAggregatedTransaction.isDefined)
-    val aggTx = mcblock.sidechainRelatedAggregatedTransaction.get
-    val newBoxes = aggTx.newBoxes()
-    assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx.unlockers().size())
-    assertEquals("MC2SCAggTx new boxes size is different", 1, newBoxes.size())
-
-    assertTrue("MC2SCAggTx first box expected to be a RegularBox.", newBoxes.get(0).isInstanceOf[RegularBox])
-    val box = newBoxes.get(0).asInstanceOf[RegularBox]
-    assertEquals("MC2SCAggTx first box value is different", 1000000, box.value())
-    assertEquals("MC2SCAggTx first box proposition is different",
-      new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000002add3")),
-      box.proposition())
-  }
-
-  @Test
-  def blocksWithScSupportParsing_TxWithScCreation(): Unit = {
+  def blocksWithScSupportParsing_TxWithScCreationAndFt(): Unit = {
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val params = RegTestParams(scId.data)
@@ -152,14 +102,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
     val mcblock = mcblockTry.get
 
-    assertEquals("Block Hash is different.", "0235ef3a41499b355d1720b51c4cfeb541aa8a19d3f5563df418db02cfb9d8fb", mcblock.hashHex)
+    assertEquals("Block Hash is different.", "0b9b3f9e2d3e136eaeec9c9d51f445a6f49005950cc4d91f957b20e3f50e36e7", mcblock.hashHex)
     assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
-    assertEquals("Hash of previous block is different.", "049c0d3341c7ec2c55706509d91e1131182c93a12f3e80ac5d847d89f9c389ad", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "ed81a220975a9d7fe72bd869acb83164121905c1347aa7f28eda286c87b92a57", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "b6d1738baa99dc33490b84e33e09c1c023076a3d59a9241c45f3bd59748620ed", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
-    assertEquals("Block creation time is different", 1568126422, mcblock.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f09", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
-    assertEquals("Block nonce is different.", "0000f3460c670529fe4ea20202b05686d44fe959f7c51c403bc8eec22ff80023", BytesUtils.toHexString(mcblock.header.nonce))
+    assertEquals("Hash of previous block is different.", "05518c30b2346285a57c7494ef884fb7dd8e4c5807166533cb36f0877b952bf9", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "82e0729fae0d7217086583c5eafda535b8a2f62af65425647808eee6c608dd06", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "5e3add878e57f80c2d14822ecd50d50cd210cb22f2707739e40247ee04507126", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
+    assertEquals("Block creation time is different", 1571158246, mcblock.header.time)
+    assertEquals("Block PoW bits is different.", "200f0f03", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
+    assertEquals("Block nonce is different.", "00008838e18206aa16b8c4a62321248207bfd0687bb0cd39e8e10da28684002a", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
     assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
 
@@ -169,7 +119,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("SidechainsMerkleRootsMap size is different.", 1, scMap.size)
     assertTrue(s"SidechainsMerkleRootsMap expected to contain sc id '${scIdHex}.", scMap.contains(scId))
     assertEquals(s"SidechainsMerkleRootsMap sc id '${scIdHex} root hash is different.",
-      "b6d1738baa99dc33490b84e33e09c1c023076a3d59a9241c45f3bd59748620ed", BytesUtils.toHexString(scMap(scId)))
+      "e08426e2eb3e760037397e3cf7acd507ed7b5139e23ad34c17ebc623a122ef25", BytesUtils.toHexString(scMap(scId)))
 
 
     assertTrue("New Block occurred, MC2SCAggTx expected to be defined.", mcblock.sidechainRelatedAggregatedTransaction.isDefined)
@@ -218,14 +168,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
     val mcblock = mcblockTry.get
 
-    assertEquals("Block Hash is different.", "0bf87140636d69c34fc7af88aa4b914a8f6a02f6f07327ef36f922455c7af176", mcblock.hashHex)
+    assertEquals("Block Hash is different.", "0aac2834707dffeea13d33bc655c1fd80f163540cdf221dd2b9eb8b889d1e18f", mcblock.hashHex)
     assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
-    assertEquals("Hash of previous block is different.", "0ab4cdc19f1c58abeb7e2cd4f436c79ef6adfb217e624011f62f973bce7856ea", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "d1e2fc18683b06ec83558e39f1a74cb22c52b9e78703d5525ec080adeedcdf42", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "4f4346916048cc9da2c520e6bd63b5638ca4605a73e358c39e8c0a5fbe2aecb6", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
-    assertEquals("Block creation time is different", 1568126527, mcblock.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f09", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
-    assertEquals("Block nonce is different.", "0000787c8e57be7e2691e28e1a62bebc9ad46d93fc87168ff60f80592950002c", BytesUtils.toHexString(mcblock.header.nonce))
+    assertEquals("Hash of previous block is different.", "0092d667863a6cb73dea30c69de18b0596725adaa9df1aaa6c467c873c14850e", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "e15ebc9e1dd5e7a5137b46823da18818f47ccc2d50725cfc899d5d01fa91a982", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "b1c03111552c8f8ee37143baa1b7ff00636511b0189b02a2a917e6110efb58c3", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
+    assertEquals("Block creation time is different", 1571158330, mcblock.header.time)
+    assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
+    assertEquals("Block nonce is different.", "0000e2812ac29d6651d39bf27aa6e23d85b4783842c3511ea45f72ff875a0009", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
     assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
 
@@ -235,10 +185,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("SidechainsMerkleRootsMap size is different.", 2, scMap.size)
     assertTrue(s"SidechainsMerkleRootsMap expected to contain sc id '${scIdHex}.", scMap.contains(scId))
     assertEquals(s"SidechainsMerkleRootsMap sc id '${scIdHex} root hash is different.",
-      "fb4e636e6cb15b264dde58f0b7443b53e6552cf370f9170f1f69c02a24c4a4c4", BytesUtils.toHexString(scMap(scId)))
+      "801b054e584c6173628dd7f15fd385d22511e11d85318931b1433070146ec4bc", BytesUtils.toHexString(scMap(scId)))
     assertTrue(s"SidechainsMerkleRootsMap expected to contain sc id '${anotherScIdHex}.", scMap.contains(anotherScId))
     assertEquals(s"SidechainsMerkleRootsMap sc id '${anotherScIdHex} root hash is different.",
-      "df920b03d583b19401534e9f2f74c4bed1c6df242d7ad5ce68f4d64a6777e98d", BytesUtils.toHexString(scMap(anotherScId)))
+      "5473dd00c8cecfd2de59f0432e6853484e11a2a46ad8a276c588d9185b8b1749", BytesUtils.toHexString(scMap(anotherScId)))
 
 
     assertTrue("New Block occurred, MC2SCAggTx expected to be defined.", mcblock.sidechainRelatedAggregatedTransaction.isDefined)
@@ -249,21 +199,21 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("MC2SCAggTx first box expected to be a RegularBox.", newBoxes.get(0).isInstanceOf[RegularBox])
     var box = newBoxes.get(0).asInstanceOf[RegularBox]
-    assertEquals("MC2SCAggTx first box value is different", 1000000, box.value())
+    assertEquals("MC2SCAggTx first box value is different", 101000000L, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add1")),
       box.proposition())
 
     assertTrue("MC2SCAggTx second box expected to be a RegularBox.", newBoxes.get(1).isInstanceOf[RegularBox])
     box = newBoxes.get(1).asInstanceOf[RegularBox]
-    assertEquals("MC2SCAggTx first box value is different", 2000000, box.value())
+    assertEquals("MC2SCAggTx first box value is different", 202000000L, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add2")),
       box.proposition())
 
     assertTrue("MC2SCAggTx third box expected to be a RegularBox.", newBoxes.get(2).isInstanceOf[RegularBox])
     box = newBoxes.get(2).asInstanceOf[RegularBox]
-    assertEquals("MC2SCAggTx first box value is different", 3000000, box.value())
+    assertEquals("MC2SCAggTx first box value is different", 303000000L, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add3")),
       box.proposition())
