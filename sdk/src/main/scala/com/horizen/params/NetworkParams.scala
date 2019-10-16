@@ -2,7 +2,6 @@ package com.horizen.params
 
 import java.math.BigInteger
 
-import com.horizen.CommonParams
 import scorex.util.{ModifierId, bytesToId}
 
 trait NetworkParams {
