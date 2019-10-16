@@ -24,64 +24,53 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "allBoxes") ~> sidechainWalletApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
-      }
       Post(basePath + "allBoxes").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allBoxes") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allBoxes").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "balance") ~> sidechainWalletApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
-      }
       Post(basePath + "balance").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "balance") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "balance").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
-      }
       Post(basePath + "allPublicKeys").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allPublicKeys") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allPublicKeys").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
 
     "reply at /allBoxes" in {
-        Post(basePath + "allBoxes")
-          .withEntity(
-            SerializationUtil.serialize(ReqAllBoxes(None, None))) ~> sidechainWalletApiRoute ~> check {
-          status.intValue() shouldBe StatusCodes.OK.intValue
-          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          mapper.readTree(entityAs[String]).get("result") match {
-            case result =>
-              assertEquals(1, result.findValues("boxes").size())
-              result.get("boxes") match{
-                case node =>
-                  assertTrue(node.isArray)
-                  assertEquals(3, node.elements().asScala.length)
-                case _ => fail("Result serialization failed")
-              }
-            case _ => fail("Serialization failed for object SidechainApiResponseBody")
-          }
+      Post(basePath + "allBoxes") ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.findValues("boxes").size())
+            result.get("boxes") match{
+              case node =>
+                assertTrue(node.isArray)
+                assertEquals(3, node.elements().asScala.length)
+              case _ => fail("Result serialization failed")
+            }
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
-        Post(basePath + "allBoxes")
-          .withEntity(
-            SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
-          status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        }
+      }
+      Post(basePath + "allBoxes")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
       Post(basePath + "allBoxes")
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(None, Some(Seq("box_1_id", "box_2_id"))))) ~> sidechainWalletApiRoute ~> check {
@@ -108,9 +97,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /balance" in {
-      Post(basePath + "balance")
-        .withEntity(
-          SerializationUtil.serialize(ReqBalance(None))) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "balance") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -157,9 +144,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /allPublicKeys" in {
-      Post(basePath + "allPublicKeys")
-        .withEntity(
-          SerializationUtil.serialize(ReqAllPropositions(None))) ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {

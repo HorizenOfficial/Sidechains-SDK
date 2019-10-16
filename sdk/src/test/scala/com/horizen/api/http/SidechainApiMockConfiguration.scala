@@ -12,6 +12,10 @@ class SidechainApiMockConfiguration {
   private var should_peerManager_GetAllPeers_reply: Boolean = true
   private var should_networkController_GetConnectedPeers_reply = true
   private var should_peerManager_GetBlacklistedPeers_reply = true
+  private var should_history_getBestMainchainBlockReferenceInfo_return_value = true
+  private var should_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value = true
+  private var should_history_getMainchainBlockReferenceInfoByHash_return_value = true
+  private var should_history_getMainchainBlockReferenceByHash_return_value = true
 
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
@@ -53,4 +57,19 @@ class SidechainApiMockConfiguration {
 
   def setShould_peerManager_GetBlacklistedPeers_reply(value: Boolean): Unit = should_peerManager_GetBlacklistedPeers_reply = value
 
+  def getShould_history_getBestMainchainBlockReferenceInfo_return_value(): Boolean = should_history_getBestMainchainBlockReferenceInfo_return_value
+
+  def setShould_history_getBestMainchainBlockReferenceInfo_return_value(value: Boolean): Unit = should_history_getBestMainchainBlockReferenceInfo_return_value = value
+
+  def getShould_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value(): Boolean = should_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value
+
+  def setShould_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value(value: Boolean): Unit = should_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value = value
+
+  def getShould_history_getMainchainBlockReferenceInfoByHash_return_value(): Boolean = should_history_getMainchainBlockReferenceInfoByHash_return_value
+
+  def setShould_history_getMainchainBlockReferenceInfoByHash_return_value(value: Boolean): Unit = should_history_getMainchainBlockReferenceInfoByHash_return_value = value
+
+  def getShould_history_getMainchainBlockReferenceByHash_return_value(): Boolean = should_history_getMainchainBlockReferenceByHash_return_value
+
+  def setShould_history_getMainchainBlockReferenceByHash_return_value(value: Boolean): Unit = should_history_getMainchainBlockReferenceByHash_return_value = value
 }

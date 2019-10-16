@@ -267,8 +267,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotAccepted("", None).code)
       }
-      Post(basePath + "submit")
-        .withEntity(SerializationUtil.serialize("{}")) ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "submit")~> sidechainBlockApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
       Post(basePath + "submit")

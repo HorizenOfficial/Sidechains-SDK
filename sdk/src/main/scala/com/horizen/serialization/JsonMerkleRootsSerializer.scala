@@ -14,6 +14,9 @@ class JsonMerkleRootsSerializer extends databind.JsonSerializer[Option[Map[ByteA
     if(t.isDefined){
       var listOfPair : Iterable[Pair] = t.get.map(k => Pair(BytesUtils.toHexString(k._1.data), BytesUtils.toHexString(k._2)))
       jsonGenerator.writeObject(listOfPair)
+    }else{
+      jsonGenerator.writeStartArray()
+      jsonGenerator.writeEndArray()
     }
   }
 }

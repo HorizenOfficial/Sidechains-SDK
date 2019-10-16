@@ -40,7 +40,6 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
         .getBestMainchainBlockReferenceInfo.asScala match {
         case Some(mcBlockRef) =>
           ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
-          ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
         case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", None))
       }
     }
@@ -66,7 +65,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
               .getMainchainBlockReferenceInfoByHash(BytesUtils.fromHexString(mcBlockRefHash)).asScala match {
               case Some(mcBlockRef) =>
                 if (body.format)
-                  ApiResponseUtil.toResponse(mcBlockRef)
+                  ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
                 else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
                 ))
               case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", None))
@@ -77,7 +76,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                 sidechainNodeView.getNodeHistory.getMainchainBlockReferenceInfoByMainchainBlockHeight(h).asScala match {
                   case Some(mcBlockRef) =>
                     if (body.format)
-                      ApiResponseUtil.toResponse(mcBlockRef)
+                      ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
                     else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
                     ))
                   case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", None))
