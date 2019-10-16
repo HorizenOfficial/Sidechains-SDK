@@ -55,18 +55,14 @@ class Forger(settings: SidechainSettings,
       mainchainSynchronizer.getNewMainchainBlockReferences(view.history, SidechainBlock.MAX_MC_BLOCKS_NUMBER)
     val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
       view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
-        .withFilter(t => t.isInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
         .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
         .toSeq
     // TO DO: secret choosing logic should be revieved during Ouroboros Praos implementation.
-    val ownerPrivateKey:PrivateKey25519 = view.vault.secrets().headOption match {
+    val ownerPrivateKey: PrivateKey25519 = view.vault.secrets().headOption match {
       case Some(secret) =>
         secret.asInstanceOf[PrivateKey25519] // TO DO: problems with types
       case None =>
-        // TO DO: do we need to generate new secret here or return error?
-        val secret = PrivateKey25519Creator.getInstance().generateSecret(view.vault.secrets().size.toString.getBytes())
-        view.vault.addSecret(secret)
-        secret
+        throw new IllegalStateException("No secrets to sign the block in wallet.")
     }
     ForgingInfo(parentId, timestamp, mainchainBlockRefToInclude, txsToInclude, ownerPrivateKey)
   }

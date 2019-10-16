@@ -52,6 +52,7 @@ public class CommandProcessor {
         }
     }
 
+    // Command structure is: command_name [json_argument]
     private Command parseCommand(String input) throws IOException {
         String inputData[] = input.trim().split(" ", 2);
         if(inputData.length == 0)

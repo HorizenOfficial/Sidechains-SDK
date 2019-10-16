@@ -5,7 +5,7 @@ import scala.concurrent.duration.FiniteDuration
 
 
 case class WebSocketSettings(
-                        bindAddress: String,
+                        address: String,
                         connectionTimeout: FiniteDuration,
                         reconnectionDelay: FiniteDuration,
                         reconnectionMaxAttempts: Int

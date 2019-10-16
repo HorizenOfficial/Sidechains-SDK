@@ -83,7 +83,7 @@ class SidechainApp @Inject()
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
-  val genesisPowData = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+  val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -135,7 +135,6 @@ class SidechainApp @Inject()
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
-    sidechainSettings.wallet.seed.getBytes(),
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
     applicationWallet, applicationState, genesisBlock, // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
     Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
@@ -160,7 +159,7 @@ class SidechainApp @Inject()
 
   // Create the web socket connector and configure it
   val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
-    sidechainSettings.websocket.bindAddress,
+    sidechainSettings.websocket.address,
     sidechainSettings.websocket.connectionTimeout,
     communicationClient,
     webSocketReconnectionHandler
