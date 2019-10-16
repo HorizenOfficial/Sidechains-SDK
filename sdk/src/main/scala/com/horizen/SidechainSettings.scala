@@ -54,15 +54,6 @@ case class SidechainSettings(
                               websocket: WebSocketSettings,
                               wallet: WalletSettings) {
 
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
-
-  // TO DO: remove this data from here
-  lazy val genesisBlock: Option[SidechainBlock] = Some(
-    new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
-      BytesUtils.fromHexString(genesisData.scGenesisBlockHex)
-    )
-  )
-
   // TO DO: remove this data from here
   val genesisPowData: Seq[(Int, Int)] = {
     var res: Seq[(Int, Int)] = Seq()

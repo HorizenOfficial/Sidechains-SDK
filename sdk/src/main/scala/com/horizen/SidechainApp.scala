@@ -79,19 +79,24 @@ class SidechainApp @Inject()
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
+  // Deserialize genesis block bytes
+  val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
+    )
+
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      sidechainSettings.genesisBlock.get.id,
-      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
       sidechainSettings.genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case "mainnet" | "testnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      sidechainSettings.genesisBlock.get.id,
-      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
       sidechainSettings.genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
@@ -131,7 +136,7 @@ class SidechainApp @Inject()
     sidechainStateStorage,
     sidechainSettings.wallet.seed.getBytes(),
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, sidechainSettings.genesisBlock.get,
+    applicationWallet, applicationState, genesisBlock, // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
     Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
   )
 
