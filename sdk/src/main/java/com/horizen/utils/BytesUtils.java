@@ -190,14 +190,4 @@ public final class BytesUtils {
         }
         return false;
     }
-
-    public static boolean hasSameElement(Collection<ByteArrayWrapper> collection1, Collection<byte[]> collection2) {
-        for (ByteArrayWrapper v1 : collection1) {
-            byte[] v = v1.data();
-            for (byte[] v2 : collection2)
-                if (Arrays.equals(v, v2))
-                    return true;
-        }
-         return false;
-    }
 }
