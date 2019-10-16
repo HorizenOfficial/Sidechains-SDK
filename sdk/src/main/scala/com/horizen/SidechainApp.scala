@@ -7,7 +7,7 @@ import java.net.InetSocketAddress
 
 import akka.actor.ActorRef
 import com.horizen.api.http._
-import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, StorageParams}
@@ -83,6 +83,7 @@ class SidechainApp @Inject()
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+  val genesisPowData = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -90,14 +91,14 @@ class SidechainApp @Inject()
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case "mainnet" | "testnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")

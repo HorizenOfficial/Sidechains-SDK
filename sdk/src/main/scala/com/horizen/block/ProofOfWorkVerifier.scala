@@ -5,7 +5,7 @@ import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.utils.Utils
+import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.control.Breaks._
 
@@ -131,5 +131,20 @@ object ProofOfWorkVerifier {
       bitsNew = params.powLimit
 
     Utils.encodeCompactBits(bitsNew).toInt
+  }
+
+  // Expect powData hex representation from MC RPC getscgenesisinfo
+  def parsePowData(powData: String): Seq[(Int, Int)] = {
+    var res: Seq[(Int, Int)] = Seq()
+    val powDataBytes: Array[Byte] = BytesUtils.fromHexString(powData)
+    var offset = 0
+    while(offset < powDataBytes.length) {
+      res = res :+ (
+        BytesUtils.getReversedInt(powDataBytes, offset),
+        BytesUtils.getReversedInt(powDataBytes, offset + 4)
+      )
+      offset += 8
+    }
+    res
   }
 }

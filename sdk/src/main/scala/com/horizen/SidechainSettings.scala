@@ -32,7 +32,7 @@ case class WebSocketSettings(
                         connectionTimeout: FiniteDuration,
                         reconnectionDelay: FiniteDuration,
                         reconnectionMaxAttempts: Int
-                        )
+                            )
 
 case class GenesisDataSettings(
                         scGenesisBlockHex: String,
@@ -40,43 +40,28 @@ case class GenesisDataSettings(
                         mcBlockHeight: Int,
                         powData: String,
                         mcNetwork: String
-                      )
+                              )
 
 case class WalletSettings(
-                         seed: String,
-                         genesisSecrets: Seq[String]
+                        seed: String,
+                        genesisSecrets: Seq[String]
                          )
 
 
 case class SidechainSettings(
-                              scorexSettings: ScorexSettings,
-                              genesisData: GenesisDataSettings,
-                              websocket: WebSocketSettings,
-                              wallet: WalletSettings) {
-
-  // TO DO: remove this data from here
-  val genesisPowData: Seq[(Int, Int)] = {
-    var res: Seq[(Int, Int)] = Seq()
-    val powDataBytes: Array[Byte] = BytesUtils.fromHexString(genesisData.powData)
-    var offset = 0
-    while(offset < powDataBytes.length) {
-      res = res :+ (
-        BytesUtils.getReversedInt(powDataBytes, offset),
-        BytesUtils.getReversedInt(powDataBytes, offset + 4)
-      )
-      offset += 8
-    }
-    res
-  }
-}
+                        scorexSettings: ScorexSettings,
+                        genesisData: GenesisDataSettings,
+                        websocket: WebSocketSettings,
+                        wallet: WalletSettings
+                            )
 
 
 object SidechainSettingsReader
   extends ScorexLogging
     with SettingsReaders
 {
-
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
+
   val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
 
   def fromConfig(config: Config): SidechainSettings = {

@@ -7,7 +7,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
-import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
@@ -51,19 +51,21 @@ trait SidechainNodeViewHolderFixture
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
     BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
   )
+  val genesisPowData = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case "mainnet" | "testnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
