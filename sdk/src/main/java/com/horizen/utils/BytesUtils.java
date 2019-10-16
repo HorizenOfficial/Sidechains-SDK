@@ -175,7 +175,7 @@ public final class BytesUtils {
 
     // Get byte array from hex string;
     public static byte[] fromHexString(String hex) {
-        return BaseEncoding.base16().lowerCase().decode(hex);
+        return BaseEncoding.base16().lowerCase().decode(hex.toLowerCase());
     }
 
     // Get hex string representation of byte array
