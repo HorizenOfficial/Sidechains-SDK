@@ -153,7 +153,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
     entity(as[ReqDecodeTransactionBytes]) { body =>
       withNodeView { sidechainNodeView =>
-        var bytes = BytesUtils.fromHexString(body.transactionBytes)
         var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
         tryTX match {
           case Success(tx) =>
