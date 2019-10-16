@@ -192,7 +192,7 @@ public class CommandProcessor {
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
             String sidechainBlockHex = BytesUtils.toHexString(SidechainBlock.create(
-                    SidechainSettingsReader.genesisParentBlockId(),
+                    params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),

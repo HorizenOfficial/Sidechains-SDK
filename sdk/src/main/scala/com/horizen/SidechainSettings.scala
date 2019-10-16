@@ -62,8 +62,6 @@ object SidechainSettingsReader
 {
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 
-  val genesisParentBlockId : scorex.core.block.Block.BlockId = bytesToId(new Array[Byte](32))
-
   def fromConfig(config: Config): SidechainSettings = {
     val webSocketConnectorConfiguration = config.as[WebSocketSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
