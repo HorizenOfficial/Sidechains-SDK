@@ -95,7 +95,9 @@ object ProofOfWorkVerifier {
         geMedianTimePast(timeData, timeData.size, params),
         params)
 
-      if(!res.equals(mcref.header.bits))
+      // TO DO: BigInteger has a higher precision than uint256 on divide operation, that's why our result can be bigger (a bit), than actual in nBits value
+      // Precision should be decreased after any divide operation. See commented code in calculateNextWorkRequired and in BitcoinJ implementation.
+      if(Math.abs(res - mcref.header.bits) > 1)
         return false
 
       // subtract oldest MC block target data and add current one
@@ -129,6 +131,13 @@ object ProofOfWorkVerifier {
     var bitsNew: BigInteger = bitsAvg.multiply(BigInteger.valueOf(actualTimespan)).divide(BigInteger.valueOf(params.averagingWindowTimespan))
     if(bitsNew.compareTo(params.powLimit) > 0)
       bitsNew = params.powLimit
+
+    // TO DO: The calculated difficulty is to a higher precision than received, so reduce here.
+    /*if(nextBits.isDefined) {
+      val accuracyBytes = (nextBits.get >>> 24) - 3
+      val mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8)
+      bitsNew = bitsNew.and(mask)
+    }*/
 
     Utils.encodeCompactBits(bitsNew).toInt
   }
