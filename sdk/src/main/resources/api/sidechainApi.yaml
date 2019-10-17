@@ -566,7 +566,7 @@ paths:
               required:
                 - transactionOutputs
               properties:
-                transactionOutputs:
+                outputs:
                   type: array
                   items:
                     type: object

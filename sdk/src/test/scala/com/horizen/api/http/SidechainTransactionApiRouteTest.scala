@@ -2,10 +2,13 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
+import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.api.http.SidechainTransactionErrorResponse.{ErrorByteTransactionParsing, ErrorNotFoundTransactionInput, GenericTransactionError}
-import com.horizen.api.http.SidechainTransactionRestScheme.{ReqAllTransactions, ReqDecodeTransactionBytes}
+import com.horizen.api.http.SidechainTransactionRestScheme.{ReqAllTransactions, ReqCreateRegularTransaction, ReqDecodeTransactionBytes, ReqSendCoinsToAddress, TransactionInput, TransactionOutput}
+import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.SerializationUtil
-import com.horizen.transaction.RegularTransactionSerializer
+import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
@@ -98,6 +101,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqAllTransactions(None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        println(response)
         mapper.readTree(entityAs[String]).get("result") match {
           case result =>
             assertEquals(1, result.elements().asScala.length)
@@ -151,33 +155,40 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
-//
-//    "reply at /createRegularTransaction" in {
-//      // parameter 'format' = true
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
-//      // parameter 'format' = false
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
-//      }
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//    }
+
+    "reply at /createRegularTransaction" in {
+      // parameter 'format' = true
+      val transactionInput: List[TransactionInput] = allBoxes.asScala.map(box => TransactionInput(BytesUtils.toHexString(box.id()))).toList
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      // parameter 'format' = false
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
+      }
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head),transactionOutput,None))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
+      }
+    }
 //
 //    "reply at /createRegularTransactionSimplified" in {
 //      // parameter 'format' = true
@@ -200,13 +211,18 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 //      }
 //    }
 //
-//    "reply at /sendCoinsToAddress" in {
-//      // parameter 'format' = true
-//      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
+    "reply at /sendCoinsToAddress" in {
+      // parameter 'format' = true
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
+      Post(basePath + "sendCoinsToAddress")
+        .withEntity(
+          //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,None))
+        ) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }}
 //      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
 //        status.intValue() shouldBe StatusCodes.OK.intValue
 //        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

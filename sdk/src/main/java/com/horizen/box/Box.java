@@ -2,9 +2,7 @@ package com.horizen.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.horizen.proposition.Proposition;
-import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 
 /**
@@ -36,7 +34,6 @@ public interface Box<P extends Proposition>
     P proposition();
 
     @JsonProperty("id")
-    @JsonSerialize(using = ByteUtilsSerializer.class)
     @Override
     byte[] id();
 

@@ -2,12 +2,9 @@ package com.horizen.node.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
-import com.horizen.api.http.SuccessResponse;
-import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import scorex.core.serialization.BytesSerializable;
@@ -17,15 +14,13 @@ import java.util.Arrays;
 import java.util.Objects;
 
 @JsonView(Views.Default.class)
-public final class MainchainBlockReferenceInfo implements BytesSerializable, SuccessResponse {
+public final class MainchainBlockReferenceInfo implements BytesSerializable {
 
     // Mainchain block reference hash with the most height
-    @JsonSerialize(using = ByteUtilsSerializer.class)
     @JsonProperty("hash")
     private byte[] mainchainBlockReferenceHash;
 
     // parent mainchain block reference hash
-    @JsonSerialize(using = ByteUtilsSerializer.class)
     @JsonProperty("parentHash")
     private byte[] parentMainchainBlockReferenceHash;
 
@@ -34,8 +29,6 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable, Suc
     private int mainchainHeight;
 
     // Sidechain block ID which contains this MC block reference
-    @JsonSerialize(using = ByteUtilsSerializer.class)
-    @JsonProperty("sidechainBlockId")
     private byte[] sidechainBlockId;
 
     public MainchainBlockReferenceInfo(byte[] mainchainBlockReferenceHash,
