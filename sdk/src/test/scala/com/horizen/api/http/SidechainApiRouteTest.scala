@@ -15,11 +15,13 @@ import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSide
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.SidechainBlockFixture
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
+import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.MainNetParams
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, TransactionSerializer}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -40,12 +42,14 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar {
+abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
+  //generateGenesisBlock(sidechainTransactionsCompanion)
   private val genesisBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
     PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
     SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
@@ -73,6 +77,12 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
 
   val utilMocks = new SidechainNodeViewUtilMocks()
+
+  val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
+  val transaction_1_bytes: Array[Byte] = RegularTransactionSerializer.getSerializer().toBytes(memoryPool.get(0))
+  val allBoxes = utilMocks.allBoxes
+
+  val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 3 seconds)

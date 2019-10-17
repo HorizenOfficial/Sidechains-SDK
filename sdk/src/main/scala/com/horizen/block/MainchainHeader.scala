@@ -7,7 +7,6 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.utils.ScorexEncoder
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable
@@ -47,11 +46,11 @@ class MainchainHeader(
 
   def semanticValidity(params: NetworkParams): Boolean = {
     if(hashPrevBlock == null || hashPrevBlock.length != 32
-        || hashMerkleRoot == null || hashMerkleRoot.length != 32
-        || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
-        || nonce == null || nonce.length != 32
-        || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
-      )
+      || hashMerkleRoot == null || hashMerkleRoot.length != 32
+      || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
+      || nonce == null || nonce.length != 32
+      || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
+    )
       return false
 
     // Check if timestamp is valid and not too far in the future

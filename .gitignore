@@ -4,4 +4,3 @@ target/
 scorex.log
 scorex-errors.log
 *.iml
-src/main/resources/sc_settings.conf

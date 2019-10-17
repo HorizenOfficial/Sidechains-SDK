@@ -2,9 +2,12 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
+import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.api.http.SidechainBlockErrorResponse._
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.serialization.SerializationUtil
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import scorex.core.idToBytes
 import scorex.core.bytesToId
@@ -267,8 +270,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotAccepted("", None).code)
       }
-      Post(basePath + "submit")
-        .withEntity(SerializationUtil.serialize("{}")) ~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "submit")~> sidechainBlockApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
       Post(basePath + "submit")
@@ -331,7 +333,5 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", None).code)
       }
     }
-
   }
-
 }

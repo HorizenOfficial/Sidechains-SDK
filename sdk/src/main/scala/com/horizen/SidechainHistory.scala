@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
-import com.horizen.block.{MainchainBlockReference, ProofOfWorkVerifier, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -404,6 +404,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
     transaction
   }
+
+  override def getMainchainCreationBlockHeight: Int = params.mainchainCreationBlockHeight
 
   override def getBestMainchainBlockReferenceInfo: JOptional[MainchainBlockReferenceInfo] = {
     storage.getBestMainchainBlockReferenceInfo.asJava

@@ -1,7 +1,5 @@
 package com.horizen.transaction;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -22,7 +20,6 @@ import javafx.util.Pair;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
-@JsonView(Views.Default.class)
 public final class RegularTransaction
     extends SidechainTransaction<PublicKey25519Proposition, RegularBox>
 {
@@ -31,8 +28,6 @@ public final class RegularTransaction
 
     private List<RegularBox> _inputs;
     private List<Pair<PublicKey25519Proposition, Long>> _outputs;
-
-    @JsonProperty("signatures")
     private List<Signature25519> _signatures;
 
     private long _fee;

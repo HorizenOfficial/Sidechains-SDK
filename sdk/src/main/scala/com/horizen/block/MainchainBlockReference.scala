@@ -46,7 +46,6 @@ class MainchainBlockReference(
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   override type M = MainchainBlockReference
-  /*override type J = MainchainBlockReference*/
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 

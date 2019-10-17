@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.scala.DefaultScalaModule;
 
 public class ApplicationJsonSerializer {
@@ -53,6 +54,9 @@ public class ApplicationJsonSerializer {
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT);
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(byte[].class, new ByteUtilsSerializer());
+        objectMapper.registerModule(module);
     }
 
     public String serialize(Object value) throws Exception {

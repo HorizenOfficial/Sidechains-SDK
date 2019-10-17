@@ -30,7 +30,9 @@ trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
 {
 
-  val sidechainSettings = SidechainSettingsReader.read("src/test/resources/sc_node_holder_fixter_settings.conf", None)
+  val classLoader: ClassLoader = getClass.getClassLoader
+
+  val sidechainSettings: SidechainSettings = SidechainSettingsReader.read(classLoader.getResource("sc_node_holder_fixter_settings.conf").getFile, None)
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
@@ -51,7 +53,7 @@ trait SidechainNodeViewHolderFixture
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
     BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
   )
-  val genesisPowData = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+  val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
