@@ -119,7 +119,7 @@ object MainchainRestSchema {
   private[api] case class MainchainBlockHexResponse(blockHex: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqBlockInfoBy(hash: Option[String], height: Option[Integer], format: Boolean = false)
+  private[api] case class ReqBlockInfoBy(hash: Option[String], height: Option[Int], format: Boolean = false)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqBlockBy(hash: String, format: Boolean = false)
