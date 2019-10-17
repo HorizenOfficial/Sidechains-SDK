@@ -24,6 +24,8 @@ public interface NodeHistory {
 
     Optional<Transaction> searchTransactionInsideBlockchain(String transactionId);
 
+    int getMainchainCreationBlockHeight();
+
     Optional<MainchainBlockReferenceInfo> getBestMainchainBlockReferenceInfo();
 
     Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByHash(byte[] mainchainBlockReferenceHash);
