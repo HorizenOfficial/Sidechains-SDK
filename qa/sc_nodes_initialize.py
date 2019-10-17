@@ -41,7 +41,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
     def check_connections(self, node, nodename, other_nodes):
         print("Checking connections for {0}...".format(nodename))
         peers_node = []
-        for peer in node.get_peers_connected():
+        for peer in node.node_connectedPeers()["result"]["peers"]:
             peers_node.append(peer["name"])
         print("-->Peers connected to {0}: {1}".format(nodename, json.dumps(peers_node)))
         for other_node in other_nodes:
@@ -52,13 +52,13 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         print("Genesis checks for {0}...".format(nodename))
         print("-->Checking that each public key has a box assigned with a non-zero value... ")
 
-        responce = node.wallet_getPublicKeys()
+        responce = node.wallet_allPublicKeys()
         public_keys = responce["result"]["propositions"]
 
-        responce = node.wallet_getAllBoxes()
+        responce = node.wallet_allBoxes()
         boxes = responce["result"]["boxes"]
 
-        responce = node.wallet_getBalance()
+        responce = node.wallet_balance()
         balance = responce["result"]
         assert_equal(expected_keys_count, len(public_keys), "Unexpected number of public keys")
         assert_equal(expected_boxes_count, len(boxes), "Unexpected number of boxes")
@@ -71,8 +71,8 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
                     break
             assert_true(target is not None, "Box related to public key: {0} not found".format(key))
         print("-->Checking genesis balance...")
-        assert_equal(100000, int(balance["globalBalance"]), "Unexpected balance")
-        print("-->Total balance: {0}".format(json.dumps(balance["globalBalance"])))
+        assert_equal(10000000000, int(balance["balance"]), "Unexpected balance")
+        print("-->Total balance: {0}".format(json.dumps(balance["balance"])))
         print("OK\n")
     
     def run_test(self):
