@@ -49,9 +49,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       withNodeView { sidechainNodeView =>
         var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
         if (body.format.getOrElse(true)) {
-          ApiResponseUtil.toResponse(RespAllTransactions(Option(unconfirmedTxs.asScala.toList), None))
+          ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
         } else {
-          ApiResponseUtil.toResponse(RespAllTransactions(None, Option(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString))))
+          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
         }
       }
     }
@@ -135,9 +135,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           case Some(t) =>
             if (format) {
               //TO-DO JSON representation of transaction
-              ApiResponseUtil.toResponse(TransactionDTO(Option(t), None))
+              ApiResponseUtil.toResponse(TransactionDTO(t))
             } else {
-              ApiResponseUtil.toResponse(TransactionDTO(None, Option(new String(companion.toBytes(t)))))
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(t))))
             }
           case None =>
             // TO-DO Change the errorCode
@@ -210,9 +210,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               fee, System.currentTimeMillis())
 
             if (body.format.getOrElse(false))
-              ApiResponseUtil.toResponse(TransactionDTO(Option(regularTransaction), None))
+              ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
             else
-              ApiResponseUtil.toResponse(TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction)))))
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -237,9 +237,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
 
           if (body.format.getOrElse(false))
-            ApiResponseUtil.toResponse(TransactionDTO(Option(regularTransaction), None))
+            ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
           else
-            ApiResponseUtil.toResponse(TransactionDTO(None, Option(BytesUtils.toHexString(companion.toBytes(regularTransaction)))))
+            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
         } catch {
           case t: Throwable =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -345,13 +345,19 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactions(transactions: Option[List[Transaction]], transactionIds: Option[List[String]]) extends SuccessResponse
+  private[api] case class RespAllTransactions(transactions: List[Transaction]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: Option[Transaction], transactionBytes: Option[String]) extends SuccessResponse
+  private[api] case class TransactionDTO(transaction: Transaction) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)

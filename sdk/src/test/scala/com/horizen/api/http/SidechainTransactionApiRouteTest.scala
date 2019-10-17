@@ -2,10 +2,13 @@ package com.horizen.api.http
 
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
+import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.api.http.SidechainTransactionErrorResponse.{ErrorByteTransactionParsing, ErrorNotFoundTransactionInput, GenericTransactionError}
-import com.horizen.api.http.SidechainTransactionRestScheme.{ReqAllTransactions, ReqDecodeTransactionBytes}
+import com.horizen.api.http.SidechainTransactionRestScheme.{ReqAllTransactions, ReqCreateRegularTransaction, ReqDecodeTransactionBytes, ReqSendCoinsToAddress, TransactionInput, TransactionOutput}
+import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.SerializationUtil
-import com.horizen.transaction.RegularTransactionSerializer
+import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
@@ -98,6 +101,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqAllTransactions(None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        println(response)
         mapper.readTree(entityAs[String]).get("result") match {
           case result =>
             assertEquals(1, result.elements().asScala.length)
@@ -151,33 +155,40 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
-//
-//    "reply at /createRegularTransaction" in {
-//      // parameter 'format' = true
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
-//      // parameter 'format' = false
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
-//      }
-//      Post(basePath + "createRegularTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//    }
+
+    "reply at /createRegularTransaction" in {
+      // parameter 'format' = true
+      val transactionInput: List[TransactionInput] = allBoxes.asScala.map(box => TransactionInput(BytesUtils.toHexString(box.id()))).toList
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      // parameter 'format' = false
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        //println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
+      }
+      Post(basePath + "createRegularTransaction")
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head),transactionOutput,None))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
+      }
+    }
 //
 //    "reply at /createRegularTransactionSimplified" in {
 //      // parameter 'format' = true
@@ -200,13 +211,15 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 //      }
 //    }
 //
-//    "reply at /sendCoinsToAddress" in {
-//      // parameter 'format' = true
-//      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
+    "reply at /sendCoinsToAddress" in {
+      // parameter 'format' = true
+      val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
+      Post(basePath + "sendCoinsToAddress")
+        .withEntity(SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,None))) ~> sidechainTransactionApiRoute ~> check {
+        println(response)
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }}
 //      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
 //        status.intValue() shouldBe StatusCodes.OK.intValue
 //        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -242,4 +255,53 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 //      }
 //    }
   }
+
+  private def assertsOnTransactionJson(json: JsonNode, transaction: BoxTransaction[_, _]): Unit = {
+    assertEquals(6, json.elements().asScala.length)
+    assertTrue(json.get("unlockers").isArray)
+    assertEquals(transaction.unlockers().size(), json.get("unlockers").elements().asScala.length)
+    assertTrue(json.get("newBoxes").isArray)
+    assertEquals(transaction.newBoxes().size(), json.get("newBoxes").elements().asScala.length)
+    assertTrue(json.get("fee").isLong)
+    assertEquals(transaction.fee(), json.get("fee").asLong())
+    assertTrue(json.get("timestamp").isLong)
+    assertEquals(transaction.timestamp(), json.get("timestamp").asLong())
+    assertTrue(json.get("id").isTextual)
+    assertEquals(BytesUtils.toHexString(transaction.id.getBytes), json.get("id").asText())
+    assertTrue(json.get("modifierTypeId").isInt)
+    assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
+  }
+
+  private def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
+    assertEquals(2, json.elements().asScala.length)
+    assertTrue(json.get("closedBoxId").isTextual)
+    assertEquals(BytesUtils.toHexString(boxUnlocker.closedBoxId()), json.get("closedBoxId").asText())
+    assertTrue(json.get("boxKey").isObject)
+    assertEquals(1, json.get("boxKey").elements().asScala.length)
+    val sign = json.get("boxKey")
+    assertEquals(1, sign.elements().asScala.length)
+    assertTrue(sign.get("signature").isTextual)
+  }
+
+  private def assertsOnBoxJson(json: JsonNode, box: Box[_]): Unit = {
+    assertTrue(json.elements().asScala.length>=4)
+    assertTrue(json.elements().asScala.length<=5)
+    assertTrue(json.get("typeId").isInt)
+    assertTrue(json.get("proposition").isObject)
+    assertTrue(json.get("value").isLong)
+    assertTrue(json.get("id").isTextual)
+    assertEquals(BytesUtils.toHexString(box.id()), json.get("id").asText())
+    assertEquals(box.value(), json.get("value").asLong())
+    assertEquals(box.boxTypeId().toInt, json.get("typeId").asInt())
+    assertTrue(json.get("boxKey").isObject)
+    assertEquals(1, json.get("proposition").elements().asScala.length)
+    val publicKey = json.get("proposition")
+    assertEquals(1, publicKey.elements().asScala.length)
+    assertTrue(publicKey.get("publicKey").isTextual)
+    if(json.elements().asScala.length>4){
+      assertTrue(json.get("nonce").isLong)
+      assertEquals(box.asInstanceOf[NoncedBox[_]].nonce(), json.get("nonce").asLong())
+    }
+  }
+
 }

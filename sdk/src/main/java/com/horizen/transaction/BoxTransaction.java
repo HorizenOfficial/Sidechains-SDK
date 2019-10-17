@@ -1,11 +1,14 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.Views;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.io.ByteArrayOutputStream;
@@ -14,6 +17,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@JsonView(Views.Default.class)
+@JsonIgnoreProperties({"signatures", "encoder"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;

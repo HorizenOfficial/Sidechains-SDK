@@ -2,8 +2,6 @@ package com.horizen.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.horizen.serialization.ByteUtilsSerializer;
 import com.horizen.serialization.Views;
 import scala.util.Try;
 
@@ -26,7 +24,6 @@ public final class PublicKey25519Proposition
     public static final int KEY_LENGTH = Curve25519.KeyLength();;
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
-    @JsonSerialize(using = ByteUtilsSerializer.class)
     @JsonProperty("publicKey")
     private byte[] _pubKeyBytes;
 

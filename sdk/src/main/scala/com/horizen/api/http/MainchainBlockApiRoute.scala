@@ -39,7 +39,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
       sidechainNodeView.getNodeHistory
         .getBestMainchainBlockReferenceInfo.asScala match {
         case Some(mcBlockRef) =>
-          ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
+          ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
         case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", None))
       }
     }
@@ -50,7 +50,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
     withNodeView { sidechainNodeView =>
       sidechainNodeView.getNodeHistory
         .getMainchainBlockReferenceInfoByMainchainBlockHeight(1).asScala match {
-        case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
+        case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
         case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", None))
       }
     }
@@ -65,9 +65,8 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
               .getMainchainBlockReferenceInfoByHash(BytesUtils.fromHexString(mcBlockRefHash)).asScala match {
               case Some(mcBlockRef) =>
                 if (body.format)
-                  ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
-                else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
-                ))
+                  ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
+                else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
               case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", None))
             }
           case None =>
@@ -76,9 +75,8 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                 sidechainNodeView.getNodeHistory.getMainchainBlockReferenceInfoByMainchainBlockHeight(h).asScala match {
                   case Some(mcBlockRef) =>
                     if (body.format)
-                      ApiResponseUtil.toResponse(MainchainApiResponse(Some(mcBlockRef)))
-                    else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes()))
-                    ))
+                      ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
+                    else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
                   case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", None))
                 }
               case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", None))
@@ -101,8 +99,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
           case Some(mcBlockRef) =>
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))
-            else ApiResponseUtil.toResponse(MainchainApiResponse(None, Some(BytesUtils.toHexString(mcBlockRef.bytes))
-            ))
+            else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes)))
           case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", None))
         }
       }
@@ -116,7 +113,10 @@ object MainchainRestSchema {
   private[api] case class MainchainBlockResponse(blockReference: MainchainBlockReference) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class MainchainApiResponse(blockReferenceInfo: Option[MainchainBlockReferenceInfo], blockHex: Option[String] = None) extends SuccessResponse
+  private[api] case class MainchainBlockReferenceInfoResponse(blockReferenceInfo: MainchainBlockReferenceInfo) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class MainchainBlockHexResponse(blockHex: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqBlockInfoBy(hash: Option[String], height: Option[Integer], format: Boolean = false)

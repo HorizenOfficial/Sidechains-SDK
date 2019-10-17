@@ -3,7 +3,7 @@ package com.horizen.block
 import java.io.ByteArrayOutputStream
 import java.time.Instant
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.{ScorexEncoding, SidechainTypes}
@@ -27,14 +27,14 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion"))
 class SidechainBlock (
-                       @JsonProperty("parentId") @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
-                       @JsonProperty("timestamp") override val timestamp: Block.Timestamp,
-                       @JsonProperty("mainchainBlocks") val mainchainBlocks : Seq[MainchainBlockReference],
-                       @JsonProperty("sidechainTransactions") val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                       @JsonProperty("forgerPublicKey") val forgerPublicKey: PublicKey25519Proposition,
-                       @JsonProperty("signature") val signature: Signature25519,
+                       @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
+                       override val timestamp: Block.Timestamp,
+                       val mainchainBlocks : Seq[MainchainBlockReference],
+                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
+                       val forgerPublicKey: PublicKey25519Proposition,
+                       val signature: Signature25519,
                        companion: SidechainTransactionsCompanion)
 
   extends Block[SidechainTypes#SCBT]
@@ -48,7 +48,6 @@ class SidechainBlock (
 
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
-  @JsonProperty("id")
   @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId =
     bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))

@@ -82,7 +82,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
             result.get("boxes") match{
               case node =>
                 assertTrue(node.isArray)
-                assertEquals(1, node.elements().asScala.length)
+                assertEquals(3, node.elements().asScala.length)
               case _ => fail("Result serialization failed")
             }
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
