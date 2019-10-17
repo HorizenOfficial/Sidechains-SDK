@@ -41,7 +41,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
                 "publicKey": receiver, \
                 "value": amount \
                 } ], \
-#            "fee": fee, \
+            "fee": fee, \
 #            "format": "true"
             }
         request = json.dumps(j)
