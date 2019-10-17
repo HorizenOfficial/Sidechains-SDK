@@ -25,6 +25,7 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable {
     private byte[] parentMainchainBlockReferenceHash;
 
     // Height in mainchain of mainchainBlockReference
+    @JsonProperty("height")
     private int mainchainHeight;
 
     // Sidechain block ID which contains this MC block reference
