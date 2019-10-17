@@ -26,6 +26,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.serialization.Views
@@ -369,7 +370,7 @@ object SidechainTransactionRestScheme {
   private[api] case class TransactionInput(boxId: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionOutput(publicKey: String, value: Long)
+  private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateRegularTransaction(transactionInputs: List[TransactionInput],
@@ -381,14 +382,14 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateRegularTransactionSimplified(transactionOutputs: List[TransactionOutput],
-                                                                fee: Long,
+                                                                @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Long,
                                                                 format: Option[Boolean]) {
     require(transactionOutputs.nonEmpty, "Empty outputs list")
     require(fee >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput], fee: Option[Long]) {
+  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput], @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }

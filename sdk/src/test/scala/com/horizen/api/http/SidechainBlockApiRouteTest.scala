@@ -334,35 +334,4 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       }
     }
   }
-
-  private def assertsOnBlockJson(json: JsonNode, block: SidechainBlock): Unit = {
-    assertEquals(7, json.elements().asScala.length)
-    assertTrue(json.get("parentId").isTextual)
-    assertTrue(json.get("timestamp").isLong)
-    assertTrue(json.get("mainchainBlocks").isArray)
-    assertTrue(json.get("sidechainTransactions").isArray)
-    assertTrue(json.get("forgerPublicKey").isObject)
-    assertTrue(json.get("id").isTextual)
-
-    assertEquals(BytesUtils.toHexString(block.parentId.getBytes), json.get("parentId").asText())
-    assertEquals(BytesUtils.toHexString(block.id.getBytes), json.get("id").asText())
-    assertEquals(block.timestamp.toLong, json.get("timestamp").asLong())
-
-    assertEquals(block.mainchainBlocks.size, json.get("mainchainBlocks").elements().asScala.length)
-    assertEquals(block.sidechainTransactions.size, json.get("sidechainTransactions").elements().asScala.length)
-
-    val forgerPublicKey = json.get("forgerPublicKey")
-    assertEquals(7, forgerPublicKey.elements().asScala.length)
-    assertTrue(forgerPublicKey.get("forgerPublicKey").isTextual)
-  }
-
-  private def assertsOnMainchainBlockReferenceJson(json: JsonNode, mc: MainchainBlockReference): Unit = {
-    assertEquals(3, json.elements().asScala.length)
-    assertTrue(json.get("header").isObject)
-    assertTrue(json.get("sidechainRelatedAggregatedTransaction").isObject)
-    assertTrue(json.get("merkleRoots").isArray)
-
-    //assert on merkle roots
-  }
-
 }

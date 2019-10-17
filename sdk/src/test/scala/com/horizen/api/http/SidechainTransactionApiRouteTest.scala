@@ -215,7 +215,10 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       // parameter 'format' = true
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
       Post(basePath + "sendCoinsToAddress")
-        .withEntity(SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(
+          //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,None))
+        ) ~> sidechainTransactionApiRoute ~> check {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -255,53 +258,4 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 //      }
 //    }
   }
-
-  private def assertsOnTransactionJson(json: JsonNode, transaction: BoxTransaction[_, _]): Unit = {
-    assertEquals(6, json.elements().asScala.length)
-    assertTrue(json.get("unlockers").isArray)
-    assertEquals(transaction.unlockers().size(), json.get("unlockers").elements().asScala.length)
-    assertTrue(json.get("newBoxes").isArray)
-    assertEquals(transaction.newBoxes().size(), json.get("newBoxes").elements().asScala.length)
-    assertTrue(json.get("fee").isLong)
-    assertEquals(transaction.fee(), json.get("fee").asLong())
-    assertTrue(json.get("timestamp").isLong)
-    assertEquals(transaction.timestamp(), json.get("timestamp").asLong())
-    assertTrue(json.get("id").isTextual)
-    assertEquals(BytesUtils.toHexString(transaction.id.getBytes), json.get("id").asText())
-    assertTrue(json.get("modifierTypeId").isInt)
-    assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
-  }
-
-  private def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
-    assertEquals(2, json.elements().asScala.length)
-    assertTrue(json.get("closedBoxId").isTextual)
-    assertEquals(BytesUtils.toHexString(boxUnlocker.closedBoxId()), json.get("closedBoxId").asText())
-    assertTrue(json.get("boxKey").isObject)
-    assertEquals(1, json.get("boxKey").elements().asScala.length)
-    val sign = json.get("boxKey")
-    assertEquals(1, sign.elements().asScala.length)
-    assertTrue(sign.get("signature").isTextual)
-  }
-
-  private def assertsOnBoxJson(json: JsonNode, box: Box[_]): Unit = {
-    assertTrue(json.elements().asScala.length>=4)
-    assertTrue(json.elements().asScala.length<=5)
-    assertTrue(json.get("typeId").isInt)
-    assertTrue(json.get("proposition").isObject)
-    assertTrue(json.get("value").isLong)
-    assertTrue(json.get("id").isTextual)
-    assertEquals(BytesUtils.toHexString(box.id()), json.get("id").asText())
-    assertEquals(box.value(), json.get("value").asLong())
-    assertEquals(box.boxTypeId().toInt, json.get("typeId").asInt())
-    assertTrue(json.get("boxKey").isObject)
-    assertEquals(1, json.get("proposition").elements().asScala.length)
-    val publicKey = json.get("proposition")
-    assertEquals(1, publicKey.elements().asScala.length)
-    assertTrue(publicKey.get("publicKey").isTextual)
-    if(json.elements().asScala.length>4){
-      assertTrue(json.get("nonce").isLong)
-      assertEquals(box.asInstanceOf[NoncedBox[_]].nonce(), json.get("nonce").asLong())
-    }
-  }
-
 }
