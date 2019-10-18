@@ -80,7 +80,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 300 milliseconds)
+  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
