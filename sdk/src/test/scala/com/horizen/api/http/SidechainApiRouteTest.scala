@@ -12,6 +12,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -47,12 +48,10 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
-  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
-  //generateGenesisBlock(sidechainTransactionsCompanion)
-  private val genesisBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
-    PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-    SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+  val sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+
+  val jsonChecker = new SidechainJSONBOChecker
 
   private val inetAddr1 = new InetSocketAddress("92.92.92.92", 27017)
   private val inetAddr2 = new InetSocketAddress("93.93.93.93", 27017)
@@ -74,13 +73,14 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
 
   val mapper: ObjectMapper = ApplicationJsonSerializer.getInstance().getObjectMapper
+  // DO NOT REMOVE THIS LINE
   mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
 
   val utilMocks = new SidechainNodeViewUtilMocks()
 
   val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
-  val transaction_1_bytes: Array[Byte] = RegularTransactionSerializer.getSerializer().toBytes(memoryPool.get(0))
   val allBoxes = utilMocks.allBoxes
+  val genesisBlock = utilMocks.genesisBlock
 
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
@@ -112,7 +112,16 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
   val mockedSidechainTransactioActor = TestProbe()
-  mockedSidechainTransactioActor.setAutoPilot(TestActor.KeepRunning)
+  mockedSidechainTransactioActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case BroadcastTransaction(t) =>
+          if (sidechainApiMockConfiguration.getShould_transactionActor_BroadcastTransaction_reply()) sender ! Future.successful()
+          else sender ! Future.failed(new Exception("Broadcast failed."))
+      }
+      TestActor.KeepRunning
+    }
+  })
   val mockedSidechainTransactioActorRef: ActorRef = mockedSidechainTransactioActor.ref
 
   val mockedPeerManagerActor = TestProbe()

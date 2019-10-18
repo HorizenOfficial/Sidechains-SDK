@@ -103,7 +103,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var blockHash = body.blockHash.getOrElse("")
         var txIndex = body.transactionIndex.getOrElse(false)
         var transaction: Option[Transaction] = None
-        var error: String = ???
+        var error: String = ""
 
 
         // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
