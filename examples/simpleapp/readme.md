@@ -48,6 +48,8 @@ To run SC with a connection with a real MC node do the following steps:
 9. Run SimpleApp node with the configuration file you created. Your SC node will be connected to the MC node.
 10. If new MC blocks will appear, than the next SC blocks will automatically include the references to MC blocks inside. Maximum number of MC Block Refs per SC Block is 3.
 
+[The MC and SC workflow example](mc_sc_workflow_example.md).
+
 **How to choose the address of the first forward transfers during creation?**
 
 Address you specified in `sc_create` RPC method is a public key defined in SC.
