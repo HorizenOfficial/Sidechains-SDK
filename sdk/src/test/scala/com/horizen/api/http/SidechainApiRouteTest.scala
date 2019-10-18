@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.time.Instant
 import java.{lang, util}
 
 import akka.actor.{ActorRef, ActorSystem}
@@ -14,15 +13,11 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurren
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.{SidechainSettings, SidechainTypes}
-import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.params.MainNetParams
-import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, TransactionSerializer}
+import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -85,7 +80,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 3 seconds)
+  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 300 milliseconds)
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
@@ -133,7 +128,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
             sender ! peers
           else sender ! Failure(new Exception("No peers."))
         case GetBlacklistedPeers =>
-          if(sidechainApiMockConfiguration.getShould_peerManager_GetBlacklistedPeers_reply())
+          if (sidechainApiMockConfiguration.getShould_peerManager_GetBlacklistedPeers_reply())
             sender ! Seq[InetAddress](inetAddrBlackListed_1.getAddress, inetAddrBlackListed_2.getAddress)
           else new Exception("No black listed peers.")
       }
