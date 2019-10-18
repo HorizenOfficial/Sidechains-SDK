@@ -5,7 +5,7 @@ import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.utils.Utils
+import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.control.Breaks._
 
@@ -95,7 +95,9 @@ object ProofOfWorkVerifier {
         geMedianTimePast(timeData, timeData.size, params),
         params)
 
-      if(!res.equals(mcref.header.bits))
+      // TO DO: BigInteger has a higher precision than uint256 on divide operation, that's why our result can be bigger (a bit), than actual in nBits value
+      // Precision should be decreased after any divide operation. See commented code in calculateNextWorkRequired and in BitcoinJ implementation.
+      if(Math.abs(res - mcref.header.bits) > 1)
         return false
 
       // subtract oldest MC block target data and add current one
@@ -130,6 +132,28 @@ object ProofOfWorkVerifier {
     if(bitsNew.compareTo(params.powLimit) > 0)
       bitsNew = params.powLimit
 
+    // TO DO: The calculated difficulty is to a higher precision than received, so reduce here.
+    /*if(nextBits.isDefined) {
+      val accuracyBytes = (nextBits.get >>> 24) - 3
+      val mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8)
+      bitsNew = bitsNew.and(mask)
+    }*/
+
     Utils.encodeCompactBits(bitsNew).toInt
+  }
+
+  // Expect powData hex representation from MC RPC getscgenesisinfo
+  def parsePowData(powData: String): Seq[(Int, Int)] = {
+    var res: Seq[(Int, Int)] = Seq()
+    val powDataBytes: Array[Byte] = BytesUtils.fromHexString(powData)
+    var offset = 0
+    while(offset < powDataBytes.length) {
+      res = res :+ (
+        BytesUtils.getReversedInt(powDataBytes, offset),
+        BytesUtils.getReversedInt(powDataBytes, offset + 4)
+      )
+      offset += 8
+    }
+    res
   }
 }

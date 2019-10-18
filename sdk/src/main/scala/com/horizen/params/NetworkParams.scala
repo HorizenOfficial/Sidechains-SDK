@@ -2,8 +2,7 @@ package com.horizen.params
 
 import java.math.BigInteger
 
-import com.horizen.CommonParams
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, bytesToId}
 
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
@@ -28,6 +27,7 @@ trait NetworkParams {
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
   val sidechainId: Array[Byte]
   val sidechainGenesisBlockId: ModifierId
+  val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
 
   val maxHistoryRewritingLength: Int = 100
 

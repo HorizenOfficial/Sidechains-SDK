@@ -36,13 +36,14 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(3, self.options.tmpdir)
     
-    def create_tx(self, sender, receiver, amount, fee):
+    def send_coins(self, sender, receiver, amount, fee):
         j = {"outputs": [ {\
                 "publicKey": receiver, \
                 "value": amount \
-            } ], \
+                } ], \
             "fee": fee, \
-            "format": "true"}
+#            "format": "true"
+            }
         request = json.dumps(j)
         txid = sender.transaction_sendCoinsToAddress(request)["result"]["transactionId"]
         print("--->SC Transaction ID: {0}".format(str(txid)))
@@ -54,21 +55,21 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         blocks = node.block_generate(request)
         i = blocks.has_key("result")
         assert_true(blocks.has_key("result"), "Error during block generation for SC {0}".format(nodename))
-        return blocks["result"]["ids"]
+        return blocks["result"]["blockIds"]
             
     def check_tx_in_block(self, node, nodename, block_id, tx_id):
         tx_list = []
-        j = {"id": block_id}
+        j = {"blockId": block_id}
         request = json.dumps(j)
-        block = node.block_getBlock(request)
+        block = node.block_findById(request)
         assert_true(block.has_key("result"), "Error during getBlock for SC {0}".format(nodename))
-        for tx in block["result"]["blockInfo"]["sidechainTransactions"]:
+        for tx in block["result"]["block"]["sidechainTransactions"]:
             tx_list.append(tx["id"])
         assert_true(tx_id in tx_list, "Transaction {0} not included in the new block for SC {1}".format(str(tx_id), nodename))
     
     def check_tx_in_mempool(self, node, nodename, txid, mainchain = True):
         tx_list = []
-        for tx in node.transaction_getMemoryPool()["result"]["transactions"]:
+        for tx in node.transaction_allTransactions()["result"]["transactions"]:
             tx_list.append(tx["id"])
         assert_true(txid in tx_list, "Transaction {0} not in mempool for SC {1}".format(str(txid), nodename))
     
@@ -79,22 +80,22 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         scnode0name = "node0"
         scnode1name = "node1"
         scnode2name = "node2"
-        scnodeadresses = self.sc_nodes[1].wallet_getPublicKeys()
-        scnode1address = self.sc_nodes[1].wallet_getPublicKeys()["result"]["propositions"][0]["publicKey"]
-        scnode0balance = int(self.sc_nodes[0].wallet_getBalance()["result"]["globalBalance"])
-        scnode1balance = int(self.sc_nodes[1].wallet_getBalance()["result"]["globalBalance"])
-        scnode2balance = int(self.sc_nodes[2].wallet_getBalance()["result"]["globalBalance"])
+        scnodeadresses = self.sc_nodes[1].wallet_allPublicKeys()
+        scnode1address = self.sc_nodes[1].wallet_allPublicKeys()["result"]["propositions"][0]["publicKey"]
+        scnode0balance = int(self.sc_nodes[0].wallet_balance()["result"]["balance"])
+        scnode1balance = int(self.sc_nodes[1].wallet_balance()["result"]["balance"])
+        scnode2balance = int(self.sc_nodes[2].wallet_balance()["result"]["balance"])
         print("-->SC Node 0 balance: {0}".format(scnode0balance))
         print("-->SC Node 1 balance: {0}".format(scnode1balance))
         print("-->SC Node 2 balance: {0}".format(scnode2balance))
-        sc_amount = random.randint(1, scnode0balance - 100)
+        sc_amount = random.randint(scnode0balance - 1000, scnode0balance - 100)
         sc_fee = 0
         print("OK\n")
         
         #Node0 do a tx to Node1
         print("Sending transactions...")
         print("-->SC Node 0 sends to SC Node 1 address {0}, {1} coins with fee {2} coins...".format(str(scnode1address), sc_amount, sc_fee))
-        sctxid = self.create_tx(self.sc_nodes[0], scnode1address, sc_amount, sc_fee)
+        sctxid = self.send_coins(self.sc_nodes[0], scnode1address, sc_amount, sc_fee)
         print("OK\n")
         
         #Check tx appears in all nodes' mempools
@@ -126,18 +127,17 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         
         #Check that tx isn't in nodes' mempools anymore
         print("Checking mempools empty...")
-        mempool1 = self.sc_nodes[0].transaction_getMemoryPool()["result"]
-        assert_equal(0, len(self.sc_nodes[0].transaction_getMemoryPool()["result"]["transactions"]))
-        assert_equal(0, len(self.sc_nodes[1].transaction_getMemoryPool()["result"]["transactions"]))
-        assert_equal(0, len(self.sc_nodes[2].transaction_getMemoryPool()["result"]["transactions"]))
+        assert_equal(0, len(self.sc_nodes[0].transaction_allTransactions()["result"]["transactions"]))
+        assert_equal(0, len(self.sc_nodes[1].transaction_allTransactions()["result"]["transactions"]))
+        assert_equal(0, len(self.sc_nodes[2].transaction_allTransactions()["result"]["transactions"]))
         print("OK\n")
         
         #Checking that node0 balance has decreased by amount-fee, node1 balance has increased by amount and node2 balance has increased of blockreward+txfee
         print("Checking balance changed...")
         scblockreward = 1
-        node0newbalance = int(self.sc_nodes[0].wallet_getBalance()["result"]["globalBalance"])
-        node1newbalance = int(self.sc_nodes[1].wallet_getBalance()["result"]["globalBalance"])
-        node2newbalance = int(self.sc_nodes[2].wallet_getBalance()["result"]["globalBalance"])
+        node0newbalance = int(self.sc_nodes[0].wallet_balance()["result"]["balance"])
+        node1newbalance = int(self.sc_nodes[1].wallet_balance()["result"]["balance"])
+        node2newbalance = int(self.sc_nodes[2].wallet_balance()["result"]["balance"])
         assert_equal(scnode0balance - (sc_amount+sc_fee), node0newbalance, "Coins sent/total sc_amount mismatch for Node0")
         assert_equal(scnode1balance + sc_amount, node1newbalance, "Coins received/total sc_amount mismatch for Node1")
         assert_equal(scnode2balance, node2newbalance, "Coins received/total sc_amount mismatch for Node2")

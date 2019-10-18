@@ -48,8 +48,9 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
 
   def genesisBlockReferenceInfo: Route = (post & path("genesisBlockReferenceInfo")) {
     withNodeView { sidechainNodeView =>
+      val mainchainCreationBlockHeight = sidechainNodeView.getNodeHistory.getMainchainCreationBlockHeight
       sidechainNodeView.getNodeHistory
-        .getMainchainBlockReferenceInfoByMainchainBlockHeight(1).asScala match {
+        .getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainCreationBlockHeight).asScala match {
         case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
         case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", None))
       }

@@ -7,16 +7,11 @@ import com.google.inject.Injector;
 
 
 public class SimpleApp {
-
-
-
     public static void main(String[] args) {
-
         if (args.length == 0) {
             System.out.println("Please provide settings file name as first parameter!");
             return;
         }
-
 
         String settingsFileName = args[0];
 
@@ -25,7 +20,5 @@ public class SimpleApp {
 
         sidechainApp.run();
         System.out.println("Simple Sidechain application successfully started...");
-
     }
-
 }

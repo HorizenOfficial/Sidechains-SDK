@@ -52,6 +52,7 @@ public class CommandProcessor {
         }
     }
 
+    // Command structure is: command_name [json_argument]
     private Command parseCommand(String input) throws IOException {
         String inputData[] = input.trim().split(" ", 2);
         if(inputData.length == 0)
@@ -192,7 +193,7 @@ public class CommandProcessor {
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
             String sidechainBlockHex = BytesUtils.toHexString(SidechainBlock.create(
-                    SidechainSettingsReader.genesisParentBlockId(),
+                    params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),

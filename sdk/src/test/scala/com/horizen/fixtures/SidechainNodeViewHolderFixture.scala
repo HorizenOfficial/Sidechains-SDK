@@ -7,11 +7,12 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
-import com.horizen.secret.SecretSerializer
+import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -29,7 +30,9 @@ trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
 {
 
-  val sidechainSettings = SidechainSettingsReader.read("src/test/resources/sc_node_holder_fixter_settings.conf", None)
+  val classLoader: ClassLoader = getClass.getClassLoader
+
+  val sidechainSettings: SidechainSettings = SidechainSettingsReader.read(classLoader.getResource("sc_node_holder_fixter_settings.conf").getFile, None)
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
@@ -47,19 +50,24 @@ trait SidechainNodeViewHolderFixture
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
 
+  val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
+    BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
+  )
+  val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      sidechainSettings.genesisBlock.get.id,
-      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case "mainnet" | "testnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      sidechainSettings.genesisBlock.get.id,
-      sidechainSettings.genesisBlock.get.mainchainBlocks.head.hash,
-      sidechainSettings.genesisPowData,
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
@@ -81,14 +89,16 @@ trait SidechainNodeViewHolderFixture
     getStorage(),
     sidechainTransactionsCompanion)
 
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey1)
-  sidechainSecretStorage.add(sidechainSettings.targetSecretKey2)
+  // Append genesis secrets if we start the node first time
+  if(sidechainSecretStorage.isEmpty) {
+    for(secretHex <- sidechainSettings.wallet.genesisSecrets)
+      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+  }
 
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
-    "test seed %s".format(sidechainSettings.scorexSettings.network.nodeName).getBytes(), // To Do: add Wallet group to config file => wallet.seed
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, sidechainSettings.genesisBlock.get,
+    defaultApplicationWallet, defaultApplicationState, genesisBlock,
     Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params)))
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)

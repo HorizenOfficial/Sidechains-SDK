@@ -46,10 +46,10 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     params = MainNetParams(new Array[Byte](32), genesisBlock.id)
 
     // TO DO: remove this after refactoring of Node objects restore/genesis creation methods. NO MOCKS!
-    Mockito.when(sidechainSettings.genesisBlock)
+    /*Mockito.when(sidechainSettings.genesisBlock)
       .thenAnswer(answer => {
         Some(genesisBlock)
-      })
+      })*/
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
         scorexSettings
