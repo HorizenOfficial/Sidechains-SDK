@@ -1,0 +1,254 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.horizen</groupId>
+	<artifactId>Sidechains-SDK</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<inceptionYear>2018</inceptionYear>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<scala.version>2.12.8</scala.version>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>scala-tools.org</id>
+			<name>Scala-Tools Maven2 Repository</name>
+			<url>http://scala-tools.org/repo-releases</url>
+		</repository>
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>scala-tools.org</id>
+			<name>Scala-Tools Maven2 Repository</name>
+			<url>http://scala-tools.org/repo-releases</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>${scala.version}</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scorex-core_2.12</artifactId>
+			<version>2.0.0-RC4</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>iodb_2.12</artifactId>
+			<version>0.3.2</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.25</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>21.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.google.inject/guice -->
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>4.2.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.scalatest/scalatest -->
+		<dependency>
+			<groupId>org.scalatest</groupId>
+			<artifactId>scalatest_2.12</artifactId>
+			<version>3.0.5</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-testkit -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-testkit_2.12</artifactId>
+			<version>2.5.23</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-testkit -->
+		<dependency>
+			<groupId>com.typesafe.akka</groupId>
+			<artifactId>akka-http-testkit_2.12</artifactId>
+			<version>10.1.8</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>2.27.0</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-scala_2.12</artifactId>
+			<version>2.9.9</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus.bundles/tyrus-standalone-client -->
+		<dependency>
+			<groupId>org.glassfish.tyrus.bundles</groupId>
+			<artifactId>tyrus-standalone-client</artifactId>
+			<version>1.15</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-container-grizzly-server -->
+		<dependency>
+			<groupId>org.glassfish.tyrus</groupId>
+			<artifactId>tyrus-container-grizzly-server</artifactId>
+			<version>1.15</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
+		<dependency>
+			<groupId>org.glassfish.tyrus</groupId>
+			<artifactId>tyrus-server</artifactId>
+			<version>1.15</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!--
+        <sourceDirectory>src/main/scala</sourceDirectory>
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
+        -->
+		<plugins>
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>compile-scala-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>compile-scala-tests</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<scalaVersion>${scala.version}</scalaVersion>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.0</version>
+				<configuration>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.12.4</version>
+				<configuration>
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>2.5.2</version>
+				<configuration>
+					<file>target/${project.build.finalName}.${project.packaging}</file>			
+					<pomFile>pom.xml</pomFile>
+				</configuration>
+				<executions>
+					<execution>
+						<id>install-jar-lib</id>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+			</plugin>			
+		</plugins>
+		<testResources>
+			<testResource>
+				<directory>${basedir}/src/test/resources</directory>
+				<includes>
+					<include>publickey25519proposition_bytes</include>
+					<include>privatekey25519_bytes</include>
+					<include>regulartransaction_bytes</include>
+					<include>regularbox_bytes</include>
+					<include>certifierrightbox_bytes</include>
+					<include>sidechainblockinfo_bytes</include>
+					<include>sidechainsyncinfo_bytes</include>
+					<include>mcblock473173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
+					<include>mcblock501173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
+					<include>mcblock273173</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07 -->
+					<include>mcheader300001</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000058f40e90e203ceae655ae4d8a5c27d72732698e0c7959700c2787a01 -->
+					<include>mcheader503014</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawblock/000000001918f6d26d0b128dd4a6e6fce71f3cd96694470d4e24ddaf0dc0404f -->
+					<include>mctx_v1</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/6054f092033e5bb352d46ddb837b10da91eb43b40da46656e46140e3ce938db9 -->
+					<include>mctx_v1_coinbase</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/e2f681e0431bc5f77299373632350ac493211fa8f3d0491a2d6c5e0284f5d377 -->
+					<include>mctx_v2</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/3c1bd6d388a731016fbc809ab032b35356e64b2e7601ede00fd430fb612937ac -->
+					<include>mctx_v-3</include>
+					<!-- from https://explorer.zen-solutions.io/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
+					<include>mctx_v-4_single_ft</include>								<!-- generated on regtest on 15.10.2019 -->
+					<include>mctx_v-4_multiple_ft</include>								<!-- generated on regtest on 15.10.2019 -->
+					<include>mctx_v-4_sc_creation</include> 							<!-- generated on regtest on 15.10.2019 -->
+					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
+					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
+					<include>sc_node_holder_fixter_settings.conf</include>
+				</includes>
+			</testResource>
+		</testResources>
+	</build>
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<configuration>
+					<scalaVersion>${scala.version}</scalaVersion>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
+</project>

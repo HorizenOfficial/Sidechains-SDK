@@ -3,4 +3,3 @@ out/
 target/
 scorex.log
 scorex-errors.log
-*.iml
