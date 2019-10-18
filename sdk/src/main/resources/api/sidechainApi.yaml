@@ -1,0 +1,1263 @@
+openapi: "3.0.0"
+
+info:
+  version: "1.0"
+  title: Sidechain Node API spec
+  description: API docs for Sidechain node.
+
+tags:
+  - name: block
+    description: Sidechain block operations
+  - name: transaction
+    description: Sidechain transaction operations
+  - name: wallet
+    description: Sidechain wallet operations
+  - name: node
+    description: Sidechain node operations
+  - name: mainchain
+    description: Sidechain mainchain operations
+
+paths:
+
+  # Sidechain block operations
+  /block/findById:
+    post:
+      tags:
+        - block
+      summary: find block by id
+      description: return a single block
+      operationId: getBlock
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: ID of block to return
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockHex:
+                        type: string
+                      block:
+                        $ref: '#/components/schemas/SidechainBlock'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/findLastIds:
+    post:
+      tags:
+        - block
+      summary: find last block ids
+      description: Returns an array of number last sidechain block ids
+      operationId: getLastBlockIds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - number
+              properties:
+                number:
+                  description: The number of block ids to return
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      lastBlockIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/findIdByHeight:
+    post:
+      tags:
+        - block
+      summary: find a block id by height
+      description: Return a sidechain block Id by its height in a blockchain
+      operationId: getBlockIdByHeight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - height
+              properties:
+                height:
+                  description: The height, in a blockchain, of the block to return
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/best:
+    post:
+      tags:
+        - block
+      summary: find the best block
+      description: Return here best sidechain block id and height in active chain
+      operationId: getBestBlockInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      block:
+                        $ref: '#/components/schemas/SidechainBlock'
+                      height:
+                        type: integer
+                        format: int64
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/template:
+    post:
+      tags:
+        - block
+      summary: find block candidate for being next tip
+      description: Return Sidechain block candidate for being next tip, already signed by Forger
+      operationId: getBlockTemplate
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      block:
+                        type: string
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlock'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/submit:
+    post:
+      tags:
+        - block
+      summary: submitBlock
+      description: submitBlock
+      operationId: submitBlock
+      requestBody:
+        description: The sidechain block as array of bytes
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockHex
+              properties:
+                blockHex:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/generate:
+    post:
+      tags:
+        - block
+      summary: generate new blocks
+      description: Returns ids of generated sidechain blocks
+      operationId: generateBlocks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - number
+              properties:
+                number:
+                  description: The number of blocks to generate
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  # Sidechain transaction operations
+  /transaction/allTransactions:
+    post:
+      tags:
+        - transaction
+      summary: find all transactions in memory pool
+      description: Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction
+      operationId: getMemoryPool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transaction'
+                      transactionIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/findById:
+    post:
+      tags:
+        - transaction
+      summary: find transaction in memory pool, or in a block or in full blockchain
+      description:  "All the possible behaviours are:\n
+      1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
+      2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
+      3) blockHash not set, txIndex = false -> Search in memory pool"
+      operationId: getRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionId
+              properties:
+                transactionId:
+                  type: string
+                blockHash:
+                  type: string
+                  default: ""
+                transactionIndex:
+                  type: boolean
+                  default: false
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/decodeTransactionBytes:
+    post:
+      tags:
+        - transaction
+      summary: a human readable representation of the trasanction
+      description: Return a JSON representation of a transaction given its byte serialization
+      operationId: decodeRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionBytes
+              properties:
+                transactionBytes:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/createRegularTransaction:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a regular transaction
+      description: Create and sign a regular transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createRegularTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionInputs
+                - transactionOutputs
+              properties:
+                transactionInputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - boxId
+                    properties:
+                      boxId:
+                        type: string
+                transactionOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/createRegularTransactionSimplified:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a regular transaction
+      description: Create and sign a regular transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createRegularTransactionSimplified
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionOutputs
+              properties:
+                transactionOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                fee:
+                  type: integer
+                  format: int64
+                format:
+                  type: boolean
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/sendCoinsToAddress:
+    post:
+      tags:
+        - transaction
+      summary: send a transaction
+      description: Create and sign a regular transaction, specifying outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      operationId: sendCoinsToAddress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionOutputs
+              properties:
+                outputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                fee:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/sendTransaction:
+    post:
+      tags:
+        - transaction
+      summary: send a transaction
+      description: Validate and send a transaction, given its serialization as input. Then return the id of the transaction
+      operationId: sendRawTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionBytes
+              properties:
+                transactionBytes:
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  # Sidechain wallet operations
+  /wallet/allBoxes:
+    post:
+      tags:
+        - wallet
+      summary: find all boxes
+      description: Return all boxes, excluding those which ids are included in excludeBoxIds list
+      operationId: getAllBoxes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boxTypeClass:
+                  description: Filter boxes of a given type
+                  type: string
+                excludeBoxIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      boxes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Box'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/balance:
+    post:
+      tags:
+        - wallet
+      summary: the global balance
+      description: Return the global balance for all types of boxes
+      operationId: getBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boxType:
+                  description: Filter balance for given box type
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      balance:
+                        type: integer
+                        format: int64
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/createSecret:
+    post:
+      tags:
+        - wallet
+      summary: new secret
+      description: Create new secret and return corresponding address (public key)
+      operationId: createSecret
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/allPublicKeys:
+    post:
+      tags:
+        - wallet
+      summary: find all public keys
+      description: Returns the list of all wallet’s propositions (public keys)
+      operationId: getPropositions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                proptype:
+                  description: Filter propositions of the given type
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      propositions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  # Sidechain node operations
+  /node/allPeers:
+    post:
+      tags:
+        - node
+      summary: find all peers node
+      description: Returns the list of all sidechain node peers
+      operationId: allPeers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      peers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/connect:
+    post:
+      tags:
+        - node
+      summary: connect to a node
+      description: Send the request to connect to a sidechain node
+      operationId: connect
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - host
+                - port
+              properties:
+                host:
+                  type: string
+                port:
+                  type: integer
+                  format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      connectedTo:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/connectedPeers:
+    post:
+      tags:
+        - node
+      summary: find all connected peers node
+      description: Returns the list of all connected sidechain node peers
+      operationId: connectedPeers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      peers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/blacklistedPeers:
+    post:
+      tags:
+        - node
+      summary: find all blacklisted peers node
+      description: Returns the list of all blacklisted sidechain node peers
+      operationId: blacklistedPeers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/BlacklistedPeersNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/bestBlockReferenceInfo:
+    post:
+      tags:
+        - mainchain
+      summary: find the best MC block header which has already been included in a SC block
+      description: "Returns the best MC block header which has already been included in a SC block. Returns:\n
+        1) Mainchain block reference hash with the most height; \n
+        2) Its height in mainchain; \n
+        3) Sidechain block ID which contains this MC block reference."
+      operationId: bestBlockReferenceInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockReferenceInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/genesisBlockReferenceInfo:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: genesisBlockReferenceInfo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockReferenceInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/blockReferenceInfoBy:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: blockReferenceInfoBy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hash:
+                  type: string
+                height:
+                  type: integer
+                  format: int32
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blocReferencekInfo:
+                        $ref: '#/components/schemas/MainchainBlockInfo'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /mainchain/blockReferenceByHash:
+    post:
+      tags:
+        - mainchain
+      summary: ""
+      description: ""
+      operationId: blockReferenceByHash
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hash
+              properties:
+                hash:
+                  type: string
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockReference:
+                        $ref: '#/components/schemas/MainchainBlock'
+                      blockHex:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+components:
+  schemas:
+    # Objects
+    SidechainApiError:
+      description: A SidechainApiError represents an HTTP error.
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        reason:
+          type: string
+        detail:
+          type: string
+
+    SidechainApiErrorResponse:
+      description: A SidechainApiErrorResponse represents a business logic error, not HTTP error.
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        detail:
+          type: string
+
+    BlacklistedPeersNode:
+      type: object
+      properties:
+        addresses:
+          type: array
+          items:
+            type: string
+
+    SidechainPeerNode:
+      type: object
+      properties:
+        address:
+          type: string
+        lastSeen:
+          type: integer
+          format: int64
+        name:
+          type: string
+        connectionType:
+          type: string
+
+    Proposition:
+      type: object
+      properties:
+        publicKey:
+          type: string
+
+    Signature25519:
+      type: object
+      properties:
+        signature:
+          type: string
+
+    MainchainHeader:
+      type: object
+      properties:
+        mainchainHeaderBytes:
+          type: string
+        version:
+          type: integer
+          format: int32
+        hashPrevBlock:
+          type: string
+        hashMerkleRoot:
+          type: string
+        hashReserved:
+          type: string
+        hashSCMerkleRootsMap:
+          type: string
+        time:
+          type: integer
+          format: int64
+        bits:
+          type: integer
+          format: int64
+        nonce:
+          type: string
+        solution:
+          type: string
+
+    MC2SCAggregatedTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        fee:
+          type: integer
+          format: int64
+        timestamp:
+          type: integer
+          format: int64
+        mc2scTransactionsMerkleRootHash:
+          type: string
+        newBoxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Box'
+
+    Box:
+      type: object
+      properties:
+        id:
+          type: string
+        proposition:
+          $ref: '#/components/schemas/Proposition'
+        value:
+          type: integer
+          format: int64
+        nonce:
+          type: integer
+          format: int64
+        activeFromWithdrawalEpoch:
+          type: integer
+          format: int64
+        typeId:
+          type: integer
+          format: int64
+
+    MainchainBlock:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/MainchainHeader'
+        sidechainRelatedAggregatedTransaction:
+          $ref: '#/components/schemas/MC2SCAggregatedTransaction'
+        merkleRoots:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+
+    Transaction:
+      type: object
+
+    MainchainBlockInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+        parentHash:
+          type: string
+        height:
+          type: integer
+          format: int64
+        sidechainBlockId:
+          type: string
+
+    SidechainBlock:
+      type: object
+      properties:
+        id:
+          type: string
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        mainchainBlocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainBlock'
+        sidechainTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        forgerPublicKey:
+          $ref: '#/components/schemas/Proposition'
+        signature:
+          $ref: '#/components/schemas/Signature25519'
