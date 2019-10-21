@@ -210,11 +210,32 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
     memoryPool
   }
 
+  def getExtendedNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
+    val wallet: ExtendedNodeWallet = mock[ExtendedNodeWallet]
+
+    Mockito.when(wallet.allPublicKeys()).thenAnswer(_ => {
+      val pbks = new util.ArrayList[ExtendedProposition]()
+      pbks.add(new ExtendedProposition("publicKey_1"))
+      pbks.add(new ExtendedProposition("publicKey_2"))
+      pbks.add(new ExtendedProposition("publicKey_3"))
+      pbks
+    })
+
+    wallet
+  }
+
   def getSidechainNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainNodeView =
-    new SidechainNodeView(
-      getNodeHistoryMock(sidechainApiMockConfiguration),
-      getNodeStateMock(sidechainApiMockConfiguration),
-      getNodeWalletMock(sidechainApiMockConfiguration),
-      getNodeMemoryPoolMock(sidechainApiMockConfiguration))
+    if (sidechainApiMockConfiguration.getUseExtendedNodeView())
+      new SidechainNodeView(
+        getNodeHistoryMock(sidechainApiMockConfiguration),
+        getNodeStateMock(sidechainApiMockConfiguration),
+        getExtendedNodeWalletMock(sidechainApiMockConfiguration),
+        getNodeMemoryPoolMock(sidechainApiMockConfiguration))
+    else
+      new SidechainNodeView(
+        getNodeHistoryMock(sidechainApiMockConfiguration),
+        getNodeStateMock(sidechainApiMockConfiguration),
+        getNodeWalletMock(sidechainApiMockConfiguration),
+        getNodeMemoryPoolMock(sidechainApiMockConfiguration))
 
 }

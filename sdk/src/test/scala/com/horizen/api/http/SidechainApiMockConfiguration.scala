@@ -21,6 +21,7 @@ class SidechainApiMockConfiguration {
   private var should_memPool_searchTransactionInMemoryPool_return_value = true
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
+  private var useExtendedNodeView = false
 
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
@@ -97,4 +98,8 @@ class SidechainApiMockConfiguration {
   def getShould_history_searchTransactionInBlock_return_value(): Boolean = should_history_searchTransactionInBlock_return_value
 
   def setShould_history_searchTransactionInBlock_return_value(value: Boolean): Unit = should_history_searchTransactionInBlock_return_value = value
+
+  def getUseExtendedNodeView(): Boolean = useExtendedNodeView
+
+  def setUseExtendedNodeView(value: Boolean): Unit = useExtendedNodeView = value
 }
