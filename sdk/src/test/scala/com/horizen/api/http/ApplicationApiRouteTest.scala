@@ -17,32 +17,31 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.NotFound.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
+    }
 
-      Post(basePath + "allPublicKeys") ~> Route.seal(applicationApiRoute) ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], new ErrorAllPublickeys("", None).code())
-      }
+    "reply at /allSecrets" in {
 
-      sidechainApiMockConfiguration.setUseExtendedNodeView(true)
-      Post(basePath + "allPublicKeys") ~> applicationApiRoute ~> check {
+      Post(basePath + "allSecrets") ~> applicationApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
           case result =>
             assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("propositions").isArray)
-            assertEquals(3, result.get("propositions").elements().asScala.length)
-            val elems: Array[String] = result.get("propositions").elements().asScala.map(node => {
+            assertTrue(result.get("secrets").isArray)
+            assertEquals(2, result.get("secrets").elements().asScala.length)
+            result.get("secrets").elements().asScala.toList.foreach(node => {
               assertTrue(node.isObject)
-              val pbk = node.get("publicKey")
-              assertTrue(pbk.isTextual)
-              pbk.asText()
-            }).toArray
-            val expected: Array[String] = Array("publicKey_1", "publicKey_2", "publicKey_3")
-            elems shouldEqual expected
+              assertEquals(0, node.elements().asScala.length)
+            })
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
+      }
+
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
+      Post(basePath + "allSecrets") ~> applicationApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], new ErrorAllSecrets("", None).code())
       }
     }
   }

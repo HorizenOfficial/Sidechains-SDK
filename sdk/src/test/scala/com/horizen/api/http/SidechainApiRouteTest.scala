@@ -95,7 +95,9 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case GetDataFromCurrentSidechainNodeView(f) => sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case GetDataFromCurrentSidechainNodeView(f) =>
+          if(sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
+            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success()

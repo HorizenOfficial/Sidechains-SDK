@@ -7,6 +7,7 @@ import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.Route;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.node.SidechainNodeView;
+import com.horizen.secret.Secret;
 import com.horizen.serialization.Views;
 import scala.Some;
 
@@ -23,23 +24,21 @@ public class SimpleCustomApi extends ApplicationApiGroup {
     @Override
     public List<Route> getRoutes() {
         List<Route> routes = new ArrayList<>();
-        routes.add(allPublicKeys());
+        routes.add(allSecrets());
         return routes;
     }
 
-    private Route allPublicKeys() {
-        return Directives.path("allPublicKeys", () ->
+    private Route allSecrets() {
+        return Directives.path("allSecrets", () ->
                 Directives.post((() ->
                         Directives.extractRequestEntity(entity -> {
                             try {
                                 SidechainNodeView view = getSidechaiNodeView();
-                                ExtendedNodeWallet wallet = (ExtendedNodeWallet) view.getNodeWallet();
-                                RespNewSecret resp = new RespNewSecret();
-                                List<ExtendedProposition> props = wallet.allPublicKeys();
-                                resp.setPropositions(props);
+                                RespAllSecret resp = new RespAllSecret();
+                                resp.setSecrets(view.getNodeWallet().allSecrets());
                                 return ApiResponseUtil.toResponseAsJava(resp);
                             } catch (Exception e) {
-                                ErrorAllPublickeys error = new ErrorAllPublickeys("Error.", Some.apply(e));
+                                ErrorAllSecrets error = new ErrorAllSecrets("Error.", Some.apply(e));
                                 try {
                                     return ApiResponseUtil.toResponseAsJava(error);
                                 } catch (Exception ee) {
@@ -52,16 +51,16 @@ public class SimpleCustomApi extends ApplicationApiGroup {
     }
 
     @JsonView(Views.Default.class)
-    class RespNewSecret implements SuccessResponse {
+    class RespAllSecret implements SuccessResponse {
 
-        private List<ExtendedProposition> propositions;
+        private List<Secret> secrets;
 
-        public List<ExtendedProposition> getPropositions() {
-            return propositions;
+        public List<Secret> getSecrets() {
+            return secrets;
         }
 
-        public void setPropositions(List<ExtendedProposition> propositions) {
-            this.propositions = propositions;
+        public void setSecrets(List<Secret> secrets) {
+            this.secrets = secrets;
         }
     }
 }
