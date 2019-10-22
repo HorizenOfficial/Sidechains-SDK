@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import scorex.core.settings.RESTApiSettings
 
@@ -24,21 +25,13 @@ case class SidechainRejectionApiRoute(basePath: String, path: String,
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
-  override def route: Route = {
-    if (path.isEmpty) {
+  override def route: Route =
+    if (path.isEmpty)
       (pathPrefix(basePath)) {
-        {
-          reject
-        }
+        SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
       }
-    } else {
-      (pathPrefix(basePath) & path(path)) {
-        {
-          reject
-        }
-      }
+    else (pathPrefix(basePath) & path(path)) {
+      SidechainApiError(StatusCodes.NotFound, "NotFound").complete("The requested resource could not be found.")
     }
-
-  }
 
 }

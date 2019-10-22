@@ -5,6 +5,8 @@ import java.{lang, util}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import akka.http.scaladsl.server.RouteConcatenation._
+import akka.http.scaladsl.server.Directives.{path, post, _}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
@@ -96,7 +98,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case GetDataFromCurrentSidechainNodeView(f) =>
-          if(sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
@@ -200,6 +202,9 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, new SimpleCustomApi()).route
+  val walletBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "balance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+
 
   val basePath: String
 
