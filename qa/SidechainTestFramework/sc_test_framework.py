@@ -4,11 +4,12 @@ from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
     initialize_chain, initialize_chain_clean, \
-    start_nodes, stop_nodes, \
+    start_nodes, stop_nodes, get_genesis_info, \
     sync_blocks, sync_mempools, wait_bitcoinds
 from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
-    start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException
+    start_sc_nodes, stop_sc_nodes, sc_generate_genesis_data, \
+    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException, \
+    generate_secret, initialize_sc_datadir
 import tempfile
 import os
 import json
@@ -25,20 +26,20 @@ For MC&SC Tests: Don't override anything
 
 #Default config, for the moment, just setup 1 MC node and 1 SC node
 class SidechainTestFramework(BitcoinTestFramework):
-    
+
     def add_options(self, parser):
         pass
-    
+
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, 1)
-        
+
     def setup_network(self, split = False):
-        self.nodes = self.setup_nodes() 
+        self.nodes = self.setup_nodes()
         self.sync_all()
-    
+
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
-    
+
     def split_network(self):
         pass
 
@@ -48,25 +49,50 @@ class SidechainTestFramework(BitcoinTestFramework):
 
     def join_network(self):
         pass
-    
+
     def sc_add_options(self, parser):
         pass
-    
-    #For now it's not active. scutil.generateGenesisData will return None
+
     def sc_generate_genesis_data(self):
-        return generate_genesis_data(self.nodes[0]) #Maybe other parameters in future
-    
+        return None
+
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data() #Should interact with mainchain in order to generate Genesis Data for SC Nodes
-        initialize_sc_chain_clean(self.options.tmpdir, 1, genesisData)
+        initialize_sc_chain_clean(self.options.tmpdir, 1)
+
+    """
+    Bootstrap some sidechain nodes.
     
+    Parameters:
+     - number_of_sidechains_nodes: the number of sidechain nodes to be bootstrapped
+     - number_of_accounts_per_sidechain: an array containing the numbers of accounts to be created for each sidechain node.
+            For example [2, 4, 5] for add 2 accounts to the first node, 4 accounts to the second one and 5 accounts to the third one.
+     - mainchain_node: the mainchain node
+    
+    NB: for each account add an amount of 100
+    """
+    def bootstrap_sidechain(self, number_of_sidechains_nodes, number_of_accounts_per_sidechain, mainchain_node):
+        sc_nodes_bootstrap_info = {}
+        for i in range(number_of_sidechains_nodes):
+            n_keys = number_of_accounts_per_sidechain[i]
+            account_secrets = generate_secret(i, n_keys)
+            balances = []
+            total_balance = 100*n_keys
+            for j in range(n_keys):
+                balances.append(100)
+            sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(i)
+            genesis_info = get_genesis_info(sidechain_id, mainchain_node, account_secrets, balances)
+            print "Sidechain created with id: " + sidechain_id
+            initialize_sc_datadir(self.options.tmpdir, i, account_secrets, genesis_info[0])
+            sc_nodes_bootstrap_info[i] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
+        return sc_nodes_bootstrap_info
+
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
         self.sc_sync_all()
-    
-    def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
-        
+
+    def sc_setup_nodes(self, number_of_sidechains_nodes = 1):
+        return start_sc_nodes(number_of_sidechains_nodes, self.options.tmpdir)
+
     def sc_split_network(self):
         pass
 
@@ -76,10 +102,10 @@ class SidechainTestFramework(BitcoinTestFramework):
 
     def sc_join_network(self):
         pass
-        
+
     def run_test(self):
         pass
-        
+
     def main(self):
         import optparse
 
@@ -96,7 +122,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
-       
+
         self.add_options(parser)
         self.sc_add_options(parser)
         (self.options, self.args) = parser.parse_args()
@@ -106,22 +132,22 @@ class SidechainTestFramework(BitcoinTestFramework):
             logging.basicConfig(level=logging.DEBUG)
 
         os.environ['PATH'] = self.options.zendir+":"+os.environ['PATH']
-        
+
         check_json_precision()
 
         success = False
         try:
             if not os.path.isdir(self.options.tmpdir):
                 os.makedirs(self.options.tmpdir)
-            
+
             print("Initializing test directory "+self.options.tmpdir)
-            
+
             self.setup_chain()
 
             self.setup_network()
-            
+
             self.sc_setup_chain()
-            
+
             self.sc_setup_network()
 
             self.run_test()
@@ -143,7 +169,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         except Exception as e:
             print("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
-        
+
         if not self.options.noshutdown: #Support for tests with MC only, SC only, MC/SC
             if hasattr(self, "nodes"):
                 print("Stopping MC nodes")
@@ -169,7 +195,7 @@ class SidechainTestFramework(BitcoinTestFramework):
 '''Support for running MC & SC Nodes with different binaries. 
 For MC the implementation follows the one of BTF, for SC it is possible to specify multiple jars'''
 class SidechainComparisonTestFramework(SidechainTestFramework):
-    
+
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
                           default=os.getenv("BITCOIND", "zend"),
@@ -187,20 +213,20 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
                                     extra_args=[['-debug', '-whitelist=127.0.0.1']] * self.num_nodes,
                                     binary=[self.options.testbinary] +
                                            [self.options.refbinary]*(self.num_nodes-1))
-    
+
     def sc_add_options(self, parser):
         parser.add_option("--jarspathlist", dest="jarspathlist", type = "string",
                           action = "callback", callback = self._get_args,
                           default=["resources/twinsChain.jar examples.hybrid.HybridApp", "resources/twinsChainOld.jar examples.hybrid.HybridApp"],
                           help="node jars to test in the format: \"<jar1>,<jar2>,...\"")
-    
+
     def _get_args(self, option, opt, value, parser):
         setattr(parser.values, option.dest, str.split(','))
-        
+
     def sc_setup_chain(self):
         genesisData = self.sc_generate_genesis_data()
         self.num_sc_nodes = len(self.options.jarspathlist)
         initialize_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes, genesisData)
-        
+
     def sc_setup_network(self):
-        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)    
+        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)

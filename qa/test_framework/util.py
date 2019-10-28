@@ -75,13 +75,14 @@ def initialize_datadir(dirname, n):
     datadir = os.path.join(dirname, "node"+str(n))
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
-    with open(os.path.join(datadir, "zcash.conf"), 'w') as f:
+    with open(os.path.join(datadir, "zen.conf"), 'w') as f:
         f.write("regtest=1\n")
         f.write("showmetrics=0\n")
         f.write("rpcuser=rt\n")
         f.write("rpcpassword=rt\n")
         f.write("port="+str(p2p_port(n))+"\n")
         f.write("rpcport="+str(rpc_port(n))+"\n")
+        f.write("websocket=1\n")
         f.write("listenonion=0\n")
     return datadir
 
@@ -188,7 +189,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     devnull = open("/dev/null", "w+")
     if os.getenv("PYTHON_DEBUG", ""):
         print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
-    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
+    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir, "-regtest"] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
@@ -439,3 +440,32 @@ def get_coinbase_address(node, expected_utxos=None):
     addrs = [a for a in set(addrs) if addrs.count(a) == expected_utxos]
     assert(len(addrs) > 0)
     return addrs[0]
+
+"""
+Perform SC creation, mine mainchain blocks, create genesis info.
+Parameters:
+ - sidechain_id: id of the sidechain to be created
+ - mainchain_node: the mainchain node
+ - secrets: a JSON array of genesis secrets in the following form: [{"secret":"a string", "publicKey":"a string"}...]
+ - amounts: an array of amounts for each secret.
+ 
+Output: an array of two information:
+ - the genesis info used for start the sidechain node
+ - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
+
+"""
+def get_genesis_info(sidechain_id, mainchain_node, secrets, amounts):
+    number_of_blocks_to_enable_sc_logic = 219
+    number_of_blocks = mainchain_node.getblockcount()
+    diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
+    if diff > 1:
+        mainchain_node.generate(diff)
+
+    withdrawal_epoch_length = 1000
+    addresses = []
+    for i in range(len(secrets)):
+        addresses.append({"address": secrets[i]["secret"], "amount": amounts[i]})
+    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, addresses)
+    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
+    mainchain_node.generate(1)
+    return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount()]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
+from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
 from SidechainTestFramework.scutil import initialize_sc_chain_clean, start_sc_nodes, connect_sc_nodes, sync_sc_mempools, sync_sc_blocks, \
                                           wait_for_next_sc_blocks
 import json
