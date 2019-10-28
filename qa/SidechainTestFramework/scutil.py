@@ -42,7 +42,7 @@ def wait_for_next_sc_blocks(node, expected_height, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise TimeoutException("Waiting blocks")
-        height = int(node.block_getBestBlockInfo()["result"]["height"])
+        height = int(node.block_best()["result"]["height"])
         if height >= expected_height:
             break
         time.sleep(WAIT_CONST)

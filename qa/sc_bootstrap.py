@@ -50,12 +50,11 @@ class SCBootstrap(SidechainTestFramework):
         assert_equal(expected_wallet_balance, int(balance["balance"]), "Unexpected balance")
         print("Total balance: {0}".format(json.dumps(balance["balance"])))
 
-    def check_genesis_block(self, sc_node, sidechain_id, mc_block, keys):
+    def check_mainchan_block_inclusion(self, sc_node, sidechain_id, expected_sc_block_height, mc_block, keys):
         print("Check genesis block for sidechain id {0}.".format(sidechain_id))
         response = sc_node.block_best()
-        genesis_block = response["result"]["block"]
         height = response["result"]["height"]
-        assert_equal(1, height, "The best block is not the genesis block.")
+        assert_equal(expected_sc_block_height, height, "The best block is not the genesis block.")
         mc_block_json = response["result"]["block"]["mainchainBlocks"][0]
         new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
         print("Checking that each public key has a box assigned with a non-zero value.")
@@ -77,15 +76,12 @@ class SCBootstrap(SidechainTestFramework):
         mc_block_bits = mc_block["bits"]
         mc_block_nonce = mc_block["nonce"]
         mc_block_previousblockhash = mc_block["previousblockhash"]
-
-
         sc_mc_block_version = mc_block_json["header"]["version"]
         sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
         sc_mc_block_time = mc_block_json["header"]["time"]
         sc_mc_block_bits = mc_block_json["header"]["bits"]
         sc_mc_block_nonce = mc_block_json["header"]["nonce"]
         sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
-
         assert_equal(mc_block_version, sc_mc_block_version)
         assert_equal(mc_block_merkleroot, sc_mc_block_merkleroot)
         assert_equal(mc_block_time, sc_mc_block_time)
@@ -119,7 +115,7 @@ class SCBootstrap(SidechainTestFramework):
             # check all keys/boxes/balances are coherent with the default initialization
             self.check_genesis_balances(node, node_info[0], len(node_info[1]), len(node_info[1]), node_info[2]*100000000)
             # verify MC block reference's inclusion
-            self.check_genesis_block(node, node_info[0], mc_block, node_info[1])
+            self.check_mainchan_block_inclusion(node, node_info[0], 1, mc_block, node_info[1])
 
 if __name__ == "__main__":
     SCBootstrap().main()
