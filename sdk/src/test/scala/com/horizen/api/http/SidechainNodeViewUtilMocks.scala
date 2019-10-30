@@ -2,6 +2,7 @@ package com.horizen.api.http
 
 import java.time.Instant
 import java.util.Optional
+import java.util.function.Consumer
 import java.{lang, util}
 
 import com.horizen.SidechainTypes
@@ -12,21 +13,25 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import javafx.util.Pair
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
+import scorex.crypto.hash.Blake2b256
 import scorex.util.bytesToId
 import scorex.util.idToBytes
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewUtilMocks extends MockitoSugar {
 
+  private val walletBoxesByType = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], mutable.Map[ByteArrayWrapper, Box[Proposition]]]()
+  private val walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
   val mainchainBlockReferenceInfoRef = new MainchainBlockReferenceInfo(
     BytesUtils.fromHexString("0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0"),
     BytesUtils.fromHexString("00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582"),
@@ -45,6 +50,33 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList()
+
+  private def updateBoxesBalance (boxToAdd : Box[Proposition], boxToRemove : Box[Proposition]) : Unit = {
+    if (boxToAdd != null) {
+      val bca = boxToAdd.getClass
+      walletBoxesBalances.put(bca, walletBoxesBalances.getOrElse(bca, 0L) + boxToAdd.value())
+    }
+    if (boxToRemove != null) {
+      val bcr = boxToRemove.getClass
+      walletBoxesBalances.put(bcr, walletBoxesBalances.getOrElse(bcr, 0L) - boxToRemove.value())
+    }
+  }
+
+  private def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
+    new ByteArrayWrapper(Blake2b256.hash(boxId))
+  }
+
+  private def addWalletBoxByType(walletBox : Box[Proposition]) : Unit = {
+    val bc = walletBox.getClass
+    val key = calculateKey(walletBox.id())
+    val t = walletBoxesByType.get(bc)
+    if (t.isEmpty) {
+      val m = new mutable.LinkedHashMap[ByteArrayWrapper, Box[Proposition]]()
+      m.put(key, walletBox)
+      walletBoxesByType.put(bc, m)
+    } else
+      t.get.put(key, walletBox)
+  }
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
     val history: NodeHistory = mock[NodeHistory]
@@ -125,30 +157,32 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
     list.add(box_1.asInstanceOf[Box[Proposition]])
     list.add(box_2.asInstanceOf[Box[Proposition]])
     list.add(box_3.asInstanceOf[Box[Proposition]])
+
+    addWalletBoxByType(box_1.asInstanceOf[Box[Proposition]])
+    addWalletBoxByType(box_2.asInstanceOf[Box[Proposition]])
+    addWalletBoxByType(box_3.asInstanceOf[Box[Proposition]])
+    updateBoxesBalance(box_1.asInstanceOf[Box[Proposition]], null)
+    updateBoxesBalance(box_2.asInstanceOf[Box[Proposition]], null)
+    updateBoxesBalance(box_3.asInstanceOf[Box[Proposition]], null)
     list
   }
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
-    Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
-    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => Long.box(5500))
+    Mockito.when(wallet.boxesBalance(ArgumentMatchers.any[Class[_ <: Box[_ <: Proposition]]])).thenAnswer(asw =>
+      walletBoxesBalances.getOrElse(asw.getArgument(0), 0L))
+    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => allBoxes.asScala.map(_.value()).sum)
 
     Mockito.when(wallet.allBoxes()).thenAnswer(_ => allBoxes)
     Mockito.when(wallet.allBoxes(ArgumentMatchers.any[util.List[Array[Byte]]])).thenAnswer(asw => {
-      val args = asw.getArguments
-      if (args != null && args.length > 0) {
-        val arg = asw.getArgument(0).asInstanceOf[util.List[Array[Byte]]]
-        if (arg.size() > 0)
-          allBoxes.asScala.toList.filter(box => !BytesUtils.contains(arg, box.id())).asJava
-        else allBoxes
-      }
-      else
-        allBoxes
+      val arg = asw.getArgument(0).asInstanceOf[util.List[Array[Byte]]].asScala.map(a=>new String(a)).asJava
+      allBoxes.asScala.filter(b => !arg.contains(BytesUtils.toHexString(b.id()))).asJava
     })
 
     val listOfSecrets = List(secret1, secret2)
 
-    Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
+    Mockito.when(wallet.secretsOfType(ArgumentMatchers.any[Class[_ <: Secret]])).thenAnswer(asw =>
+      listOfSecrets.filter(_.getClass.equals(asw.getArgument(0))).asJava)
 
     Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
 
@@ -162,8 +196,12 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
       else Optional.empty()
     })
 
-    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any(), ArgumentMatchers.any())).thenAnswer(asw => {
-      allBoxes
+    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any[Class[_ <: Box[_ <: Proposition]]], ArgumentMatchers.any[java.util.List[Array[Byte]]])).thenAnswer(asw => {
+      val idsToExclude = asw.getArgument(1).asInstanceOf[util.List[Array[Byte]]].asScala.map(a=>new String(a)).asJava
+      (walletBoxesByType.get(asw.getArgument(0)) match {
+        case Some(v) => v.values.toList
+        case None => List[Box[Proposition]]()
+      }).filter(b => !idsToExclude.contains(BytesUtils.toHexString(b.id()))).asJava
     })
 
     wallet

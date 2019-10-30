@@ -77,8 +77,27 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(None, Some(Seq(
-            BytesUtils.toHexString(allBoxes.get(0).id()), BytesUtils.toHexString(allBoxes.get(1).id())))))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.RegularBox"), None))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "allBoxes") ~> sidechainWalletApiRoute).response
+      }
+      Post(basePath + "allBoxes")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), None))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.findValues("boxes").size())
+            val jsonBoxes = result.get("boxes")
+            assertTrue(jsonBoxes.isArray)
+            assertEquals(0, jsonBoxes.elements().asScala.length)
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      val idsToExclude = Some(Seq(BytesUtils.toHexString(allBoxes.get(0).id()), BytesUtils.toHexString(allBoxes.get(1).id())))
+      Post(basePath + "allBoxes")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllBoxes(None, idsToExclude))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -87,11 +106,8 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
             result.get("boxes") match {
               case node =>
                 assertTrue(node.isArray)
-                //                java.lang.AssertionError:
-                //                  Expected :1
-                //                Actual   :3
-                assertEquals(3, node.elements().asScala.length)
-                //jsonChecker.assertsOnBoxJson(node.elements().asScala.next(), allBoxes.get(2))
+                assertEquals(1, node.elements().asScala.length)
+                jsonChecker.assertsOnBoxJson(node.elements().asScala.next(), allBoxes.get(2))
               case _ => fail("Result serialization failed")
             }
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
@@ -99,9 +115,19 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "allBoxes")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.RegularBox"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "allBoxes").withEntity(SerializationUtil.serialize(ReqAllBoxes(None, idsToExclude))) ~> sidechainWalletApiRoute).response
+      }
+      Post(basePath + "allBoxes")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "allBoxes").withEntity(SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), None))) ~> sidechainWalletApiRoute).response
       }
     }
 
@@ -113,7 +139,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           case result =>
             assertEquals(1, result.fieldNames().asScala.length)
             result.get("balance") match {
-              case node => node.asInt() shouldBe 5500
+              case node => node.asInt() shouldBe 60
               case _ => fail("Result serialization failed")
             }
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
@@ -124,6 +150,26 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           SerializationUtil.serialize(ReqBalance(Some("a_class")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "balance")
+        .withEntity(
+          SerializationUtil.serialize(ReqBalance(Some("com.horizen.box.RegularBox")))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "balance") ~> sidechainWalletApiRoute).response
+      }
+      Post(basePath + "balance")
+        .withEntity(
+          SerializationUtil.serialize(ReqBalance(Some("com.horizen.box.CoinsBox")))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.fieldNames().asScala.length)
+            result.get("balance") match {
+              case node => node.asInt() shouldBe 0
+              case _ => fail("Result serialization failed")
+            }
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
       }
     }
 
@@ -173,6 +219,25 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           SerializationUtil.serialize(ReqAllPropositions(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "allPublicKeys")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllPropositions(Some("com.horizen.secret.PrivateKey25519")))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute).response
+      }
+      Post(basePath + "allPublicKeys")
+        .withEntity(
+          SerializationUtil.serialize(ReqAllPropositions(Some("com.horizen.secret.Secret")))) ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.findValues("propositions").size())
+            val propositions = result.get("propositions")
+            assertTrue(propositions.isArray)
+            assertEquals(0, propositions.findValues("publicKey").size())
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
       }
     }
 
