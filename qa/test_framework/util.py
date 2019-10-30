@@ -189,7 +189,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     devnull = open("/dev/null", "w+")
     if os.getenv("PYTHON_DEBUG", ""):
         print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
-    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir, "-regtest"] +
+    subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
@@ -447,6 +447,7 @@ Parameters:
  - sidechain_id: id of the sidechain to be created
  - mainchain_node: the mainchain node
  - secrets: a JSON array of genesis secrets in the following form: [{"secret":"a string", "publicKey":"a string"}...]
+ - withdrawal_epoch_length
  - amounts: an array of amounts for each secret.
  
 Output: an array of two information:
@@ -454,14 +455,13 @@ Output: an array of two information:
  - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
 
 """
-def get_genesis_info(sidechain_id, mainchain_node, secrets, amounts):
+def get_genesis_info(sidechain_id, mainchain_node, withdrawal_epoch_length, secrets, amounts):
     number_of_blocks_to_enable_sc_logic = 219
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
         mainchain_node.generate(diff)
 
-    withdrawal_epoch_length = 1000
     addresses = []
     total_amount = 0
     for i in range(len(secrets)):

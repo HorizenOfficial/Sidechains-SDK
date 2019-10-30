@@ -9,7 +9,7 @@ from test_framework.util import check_json_precision, \
 from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, sc_generate_genesis_data, \
     sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException, \
-    generate_secret, initialize_sc_datadir
+    generate_secrets, initialize_sc_datadir
 import tempfile
 import os
 import json
@@ -66,6 +66,7 @@ class SidechainTestFramework(BitcoinTestFramework):
      - number_of_sidechains_nodes: the number of sidechain nodes to be bootstrapped
      - number_of_accounts_per_sidechain: an array containing the numbers of accounts to be created for each sidechain node.
             For example [2, 4, 5] for add 2 accounts to the first node, 4 accounts to the second one and 5 accounts to the third one.
+     - withdrawal_epochs_length:
      - mainchain_node: the mainchain node
     
     NB: for each account add an amount of 100
@@ -74,13 +75,13 @@ class SidechainTestFramework(BitcoinTestFramework):
         sc_nodes_bootstrap_info = {}
         for i in range(number_of_sidechains_nodes):
             n_keys = number_of_accounts_per_sidechain[i]
-            account_secrets = generate_secret(i, n_keys)
+            account_secrets = generate_secrets(i, n_keys)
             balances = []
             total_balance = 100*n_keys
             for j in range(n_keys):
                 balances.append(100)
             sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(i)
-            genesis_info = get_genesis_info(sidechain_id, mainchain_node, account_secrets, balances)
+            genesis_info = get_genesis_info(sidechain_id, mainchain_node, 1000, account_secrets, balances)
             print "Sidechain created with id: " + sidechain_id
             initialize_sc_datadir(self.options.tmpdir, i, account_secrets, genesis_info[0])
             sc_nodes_bootstrap_info[i] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
