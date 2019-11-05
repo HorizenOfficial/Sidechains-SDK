@@ -658,7 +658,7 @@ paths:
               type: object
               properties:
                 boxTypeId:
-                  description: Filter boxes for a given srialization code identifier
+                  description: Filter boxes for a given serialization code identifier
                   type: integer
                   format: int32
                 excludeBoxIds:
@@ -703,7 +703,7 @@ paths:
               type: object
               properties:
                 boxTypeId:
-                  description: Filter balance for a given srialization code identifier
+                  description: Filter balance for a given serialization code identifier
                   type: integer
                   format: int32
       responses:
