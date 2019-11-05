@@ -37,7 +37,7 @@ public class RegularTransactionCreator {
 
 
         List<RegularBox> boxes = new ArrayList<>();
-        for(Box box : wallet.boxesOfType(RegularBox.class, boxIdsToExclude)) {
+        for(Box box : wallet.boxesOfType(RegularBox.BOX_TYPE_ID, boxIdsToExclude)) {
             boxes.add((RegularBox) box);
         }
 

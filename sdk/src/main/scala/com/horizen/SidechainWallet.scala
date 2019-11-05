@@ -155,20 +155,20 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]]): JList[Box[Proposition]] = {
+  override def boxesOfType(boxType: Byte): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .map(_.box)
       .asJava
   }
 
-  override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
+  override def boxesOfType(boxType: Byte, boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
       .filter((wb : WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
 
-  override def boxesBalance(boxType: Class[_ <: Box[_ <: Proposition]]): java.lang.Long = {
+  override def boxesBalance(boxType: Byte): java.lang.Long = {
     walletBoxStorage.getBoxesBalance(boxType)
   }
 
@@ -183,8 +183,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     secretStorage.getAll.asJava
   }
 
-  override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
-    secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
+  override def secretsOfType(secretType: Byte): JList[Secret] = {
+    secretStorage.getAll.filter(_.secretTypeId().equals(secretType)).asJava
   }
 
   override def allBoxesBalance(): lang.Long = {

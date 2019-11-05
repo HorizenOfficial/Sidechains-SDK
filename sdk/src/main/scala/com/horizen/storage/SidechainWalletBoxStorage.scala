@@ -27,8 +27,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
   private val _walletBoxes = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
-  private val _walletBoxesByType = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], mutable.Map[ByteArrayWrapper, WalletBox]]()
-  private val _walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
+  private val _walletBoxesByType = new mutable.LinkedHashMap[Byte, mutable.Map[ByteArrayWrapper, WalletBox]]()
+  private val _walletBoxesBalances = new mutable.LinkedHashMap[Byte, Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
   loadWalletBoxes()
@@ -44,17 +44,17 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   private def updateBoxesBalance (boxToAdd : WalletBox, boxToRemove : WalletBox) : Unit = {
     if (boxToAdd != null) {
-      val bca = boxToAdd.box.getClass
+      val bca = boxToAdd.box.boxTypeId()
       _walletBoxesBalances.put(bca, _walletBoxesBalances.getOrElse(bca, 0L) + boxToAdd.box.value())
     }
     if (boxToRemove != null) {
-      val bcr = boxToRemove.box.getClass
+      val bcr = boxToRemove.box.boxTypeId()
       _walletBoxesBalances.put(bcr, _walletBoxesBalances.getOrElse(bcr, 0L) - boxToRemove.box.value())
     }
   }
 
   private def addWalletBoxByType(walletBox : WalletBox) : Unit = {
-    val bc = walletBox.box.getClass
+    val bc = walletBox.box.boxTypeId()
     val key = calculateKey(walletBox.box.id())
     val t = _walletBoxesByType.get(bc)
     if (t.isEmpty) {
@@ -96,14 +96,14 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     _walletBoxes.values.toList
   }
 
-  def getByType (boxType: Class[_ <: Box[_ <: Proposition]]) : List[WalletBox] = {
+  def getByType (boxType: Byte) : List[WalletBox] = {
     _walletBoxesByType.get(boxType) match {
       case Some(v) => v.values.toList
       case None => List[WalletBox]()
     }
   }
 
-  def getBoxesBalance (boxType: Class[_ <: Box[_ <: Proposition]]): Long = {
+  def getBoxesBalance (boxType: Byte): Long = {
     _walletBoxesBalances.getOrElse(boxType, 0L)
   }
 

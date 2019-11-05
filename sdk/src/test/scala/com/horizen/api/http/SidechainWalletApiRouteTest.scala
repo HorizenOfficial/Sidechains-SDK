@@ -4,6 +4,8 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
 import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.box.{CoinsBox, RegularBox}
+import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
@@ -71,18 +73,12 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      Post(basePath + "allBoxes")
-        .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.RegularBox"), None))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some(RegularBox.BOX_TYPE_ID), None))) ~> sidechainWalletApiRoute ~> check {
         response shouldEqual (Post(basePath + "allBoxes") ~> sidechainWalletApiRoute).response
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), None))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some(0), None))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -115,19 +111,13 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      Post(basePath + "allBoxes")
-        .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.RegularBox"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllBoxes(Some(RegularBox.BOX_TYPE_ID), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
         response shouldEqual (Post(basePath + "allBoxes").withEntity(SerializationUtil.serialize(ReqAllBoxes(None, idsToExclude))) ~> sidechainWalletApiRoute).response
       }
       Post(basePath + "allBoxes")
         .withEntity(
-          SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
-        response shouldEqual (Post(basePath + "allBoxes").withEntity(SerializationUtil.serialize(ReqAllBoxes(Some("com.horizen.box.CoinsBox"), None))) ~> sidechainWalletApiRoute).response
+          SerializationUtil.serialize(ReqAllBoxes(Some(0), idsToExclude))) ~> sidechainWalletApiRoute ~> check {
+        response shouldEqual (Post(basePath + "allBoxes").withEntity(SerializationUtil.serialize(ReqAllBoxes(Some(0), None))) ~> sidechainWalletApiRoute).response
       }
     }
 
@@ -147,18 +137,12 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "balance")
         .withEntity(
-          SerializationUtil.serialize(ReqBalance(Some("a_class")))) ~> sidechainWalletApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      Post(basePath + "balance")
-        .withEntity(
-          SerializationUtil.serialize(ReqBalance(Some("com.horizen.box.RegularBox")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqBalance(Some(RegularBox.BOX_TYPE_ID)))) ~> sidechainWalletApiRoute ~> check {
         response shouldEqual (Post(basePath + "balance") ~> sidechainWalletApiRoute).response
       }
       Post(basePath + "balance")
         .withEntity(
-          SerializationUtil.serialize(ReqBalance(Some("com.horizen.box.CoinsBox")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqBalance(Some(0)))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -216,18 +200,12 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "allPublicKeys")
         .withEntity(
-          SerializationUtil.serialize(ReqAllPropositions(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      Post(basePath + "allPublicKeys")
-        .withEntity(
-          SerializationUtil.serialize(ReqAllPropositions(Some("com.horizen.secret.PrivateKey25519")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllPropositions(Some(PrivateKey25519.SECRET_TYPE_ID)))) ~> sidechainWalletApiRoute ~> check {
         response shouldEqual (Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute).response
       }
       Post(basePath + "allPublicKeys")
         .withEntity(
-          SerializationUtil.serialize(ReqAllPropositions(Some("com.horizen.secret.Secret")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqAllPropositions(Some(-1)))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {

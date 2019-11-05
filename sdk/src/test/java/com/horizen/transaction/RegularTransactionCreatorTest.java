@@ -63,7 +63,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type) {
+    public List<Box<Proposition>> boxesOfType(byte type) {
         List<Box<Proposition>> filteredBoxes = new ArrayList<>();
         for(Box box : _boxesOrderedBytCreationTime) {
             if(box.getClass().equals(type))
@@ -73,10 +73,10 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type, List<byte[]> boxIdsToExclude) {
+    public List<Box<Proposition>> boxesOfType(byte type, List<byte[]> boxIdsToExclude) {
         List<Box<Proposition>> filteredBoxes = new ArrayList<>();
         for(Box box : _boxesOrderedBytCreationTime) {
-            if(!box.getClass().equals(type))
+            if(box.boxTypeId() != type)
                 continue;
             boolean acceptable = true;
             for(byte[] idToExclude : boxIdsToExclude)
@@ -92,7 +92,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
 
     //TODO Implement
     @Override
-    public Long boxesBalance(Class<? extends Box<? extends Proposition>> type) {
+    public Long boxesBalance(byte type) {
         return 0L;
     }
 
@@ -112,7 +112,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public List<Secret> secretsOfType(Class<? extends Secret> type) {
+    public List<Secret> secretsOfType(byte type) {
         return null;
     }
 

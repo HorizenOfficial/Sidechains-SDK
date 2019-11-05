@@ -15,11 +15,11 @@ public interface NodeWallet {
     // boxes are sorted by creation time in wallet from oldest to newest
     List<Box<Proposition>> allBoxes(List<byte[]> boxIdsToExclude);
 
-    List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type);
+    List<Box<Proposition>> boxesOfType(byte type);
 
-    List<Box<Proposition>> boxesOfType(Class<? extends Box<? extends Proposition>> type, List<byte[]> boxIdsToExclude);
+    List<Box<Proposition>> boxesOfType(byte type, List<byte[]> boxIdsToExclude);
 
-    Long boxesBalance(Class<? extends Box<? extends Proposition>> type);
+    Long boxesBalance(byte type);
 
     Long allBoxesBalance();
 
@@ -27,7 +27,7 @@ public interface NodeWallet {
 
     List<Secret> allSecrets();
 
-    List<Secret> secretsOfType(Class<? extends Secret> type);
+    List<Secret> secretsOfType(byte type);
 
     byte[] walletSeed();
 }

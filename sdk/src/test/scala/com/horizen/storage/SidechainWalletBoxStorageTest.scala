@@ -101,13 +101,13 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 6: get by type for existing type
-    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.isInstanceOf[RegularBox]),
-      walletBoxStorage.getByType(classOf[RegularBox]))
+    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.boxTypeId() == RegularBox.BOX_TYPE_ID),
+      walletBoxStorage.getByType(RegularBox.BOX_TYPE_ID))
 
 
     // Test 7: get by type for non-existing type
     assertEquals("Storage should NOT contain WalletBoxes of specified type.", List(),
-      walletBoxStorage.getByType(classOf[CustomBoxChild]))
+      walletBoxStorage.getByType(0))
   }
 
 

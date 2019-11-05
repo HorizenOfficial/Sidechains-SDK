@@ -411,10 +411,10 @@ class SidechainWalletTest
     val actualSecretsJava = sidechainWallet.allSecrets()
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualSecretsJava)
 
-    var actualPrivateKeysJava = sidechainWallet.secretsOfType(classOf[PrivateKey25519])
+    var actualPrivateKeysJava = sidechainWallet.secretsOfType(PrivateKey25519.SECRET_TYPE_ID)
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualPrivateKeysJava)
 
-    var actualCustomKeysJava = sidechainWallet.secretsOfType(classOf[CustomPrivateKey])
+    var actualCustomKeysJava = sidechainWallet.secretsOfType(CustomPrivateKey.SECRET_TYPE_ID)
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(), actualCustomKeysJava)
 
 
@@ -515,9 +515,9 @@ class SidechainWalletTest
 
     //TEST for - NodeWallet.secretsOfType
     assertTrue("Wallet must contain all Secrets of specified type.",
-      sidechainWallet.secretsOfType(classOf[PrivateKey25519]).containsAll(secretList.slice(1, 5).asJavaCollection))
+      sidechainWallet.secretsOfType(PrivateKey25519.SECRET_TYPE_ID).containsAll(secretList.slice(1, 5).asJavaCollection))
     assertTrue("Wallet must contain all Secrets of specified type.",
-      sidechainWallet.secretsOfType(classOf[CustomPrivateKey]).contains(s))
+      sidechainWallet.secretsOfType(CustomPrivateKey.SECRET_TYPE_ID).contains(s))
 
     //TEST for - NodeWallet.allSecrets
     val sl1 = sidechainWallet.allSecrets()
@@ -553,22 +553,22 @@ class SidechainWalletTest
 
 
     // Test 2: test boxesOfType(type) and boxesOfType(type, boxIdsToExclude)
-    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[RegularBox])).thenReturn(List(walletBoxRegular1, walletBoxRegular2))
+    Mockito.when(mockedWalletBoxStorage1.getByType(RegularBox.BOX_TYPE_ID)).thenReturn(List(walletBoxRegular1, walletBoxRegular2))
 
-    val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[RegularBox])
+    val actualBoxesByTypeJava = sidechainWallet.boxesOfType(RegularBox.BOX_TYPE_ID)
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox.",
       util.Arrays.asList(walletBoxRegular1.box, walletBoxRegular2.box), actualBoxesByTypeJava)
 
-    val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[RegularBox], util.Arrays.asList(walletBoxRegular1.box.id()))
+    val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(RegularBox.BOX_TYPE_ID, util.Arrays.asList(walletBoxRegular1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox with excluded ids.",
       util.Arrays.asList(walletBoxRegular2.box), actualBoxesByTypeWithExcludeJava)
 
 
     // Test 3: test boxesBalance(type)
     val balance = 100L
-    Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(classOf[RegularBox])).thenReturn(balance)
+    Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(RegularBox.BOX_TYPE_ID)).thenReturn(balance)
 
-    val actualBalance = sidechainWallet.boxesBalance(classOf[RegularBox])
+    val actualBalance = sidechainWallet.boxesBalance(RegularBox.BOX_TYPE_ID)
     assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
   }
 
@@ -600,19 +600,19 @@ class SidechainWalletTest
     assertTrue("Wallet must contain all specified Boxes.", boxList.slice(1, 5).map(_.box).asJavaCollection.containsAll(bl))
 
     //TEST for - NodeWallet.boxesOfType
-    bl = sidechainWallet.boxesOfType(classOf[RegularBox])
+    bl = sidechainWallet.boxesOfType(RegularBox.BOX_TYPE_ID)
 
     assertEquals("Wallet must contain specified count of Boxes.", boxList.size, bl.size)
     assertTrue("Wallet must contain all specified Boxes.", boxList.map(_.box).asJavaCollection.containsAll(bl))
 
     //TEST for - NodeWallet.boxesOfType(boxIdsToExclude)
-    bl = sidechainWallet.boxesOfType(classOf[RegularBox], boxList.slice(0, 1).map(_.box.id()).asJava)
+    bl = sidechainWallet.boxesOfType(RegularBox.BOX_TYPE_ID, boxList.slice(0, 1).map(_.box.id()).asJava)
 
     assertEquals("Wallet must contain specified count of Boxes.", boxList.size - 1, bl.size)
     assertTrue("Wallet must contain all specified Boxes.", boxList.slice(1, 5).map(_.box).asJavaCollection.containsAll(bl))
 
     //TEST for - NodeWallet.boxesBalance
-    assertEquals("", boxList.map(_.box.value()).sum, sidechainWallet.boxesBalance(classOf[RegularBox]))
+    assertEquals("", boxList.map(_.box.value()).sum, sidechainWallet.boxesBalance(RegularBox.BOX_TYPE_ID))
   }
 
 }

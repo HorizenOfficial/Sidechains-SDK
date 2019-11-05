@@ -56,13 +56,13 @@ class SidechainWalletBoxStorageTest
     assertEquals("Storage must contain specified CustomBox.", wbList3.head,
       sidechainWalletBoxStorage.get(wbList3.head.box.id()).get)
 
-    wbl1 = sidechainWalletBoxStorage.getByType(classOf[CertifierRightBox])
+    wbl1 = sidechainWalletBoxStorage.getByType(CertifierRightBox.BOX_TYPE_ID)
     assertEquals("Storage must contain 3 CertifierRightBoxes.", 3, wbl1.size)
     for(wb <- wbList2)
       assertTrue("Storage must contain all CertifierRightBoxes.", wbl1.contains(wb))
 
     assertEquals("Balances for CertifierRightBox must be same.", wbList2.map(_.box.value()).sum,
-      sidechainWalletBoxStorage.getBoxesBalance(classOf[CertifierRightBox]))
+      sidechainWalletBoxStorage.getBoxesBalance(CertifierRightBox.BOX_TYPE_ID))
 
     // TEST SCENARIO 2: Test update/remove of WalletBoxes on non-empty storage
     assertTrue("Remove operation must be successful.",
@@ -74,11 +74,11 @@ class SidechainWalletBoxStorageTest
     for(wb <- wbList1 ++ wbList3)
       assertTrue("Storage must contain all specified items (except removed).", wbl1.contains(wb))
 
-    wbl1 = sidechainWalletBoxStorage.getByType(classOf[CertifierRightBox])
+    wbl1 = sidechainWalletBoxStorage.getByType(CertifierRightBox.BOX_TYPE_ID)
     assertEquals("Storage must not contain CertifierRightBoxes.", 0, wbl1.size)
 
     assertEquals("Balances for CertifierRightBox must be 0.", 0,
-      sidechainWalletBoxStorage.getBoxesBalance(classOf[CertifierRightBox]))
+      sidechainWalletBoxStorage.getBoxesBalance(CertifierRightBox.BOX_TYPE_ID))
 
     var rv = sidechainWalletBoxStorage.rollbackVersions
     assertEquals("Versions count in storage must be 2.", 2, rv.size)
@@ -95,7 +95,7 @@ class SidechainWalletBoxStorageTest
       assertTrue("Storage must contain all specified items.", wbl2.contains(wb))
 
     assertEquals("Balances for CertifierRightBox must be same.", wbList2.map(_.box.value()).sum,
-      sidechainWalletBoxStorage.getBoxesBalance(classOf[CertifierRightBox]))
+      sidechainWalletBoxStorage.getBoxesBalance(CertifierRightBox.BOX_TYPE_ID))
   }
 
   @Test
@@ -103,18 +103,18 @@ class SidechainWalletBoxStorageTest
     val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
 
     // Test 1: Test balance for Box Type which is NOT present yet in the storage.
-    assertEquals("Balance of RegularBoxes should be 0.", 0, sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should be 0.", 0, sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
 
 
     // Test 2: Test balance after item of Box Class was added.
     val walletBox1 = getWalletBox(classOf[RegularBox])
     sidechainWalletBoxStorage.update(getVersion, List(walletBox1), List[Array[Byte]]())
-    assertEquals("Balance of RegularBoxes should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
 
 
     // Test 3: Test balance after item of Box Class was removed.
     sidechainWalletBoxStorage.update(getVersion, List[WalletBox](), List(walletBox1.box.id()))
-    assertEquals("Balance of RegularBoxes should be 0.", 0, sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should be 0.", 0, sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
   }
 
   @Test
@@ -131,21 +131,21 @@ class SidechainWalletBoxStorageTest
     exceptionOccurred = sidechainWalletBoxStorage.update(getVersion, List(walletBox2, walletBox2), List[Array[Byte]]()).isFailure
 
     assertTrue("Exception expected on duplicate item insertions.", exceptionOccurred)
-    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
 
 
     // Test 2: try to remove duplicate items.
     exceptionOccurred = sidechainWalletBoxStorage.update(getVersion, List[WalletBox](), List(walletBox1.box.id(), walletBox1.box.id())).isFailure
 
     assertTrue("Exception expected on duplicate item removals.", exceptionOccurred)
-    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
 
 
     // Test 3: try to remove non-existent item.
     exceptionOccurred = sidechainWalletBoxStorage.update(getVersion, List[WalletBox](), List(walletBox2.box.id())).isFailure
 
     assertFalse("Exception NOT expected on non-existent item removals.", exceptionOccurred)
-    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
+    assertEquals("Balance of RegularBoxes should NOT change, so should be %d.".format(walletBox1.box.value()), walletBox1.box.value(), sidechainWalletBoxStorage.getBoxesBalance(RegularBox.BOX_TYPE_ID))
   }
 
 }

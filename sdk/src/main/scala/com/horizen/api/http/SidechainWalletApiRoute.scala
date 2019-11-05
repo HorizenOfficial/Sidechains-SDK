@@ -14,6 +14,7 @@ import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.serialization.Views
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -34,15 +35,14 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def allBoxes: Route = (post & path("allBoxes")) {
     entity(as[ReqAllBoxes]) { body =>
       withNodeView { sidechainNodeView =>
-        var optBoxTypeClass = body.boxTypeClass
+        var optBoxTypeClass = body.boxTypeId
         var wallet = sidechainNodeView.getNodeWallet
         var idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
         if (optBoxTypeClass.isEmpty) {
           var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxTypeClass.get).asSubclass(classOf[SidechainTypes#SCB])
-          var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+          var allClosedBoxesByType = wallet.boxesOfType(optBoxTypeClass.get, idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
         }
       }
@@ -56,13 +56,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqBalance]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optBoxType = body.boxType
+        var optBoxType = body.boxTypeId
         if (optBoxType.isEmpty) {
           var sumOfBalances: Long = wallet.allBoxesBalance()
           ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxType.get).asSubclass(classOf[SidechainTypes#SCB])
-          var balance = wallet.boxesBalance(clazz)
+          var balance = wallet.boxesBalance(optBoxType.get)
           ApiResponseUtil.toResponse(RespBalance(balance))
         }
       }
@@ -93,14 +92,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqAllPropositions]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optPropType = body.proptype
+        var optPropType = body.propositionTypeId
         if (optPropType.isEmpty) {
           var listOfPropositions = wallet.allSecrets().asScala.map(s =>
             s.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(optPropType.get).asSubclass(classOf[SidechainTypes#SCS])
-          var listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+          var listOfPropositions = wallet.secretsOfType(optPropType.get).asScala.map(secret =>
             secret.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         }
@@ -112,13 +110,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllBoxes(boxTypeClass: Option[String], excludeBoxIds: Option[Seq[String]])
+  private[api] case class ReqAllBoxes(@JsonDeserialize(contentAs = classOf[java.lang.Byte]) boxTypeId: Option[Byte], excludeBoxIds: Option[Seq[String]])
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqBalance(boxType: Option[String])
+  private[api] case class ReqBalance(@JsonDeserialize(contentAs = classOf[java.lang.Byte]) boxTypeId: Option[Byte])
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
@@ -127,7 +125,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespCreateSecret(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllPropositions(proptype: Option[String])
+  private[api] case class ReqAllPropositions(@JsonDeserialize(contentAs = classOf[java.lang.Byte]) propositionTypeId: Option[Byte])
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse

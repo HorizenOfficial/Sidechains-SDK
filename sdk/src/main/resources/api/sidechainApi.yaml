@@ -657,9 +657,10 @@ paths:
             schema:
               type: object
               properties:
-                boxTypeClass:
-                  description: Filter boxes of a given type
-                  type: string
+                boxTypeId:
+                  description: Filter boxes for a given srialization code identifier
+                  type: integer
+                  format: int32
                 excludeBoxIds:
                   type: array
                   items:
@@ -701,9 +702,10 @@ paths:
             schema:
               type: object
               properties:
-                boxType:
-                  description: Filter balance for given box type
-                  type: string
+                boxTypeId:
+                  description: Filter balance for a given srialization code identifier
+                  type: integer
+                  format: int32
       responses:
         '200':
           description: successful operation
@@ -769,9 +771,10 @@ paths:
             schema:
               type: object
               properties:
-                proptype:
-                  description: Filter propositions of the given type
-                  type: string
+                propositionTypeId:
+                  description: Filter propositions of the given serialization code identifier
+                  type: integer
+                  format: int32
       responses:
         '200':
           description: successful operation
@@ -1204,7 +1207,7 @@ components:
           format: int64
         typeId:
           type: integer
-          format: int64
+          format: int32
 
     MainchainBlock:
       type: object

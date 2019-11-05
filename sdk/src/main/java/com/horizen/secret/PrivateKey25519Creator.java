@@ -33,7 +33,7 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
 
     @Override
     public PrivateKey25519 generateNextSecret(NodeWallet wallet) {
-        List<Secret> prevSecrets = wallet.secretsOfType(PrivateKey25519.class);
+        List<Secret> prevSecrets = wallet.secretsOfType(PrivateKey25519.SECRET_TYPE_ID);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
         byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
 

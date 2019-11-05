@@ -30,8 +30,8 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewUtilMocks extends MockitoSugar {
 
-  private val walletBoxesByType = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], mutable.Map[ByteArrayWrapper, Box[Proposition]]]()
-  private val walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
+  private val walletBoxesByType = new mutable.LinkedHashMap[Byte, mutable.Map[ByteArrayWrapper, Box[Proposition]]]()
+  private val walletBoxesBalances = new mutable.LinkedHashMap[Byte, Long]()
   val mainchainBlockReferenceInfoRef = new MainchainBlockReferenceInfo(
     BytesUtils.fromHexString("0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0"),
     BytesUtils.fromHexString("00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582"),
@@ -53,11 +53,11 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
   private def updateBoxesBalance (boxToAdd : Box[Proposition], boxToRemove : Box[Proposition]) : Unit = {
     if (boxToAdd != null) {
-      val bca = boxToAdd.getClass
+      val bca = boxToAdd.boxTypeId()
       walletBoxesBalances.put(bca, walletBoxesBalances.getOrElse(bca, 0L) + boxToAdd.value())
     }
     if (boxToRemove != null) {
-      val bcr = boxToRemove.getClass
+      val bcr = boxToRemove.boxTypeId()
       walletBoxesBalances.put(bcr, walletBoxesBalances.getOrElse(bcr, 0L) - boxToRemove.value())
     }
   }
@@ -67,7 +67,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
   }
 
   private def addWalletBoxByType(walletBox : Box[Proposition]) : Unit = {
-    val bc = walletBox.getClass
+    val bc = walletBox.boxTypeId()
     val key = calculateKey(walletBox.id())
     val t = walletBoxesByType.get(bc)
     if (t.isEmpty) {
@@ -169,7 +169,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
-    Mockito.when(wallet.boxesBalance(ArgumentMatchers.any[Class[_ <: Box[_ <: Proposition]]])).thenAnswer(asw =>
+    Mockito.when(wallet.boxesBalance(ArgumentMatchers.any[Byte])).thenAnswer(asw =>
       walletBoxesBalances.getOrElse(asw.getArgument(0), 0L))
     Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => allBoxes.asScala.map(_.value()).sum)
 
@@ -181,8 +181,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
     val listOfSecrets = List(secret1, secret2)
 
-    Mockito.when(wallet.secretsOfType(ArgumentMatchers.any[Class[_ <: Secret]])).thenAnswer(asw =>
-      listOfSecrets.filter(_.getClass.equals(asw.getArgument(0))).asJava)
+    Mockito.when(wallet.secretsOfType(ArgumentMatchers.any[Byte])).thenAnswer(asw =>
+      listOfSecrets.filter(_.secretTypeId().equals(asw.getArgument(0))).asJava)
 
     Mockito.when(wallet.walletSeed()).thenAnswer(_ => "a seed".getBytes)
 
@@ -196,7 +196,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
       else Optional.empty()
     })
 
-    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any[Class[_ <: Box[_ <: Proposition]]], ArgumentMatchers.any[java.util.List[Array[Byte]]])).thenAnswer(asw => {
+    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any[Byte], ArgumentMatchers.any[java.util.List[Array[Byte]]])).thenAnswer(asw => {
       val idsToExclude = asw.getArgument(1).asInstanceOf[util.List[Array[Byte]]].asScala.map(a=>new String(a)).asJava
       (walletBoxesByType.get(asw.getArgument(0)) match {
         case Some(v) => v.values.toList
