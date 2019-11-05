@@ -3,7 +3,7 @@ package com.horizen.storage
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.SidechainTypes
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import scorex.util.ScorexLogging
 
 import scala.util.Try

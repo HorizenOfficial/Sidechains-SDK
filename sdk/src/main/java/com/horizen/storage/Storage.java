@@ -2,7 +2,7 @@ package com.horizen.storage;
 
 import java.util.Optional;
 import java.util.List;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import com.horizen.utils.ByteArrayWrapper;
 
 public interface Storage {

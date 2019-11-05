@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import java.util.{Optional, ArrayList => JArrayList}
 
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
