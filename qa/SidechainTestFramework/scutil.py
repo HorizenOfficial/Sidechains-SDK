@@ -1,20 +1,12 @@
 import os
 import sys
 
-from binascii import hexlify, unhexlify
-from base64 import b64encode
-from decimal import Decimal, ROUND_DOWN
 import json
-import random
 from sidechainauthproxy import SidechainAuthServiceProxy
-import shutil
 import subprocess
 import time
-import random
-import string
 import socket
 from contextlib import closing
-import platform
 
 WAIT_CONST = 1
 
@@ -112,10 +104,14 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 }
 """
 def generate_genesis_data(n, genesis_info):
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
+
     jsonSecret = generate_secrets(n, 1)[0]
     jsonParameters = {"secret": jsonSecret["secret"], "info": genesis_info}
     javaPs = subprocess.Popen(["java", "-cp",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar:../tools/sctool/target/lib/*",
+                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar"+lib_separator+"../tools/sctool/target/lib/*",
                                "com.horizen.ScBootstrappingTool",
                                "genesisinfo", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
     scBootstrapOutput = javaPs.communicate()[0]
@@ -146,11 +142,15 @@ Output: a JSON array of pairs secret-public key.
 ]
 """
 def generate_secrets(n, number_of_accounts):
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
+
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "sidechain_seed_{0}_{1}".format(n, i + 1)}
         javaPs = subprocess.Popen(["java", "-cp",
-                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar:../tools/sctool/target/lib/*",
+                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar"+lib_separator+"../tools/sctool/target/lib/*",
                                    "com.horizen.ScBootstrappingTool",
                                    "generatekey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
         scBootstrapOutput = javaPs.communicate()[0]
@@ -192,8 +192,6 @@ Parameters:
                 "mcBlockHeight": xxx,
                 "mcNetwork": regtest|testnet|mainnet
             }
-            
-NB: if either account_secrets=None or genesis_info=None, the template_predefined_genesis.conf will be considered
 """
 def initialize_sc_datadir(dirname, n, account_secrets=None, genesis_info=None):
     """Create directories for each node and configuration files inside them.
@@ -203,51 +201,76 @@ def initialize_sc_datadir(dirname, n, account_secrets=None, genesis_info=None):
 
     apiAddress = "127.0.0.1"
     configsData = []
-    config = None
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
-    if(account_secrets!=None and genesis_info != None):
-        with open('./resources/template.conf', 'r') as templateFile:
-            tmpConfig = templateFile.read()
-        genesis_secrets = []
-        for i in range(len(account_secrets)):
-            genesis_secrets.append(str(account_secrets[i]["secret"]))
+    with open('./resources/template.conf', 'r') as templateFile:
+        tmpConfig = templateFile.read()
+    genesis_secrets = []
+    for i in range(len(account_secrets)):
+         genesis_secrets.append(str(account_secrets[i]["secret"]))
 
-        jsonNode = generate_genesis_data(n, genesis_info)
-        config = tmpConfig % {
-            'NODE_NUMBER': n,
-            'DIRECTORY': dirname,
-            'WALLET_SEED': "sidechain_seed_{0}".format(n),
-            'API_ADDRESS': "127.0.0.1",
-            'API_PORT': str(apiPort),
-            'BIND_PORT': str(bindPort),
-            'OFFLINE_GENERATION': "false",
-            'GENESIS_SECRETS': ','.join(['"{0}"'.format(value) for value in genesis_secrets])[1:-1],
-            'SIDECHAIN_ID': jsonNode["scId"],
-            'GENESIS_DATA': jsonNode["scGenesisBlockHex"],
-            'POW_DATA': jsonNode["powData"],
-            'BLOCK_HEIGHT': jsonNode["mcBlockHeight"],
-            'NETWORK': str(jsonNode["mcNetwork"])
-        }
-    else:
-        with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
-            tmpConfig = templateFile.read()
-        genesis_secrets = []
-        for i in range(len(account_secrets)):
-            genesis_secrets.append(str(account_secrets[i]["secret"]))
-        config = tmpConfig % {
-            'NODE_NUMBER': n,
-            'DIRECTORY': dirname,
-            'WALLET_SEED': "sidechain_seed_{0}".format(n),
-            'API_ADDRESS': "127.0.0.1",
-            'API_PORT': str(apiPort),
-            'BIND_PORT': str(bindPort),
-            'OFFLINE_GENERATION': "false"
-        }
+    jsonNode = generate_genesis_data(n, genesis_info)
+    config = tmpConfig % {
+        'NODE_NUMBER': n,
+        'DIRECTORY': dirname,
+        'WALLET_SEED': "sidechain_seed_{0}".format(n),
+        'API_ADDRESS': "127.0.0.1",
+        'API_PORT': str(apiPort),
+        'BIND_PORT': str(bindPort),
+        'OFFLINE_GENERATION': "false",
+        'GENESIS_SECRETS': ','.join(['"{0}"'.format(value) for value in genesis_secrets])[1:-1],
+        'SIDECHAIN_ID': jsonNode["scId"],
+        'GENESIS_DATA': jsonNode["scGenesisBlockHex"],
+        'POW_DATA': jsonNode["powData"],
+        'BLOCK_HEIGHT': jsonNode["mcBlockHeight"],
+        'NETWORK': str(jsonNode["mcNetwork"])
+    }
+
+
+    configsData.append({
+        "name": "node" + str(n),
+        "url": "http://" + apiAddress + ":" + str(apiPort)
+    })
+    with open(os.path.join(datadir, "node" + str(n) + ".conf"), 'w+') as configFile:
+        configFile.write(config)
+
+    return configsData
+
+
+def initialize_default_sc_datadir(dirname, n):
+    """Create directories for each node and configuration files inside them.
+       For each node put also genesis data in configuration files.
+       Configuration data must be automatically generated and different from
+       the ones generated for the other nodes."""
+
+    genesis_secrets = {0 : "6882a61d8a23a9582c7c7e659466524880953fa25d983f29a8e3aa745ee6de5c0c97174767fd137f1cf2e37f2e48198a11a3de60c4a060211040d7159b769266", \
+                       1 : "905e2e581615ba0eff2bcd9fb666b4f6f6ed99ddd05208ae7918a25dc6ea6179c958724e7f4c44fd196d27f3384d2992a9c42485888862a20dcec670f3c08a4e", \
+                       2 : "80b9a06608fa5dbd11fb72d28b9df49f6ac69f0e951ca1d9e67abd404559606be9b36fb5ae7e74cc50603b161a5c31d26035f6a59e602294d9900740d6c4007f"}
+
+    apiAddress = "127.0.0.1"
+    configsData = []
+    apiPort = sc_rpc_port(n)
+    bindPort = sc_p2p_port(n)
+    datadir = os.path.join(dirname, "sc_node" + str(n))
+    if not os.path.isdir(datadir):
+        os.makedirs(datadir)
+
+    with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
+        tmpConfig = templateFile.read()
+    config = tmpConfig % {
+        'NODE_NUMBER': n,
+        'DIRECTORY': dirname,
+        'WALLET_SEED': "sidechain_seed_{0}".format(n),
+        'API_ADDRESS': "127.0.0.1",
+        'API_PORT': str(apiPort),
+        'BIND_PORT': str(bindPort),
+        'OFFLINE_GENERATION': "false",
+        'GENESIS_SECRETS': genesis_secrets[n]
+    }
 
 
     configsData.append({
@@ -264,11 +287,15 @@ def sc_generate_genesis_data(self):
     return generate_genesis_data(self.nodes[0])  # Maybe other parameters in future
 
 
-def initialize_sc_chain(test_dir, genesisData):
-    pass
+def initialize_default_sc_chain_clean(test_dir, num_nodes):
+    """
+    Create an empty blockchain and num_nodes wallets.
+    Useful if a test case wants complete control over initialization.
+    """
+    for i in range(num_nodes):
+        initialize_default_sc_datadir(test_dir, i)
 
-
-def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets=None, genesis_info=None):
+def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.

@@ -19,13 +19,18 @@ from test_framework.util import assert_equal, assert_true
 """
 class SCBootstrap(SidechainTestFramework):
 
+    number_of_sidechains = 3
+
     def sc_setup_chain(self):
         # SC chain setup
-        pass
+        number_of_accounts_per_sidechain = []
+        for i in range(self.number_of_sidechains):
+            number_of_accounts_per_sidechain.append(i+1)
+        self.bootstrap_sidechain(self.number_of_sidechains, number_of_accounts_per_sidechain, 1000, self.nodes[0])
 
     def sc_setup_network(self, split=False):
         # SC network setup
-        pass
+        self.sc_nodes = self.sc_setup_nodes(self.number_of_sidechains)
 
     def check_genesis_balances(self, sc_node, sidechain_id, expected_keys_count, expected_boxes_count, expected_wallet_balance):
         print("Genesis checks for sidechain id {0}.".format(sidechain_id))
@@ -89,27 +94,17 @@ class SCBootstrap(SidechainTestFramework):
         assert_equal(mc_block_previousblockhash, sc_mc_block_previousblockhash)
 
     def run_test(self):
-        # start 1 mc node
         mc_nodes = self.nodes
         print "Number of MC nodes: {0}".format(len(mc_nodes))
         assert_equal(1, len(mc_nodes), "The number of MC nodes is grater than 1.")
 
-        number_of_sidechains = 1
-        number_of_accounts_per_sidechain = []
-        for i in range(number_of_sidechains):
-            number_of_accounts_per_sidechain.append(i+1)
-
-        # Generate information for bootstrapping sidechains
-        sc_nodes_info = self.bootstrap_sidechain(number_of_sidechains, number_of_accounts_per_sidechain, mc_nodes[0])
-        assert_equal(number_of_sidechains, len(sc_nodes_info), "Not all sidechains have been successfully created.")
+        sc_nodes_info = self.sc_nodes_bootstrap_info
+        assert_equal(self.number_of_sidechains, len(sc_nodes_info), "Not all sidechains have been successfully created.")
         print sc_nodes_info
 
-        # Start sidechain nodes
-        sc_nodes = self.sc_setup_nodes(number_of_sidechains)
-
         # Check validity of genesis information
-        for i in range(number_of_sidechains):
-            node = sc_nodes[i]
+        for i in range(self.number_of_sidechains):
+            node = self.sc_nodes[i]
             node_info = sc_nodes_info[i]
             mc_block = mc_nodes[0].getblock(str(node_info[3]))
             # check all keys/boxes/balances are coherent with the default initialization

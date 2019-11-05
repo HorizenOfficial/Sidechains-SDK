@@ -3,12 +3,12 @@ from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
-    initialize_chain, initialize_chain_clean, \
+    initialize_chain_clean, \
     start_nodes, stop_nodes, get_genesis_info, \
     sync_blocks, sync_mempools, wait_bitcoinds
-from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
-    start_sc_nodes, stop_sc_nodes, sc_generate_genesis_data, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException, \
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
+    start_sc_nodes, stop_sc_nodes, \
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, \
     generate_secrets, initialize_sc_datadir
 import tempfile
 import os
@@ -53,11 +53,8 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_add_options(self, parser):
         pass
 
-    def sc_generate_genesis_data(self):
-        return None
-
     def sc_setup_chain(self):
-        initialize_sc_chain_clean(self.options.tmpdir, 1)
+        initialize_default_sc_chain_clean(self.options.tmpdir, 1)
 
     """
     Bootstrap some sidechain nodes.
@@ -71,8 +68,8 @@ class SidechainTestFramework(BitcoinTestFramework):
     
     NB: for each account add an amount of 100
     """
-    def bootstrap_sidechain(self, number_of_sidechains_nodes, number_of_accounts_per_sidechain, mainchain_node):
-        sc_nodes_bootstrap_info = {}
+    def bootstrap_sidechain(self, number_of_sidechains_nodes, number_of_accounts_per_sidechain, withdrawal_epoch_length, mainchain_node):
+        self.sc_nodes_bootstrap_info = {}
         for i in range(number_of_sidechains_nodes):
             n_keys = number_of_accounts_per_sidechain[i]
             account_secrets = generate_secrets(i, n_keys)
@@ -81,11 +78,11 @@ class SidechainTestFramework(BitcoinTestFramework):
             for j in range(n_keys):
                 balances.append(100)
             sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(i)
-            genesis_info = get_genesis_info(sidechain_id, mainchain_node, 1000, account_secrets, balances)
+            genesis_info = get_genesis_info(sidechain_id, mainchain_node, withdrawal_epoch_length, account_secrets, balances)
             print "Sidechain created with id: " + sidechain_id
             initialize_sc_datadir(self.options.tmpdir, i, account_secrets, genesis_info[0])
-            sc_nodes_bootstrap_info[i] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
-        return sc_nodes_bootstrap_info
+            self.sc_nodes_bootstrap_info[i] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
+        return self.sc_nodes_bootstrap_info
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
