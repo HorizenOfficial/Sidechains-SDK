@@ -7,8 +7,8 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
+import com.horizen.validation.{SidechainBlockValidator, MainchainPoWValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.block.BlockValidator
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
@@ -24,8 +24,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
-                              genesisBlock: SidechainBlock,
-                              validators: Seq[BlockValidator[SidechainBlock]])
+                              genesisBlock: SidechainBlock)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
@@ -38,8 +37,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
+  private def validators(params: NetworkParams): Seq[SidechainBlockValidator] = Seq(new SidechainBlockSemanticValidator(params), new WithdrawalEpochValidator(params), new MainchainPoWValidator(params))
+
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
-    history <- SidechainHistory.restoreHistory(historyStorage, params, validators)
+    history <- SidechainHistory.restoreHistory(historyStorage, params, validators(params))
     state <- SidechainState.restoreState(stateStorage, applicationState)
     wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
     pool <- Some(SidechainMemoryPool.emptyPool)
@@ -47,7 +48,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock, validators)
+      history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock, validators(params))
       state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock)
       wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet, genesisBlock)
       pool <- Success(SidechainMemoryPool.emptyPool)
@@ -56,12 +57,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  // TO DO: Put it into NodeViewSynchronizerRef::modifierSerializers. Also put here map of custom sidechain transactions
-  /*val customTransactionSerializers: Map[scorex.core.ModifierTypeId, TransactionSerializer[_ <: Transaction]] = ???
-
-  override val modifierSerializers: Map[Byte, Serializer[_ <: NodeViewModifier]] =
-    Map(new RegularTransaction().modifierTypeId() -> new SidechainTransactionsCompanion(customTransactionSerializers))
-  */
   protected def getCurrentSidechainNodeViewInfo: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages
       .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
@@ -103,10 +98,9 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            validators: Seq[BlockValidator[SidechainBlock]]): Props =
+            genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, validators))
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -118,11 +112,10 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            validators: Seq[BlockValidator[SidechainBlock]])
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, validators))
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -135,9 +128,8 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            validators: Seq[BlockValidator[SidechainBlock]])
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, validators), name)
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }

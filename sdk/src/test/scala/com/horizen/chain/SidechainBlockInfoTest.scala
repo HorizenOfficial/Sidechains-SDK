@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -17,31 +18,31 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val score: Long = 1L << 32 + 1
   val parentId: ModifierId = getRandomModifier()
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
+  val refIds = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
+    "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainBlockReferenceId(BytesUtils.fromHexString(hex)))
+  val withdrawalEpoch: Int = 10
+  val withdrawalEpochIndex: Int = 100
 
   @Test
   def creation(): Unit = {
     val clonedParentId: ModifierId = bytesToId(idToBytes(parentId))
-    val refs = generateMainchainReferences(Seq(generateMainchainBlockReference()))
-    val refIds = refs.map(d => byteArrayToMainchainBlockReferenceId(d.hash))
-
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds, withdrawalEpoch, withdrawalEpochIndex)
 
     assertEquals("SidechainBlockInfo height is different", height, info.height)
     assertEquals("SidechainBlockInfo score is different", score, info.score)
     assertEquals("SidechainBlockInfo parentId is different", clonedParentId, info.parentId)
-    assertEquals("SidechainBlockInfo semanticValidity is different",  ModifierSemanticValidity.Valid, info.semanticValidity)
+    assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, info.semanticValidity)
     assertEquals("SidechainBlockInfo mainchain lock reference size is different", refIds.length, info.mainchainBlockReferenceHashes.length)
     refIds.zipWithIndex.foreach{case (ref, index) =>
       assertEquals("SidechainBlockInfo reference is different", ref, info.mainchainBlockReferenceHashes(index))
     }
+    assertEquals("SidechainBlockInfo withdrawalEpoch is different", withdrawalEpoch, info.withdrawalEpoch)
+    assertEquals("SidechainBlockInfo withdrawalEpochIndex is different", withdrawalEpochIndex, info.withdrawalEpochIndex)
   }
 
   @Test
   def serialization(): Unit = {
-    val refs = generateMainchainReferences(Seq(generateMainchainBlockReference()))
-    val refIds = refs.map(d => byteArrayToMainchainBlockReferenceId(d.hash))
-
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, semanticValidity, refIds, withdrawalEpoch, withdrawalEpochIndex)
     val bytes = info.bytes
 
 
@@ -53,12 +54,13 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo score is different", info.score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo parentId is different", info.parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", info.semanticValidity, serializedInfoTry.get.semanticValidity)
-
     val references = serializedInfoTry.get.mainchainBlockReferenceHashes
     assertEquals("Size of mainchain references shall be the same", info.mainchainBlockReferenceHashes.size, references.size)
     refIds.zipWithIndex.foreach{case (_, index) =>
       assertEquals("SidechainBlockInfo reference is different", info.mainchainBlockReferenceHashes(index), references(index))
     }
+    assertEquals("SidechainBlockInfo withdrawalEpoch is different", info.withdrawalEpoch, serializedInfoTry.get.withdrawalEpoch)
+    assertEquals("SidechainBlockInfo withdrawalEpochIndex is different", info.withdrawalEpochIndex, serializedInfoTry.get.withdrawalEpochIndex)
 
     /*
     val out = Some(new FileOutputStream("src/test/resources/sidechainblockinfo_bytes"))
@@ -89,5 +91,12 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo score is different", score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo parentId is different", parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, serializedInfoTry.get.semanticValidity)
+    val references = serializedInfoTry.get.mainchainBlockReferenceHashes
+    assertEquals("Size of mainchain references shall be the same", refIds.size, references.size)
+    refIds.zipWithIndex.foreach{case (_, index) =>
+      assertEquals("SidechainBlockInfo reference is different", refIds(index), references(index))
+    }
+    assertEquals("SidechainBlockInfo withdrawalEpoch is different", withdrawalEpoch, serializedInfoTry.get.withdrawalEpoch)
+    assertEquals("SidechainBlockInfo withdrawalEpochIndex is different", withdrawalEpochIndex, serializedInfoTry.get.withdrawalEpochIndex)
   }
 }

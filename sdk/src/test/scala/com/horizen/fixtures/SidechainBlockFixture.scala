@@ -4,12 +4,14 @@ import java.time.Instant
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.NoncedBox
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.SidechainTransaction
+import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
@@ -29,6 +31,45 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       companion,
       null
     ).get
+  }
+
+  def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      1,
+      (1L << 32) + 1,
+      bytesToId(new Array[Byte](32)),
+      ModifierSemanticValidity.Unknown,
+      Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
+      1,
+      1
+    )
+  }
+
+  def generateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo, params: NetworkParams, customScore: Option[Long] = None): SidechainBlockInfo = {
+    val withdrawalEpoch: Int =
+      if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
+        parentBlockInfo.withdrawalEpoch + 1
+      else // Continue current withdrawal epoch
+        parentBlockInfo.withdrawalEpoch
+
+    val withdrawalEpochIndex: Int =
+      if(withdrawalEpoch > parentBlockInfo.withdrawalEpoch) // New withdrawal epoch started
+        block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be 0.
+      else // Continue current withdrawal epoch
+        parentBlockInfo.withdrawalEpochIndex + block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
+
+    SidechainBlockInfo(
+      parentBlockInfo.height + 1,
+      customScore match {
+        case Some(score) => score
+        case None => parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1
+      },
+      block.parentId,
+      ModifierSemanticValidity.Unknown,
+      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      withdrawalEpoch,
+      withdrawalEpochIndex
+    )
   }
 
   def generateGenesisBlockWithNoMainchainReferences(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L, genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlock = {

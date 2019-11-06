@@ -67,4 +67,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public SidechainRelatedMainchainOutputSerializer serializer() {
         return SidechainCreationSerializer.getSerializer();
     }
+
+    public int withdrawalEpochLength() {
+        return output.withdrawalEpochLength();
+    }
 }

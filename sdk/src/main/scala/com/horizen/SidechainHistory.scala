@@ -3,13 +3,14 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.Transaction
+import com.horizen.validation.SidechainBlockValidator
 import scorex.core.NodeViewModifier
-import scorex.core.block.BlockValidator
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
@@ -19,7 +20,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams, validators: Seq[BlockValidator[SidechainBlock]])
+class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams, validators: Seq[SidechainBlockValidator])
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
@@ -39,7 +40,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
-    validators.map(_.validate(block)).foreach {
+    validators.map(_.validate(block, this)).foreach {
       case Failure(e) =>
         throw e
       case _ =>
@@ -48,18 +49,18 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          storage.update(block, (1L << 32) + 1), // 1 MC block ref and 1 SC Block
+          storage.update(block, calculateGenesisBlockInfo(block)),
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
       else {
         storage.blockInfoById(block.parentId) match {
           case Some(parentBlockInfo) =>
-            val chainScore: Long = calculateChainScore(block, parentBlockInfo.score)
+            val blockInfo: SidechainBlockInfo = calculateBlockInfo(block, parentBlockInfo)
             // Check if we retrieved the next block of best chain
             if(block.parentId.equals(bestBlockId)) {
               (
-                storage.update(block, chainScore),
+                storage.update(block, blockInfo),
                 ProgressInfo(None, Seq(), Seq(block), Seq())
               )
             } else {
@@ -68,13 +69,13 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
                   bestForkChanges(block) match { // get info to switch to another chain
                     case Success(progInfo) =>
                       (
-                        storage.update(block, chainScore),
+                        storage.update(block, blockInfo),
                         progInfo
                       )
                     case Failure(e) =>
                       //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
                       (
-                        storage.update(block, chainScore),
+                        storage.update(block, blockInfo),
                         // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                         ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
                       )
@@ -83,7 +84,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
               } else {
                 // We retrieved block from another chain that is not the best one
                 (
-                  storage.update(block, chainScore),
+                  storage.update(block, blockInfo),
                   ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
                 )
               }
@@ -117,6 +118,46 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   // last 4 bytes contain heights of passed block
   def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
     parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
+  }
+
+  def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
+    if(isGenesisBlock(block.id))
+      SidechainBlockInfo(
+        1,
+        (block.mainchainBlocks.size.toLong << 32) + 1,
+        block.parentId,
+        ModifierSemanticValidity.Unknown,
+        SidechainBlockInfo.mainchainReferencesFromBlock(block),
+        1, // First Withdrawal epoch value. Note: maybe put to params?
+        block.mainchainBlocks.size
+      )
+    else
+      throw new IllegalArgumentException("Passed block is not a genesis block.")
+  }
+
+  // Calculate SidechainBlock info based on passed block and parent info.
+  def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
+    val withdrawalEpoch: Int =
+      if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
+        parentBlockInfo.withdrawalEpoch + 1
+      else // Continue current withdrawal epoch
+        parentBlockInfo.withdrawalEpoch
+
+    val withdrawalEpochIndex: Int =
+      if(withdrawalEpoch > parentBlockInfo.withdrawalEpoch) // New withdrawal epoch started
+        block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be 0.
+      else // Continue current withdrawal epoch
+        parentBlockInfo.withdrawalEpochIndex + block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
+
+    SidechainBlockInfo(
+      parentBlockInfo.height + 1,
+      calculateChainScore(block, parentBlockInfo.score),
+      block.parentId,
+      ModifierSemanticValidity.Unknown,
+      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      withdrawalEpoch,
+      withdrawalEpochIndex
+    )
   }
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
@@ -429,7 +470,7 @@ object SidechainHistory
 {
   private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
                                       params: NetworkParams,
-                                      validators: Seq[BlockValidator[SidechainBlock]]) : Option[SidechainHistory] = {
+                                      validators: Seq[SidechainBlockValidator]) : Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new SidechainHistory(historyStorage, params, validators))
@@ -440,7 +481,7 @@ object SidechainHistory
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
-                                      validators: Seq[BlockValidator[SidechainBlock]]) : Try[SidechainHistory] = Try {
+                                      validators: Seq[SidechainBlockValidator]) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty)
       new SidechainHistory(historyStorage, params, validators)
