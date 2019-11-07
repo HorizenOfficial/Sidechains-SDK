@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{InetAddress, InetSocketAddress, URI}
+import java.nio.ByteBuffer
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
@@ -14,17 +15,21 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, Get
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.WebSocketSettings
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.serialization.Views
+import javax.websocket.{Endpoint, EndpointConfig, Session}
+import org.glassfish.tyrus.client.ClientManager
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
+                                 websocketSettings: WebSocketSettings,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("node")) {
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ websocketStatus
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -90,6 +95,22 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def websocketStatus: Route = (path("websocketStatus") & post) {
+    val address = websocketSettings.address
+    try {
+      val client = ClientManager.createClient()
+      val userSession = client.connectToServer(new Endpoint {
+        override def onOpen(session: Session, endpointConfig: EndpointConfig): Unit = {
+
+        }
+      }, new URI(address))
+      userSession.getBasicRemote.sendPing(ByteBuffer.wrap("Ping".getBytes()))
+      ApiResponseUtil.toResponse(RespWebsocketStaus(WebsocketStatus("Connected", address)))
+    } catch {
+      case e: Throwable => ApiResponseUtil.toResponse(RespWebsocketStaus(WebsocketStatus("Disconnected", address)))
+    }
+  }
+
 }
 
 object SidechainNodeRestSchema {
@@ -108,6 +129,12 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespConnect(connectedTo: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespWebsocketStaus(websocket: WebsocketStatus) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class WebsocketStatus(status: String, serverAddress: String)
 
 }
 

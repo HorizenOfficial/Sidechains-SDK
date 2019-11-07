@@ -5,8 +5,6 @@ import java.{lang, util}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
-import akka.http.scaladsl.server.RouteConcatenation._
-import akka.http.scaladsl.server.Directives.{path, post, _}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
@@ -14,7 +12,7 @@ import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.{SidechainSettings, SidechainTypes}
+import com.horizen.{SidechainSettings, SidechainTypes, WebSocketSettings}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
@@ -49,6 +47,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   val jsonChecker = new SidechainJSONBOChecker
+  var websocketRealAddress = false
 
   private val inetAddr1 = new InetSocketAddress("92.92.92.92", 27017)
   private val inetAddr2 = new InetSocketAddress("93.93.93.93", 27017)
@@ -89,6 +88,14 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
     Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
     mockedScorexSettings
+  })
+  Mockito.when(mockedSidechainSettings.websocket).thenAnswer(_ => {
+    val conf: WebSocketSettings = mock[WebSocketSettings]
+    Mockito.when(conf.address).thenAnswer(_ => {
+      if (websocketRealAddress) "wss://echo.websocket.org"
+      else "ws://localhost:8888"
+    })
+    conf
   })
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")
@@ -198,7 +205,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedSidechainSettings.websocket, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, new SimpleCustomApi()).route

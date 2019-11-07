@@ -3,9 +3,12 @@ package com.horizen.api.http
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.WebSocketSettings
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert.{assertEquals, assertTrue}
+import org.mockito.Mockito
+import scala.concurrent.duration._
 
 import scala.collection.JavaConverters._
 
@@ -149,6 +152,40 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
+    "reply at /websocketStatus" in {
+      Post(basePath + "websocketStatus") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.elements().asScala.length)
+            val wsjson = result.get("websocket")
+            assertTrue(wsjson.isObject)
+            assertTrue(wsjson.get("status").isTextual)
+            assertTrue(wsjson.get("serverAddress").isTextual)
+            assertEquals("Disconnected", wsjson.get("status").asText())
+            assertEquals("ws://localhost:8888", wsjson.get("serverAddress").asText())
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      websocketRealAddress = true
+      Post(basePath + "websocketStatus") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result =>
+            assertEquals(1, result.elements().asScala.length)
+            val wsjson = result.get("websocket")
+            assertTrue(wsjson.isObject)
+            assertTrue(wsjson.get("status").isTextual)
+            assertTrue(wsjson.get("serverAddress").isTextual)
+            assertEquals("Connected", wsjson.get("status").asText())
+            assertEquals("wss://echo.websocket.org", wsjson.get("serverAddress").asText())
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
       }
     }
   }

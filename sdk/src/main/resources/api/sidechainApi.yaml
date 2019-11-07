@@ -26,7 +26,7 @@ paths:
         - block
       summary: find block by id
       description: return a single block
-      operationId: getBlock
+      operationId: findBlockById
       requestBody:
         content:
           application/json:
@@ -346,7 +346,7 @@ paths:
       1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
       2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
       3) blockHash not set, txIndex = false -> Search in memory pool"
-      operationId: getRawTransaction
+      operationId: findTransactionsById
       requestBody:
         content:
           application/json:
@@ -764,7 +764,7 @@ paths:
         - wallet
       summary: find all public keys
       description: Returns the list of all wallet’s propositions (public keys)
-      operationId: getPropositions
+      operationId: getAllPublicKeys
       requestBody:
         content:
           application/json:
@@ -922,6 +922,40 @@ paths:
                 properties:
                   result:
                     $ref: '#/components/schemas/BlacklistedPeersNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/websocketStatus:
+    post:
+      tags:
+        - node
+      summary: check the status of the internal websocket client
+      description: Returns the status of the websocket
+      operationId: getWebsocketStatus
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      websocket:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          serverAddress:
+                            type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
