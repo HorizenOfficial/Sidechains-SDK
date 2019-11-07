@@ -6,7 +6,7 @@ import com.horizen.box.RegularBox
 import java.util.{List => JList, ArrayList => JArrayList}
 
 import com.horizen.proposition.PublicKey25519Proposition
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {

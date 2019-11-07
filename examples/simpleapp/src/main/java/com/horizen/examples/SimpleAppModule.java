@@ -24,7 +24,7 @@ import com.horizen.state.*;
 import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 public class SimpleAppModule
     extends AbstractModule

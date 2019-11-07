@@ -18,7 +18,7 @@ import com.horizen.secret.PrivateKey25519Serializer;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.VarInt;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

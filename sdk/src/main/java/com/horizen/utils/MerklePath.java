@@ -2,7 +2,7 @@ package com.horizen.utils;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;

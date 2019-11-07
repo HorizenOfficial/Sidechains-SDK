@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.RegularBox
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
