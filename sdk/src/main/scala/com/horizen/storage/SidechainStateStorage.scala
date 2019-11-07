@@ -4,7 +4,7 @@ import java.util.Optional
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.SidechainTypes
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
 import scala.collection.JavaConverters._

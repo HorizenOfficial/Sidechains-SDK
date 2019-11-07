@@ -2,7 +2,7 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{List => JList, HashMap => JHashMap}
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.Pair
 
 import akka.actor.ActorRef
 import com.horizen.api.http._
@@ -51,7 +51,7 @@ class SidechainApp @Inject()
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") val rejectedApiPaths : JList[JPair[String, String]]
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
   extends Application with ScorexLogging
 {
