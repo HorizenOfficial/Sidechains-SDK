@@ -1,6 +1,6 @@
 package com.horizen.utils;
 
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -154,6 +154,6 @@ object ProofOfWorkVerifier {
       )
       offset += 8
     }
-    res
+    res.reverse
   }
 }
