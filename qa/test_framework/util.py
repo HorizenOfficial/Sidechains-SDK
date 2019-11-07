@@ -27,6 +27,8 @@ def p2p_port(n):
     return 11000 + n + os.getpid()%999
 def rpc_port(n):
     return 12000 + n + os.getpid()%999
+def websocket_port(n):
+    return 13000 + n + os.getpid()%999
 
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BTC values"""
@@ -71,8 +73,15 @@ def sync_mempools(rpc_connections, wait=1):
 
 bitcoind_processes = {}
 
-def initialize_datadir(dirname, n):
+# websocket_info = [websocket_address, websocket_port]
+def initialize_datadir(dirname, n, websocket_info):
     datadir = os.path.join(dirname, "node"+str(n))
+    websocket_address = None
+    websocket_port = None
+    if(websocket_info is not None and len(websocket_info) == 2):
+        websocket_address = websocket_info[0]
+        websocket_port = websocket_info[1]
+
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
     with open(os.path.join(datadir, "zen.conf"), 'w') as f:
@@ -83,6 +92,11 @@ def initialize_datadir(dirname, n):
         f.write("port="+str(p2p_port(n))+"\n")
         f.write("rpcport="+str(rpc_port(n))+"\n")
         f.write("listenonion=0\n")
+        f.write("debug=ws\n")
+        if(websocket_address is not None):
+            f.write("wsaddress="+websocket_address+"\n")
+        if(websocket_port is not None):
+            f.write("wsport={0}\n".format(websocket_port))
     return datadir
 
 def initialize_chain(test_dir):
@@ -96,7 +110,7 @@ def initialize_chain(test_dir):
         devnull = open("/dev/null", "w+")
         # Create cache directories, run bitcoinds:
         for i in range(4):
-            datadir=initialize_datadir("cache", i)
+            datadir=initialize_datadir("cache", i, [])
             args = [ os.getenv("BITCOIND", "bitcoind"), "-keypool=1", "-datadir="+datadir, "-discover=0" ]
             if i > 0:
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
@@ -144,16 +158,18 @@ def initialize_chain(test_dir):
         from_dir = os.path.join("cache", "node"+str(i))
         to_dir = os.path.join(test_dir,  "node"+str(i))
         shutil.copytree(from_dir, to_dir)
-        initialize_datadir(test_dir, i) # Overwrite port/rpcport in zcash.conf
+        initialize_datadir(test_dir, i, []) # Overwrite port/rpcport in zcash.conf
 
-def initialize_chain_clean(test_dir, num_nodes):
+def initialize_chain_clean(test_dir, num_nodes, map_of_websocket_conf={}):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_datadir(test_dir, i)
+        initialize_datadir(test_dir, i, get_websocket_configuration(i, map_of_websocket_conf))
 
+def get_websocket_configuration(index, map_of_websocket_conf):
+    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else []
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''
@@ -182,7 +198,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "bitcoind")
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest" ]
+    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open("/dev/null", "w+")

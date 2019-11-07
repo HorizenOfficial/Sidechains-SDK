@@ -1,4 +1,6 @@
 #!/usr/bin/env python2
+from netrc import netrc
+
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -60,28 +62,63 @@ class SidechainTestFramework(BitcoinTestFramework):
     Bootstrap some sidechain nodes.
     
     Parameters:
-     - number_of_sidechains_nodes: the number of sidechain nodes to be bootstrapped
-     - number_of_accounts_per_sidechain: an array containing the numbers of accounts to be created for each sidechain node.
-            For example [2, 4, 5] for add 2 accounts to the first node, 4 accounts to the second one and 5 accounts to the third one.
-     - withdrawal_epochs_length:
-     - mainchain_node: the mainchain node
+     - network: a map of:
+        - key: the mainchain node
+        - value: an map of information for each sidechain:
+            - key:
+            - value: an array of:
+                - number_of_accounts: the numbers of accounts to be created
+                - withdrawal_epoch_length
+                - websocket_conf: a websocket configuration. An array of:
+                    - address
+                    - connectionTimeout
+                    - reconnectionDelay
+                    - reconnectionMaxAttempts
+                    
+    Example: 2 mainchain nodes and 3 sidechain nodes (with default websocket configuration) bootstrapped, respectively, from mainchain node first, first, and third.
+    {
+        mc_node_1: {
+            1: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
+            2: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
+        }
+        mc_node_2: {
+            1: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
+        }
+    }
+     
+     Output: a map of:
+     - key: i, i=[1,...,n] with n =t he number of sidechain nodes to be bootstrapped
+     - value: bootstrap information if the sidechain node i. An array of:
+        - sidechain_id
+        - account_secrets
+        - total_balance
+        - genesis_info
     
     NB: for each account add an amount of 100
     """
-    def bootstrap_sidechain(self, number_of_sidechains_nodes, number_of_accounts_per_sidechain, withdrawal_epoch_length, mainchain_node):
+    def bootstrap_sidechain(self, network={}):
         self.sc_nodes_bootstrap_info = {}
-        for i in range(number_of_sidechains_nodes):
-            n_keys = number_of_accounts_per_sidechain[i]
-            account_secrets = generate_secrets(i, n_keys)
-            balances = []
-            total_balance = 100*n_keys
-            for j in range(n_keys):
-                balances.append(100)
-            sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(i)
-            genesis_info = get_genesis_info(sidechain_id, mainchain_node, withdrawal_epoch_length, account_secrets, balances)
-            print "Sidechain created with id: " + sidechain_id
-            initialize_sc_datadir(self.options.tmpdir, i, account_secrets, genesis_info[0])
-            self.sc_nodes_bootstrap_info[i] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
+        total_number_of_sidechains = 0
+        for mc_node in network:
+            mc_node_values = network[mc_node]
+            number_of_sidechains_nodes = len(mc_node_values)
+            for i in range(number_of_sidechains_nodes):
+                sc_node_info = mc_node_values[i]
+                sc_index = i + total_number_of_sidechains
+                number_of_accounts = sc_node_info[0]
+                withdrawal_epoch_length = sc_node_info[1]
+                websocket_conf = sc_node_info[2]
+                account_secrets = generate_secrets(sc_index, number_of_accounts)
+                balances = []
+                total_balance = 100*number_of_accounts
+                for j in range(number_of_accounts):
+                    balances.append(100)
+                sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(sc_index)
+                genesis_info = get_genesis_info(sidechain_id, mc_node, withdrawal_epoch_length, account_secrets, balances)
+                print "Sidechain created with id: " + sidechain_id
+                initialize_sc_datadir(self.options.tmpdir, sc_index, account_secrets, genesis_info[0], websocket_conf)
+                self.sc_nodes_bootstrap_info[sc_index] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
+            total_number_of_sidechains += number_of_sidechains_nodes
         return self.sc_nodes_bootstrap_info
 
     def sc_setup_network(self, split = False):
@@ -222,9 +259,8 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
         setattr(parser.values, option.dest, str.split(','))
 
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data()
         self.num_sc_nodes = len(self.options.jarspathlist)
-        initialize_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes, genesisData)
+        initialize_default_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes)
 
     def sc_setup_network(self):
         self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)

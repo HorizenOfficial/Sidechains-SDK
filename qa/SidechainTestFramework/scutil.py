@@ -111,12 +111,13 @@ def generate_genesis_data(n, genesis_info):
     jsonSecret = generate_secrets(n, 1)[0]
     jsonParameters = {"secret": jsonSecret["secret"], "info": genesis_info}
     javaPs = subprocess.Popen(["java", "-cp",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar"+lib_separator+"../tools/sctool/target/lib/*",
+                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                "com.horizen.ScBootstrappingTool",
                                "genesisinfo", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
     scBootstrapOutput = javaPs.communicate()[0]
     jsonNode = json.loads(scBootstrapOutput)
     return jsonNode
+
 
 """
 Generate secrets by calling ScBootstrappingTools with command "generatekey"
@@ -150,7 +151,7 @@ def generate_secrets(n, number_of_accounts):
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "sidechain_seed_{0}_{1}".format(n, i + 1)}
         javaPs = subprocess.Popen(["java", "-cp",
-                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar"+lib_separator+"../tools/sctool/target/lib/*",
+                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                    "com.horizen.ScBootstrappingTool",
                                    "generatekey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
         scBootstrapOutput = javaPs.communicate()[0]
@@ -192,8 +193,13 @@ Parameters:
                 "mcBlockHeight": xxx,
                 "mcNetwork": regtest|testnet|mainnet
             }
+ - websocket_config: an array of:
+    - address (default=ws://localhost:8888)
+    - connectionTimeout (milliseconds, default=100)
+    - reconnectionDelay (seconds, default=1)
+    - reconnectionMaxAttempts (default=1)
 """
-def initialize_sc_datadir(dirname, n, account_secrets=None, genesis_info=None):
+def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_config):
     """Create directories for each node and configuration files inside them.
        For each node put also genesis data in configuration files.
        Configuration data must be automatically generated and different from
@@ -211,7 +217,7 @@ def initialize_sc_datadir(dirname, n, account_secrets=None, genesis_info=None):
         tmpConfig = templateFile.read()
     genesis_secrets = []
     for i in range(len(account_secrets)):
-         genesis_secrets.append(str(account_secrets[i]["secret"]))
+        genesis_secrets.append(str(account_secrets[i]["secret"]))
 
     jsonNode = generate_genesis_data(n, genesis_info)
     config = tmpConfig % {
@@ -227,9 +233,12 @@ def initialize_sc_datadir(dirname, n, account_secrets=None, genesis_info=None):
         'GENESIS_DATA': jsonNode["scGenesisBlockHex"],
         'POW_DATA': jsonNode["powData"],
         'BLOCK_HEIGHT': jsonNode["mcBlockHeight"],
-        'NETWORK': str(jsonNode["mcNetwork"])
+        'NETWORK': str(jsonNode["mcNetwork"]),
+        'WEBSOCKET_ADDRESS': websocket_config[0],
+        'CONNECTION_TIMEOUT': websocket_config[1],
+        'RECONNECTION_DELAY': websocket_config[2],
+        'RECONNECTION_MAX_ATTEMPS': websocket_config[3]
     }
-
 
     configsData.append({
         "name": "node" + str(n),
@@ -247,9 +256,10 @@ def initialize_default_sc_datadir(dirname, n):
        Configuration data must be automatically generated and different from
        the ones generated for the other nodes."""
 
-    genesis_secrets = {0 : "6882a61d8a23a9582c7c7e659466524880953fa25d983f29a8e3aa745ee6de5c0c97174767fd137f1cf2e37f2e48198a11a3de60c4a060211040d7159b769266", \
-                       1 : "905e2e581615ba0eff2bcd9fb666b4f6f6ed99ddd05208ae7918a25dc6ea6179c958724e7f4c44fd196d27f3384d2992a9c42485888862a20dcec670f3c08a4e", \
-                       2 : "80b9a06608fa5dbd11fb72d28b9df49f6ac69f0e951ca1d9e67abd404559606be9b36fb5ae7e74cc50603b161a5c31d26035f6a59e602294d9900740d6c4007f"}
+    genesis_secrets = {
+        0: "6882a61d8a23a9582c7c7e659466524880953fa25d983f29a8e3aa745ee6de5c0c97174767fd137f1cf2e37f2e48198a11a3de60c4a060211040d7159b769266", \
+        1: "905e2e581615ba0eff2bcd9fb666b4f6f6ed99ddd05208ae7918a25dc6ea6179c958724e7f4c44fd196d27f3384d2992a9c42485888862a20dcec670f3c08a4e", \
+        2: "80b9a06608fa5dbd11fb72d28b9df49f6ac69f0e951ca1d9e67abd404559606be9b36fb5ae7e74cc50603b161a5c31d26035f6a59e602294d9900740d6c4007f"}
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -272,7 +282,6 @@ def initialize_default_sc_datadir(dirname, n):
         'GENESIS_SECRETS': genesis_secrets[n]
     }
 
-
     configsData.append({
         "name": "node" + str(n),
         "url": "http://" + apiAddress + ":" + str(apiPort)
@@ -283,10 +292,6 @@ def initialize_default_sc_datadir(dirname, n):
     return configsData
 
 
-def sc_generate_genesis_data(self):
-    return generate_genesis_data(self.nodes[0])  # Maybe other parameters in future
-
-
 def initialize_default_sc_chain_clean(test_dir, num_nodes):
     """
     Create an empty blockchain and num_nodes wallets.
@@ -295,13 +300,30 @@ def initialize_default_sc_chain_clean(test_dir, num_nodes):
     for i in range(num_nodes):
         initialize_default_sc_datadir(test_dir, i)
 
-def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info):
+
+def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info, map_of_websocket_conf={}):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, account_secrets, genesis_info)
+        initialize_sc_datadir(test_dir, i, account_secrets, genesis_info, map_of_websocket_conf)
+
+
+def get_websocket_configuration(index, map_of_websocket_conf):
+    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else create_websocket_configuration()
+
+
+"""
+ Create a websocket configuration. An array of:
+    - address (default=ws://localhost:8888)
+    - connectionTimeout (milliseconds, default=100)
+    - reconnectionDelay (seconds, default=1)
+    - reconnectionMaxAttempts (default=1)
+"""
+def create_websocket_configuration(address="ws://localhost:8888", connectionTimeout=100, reconnectionDelay=1,
+                                   reconnectionMaxAttempts=1):
+    return [address, connectionTimeout, reconnectionDelay, reconnectionMaxAttempts]
 
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
@@ -310,9 +332,12 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar:../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
@@ -406,3 +431,53 @@ def assert_equal(expected, actual, message=""):
 def assert_true(condition, message=""):
     if not condition:
         raise AssertionError(message)
+
+def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index, mc_block, keys, is_genesis):
+    print("Check inclusion block for sidechain id {0}.".format(sidechain_id))
+    response = sc_node.block_best()
+    height = response["result"]["height"]
+    assert_equal(expected_sc_block_height, height, "The best block is not the genesis block.")
+    mc_block_json = response["result"]["block"]["mainchainBlocks"][sc_block_best_mainchain_blocks_index]
+    if (is_genesis):
+        new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
+        print("Checking that each public key has a box assigned with a non-zero value.")
+        for key in keys:
+            target = None
+            for box in new_boxes:
+                if box["proposition"]["publicKey"] == key["publicKey"]:
+                    target = box
+                    box_value = box["value"]
+                    assert_true(box_value > 0,
+                                "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
+                    assert_equal(100 * 100000000, box_value,
+                                 "Unexpected value for box: {0} with public key: {1}".format(box["id"], key))
+                    break
+        assert_true(target is not None, "Box related to public key: {0} not found".format(key))
+        mc_block_version = mc_block["version"]
+        mc_block_merkleroot = mc_block["merkleroot"]
+        mc_block_time = mc_block["time"]
+        mc_block_nonce = mc_block["nonce"]
+        sc_mc_block_version = mc_block_json["header"]["version"]
+        sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
+        sc_mc_block_time = mc_block_json["header"]["time"]
+        sc_mc_block_nonce = mc_block_json["header"]["nonce"]
+        assert_equal(mc_block_version, sc_mc_block_version)
+        assert_equal(mc_block_merkleroot, sc_mc_block_merkleroot)
+        assert_equal(mc_block_time, sc_mc_block_time)
+        assert_equal(mc_block_nonce, sc_mc_block_nonce)
+
+    response_2 = sc_node.mainchain_bestBlockReferenceInfo()
+    parent_hash = response_2["result"]["blockReferenceInfo"]["parentHash"]
+    hash = response_2["result"]["blockReferenceInfo"]["hash"]
+    sidechain_block_id = response_2["result"]["blockReferenceInfo"]["sidechainBlockId"]
+    height = response_2["result"]["blockReferenceInfo"]["height"]
+    sc_block_id = response["result"]["block"]["id"]
+    mc_block_hash = mc_block["hash"]
+    mc_block_height = mc_block["height"]
+    assert_equal(mc_block_hash, hash)
+    assert_equal(mc_block_height, height)
+    assert_equal(sc_block_id, sidechain_block_id)
+    mc_block_previousblockhash = mc_block["previousblockhash"]
+    sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
+    assert_equal(mc_block_previousblockhash, sc_mc_block_previousblockhash)
+    assert_equal(mc_block_previousblockhash, parent_hash)
