@@ -73,14 +73,8 @@ def sync_mempools(rpc_connections, wait=1):
 
 bitcoind_processes = {}
 
-# websocket_info = [websocket_address, websocket_port]
-def initialize_datadir(dirname, n, websocket_info):
+def initialize_datadir(dirname, n, websocket_port=None):
     datadir = os.path.join(dirname, "node"+str(n))
-    websocket_address = None
-    websocket_port = None
-    if(websocket_info is not None and len(websocket_info) == 2):
-        websocket_address = websocket_info[0]
-        websocket_port = websocket_info[1]
 
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
@@ -93,8 +87,6 @@ def initialize_datadir(dirname, n, websocket_info):
         f.write("rpcport="+str(rpc_port(n))+"\n")
         f.write("listenonion=0\n")
         f.write("debug=ws\n")
-        if(websocket_address is not None):
-            f.write("wsaddress="+websocket_address+"\n")
         if(websocket_port is not None):
             f.write("wsport={0}\n".format(websocket_port))
     return datadir
@@ -158,7 +150,7 @@ def initialize_chain(test_dir):
         from_dir = os.path.join("cache", "node"+str(i))
         to_dir = os.path.join(test_dir,  "node"+str(i))
         shutil.copytree(from_dir, to_dir)
-        initialize_datadir(test_dir, i, []) # Overwrite port/rpcport in zcash.conf
+        initialize_datadir(test_dir, i) # Overwrite port/rpcport in zcash.conf
 
 def initialize_chain_clean(test_dir, num_nodes, map_of_websocket_conf={}):
     """
@@ -169,7 +161,7 @@ def initialize_chain_clean(test_dir, num_nodes, map_of_websocket_conf={}):
         initialize_datadir(test_dir, i, get_websocket_configuration(i, map_of_websocket_conf))
 
 def get_websocket_configuration(index, map_of_websocket_conf):
-    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else []
+    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else None
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''

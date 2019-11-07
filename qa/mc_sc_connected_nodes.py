@@ -12,8 +12,8 @@ class MCSCConnectedNodes(SidechainTestFramework):
     ws_port_mc_0 = websocket_port(0)
     ws_port_mc_1 = websocket_port(1)
     mainchain_websocket_confs = {
-        0:[None, ws_port_mc_0],
-        1:[None, ws_port_mc_1]
+        0: ws_port_mc_0,
+        1: ws_port_mc_1
     }
 
     def setup_chain(self):
