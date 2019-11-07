@@ -1,15 +1,15 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
-import java.util.{List => JList, HashMap => JHashMap}
-import javafx.util.{Pair => JPair}
+import java.util.{HashMap => JHashMap, List => JList}
 
+import javafx.util.{Pair => JPair}
 import akka.actor.ActorRef
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, StorageParams}
+import com.horizen.params._
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -28,8 +28,8 @@ import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.websocket._
 import scorex.core.transaction.Transaction
 import scorex.util.ScorexLogging
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Try
 import scala.collection.immutable.Map
@@ -93,7 +93,14 @@ class SidechainApp @Inject()
       genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
     )
-    case "mainnet" | "testnet" => MainNetParams(
+    case "testnet" => TestNetParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight
+    )
+    case "mainnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,

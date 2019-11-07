@@ -2,7 +2,7 @@ package com.horizen.block
 
 import com.google.common.primitives.Ints
 import com.horizen.box.RegularBox
-import com.horizen.params.{MainNetParams, RegTestParams}
+import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
@@ -85,6 +85,36 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block nonce is different.", "000000000000000000000000cfcbffd9de586ff80e928e9b83e86c3c8c580000", BytesUtils.toHexString(block.get.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, block.get.header.solution.length)
     assertTrue("Block expected to be semantically valid", block.get.semanticValidity(params))
+  }
+
+  @Test
+  def blockWithSCSupportParsingOnTestnet3(): Unit = {
+    val scIdHex = "1111111111111111111111111111111111111111111111111111111111111111"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val params = TestNetParams(scId.data)
+
+    // Test 1: Block #530292 on testnet3 (with sc support)
+    val mcBlockHex = Source.fromResource("mcblock530290_testnet3").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params)
+
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
+
+    assertEquals("Block Hash is different.", "002061121ddac5438c6de656d046e80d3a044d06bac87c2501afc69eaff6fafa", mcblock.hashHex)
+    assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
+    assertEquals("Hash of previous block is different.", "006d20987ff5322196a1e5f530d52ed5c0b44750f4d1997daeda6a6c128ee14f", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "68bc6ede2f15ebb01dd6c9ff2c6dfcbe9ad824f4ec82264e4d38a8860af1d065", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "0000000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(mcblock.header.hashSCMerkleRootsMap))
+    assertEquals("Block creation time is different", 1572469894, mcblock.header.time)
+    assertEquals("Block PoW bits is different.", "1f6c7b5d", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
+    assertEquals("Block nonce is different.", "0000cefd46238a6721302931021ee4b444e54c55adad68229872877b49c10012", BytesUtils.toHexString(mcblock.header.nonce))
+    assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
+    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
+
+
+    assertFalse("New Block occurred without SC mentioned inside, SCMap expected to be undefined.",
+      mcblock.sidechainsMerkleRootsMap.isDefined)
   }
 
   @Test
