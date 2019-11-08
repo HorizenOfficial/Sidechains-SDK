@@ -1,9 +1,13 @@
-package org.ergoplatform
+package com.horizen.storage
 
 import scorex.core.utils.ScorexEncoding
 import scorex.crypto.hash.Blake2b256
 
-package object db {
+/**
+ * That source code had been copied/modified from ErgoPlatform Project
+ */
+
+package object leveldb {
   object Constants {
     val HashLength: Int = 32
   }

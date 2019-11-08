@@ -171,12 +171,6 @@
 			<artifactId>leveldbjni-all</artifactId>
 			<version>1.18.3</version>
 		</dependency>
-
-		<!--dependency>
-			<groupId>org.fusesource.leveldbjni</groupId>
-			<artifactId>leveldbjni</artifactId>
-			<version>1.8</version>
-		</dependency-->
 	</dependencies>
 
 	<build>

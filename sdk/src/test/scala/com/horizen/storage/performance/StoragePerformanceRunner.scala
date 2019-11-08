@@ -3,7 +3,8 @@ package com.horizen.storage.performance
 import java.io.{PrintWriter, StringWriter}
 
 import com.horizen.storage.performance.Measure._
-import com.horizen.storage.{ErgoPlatformStorageAdapter, Storage}
+import com.horizen.storage.Storage
+import com.horizen.storage.leveldb.VersionedLevelDbAdapterToStorageAdapter
 import com.horizen.utils._
 import javafx.util.{Pair => JPair}
 
@@ -45,7 +46,7 @@ class StoragePerformanceRunner(config: StoragePerformanceTestConfig, debug: Bool
       case (size, dataGenerator) =>
         val allMeasures = mutable.Buffer[TimeMeasure]()
         val storagePath = System.getProperty("java.io.tmpdir") + "StorageTest_" + System.currentTimeMillis()
-        val storage: Storage = new ErgoPlatformStorageAdapter(storagePath, 100000)
+        val storage: Storage = new VersionedLevelDbAdapterToStorageAdapter(storagePath, 100000)
         var storageDescription: String = ""
 
         try {

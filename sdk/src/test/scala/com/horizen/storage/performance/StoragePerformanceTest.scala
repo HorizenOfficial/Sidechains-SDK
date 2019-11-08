@@ -1,6 +1,5 @@
 package com.horizen.storage.performance
 
-import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 class StoragePerformanceTest extends JUnitSuite {
@@ -14,24 +13,21 @@ class StoragePerformanceTest extends JUnitSuite {
 
       override def storageGenerationSettings: Seq[(Int, StorageDataGenerator)] = {
         val trSettings = Seq(
-          (10000, TransactionStorageDataGenerator(1 to 1000, 1 to 1000, 1 * 255)),
-          /*(50000000, TransactionStorageDataGenerator(3 to 7, 3 to 7, 255 * 255)),
+          (50000000, TransactionStorageDataGenerator(3 to 7, 3 to 7, 255 * 255)),
           (10000000, TransactionStorageDataGenerator(3 to 7, 3 to 7, 255 * 255)),
           (10000000, TransactionStorageDataGenerator(3 to 7, 3 to 7, 255 * 255)),
           (10000000, TransactionStorageDataGenerator(30 to 70, 30 to 70, 255 * 255)),
           (1000000, TransactionStorageDataGenerator(300 to 700, 300 to 700, 255 * 255)),
           (1000000, TransactionStorageDataGenerator(300 to 700, 300 to 700, 255 * 255)),
           (1000000, TransactionStorageDataGenerator(700 to 900, 700 to 900, 255 * 255))
-*/
         )
 
         val byteDataSettings = Seq(
-          //(7000, ByteDataGenerator(1 * 1024 * 1024 to (2 * 1024 * 1024), 255 * 1)),
-          /*(10000, ByteDataGenerator(1024 * 1024 to 2 * 1024 * 1024, 255 * 255)),
+          (10000, ByteDataGenerator(1024 * 1024 to 2 * 1024 * 1024, 255 * 255)),
           (10000, ByteDataGenerator(1024 * 1024 to 2 * 1024 * 1024, 255 * 255)),
           (10000, ByteDataGenerator(1024 * 1024 to 2 * 1024 * 1024, 255 * 255)),
           (20000, ByteDataGenerator(1024 * 1023 to 1 * 1024 * 1024, 255 * 255)),
-          (30000, ByteDataGenerator(1024 * 1023 to 1 * 1024 * 1024, 255 * 255))*/
+          (30000, ByteDataGenerator(1024 * 1023 to 1 * 1024 * 1024, 255 * 255))
         )
 
         trSettings ++ byteDataSettings
@@ -45,7 +41,7 @@ class StoragePerformanceTest extends JUnitSuite {
     println()
   }
 
-  @Test
+  //@Test
   def runMeasures(): Unit = {
     runner.measurePerformance().foreach{
       case(storageDescription, results) =>

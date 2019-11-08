@@ -1,4 +1,4 @@
-package org.ergoplatform.db
+package com.horizen.storage.leveldb
 
 import io.iohk.iodb.ByteArrayWrapper
 import org.iq80.leveldb.{DB, ReadOptions}
@@ -6,12 +6,15 @@ import org.iq80.leveldb.{DB, ReadOptions}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+
 /**
+  * That source code had been copied/modified from ErgoPlatform Project
+  *
   * A LevelDB wrapper providing additional versioning layer along with a convenient db interface.
   */
 final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends KVStore {
 
-  import VersionedLDBKVStore.VersionId
+  import com.horizen.storage.leveldb.VersionedLDBKVStore.VersionId
 
   val VersionsKey: Array[Byte] = Algos.hash("versions")
 

@@ -1,12 +1,12 @@
-package com.horizen.storage
+package com.horizen.storage.leveldb
+
 import java.io.File
 import java.util
 import java.util.{Optional, List => JList}
 
-import com.horizen.utils._
-import javafx.util.{Pair => JPair}
-import org.ergoplatform.db.LDBFactory.factory
-import org.ergoplatform.db.VersionedLDBKVStore
+import com.horizen.storage.Storage
+import com.horizen.storage.leveldb.LDBFactory.factory
+import com.horizen.utils.{Pair => JPair, _}
 import org.iq80.leveldb.Options
 
 import scala.collection.JavaConverters._
@@ -18,7 +18,7 @@ import scala.compat.java8.OptionConverters._
 *    1. Why we use ByteArrayWrapper instead of Array[Byte]?
 *    2. We need iterator over the storage
 * */
-class ErgoPlatformStorageAdapter(pathToDB: String, keepVersions: Int) extends Storage{
+class VersionedLevelDbAdapterToStorageAdapter(pathToDB: String, keepVersions: Int) extends Storage{
   private val dataBase: VersionedLDBKVStore = createDb(pathToDB)
 
   override def get(key: ByteArrayWrapper): Optional[ByteArrayWrapper] = dataBase.get(key).map(byteArrayToWrapper).asJava

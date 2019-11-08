@@ -1,9 +1,11 @@
-package org.ergoplatform.db
+package com.horizen.storage.leveldb
 
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 
 /**
+  * That source code had been copied/modified from ErgoPlatform Project
+  *
   * Describes a set of changes which could be reverted later.
   * @param insertedKeys - inserted keys
   * @param removed - removed entries (key, value)

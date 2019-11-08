@@ -1,8 +1,12 @@
-package org.ergoplatform.db
+package com.horizen.storage.leveldb
 
 import org.iq80.leveldb.{DB, ReadOptions}
 
 import scala.collection.mutable
+
+/**
+ * That source code had been copied/modified from ErgoPlatform Project
+ */
 
 trait KVStore extends AutoCloseable {
 

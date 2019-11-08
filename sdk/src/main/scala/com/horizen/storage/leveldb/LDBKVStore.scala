@@ -1,8 +1,10 @@
-package org.ergoplatform.db
+package com.horizen.storage.leveldb
 
 import org.iq80.leveldb.DB
 
 /**
+  * That source code had been copied/modified from ErgoPlatform Project
+  *
   * A LevelDB wrapper providing a convenient db interface.
   */
 final class LDBKVStore(protected val db: DB) extends KVStore {

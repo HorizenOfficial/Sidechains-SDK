@@ -1,9 +1,13 @@
-package org.ergoplatform.db
+package com.horizen.storage.leveldb
 
 import org.iq80.leveldb.DBFactory
 import scorex.util.ScorexLogging
 
 import scala.util.Try
+
+/**
+ * That source code had been copied/modified from ErgoPlatform Project
+ */
 
 object LDBFactory extends ScorexLogging {
 
