@@ -13,4 +13,23 @@ public class ByteArrayWrapper extends io.iohk.iodb.ByteArrayWrapper {
     public ByteArrayWrapper(io.iohk.iodb.ByteArrayWrapper wrapper) {
         this(wrapper.data());
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[" + (
+                size() == 8 ? String.valueOf(getLong(data(), 0)) + "L" : BytesUtils.toHexString(data())) + "]";
+    }
+
+    private long getLong(byte[] buf, int pos) {
+        return
+                ((((long) buf[pos++]) << 56) |
+                        (((long) buf[pos++] & 0xFF) << 48) |
+                        (((long) buf[pos++] & 0xFF) << 40) |
+                        (((long) buf[pos++] & 0xFF) << 32) |
+                        (((long) buf[pos++] & 0xFF) << 24) |
+                        (((long) buf[pos++] & 0xFF) << 16) |
+                        (((long) buf[pos++] & 0xFF) << 8) |
+                        (((long) buf[pos] & 0xFF)));
+
+    }
 }
