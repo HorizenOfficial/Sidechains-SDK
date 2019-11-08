@@ -1,7 +1,10 @@
 package com.horizen.transaction;
 
 import com.horizen.box.BoxUnlocker;
+import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
+import com.horizen.proposition.MCPublicKeyHash;
+import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -21,6 +24,7 @@ public class RegularTransactionTest {
     long timestamp;
     ArrayList<Pair<RegularBox, PrivateKey25519>> from;
     ArrayList<Pair<PublicKey25519Proposition, Long>> to;
+    ArrayList<Pair<MCPublicKeyHash, Long>> withdrawalRequests;
 
     ArrayList<Long> expectedNonces;
 
@@ -47,6 +51,8 @@ public class RegularTransactionTest {
         to.add(new Pair<>(pk5.publicImage(), 20L));
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
+        withdrawalRequests = new ArrayList<>();
+
         expectedNonces = new ArrayList<>(Arrays.asList(
                 3911136990993187881L,
                 -2589583342552885352L,
@@ -56,24 +62,24 @@ public class RegularTransactionTest {
 
     @Test
     public void RegularTransaction_SuccessCreationTest() {
-        RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);
         assertEquals("Exception during RegularTransaction creation: fee is different!", fee, transaction.fee());
         assertEquals("Exception during RegularTransaction creation: fee is different!", timestamp, transaction.timestamp());
 
-        List<RegularBox> newBoxes = transaction.newBoxes();
+        List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
         assertEquals("Exception during RegularTransaction creation: new boxes count is different!", to.size(), newBoxes.size());
         for(int i = 0; i < to.size(); i++) {
             Pair<PublicKey25519Proposition, Long> expected = to.get(i);
-            RegularBox actual = newBoxes.get(i);
+            NoncedBox actual = newBoxes.get(i);
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d proposition is different!", i), true, expected.getKey().equals(actual.proposition()));
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d value is different!", i), expected.getValue().longValue(), actual.value());
         }
 
-        List<BoxUnlocker<PublicKey25519Proposition>> unlockers = transaction.unlockers();
+        List<BoxUnlocker<Proposition>> unlockers = transaction.unlockers();
         assertEquals("Exception during RegularTransaction creation: unlockers count is different!", from.size(), unlockers.size());
         for(int i = 0; i < from.size(); i++) {
             Pair<RegularBox, PrivateKey25519> expected = from.get(i);
-            BoxUnlocker<PublicKey25519Proposition> actual = unlockers.get(i);
+            BoxUnlocker<Proposition> actual = unlockers.get(i);
             assertArrayEquals(String.format("Exception during RegularTransaction creation: unlocker %d box id is different!", i),
                     expected.getKey().id(),actual.closedBoxId());
             assertEquals(String.format("Exception during RegularTransaction creation: unlocker %d proof is invalid!", i),
@@ -85,8 +91,8 @@ public class RegularTransactionTest {
 
     @Test
     public void newBoxesNonceEnforcingAlgorithmRegressionTest() {
-        RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
-        List<RegularBox> newBoxes = transaction.newBoxes();
+        RegularTransaction transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);
+        List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
         for(int i = 0; i < newBoxes.size(); i++)
             assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different.", i),
                     expectedNonces.get(i).longValue(), newBoxes.get(i).nonce());
@@ -98,7 +104,7 @@ public class RegularTransactionTest {
         // Test 1: from is null
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction.create(null, to, fee, timestamp);
+            RegularTransaction.create(null, to, withdrawalRequests, fee, timestamp);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -108,7 +114,7 @@ public class RegularTransactionTest {
         // Test 2: to is null
         exceptionOccurred = false;
         try {
-            RegularTransaction.create(from, null, fee, timestamp);
+            RegularTransaction.create(from, null, withdrawalRequests, fee, timestamp);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;

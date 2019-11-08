@@ -344,6 +344,7 @@ class SidechainWalletTest
     val blockId = Array[Byte](32)
     val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
     val to : JList[Pair[PublicKey25519Proposition, java.lang.Long]]= new JArrayList()
+    val withdrawalRequests : JList[Pair[MCPublicKeyHash, java.lang.Long]]= new JArrayList()
 
     Random.nextBytes(blockId)
 
@@ -353,7 +354,7 @@ class SidechainWalletTest
     for (i <- 0 to 2)
       to.add(new Pair(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], 10L))
 
-    val tx : RegularTransaction = RegularTransaction.create(from, to, 10L, 1547798549470L)
+    val tx : RegularTransaction = RegularTransaction.create(from, to, withdrawalRequests, 10L, 1547798549470L)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(Seq(tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]))

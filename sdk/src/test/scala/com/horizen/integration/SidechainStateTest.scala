@@ -12,7 +12,7 @@ import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHash, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
@@ -60,6 +60,7 @@ class SidechainStateTest
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
+    val withdrawalRequests: JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
     var totalFrom = 0L
 
 
@@ -81,7 +82,7 @@ class SidechainStateTest
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, withdrawalRequests, fee, System.currentTimeMillis - Random.nextInt(10000))
 
   }
 

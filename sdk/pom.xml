@@ -209,6 +209,7 @@
 					<include>privatekey25519_bytes</include>
 					<include>regulartransaction_bytes</include>
 					<include>regularbox_bytes</include>
+					<include>withdrawalrequestbox_bytes</include>
 					<include>certifierrightbox_bytes</include>
 					<include>sidechainblockinfo_bytes</include>
 					<include>sidechainsyncinfo_bytes</include>
