@@ -4,7 +4,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import scala.Int;
 
 import java.util.Arrays;

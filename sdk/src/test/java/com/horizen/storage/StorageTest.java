@@ -4,7 +4,7 @@ import com.horizen.fixtures.IODBStoreFixtureClass;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.*;
-import javafx.util.*;
+import com.horizen.utils.Pair;
 
 import org.junit.*;
 import static org.junit.Assert.*;

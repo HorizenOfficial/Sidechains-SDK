@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
   private val serverHost = "localhost"
-  private val serverPort = 8888
+  private val serverPort = 8999
   private var server: Server = _
 
   @Before
@@ -626,7 +626,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val pushServerHost = "localhost"
-    val pushServerPort = 8888
+    val pushServerPort = 8999
     var pushServer: Server = new Server(pushServerHost, pushServerPort, null, null, classOf[WebSocketServerPushEndpoint])
 
     pushServer.start()

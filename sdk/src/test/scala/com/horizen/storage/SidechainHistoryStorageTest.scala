@@ -11,7 +11,7 @@ import com.horizen.fixtures.{SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
-import javafx.util.Pair
+import com.horizen.utils.Pair
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._
