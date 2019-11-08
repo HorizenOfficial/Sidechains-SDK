@@ -39,17 +39,17 @@ public final class WithdrawalRequestBox
 
     @Override
     public MCPublicKeyHash proposition() {
-        return null;
+        return this.proposition;
     }
 
     @Override
     public long nonce() {
-        return 0;
+        return this.nonce;
     }
 
     @Override
     public long value() {
-        return 0;
+        return this.value;
     }
 
     @Override
@@ -71,7 +71,7 @@ public final class WithdrawalRequestBox
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(this.bytes());
+        return Arrays.hashCode(this.proposition.bytes());
     }
 
     @Override
