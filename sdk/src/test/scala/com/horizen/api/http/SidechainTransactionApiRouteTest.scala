@@ -101,7 +101,6 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqAllTransactions(None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        println(response)
         mapper.readTree(entityAs[String]).get("result") match {
           case result =>
             assertEquals(1, result.elements().asScala.length)
@@ -138,7 +137,6 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "decodeTransactionBytes")
         .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes(
           BytesUtils.toHexString(transaction_1_bytes)))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -169,7 +167,6 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       // parameter 'format' = false
       Post(basePath + "createRegularTransaction")
         .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -183,7 +180,6 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       Post(basePath + "createRegularTransaction")
         .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head),transactionOutput,None))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
@@ -219,7 +215,6 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
           //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
           SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,None))
         ) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }}

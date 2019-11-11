@@ -2,13 +2,13 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{List => JList, HashMap => JHashMap}
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.Pair
 import akka.actor.ActorRef
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, StorageParams}
+import com.horizen.params._
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -49,7 +49,7 @@ class SidechainApp @Inject()
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") val rejectedApiPaths : JList[JPair[String, String]]
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
   extends Application with ScorexLogging
 {
@@ -92,7 +92,14 @@ class SidechainApp @Inject()
       sidechainSettings.genesisData.mcBlockHeight,
       sidechainSettings.genesisData.withdrawalEpochLength
     )
-    case "mainnet" | "testnet" => MainNetParams(
+    case "testnet" => TestNetParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight
+    )
+    case "mainnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,

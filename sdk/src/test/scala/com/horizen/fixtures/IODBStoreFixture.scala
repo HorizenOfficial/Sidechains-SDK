@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import java.io.File
 
-import javafx.util.Pair
+import com.horizen.utils.Pair
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.storage.{IODBStoreAdapter, Storage}

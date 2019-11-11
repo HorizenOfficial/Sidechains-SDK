@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import java.util.Optional
 import java.util.{ArrayList => JArrayList, List => JList}
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
 

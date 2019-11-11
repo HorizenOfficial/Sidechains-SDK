@@ -7,7 +7,7 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
 
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import java.util.ArrayList;
 import java.util.List;
 

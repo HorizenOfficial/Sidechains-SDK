@@ -10,7 +10,7 @@ import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActor
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
+import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
@@ -63,7 +63,14 @@ trait SidechainNodeViewHolderFixture
       sidechainSettings.genesisData.mcBlockHeight,
       sidechainSettings.genesisData.withdrawalEpochLength
     )
-    case "mainnet" | "testnet" => MainNetParams(
+    case "testnet" => TestNetParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight
+    )
+    case "mainnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
