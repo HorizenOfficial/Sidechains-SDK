@@ -33,19 +33,34 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
     ).get
   }
 
-  def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlockInfo = {
+  def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None, validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
     SidechainBlockInfo(
       1,
       (1L << 32) + 1,
       bytesToId(new Array[Byte](32)),
-      ModifierSemanticValidity.Unknown,
+      validity,
       Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
       1,
       1
     )
   }
 
-  def generateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo, params: NetworkParams, customScore: Option[Long] = None): SidechainBlockInfo = {
+  def changeBlockInfoValidity(blockInfo: SidechainBlockInfo, validity: ModifierSemanticValidity): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      blockInfo.height,
+      blockInfo.score,
+      blockInfo.parentId,
+      validity,
+      blockInfo.mainchainBlockReferenceHashes,
+      blockInfo.withdrawalEpoch,
+      blockInfo.withdrawalEpochIndex)
+  }
+
+  def generateBlockInfo(block: SidechainBlock,
+                        parentBlockInfo: SidechainBlockInfo,
+                        params: NetworkParams,
+                        customScore: Option[Long] = None,
+                        validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
     val withdrawalEpoch: Int =
       if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
         parentBlockInfo.withdrawalEpoch + 1
@@ -65,7 +80,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
         case None => parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1
       },
       block.parentId,
-      ModifierSemanticValidity.Unknown,
+      validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       withdrawalEpoch,
       withdrawalEpochIndex

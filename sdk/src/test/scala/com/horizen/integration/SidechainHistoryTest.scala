@@ -4,6 +4,7 @@ import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
 import com.horizen.block.SidechainBlock
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures.{IODBStoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
@@ -33,6 +34,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
   val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
+  val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(Some(genesisBlock.mainchainBlocks.head.hash), ModifierSemanticValidity.Valid)
   var params: NetworkParams = _
 
   val sidechainSettings = mock[SidechainSettings]
@@ -45,11 +47,6 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id)
 
-    // TO DO: remove this after refactoring of Node objects restore/genesis creation methods. NO MOCKS!
-    /*Mockito.when(sidechainSettings.genesisBlock)
-      .thenAnswer(answer => {
-        Some(genesisBlock)
-      })*/
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
         scorexSettings
@@ -70,9 +67,10 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     val history = historyTry.get
     assertFalse("Expected to be not empty.", history.isEmpty)
-    assertEquals("Expected to have a genesis block.", 1 , history.height)
+    assertEquals("Expected to have a genesis block height.", 1 , history.height)
     assertEquals("Expected to have a genesis block.", genesisBlock.id , history.bestBlockId)
-    assertTrue("Expected to have a genesis block.", history.contains(genesisBlock.id))
+    assertEquals("Expected to have a genesis block info.", genesisBlockInfo , history.bestBlockInfo)
+    assertTrue("Expected to contain the genesis block.", history.contains(genesisBlock.id))
     assertTrue("Check for genesis block was failed.", history.isGenesisBlock(genesisBlock.id))
   }
 
@@ -107,6 +105,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // check
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB2.id , history.bestBlockId)
+    assertEquals("Expected to have different best block info, best block was changed.",
+      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, ModifierSemanticValidity.Valid, Seq(), 1, 1), history.bestBlockInfo)
 
 
     // Test 2: append block after current tip (not after genesis)
@@ -129,6 +129,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // check
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB3.id , history.bestBlockId)
+    assertEquals("Expected to have different best block info, best block was changed.",
+      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, ModifierSemanticValidity.Valid, Seq(), 1, 1), history.bestBlockInfo)
 
 
     // At the moment we have an active chain G1 -> B2 -> B3,

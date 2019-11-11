@@ -47,16 +47,28 @@ class Forger(settings: SidechainSettings,
     Await.result(future, timeoutDuration).asInstanceOf[View]
   }
 
-  protected def getNextBlockForgingInfo(): Try[ForgingInfo] = Try {
+  protected def getNextBlockForgingInfo: Try[ForgingInfo] = Try {
     val view = getNodeView
     val parentId: Block.BlockId = view.history.bestBlockId
     val timestamp: Long = Instant.now.getEpochSecond
-    val mainchainBlockRefToInclude: Seq[MainchainBlockReference] =
-      mainchainSynchronizer.getNewMainchainBlockReferences(view.history, SidechainBlock.MAX_MC_BLOCKS_NUMBER)
+
+    var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochIndex
+    if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
+      withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
+
+    val mainchainBlockRefToInclude: Seq[MainchainBlockReference] = mainchainSynchronizer.getNewMainchainBlockReferences(
+      view.history,
+      Math.min(SidechainBlock.MAX_MC_BLOCKS_NUMBER, withdrawalEpochMcBlocksLeft) // to not to include mcblock references from different withdrawal epochs
+    )
+
     val txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-      view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
-        .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
-        .toSeq
+      if(mainchainBlockRefToInclude.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
+        Seq() // no SC Txs allowed
+      } else { // SC block is in the middle of the epoch
+        view.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
+          .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+          .toSeq
+      }
     // TO DO: secret choosing logic should be revieved during Ouroboros Praos implementation.
     val ownerPrivateKey: PrivateKey25519 = view.vault.secrets().headOption match {
       case Some(secret) =>
@@ -69,7 +81,7 @@ class Forger(settings: SidechainSettings,
 
   protected def tryGetBlockTemplate: Receive = {
     case Forger.ReceivableMessages.TryGetBlockTemplate =>
-      getNextBlockForgingInfo() match {
+      getNextBlockForgingInfo match {
         case Success(pfi) =>
           sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params)
         case Failure(e) =>
@@ -94,7 +106,7 @@ class Forger(settings: SidechainSettings,
 
   protected def tryForgeNextBlock: Receive = {
     case Forger.ReceivableMessages.TryForgeNextBlock =>
-      getNextBlockForgingInfo() match {
+      getNextBlockForgingInfo match {
         case Success(pfi) =>
           SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params) match {
             case Success(block) =>

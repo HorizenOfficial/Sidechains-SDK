@@ -78,6 +78,11 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     blockById(bestBlockId).get
   }
 
+  def bestBlockInfo: SidechainBlockInfo = {
+    require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
+    blockInfoById(bestBlockId).get
+  }
+
   def blockById(blockId: ModifierId): Option[SidechainBlock] = {
     storage.get(new ByteArrayWrapper(idToBytes(blockId))).asScala.flatMap { baw =>
       val tryBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytesTry(baw.data)

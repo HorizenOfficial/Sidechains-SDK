@@ -170,8 +170,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     assertEquals("Storage returned wrong best block id", activeChainBlockList.last.id, historyStorage.bestBlockId)
 
 
-    // Test 4: get bestBlock
+    // Test 4: get bestBlock and bestBlockInfo
     assertEquals("Storage returned wrong best block", activeChainBlockList.last.id, historyStorage.bestBlock.id)
+    assertEquals("Storage returned wrong best block info", activeChainBlockInfoList.last, historyStorage.bestBlockInfo)
 
 
     // Test 5: get blockById

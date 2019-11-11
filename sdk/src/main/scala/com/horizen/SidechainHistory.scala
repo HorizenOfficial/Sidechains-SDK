@@ -36,7 +36,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   def height: Int = storage.height
   def bestBlockId: ModifierId = storage.bestBlockId
   def bestBlock: SidechainBlock = storage.bestBlock
-
+  def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
@@ -116,11 +116,11 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   // score is a long value, where
   // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
   // last 4 bytes contain heights of passed block
-  def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
+  private def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
     parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
   }
 
-  def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
+  private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
     if(isGenesisBlock(block.id))
       SidechainBlockInfo(
         1,
@@ -136,7 +136,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   }
 
   // Calculate SidechainBlock info based on passed block and parent info.
-  def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
+  private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val withdrawalEpoch: Int =
       if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
         parentBlockInfo.withdrawalEpoch + 1
