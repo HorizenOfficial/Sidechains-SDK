@@ -65,9 +65,9 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
     val semanticValidityCode = r.getByte()
     val mainChainReferences = readMainchainReferencesIds(r)
-    val withdrawalEpochNumber = r.getInt()
+    val withdrawalEpoch = r.getInt()
     val withdrawalEpochIndex = r.getInt()
 
-    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochNumber, withdrawalEpochIndex)
+    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpoch, withdrawalEpochIndex)
   }
 }

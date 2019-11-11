@@ -14,7 +14,7 @@ class MainchainPoWValidator(params: NetworkParams) extends SidechainBlockValidat
       Success()
     }
     else {
-      Failure (new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id)))))
+      Failure(new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id)))))
     }
   }
 }
