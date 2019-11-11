@@ -18,7 +18,7 @@ import scala.compat.java8.OptionConverters._
 *    1. Why we use ByteArrayWrapper instead of Array[Byte]?
 *    2. We need iterator over the storage
 * */
-class VersionedLevelDbAdapterToStorageAdapter(pathToDB: String, keepVersions: Int) extends Storage{
+class VersionedLevelDbStorageAdapter(pathToDB: String, keepVersions: Int) extends Storage{
   private val dataBase: VersionedLDBKVStore = createDb(pathToDB)
 
   override def get(key: ByteArrayWrapper): Optional[ByteArrayWrapper] = dataBase.get(key).map(byteArrayToWrapper).asJava
