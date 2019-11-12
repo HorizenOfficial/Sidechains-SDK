@@ -4,7 +4,7 @@ import com.horizen.block.SidechainBlock
 import com.horizen.params.NetworkParams
 import com.horizen.SidechainHistory
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, WithdrawalEpochUtils}
 import scorex.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
@@ -26,6 +26,17 @@ class WithdrawalEpochValidator(params: NetworkParams) extends SidechainBlockVali
 
     history.storage.blockInfoById(block.parentId) match {
       case Some(parentBlockInfo) => // Parent block is present
+        val blockEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+        if(blockEpochInfo.epoch > parentBlockInfo.withdrawalEpochInfo.epoch) { // epoch increased
+          if(parentBlockInfo.withdrawalEpochInfo.index != params.withdrawalEpochLength) // parent index was not the last index of the block -> Block contains MC Block refs from different Epochs
+            return Failure(new IllegalArgumentException("Sidechain block %s contains MC Block references, that belong to different withdrawal epochs.".format(BytesUtils.toHexString(idToBytes(block.id)))))
+
+        } else { // epoch is the same
+          if(blockEpochInfo.index == params.withdrawalEpochLength && block.transactions.nonEmpty) // Block is the last block of the epoch and contains SC Txs
+            return Failure(new IllegalArgumentException("Sidechain block %s is the last withdrawal epoch block, but contains Sidechain Transactions.".format(BytesUtils.toHexString(idToBytes(block.id)))))
+        }
+        return Success()
+
         if(parentBlockInfo.withdrawalEpochInfo.index < params.withdrawalEpochLength) { // Parent block is in the middle of Epoch
           val blockWithdrawalEpochIndex: Int = parentBlockInfo.withdrawalEpochInfo.index + block.mainchainBlocks.size
           if(blockWithdrawalEpochIndex < params.withdrawalEpochLength) // Block is in the middle of Epoch
