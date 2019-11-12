@@ -1,8 +1,9 @@
 package com.horizen.fixtures
 
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.chain.{MainchainBlockReferenceId, SidechainBlockInfo, byteArrayToMainchainBlockReferenceId}
 import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
@@ -39,8 +40,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       getRandomModifier(),
       ModifierSemanticValidity.Valid,
       generateMainchainReferences(Seq(generateMainchainBlockReference()), parent = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
-      1,
-      1
+      WithdrawalEpochInfo(1, 1)
     )
 
   val generatedData =
@@ -61,26 +61,16 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
     val parentData: (SidechainBlockInfo, Option[MainchainBlockReferenceId]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId, Seq(), params)._2)
     val parentSidechainBlockInfo = parentData._1
 
-    val withdrawalEpoch: Int =
-      if(parentSidechainBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
-        parentSidechainBlockInfo.withdrawalEpoch + 1
-      else // Continue current withdrawal epoch
-        parentSidechainBlockInfo.withdrawalEpoch
-
-    val withdrawalEpochIndex: Int =
-      if(withdrawalEpoch > parentSidechainBlockInfo.withdrawalEpoch) // New withdrawal epoch started
-        refs.size // Note: in case of empty MC Block ref list index should be 0.
-      else // Continue current withdrawal epoch
-        parentSidechainBlockInfo.withdrawalEpochIndex + refs.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
-
     val generatedScBlockInfo = SidechainBlockInfo(
       parentSidechainBlockInfo.height + 1,
       parentSidechainBlockInfo.score + (refs.size.toLong << 32) + 1,
       parent,
       ModifierSemanticValidity.Valid,
       (refs ++ generateMainchainReferences(parent = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
-      withdrawalEpoch,
-      withdrawalEpochIndex
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(
+        new SidechainBlock(null, 0L, refs, null, null, null, null),
+        parentSidechainBlockInfo.withdrawalEpochInfo,
+        params)
     )
 
     (id, (generatedScBlockInfo, findParentMainchainReference(parent)))

@@ -26,8 +26,8 @@ class WithdrawalEpochValidator(params: NetworkParams) extends SidechainBlockVali
 
     history.storage.blockInfoById(block.parentId) match {
       case Some(parentBlockInfo) => // Parent block is present
-        if(parentBlockInfo.withdrawalEpochIndex < params.withdrawalEpochLength) { // Parent block is in the middle of Epoch
-          val blockWithdrawalEpochIndex: Int = parentBlockInfo.withdrawalEpochIndex + block.mainchainBlocks.size
+        if(parentBlockInfo.withdrawalEpochInfo.index < params.withdrawalEpochLength) { // Parent block is in the middle of Epoch
+          val blockWithdrawalEpochIndex: Int = parentBlockInfo.withdrawalEpochInfo.index + block.mainchainBlocks.size
           if(blockWithdrawalEpochIndex < params.withdrawalEpochLength) // Block is in the middle of Epoch
             return Success()
           else if(blockWithdrawalEpochIndex > params.withdrawalEpochLength) // Block contains MC Block refs from different Epochs

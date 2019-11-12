@@ -9,6 +9,7 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.Transaction
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.SidechainBlockValidator
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
@@ -128,8 +129,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
         block.parentId,
         ModifierSemanticValidity.Unknown,
         SidechainBlockInfo.mainchainReferencesFromBlock(block),
-        1, // First Withdrawal epoch value. Note: maybe put to params?
-        block.mainchainBlocks.size
+        WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
       )
     else
       throw new IllegalArgumentException("Passed block is not a genesis block.")
@@ -137,26 +137,13 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
-    val withdrawalEpoch: Int =
-      if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
-        parentBlockInfo.withdrawalEpoch + 1
-      else // Continue current withdrawal epoch
-        parentBlockInfo.withdrawalEpoch
-
-    val withdrawalEpochIndex: Int =
-      if(withdrawalEpoch > parentBlockInfo.withdrawalEpoch) // New withdrawal epoch started
-        block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be 0.
-      else // Continue current withdrawal epoch
-        parentBlockInfo.withdrawalEpochIndex + block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
-
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
       calculateChainScore(block, parentBlockInfo.score),
       block.parentId,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      withdrawalEpoch,
-      withdrawalEpochIndex
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
     )
   }
 

@@ -52,7 +52,7 @@ class Forger(settings: SidechainSettings,
     val parentId: Block.BlockId = view.history.bestBlockId
     val timestamp: Long = Instant.now.getEpochSecond
 
-    var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochIndex
+    var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochInfo.index
     if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 

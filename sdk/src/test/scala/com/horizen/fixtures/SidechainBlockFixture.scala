@@ -11,6 +11,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.SidechainTransaction
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
@@ -40,8 +41,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       bytesToId(new Array[Byte](32)),
       validity,
       Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
-      1,
-      1
+      WithdrawalEpochInfo(1, 1)
     )
   }
 
@@ -52,8 +52,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       blockInfo.parentId,
       validity,
       blockInfo.mainchainBlockReferenceHashes,
-      blockInfo.withdrawalEpoch,
-      blockInfo.withdrawalEpochIndex)
+      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.index)
+    )
   }
 
   def generateBlockInfo(block: SidechainBlock,
@@ -61,18 +61,6 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
                         params: NetworkParams,
                         customScore: Option[Long] = None,
                         validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
-    val withdrawalEpoch: Int =
-      if(parentBlockInfo.withdrawalEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
-        parentBlockInfo.withdrawalEpoch + 1
-      else // Continue current withdrawal epoch
-        parentBlockInfo.withdrawalEpoch
-
-    val withdrawalEpochIndex: Int =
-      if(withdrawalEpoch > parentBlockInfo.withdrawalEpoch) // New withdrawal epoch started
-        block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be 0.
-      else // Continue current withdrawal epoch
-        parentBlockInfo.withdrawalEpochIndex + block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
-
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
       customScore match {
@@ -82,8 +70,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       block.parentId,
       validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      withdrawalEpoch,
-      withdrawalEpochIndex
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
     )
   }
 
