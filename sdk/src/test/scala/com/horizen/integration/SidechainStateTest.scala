@@ -12,6 +12,7 @@ import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.params.MainNetParams
 import com.horizen.proposition.{MCPublicKeyHash, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
@@ -56,6 +57,8 @@ class SidechainStateTest
   val transactionList = new ListBuffer[RegularTransaction]()
 
   val secretList = new ListBuffer[Secret]()
+
+  val params = MainNetParams()
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
@@ -115,7 +118,7 @@ class SidechainStateTest
         tmpDir
       })
 
-    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, applicationState).get
+    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
 
     for (b <- boxList) {
       //Test get

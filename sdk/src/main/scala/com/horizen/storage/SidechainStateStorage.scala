@@ -3,15 +3,16 @@ package com.horizen.storage
 import java.util.Optional
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
 import javafx.util.{Pair => JPair}
 
 import scala.util._
 import scala.collection.JavaConverters._
-import com.horizen.box.Box
+import com.horizen.box.{Box, WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.proposition.Proposition
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -24,6 +25,14 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
+
+  private val epochInformationKey = calculateKey("Epoch information".getBytes)
+
+  private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
+
+  private def getWithdrawalRequestsKey(withdrawalEpochInfo: WithdrawalEpochInfo) : ByteArrayWrapper = {
+    calculateKey(Ints.toByteArray(withdrawalEpochInfo.epoch))
+  }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
@@ -64,6 +73,57 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     storage.update(version,
       updateList,
       removeList)
+
+    this
+  }
+
+  def getEpochInfo : Option[WithdrawalEpochInfo] = {
+    storage.get(epochInformationKey) match {
+      case v if v.isPresent => WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data).toOption
+      case _ => Some(WithdrawalEpochInfo(0, 0))
+    }
+  }
+
+  def updateEpochInfo(version: ByteArrayWrapper,
+                      withdrawalEpochInfo: WithdrawalEpochInfo) : Try[SidechainStateStorage] = Try {
+
+    require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
+
+    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+
+    updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
+      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+
+    storage.update(version, updateList, new JArrayList[ByteArrayWrapper]())
+
+    this
+  }
+
+  def getWithdrawalRequests(withdrawalEpochInfo: WithdrawalEpochInfo) : JList[WithdrawalRequestBox] = {
+    storage.get(getWithdrawalRequestsKey(withdrawalEpochInfo)) match {
+      case v if v.isPresent => withdrawalRequestSerializer.parseBytes(v.get().data)
+      case _ => new JArrayList[WithdrawalRequestBox]()
+    }
+  }
+
+  def updateWithdrawalRequests(version: ByteArrayWrapper,
+                               withdrawalEpochInfo: WithdrawalEpochInfo,
+                               withdrawalRequestList: Set[WithdrawalRequestBox]) : Try[SidechainStateStorage] = Try {
+
+    require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
+    require(withdrawalRequestList != null, "List of WithdrawalRequestBox to add must be NOT NULL. Use empty List instead.")
+    require(!withdrawalRequestList.contains(null), "WithdrawalRequestBox to add must be NOT NULL.")
+
+    val boxList = getWithdrawalRequests(withdrawalEpochInfo)
+
+    boxList.addAll(withdrawalRequestList.asJavaCollection)
+
+    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+
+    updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
+      new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(boxList))))
+
+    storage.update(version, updateList, new JArrayList[ByteArrayWrapper]())
 
     this
   }

@@ -6,6 +6,7 @@ import javafx.util.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.RegularBox
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.params.MainNetParams
 import com.horizen.proposition.{MCPublicKeyHash, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.storage.SidechainStateStorage
@@ -45,6 +46,8 @@ class SidechainStateTest
   val transactionList = new ListBuffer[RegularTransaction]()
 
   val secretList = new ListBuffer[Secret]()
+
+  val params = MainNetParams()
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
@@ -104,7 +107,7 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
-    val sidechainState : SidechainState = new SidechainState(mockedBoxStorage, bytesToVersion(boxVersion.last.data), mockedApplicationState)
+    val sidechainState : SidechainState = new SidechainState(mockedBoxStorage, params, bytesToVersion(boxVersion.last.data), mockedApplicationState)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -247,7 +250,7 @@ class SidechainStateTest
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState : SidechainState = new SidechainState(mockedBoxStorage, bytesToVersion(boxVersion.last.data), mockedApplicationState)
+    val sidechainState : SidechainState = new SidechainState(mockedBoxStorage, params, bytesToVersion(boxVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 

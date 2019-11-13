@@ -245,9 +245,9 @@ public class CommandProcessor {
         switch(network) {
             case 0: // mainnet
             case 1: // testnet
-                return new MainNetParams(scId, null, null, null, 1);
+                return new MainNetParams(scId, null, null, null, 1, 100);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1);
+                return new RegTestParams(scId, null, null, null, 1, 100);
         }
         return null;
 
