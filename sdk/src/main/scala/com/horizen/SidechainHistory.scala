@@ -122,17 +122,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   }
 
   private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
-    if(isGenesisBlock(block.id))
-      SidechainBlockInfo(
-        1,
-        (block.mainchainBlocks.size.toLong << 32) + 1,
-        block.parentId,
-        ModifierSemanticValidity.Unknown,
-        SidechainBlockInfo.mainchainReferencesFromBlock(block),
-        WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
-      )
-    else
-      throw new IllegalArgumentException("Passed block is not a genesis block.")
+    require(isGenesisBlock(block.id), "Passed block is not a genesis block.")
+    SidechainBlockInfo(
+      1,
+      (block.mainchainBlocks.size.toLong << 32) + 1,
+      block.parentId,
+      ModifierSemanticValidity.Unknown,
+      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
+    )
   }
 
   // Calculate SidechainBlock info based on passed block and parent info.
