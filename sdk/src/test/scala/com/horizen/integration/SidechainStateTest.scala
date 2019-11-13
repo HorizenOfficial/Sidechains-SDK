@@ -3,7 +3,7 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import javafx.util.{Pair => JPair}
 
 import scala.collection.JavaConverters._
@@ -17,7 +17,7 @@ import com.horizen.proposition.{MCPublicKeyHash, Proposition, PublicKey25519Prop
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -59,6 +59,7 @@ class SidechainStateTest
   val secretList = new ListBuffer[Secret]()
 
   val params = MainNetParams()
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
@@ -101,7 +102,7 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    stateStorage.update(boxVersion, boxList.toSet, Set[Array[Byte]]())
+    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]]())
 
   }
 
@@ -145,6 +146,9 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.parentId)
       .thenAnswer(answer => bytesToId(boxVersion.data))
+
+    Mockito.when(mockedBlock.mainchainBlocks)
+      .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 

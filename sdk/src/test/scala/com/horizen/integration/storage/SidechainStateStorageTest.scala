@@ -2,6 +2,7 @@ package com.horizen.integration.storage
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
+
 import com.horizen._
 import com.horizen.box._
 import com.horizen.companion._
@@ -9,6 +10,7 @@ import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.storage._
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -27,6 +29,8 @@ class SidechainStateStorageTest
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
 
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+
   @Test
   def mainFlowTest() : Unit = {
     val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
@@ -44,7 +48,7 @@ class SidechainStateStorageTest
 
     //Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, (bList1 ++ bList2).toSet, Set()).isSuccess)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set()).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
@@ -58,7 +62,7 @@ class SidechainStateStorageTest
 
     //Test delete operation
     assertTrue("Update(delete) operation must be successful.",
-      sidechainStateStorage.update(version2, Set(), bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet).isSuccess)
+      sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(), bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version2, sidechainStateStorage.lastVersionId.get)
@@ -103,7 +107,7 @@ class SidechainStateStorageTest
 
     //Try to remove non-existent item
     assertFalse("Remove operation of non-existent item must not throw exception.",
-      sidechainStateStorage.update(version1, Set(), bList1.map(_.id())).isFailure)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(_.id())).isFailure)
 
   }
 

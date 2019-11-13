@@ -10,7 +10,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.proposition.Proposition
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import javafx.util.Pair
 import org.junit.Assert._
 import org.junit._
@@ -40,6 +40,8 @@ class SidechainStateStorageTest
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
+
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
 
   @Before
   def setUp() : Unit = {
@@ -99,14 +101,14 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, Set(boxList.head), Set(boxList(2).id()))
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(boxList(2).id()))
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getRegularBox()
-    tryRes = stateStorage.update(version, Set(box), Set(boxList(3).id()))
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(boxList(3).id()))
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.get(box.id()).isEmpty)

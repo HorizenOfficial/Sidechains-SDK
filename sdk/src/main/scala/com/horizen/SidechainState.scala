@@ -139,13 +139,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       case Success(appState) =>
         new SidechainState(
           stateStorage
-          .update(version, changes.toAppend.map(_.box).toSet.filter(box => !box.isInstanceOf[WithdrawalRequestBox]),
+          .update(version, this.withdrawalEpochInfo, changes.toAppend.map(_.box).toSet,
                   changes.toRemove.map(_.boxId.array).toSet)
-          .get
-          .updateEpochInfo(version, this.withdrawalEpochInfo)
-          .get
-          .updateWithdrawalRequests(version, this.withdrawalEpochInfo, changes.toAppend.map(_.box).
-            filter(box => box.isInstanceOf[WithdrawalRequestBox]).map(_.asInstanceOf[WithdrawalRequestBox]).toSet)
           .get,
           this.params, newVersion, appState)
       case Failure(exception) => throw exception
