@@ -10,6 +10,8 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
+import scala.collection.mutable.ArrayBuffer
+
 case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
@@ -47,12 +49,12 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
   }
 
   private def readMainchainReferencesIds(r: Reader): Seq[MainchainBlockReferenceId] = {
-    var references: Seq[MainchainBlockReferenceId] = Seq()
+    var references: ArrayBuffer[MainchainBlockReferenceId] = ArrayBuffer()
     val length = r.getInt()
 
     (0 until length).foreach(_ => {
       val bytes = r.getBytes(mainchainBlockReferenceIdSize)
-      references = references :+ byteArrayToMainchainBlockReferenceId(bytes)
+      references.append(byteArrayToMainchainBlockReferenceId(bytes))
     })
 
     references

@@ -54,9 +54,8 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo semanticValidity is different", info.semanticValidity, serializedInfoTry.get.semanticValidity)
     val references = serializedInfoTry.get.mainchainBlockReferenceHashes
     assertEquals("Size of mainchain references shall be the same", info.mainchainBlockReferenceHashes.size, references.size)
-    refIds.zipWithIndex.foreach{case (_, index) =>
+    for(index <- refIds.indices)
       assertEquals("SidechainBlockInfo reference is different", info.mainchainBlockReferenceHashes(index), references(index))
-    }
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", info.withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
     /*
@@ -90,9 +89,8 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, serializedInfoTry.get.semanticValidity)
     val references = serializedInfoTry.get.mainchainBlockReferenceHashes
     assertEquals("Size of mainchain references shall be the same", refIds.size, references.size)
-    refIds.zipWithIndex.foreach{case (_, index) =>
+    for(index <- refIds.indices)
       assertEquals("SidechainBlockInfo reference is different", refIds(index), references(index))
-    }
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
   }
 }

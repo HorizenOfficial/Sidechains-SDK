@@ -63,10 +63,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
                         validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
-      customScore match {
-        case Some(score) => score
-        case None => parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1
-      },
+      customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1),
       block.parentId,
       validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
