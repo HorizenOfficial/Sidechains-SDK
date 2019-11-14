@@ -78,11 +78,11 @@ class SidechainTestFramework(BitcoinTestFramework):
     Example: 2 mainchain nodes and 3 sidechain nodes (with default websocket configuration) bootstrapped, respectively, from mainchain node first, first, and third.
     {
         mc_node_1: {
+            0: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
             1: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
-            2: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
         }
         mc_node_2: {
-            1: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
+            0: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
         }
     }
      
@@ -113,7 +113,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                 total_balance = 100*number_of_accounts
                 for j in range(number_of_accounts):
                     balances.append(100)
-                sidechain_id = "000000000000000000000000000000000000000000000000000000000000000{0}".format(sc_index)
+                sidechain_id = ("{0}".format(sc_index)).zfill(64)
                 genesis_info = get_genesis_info(sidechain_id, mc_node, withdrawal_epoch_length, account_secrets, balances)
                 print "Sidechain created with id: " + sidechain_id
                 initialize_sc_datadir(self.options.tmpdir, sc_index, account_secrets, genesis_info[0], websocket_conf)
