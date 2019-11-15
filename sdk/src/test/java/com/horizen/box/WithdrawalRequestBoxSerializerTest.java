@@ -1,7 +1,6 @@
 package com.horizen.box;
 
-import com.horizen.proposition.MCPublicKeyHash;
-import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;
@@ -9,7 +8,6 @@ import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
 
@@ -24,7 +22,7 @@ public class WithdrawalRequestBoxSerializerTest
     public void setUp() {
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/WithdrawalRequestBox_bytes"
-        box = new WithdrawalRequestBox(new MCPublicKeyHash(new byte[MCPublicKeyHash.KEY_LENGTH]), 1000, 10);
+        box = new WithdrawalRequestBox(new MCPublicKeyHashProposition(new byte[MCPublicKeyHashProposition.KEY_LENGTH]), 1000, 10);
 
         //Save box to binary file for regression tests.
         /*

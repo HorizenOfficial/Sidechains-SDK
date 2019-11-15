@@ -53,14 +53,31 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
+  def getWithdrawalEpochInfo() : Option[WithdrawalEpochInfo] = {
+    storage.get(epochInformationKey) match {
+      case v if v.isPresent => WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data).toOption
+      case _ => None
+    }
+  }
+
+  def getWithdrawalRequests(withdrawalEpochInfo: WithdrawalEpochInfo) : JList[WithdrawalRequestBox] = {
+    storage.get(getWithdrawalRequestsKey(withdrawalEpochInfo)) match {
+      case v if v.isPresent => withdrawalRequestSerializer.parseBytes(v.get().data)
+      case _ => new JArrayList[WithdrawalRequestBox]()
+    }
+  }
+
   def update(version : ByteArrayWrapper, withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList : Set[SidechainTypes#SCB],
-             boxIdsRemoveList : Set[Array[Byte]]) : Try[SidechainStateStorage] = Try {
+             boxIdsRemoveList : Set[Array[Byte]],
+             withdrawalRequestAppendList : Set[WithdrawalRequestBox]) : Try[SidechainStateStorage] = Try {
+    require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
     require(!boxUpdateList.contains(null), "Box to add/update must be NOT NULL.")
     require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
-    require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
+    require(withdrawalRequestAppendList != null, "List of WithdrawalRequests to append must be NOT NULL. Use empty List instead.")
+    require(!withdrawalRequestAppendList.contains(null), "WithdrawalRequest to append must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
@@ -68,23 +85,19 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     for (r <- boxIdsRemoveList)
       removeList.add(calculateKey(r))
 
-    for (b <- boxUpdateList.filter(box => !box.isInstanceOf[WithdrawalRequestBox]))
+    for (b <- boxUpdateList)
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
         new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))))
 
-    if (boxUpdateList.count(box => box.isInstanceOf[WithdrawalRequestBox]) > 0) {
+    if (withdrawalRequestAppendList.nonEmpty) {
       val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo)
 
-      withdrawalRequestList.addAll(boxUpdateList
-        .filter(box => box.isInstanceOf[WithdrawalRequestBox])
-        .map(_.asInstanceOf[WithdrawalRequestBox])
-        .asJavaCollection)
-
+      withdrawalRequestList.addAll(withdrawalRequestAppendList.asJavaCollection)
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
 
-      updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
+      updateList.add(new JPair(epochInformationKey,
         new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     }
@@ -94,13 +107,6 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
       removeList)
 
     this
-  }
-
-  private def getWithdrawalRequests(withdrawalEpochInfo: WithdrawalEpochInfo) : JList[WithdrawalRequestBox] = {
-    storage.get(getWithdrawalRequestsKey(withdrawalEpochInfo)) match {
-      case v if v.isPresent => withdrawalRequestSerializer.parseBytes(v.get().data)
-      case _ => new JArrayList[WithdrawalRequestBox]()
-    }
   }
 
   def lastVersionId : Option[ByteArrayWrapper] = {

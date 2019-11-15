@@ -5,7 +5,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.box.RegularBox
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.proposition.{MCPublicKeyHash, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import javafx.util.{Pair => JPair}
 
 import scala.util.Random
@@ -15,7 +15,7 @@ trait TransactionFixture extends BoxFixture {
   def getRegularTransaction(inputsSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests: JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests: JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
     var totalFrom = 0L
 
     for(secret <- inputsSecrets) {
@@ -42,7 +42,7 @@ trait TransactionFixture extends BoxFixture {
   def getRegularTransaction(inputBoxes: Seq[RegularBox], inputSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests: JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests: JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
     var totalFrom = 0L
 
     for(box <- inputBoxes) {
@@ -69,7 +69,7 @@ trait TransactionFixture extends BoxFixture {
   def getTransaction () : RegularTransaction = {
     val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests : JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
     from.add(new JPair(new RegularBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(new RegularBox(pk2.publicImage(), 1, 20), pk2))
@@ -82,7 +82,7 @@ trait TransactionFixture extends BoxFixture {
   def getCompatibleTransaction () : RegularTransaction = {
     val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests : JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
     from.add(new JPair(new RegularBox(pk3.publicImage(), 1, 10), pk3))
     from.add(new JPair(new RegularBox(pk4.publicImage(), 1, 10), pk4))
@@ -95,7 +95,7 @@ trait TransactionFixture extends BoxFixture {
   def getIncompatibleTransaction () : RegularTransaction = {
     val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests : JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
     from.add(new JPair(new RegularBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(new RegularBox(pk6.publicImage(), 1, 10), pk6))

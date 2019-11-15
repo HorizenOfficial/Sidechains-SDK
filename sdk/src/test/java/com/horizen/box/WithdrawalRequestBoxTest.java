@@ -1,7 +1,6 @@
 package com.horizen.box;
 
-import com.horizen.proposition.MCPublicKeyHash;
-import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;
@@ -13,7 +12,7 @@ import static org.junit.Assert.*;
 
 public class WithdrawalRequestBoxTest
 {
-    MCPublicKeyHash proposition;
+    MCPublicKeyHashProposition proposition;
     long nonce;
     long value;
 
@@ -21,7 +20,7 @@ public class WithdrawalRequestBoxTest
     public void setUp() {
         byte[] anotherSeed = "testseed".getBytes();
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        proposition = new MCPublicKeyHash(new byte[20]);
+        proposition = new MCPublicKeyHashProposition(new byte[20]);
 
         nonce = 12345;
         value = 10;
@@ -48,9 +47,9 @@ public class WithdrawalRequestBoxTest
 
         byte[] anotherSeed = "another test seed".getBytes();
         Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        byte[] mcKey1 = new byte[MCPublicKeyHash.KEY_LENGTH];
+        byte[] mcKey1 = new byte[MCPublicKeyHashProposition.KEY_LENGTH];
         Arrays.fill(mcKey1, (byte) 1);
-        MCPublicKeyHash anotherProposition = new MCPublicKeyHash(mcKey1);
+        MCPublicKeyHashProposition anotherProposition = new MCPublicKeyHashProposition(mcKey1);
 
         WithdrawalRequestBox box3 = new WithdrawalRequestBox(anotherProposition, nonce, value);
         assertFalse("Boxes hash codes expected to be different", box1.hashCode() == box3.hashCode());

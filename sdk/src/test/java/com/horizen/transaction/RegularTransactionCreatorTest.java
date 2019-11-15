@@ -4,7 +4,7 @@ import com.horizen.box.Box;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
 import com.horizen.node.NodeWallet;
-import com.horizen.proposition.MCPublicKeyHash;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -161,7 +161,7 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        List<Pair<MCPublicKeyHash, Long>> withdrawalRequests = new ArrayList<>();
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
 
         to.add( new Pair<>(pk4.publicImage(), 20L));
         to.add( new Pair<>(pk5.publicImage(), 30L));
@@ -188,7 +188,7 @@ public class RegularTransactionCreatorTest {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
-        List<Pair<MCPublicKeyHash, Long>> withdrawalRequests = new ArrayList<>();
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
 
         // Note: total 'from' value is 60, total 'to' value is 10
 
@@ -245,7 +245,7 @@ public class RegularTransactionCreatorTest {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
-        List<Pair<MCPublicKeyHash, Long>> withdrawalRequests = new ArrayList<>();
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
 
         // Note: total 'from' value is 60, total 'to' value is 10
         PublicKey25519Proposition changeAddress = pk5.publicImage();

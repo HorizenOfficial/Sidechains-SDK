@@ -3,7 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.MCPublicKeyHash;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -24,7 +24,7 @@ public class RegularTransactionTest {
     long timestamp;
     ArrayList<Pair<RegularBox, PrivateKey25519>> from;
     ArrayList<Pair<PublicKey25519Proposition, Long>> to;
-    ArrayList<Pair<MCPublicKeyHash, Long>> withdrawalRequests;
+    ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests;
 
     ArrayList<Long> expectedNonces;
 

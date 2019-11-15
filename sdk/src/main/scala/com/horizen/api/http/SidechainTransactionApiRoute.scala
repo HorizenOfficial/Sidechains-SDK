@@ -199,9 +199,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               new lang.Long(element.value))
           ).toIndexedSeq
 
-          val withdrawalRequests: IndexedSeq[Pair[MCPublicKeyHash, lang.Long]] = body.withdrawalRequests.map(element =>
+          val withdrawalRequests: IndexedSeq[Pair[MCPublicKeyHashProposition, lang.Long]] = body.withdrawalRequests.map(element =>
             new Pair(
-              MCPublicKeyHashSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              MCPublicKeyHashPropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value))
           ).toIndexedSeq
 
@@ -279,8 +279,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     var outputs: java.util.List[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
       new Pair(new PublicKey25519Proposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
 
-    var withdrawalRequests: java.util.List[Pair[MCPublicKeyHash, lang.Long]] = withdrawalRequestList.map(element =>
-      new Pair(new MCPublicKeyHash(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
+    var withdrawalRequests: java.util.List[Pair[MCPublicKeyHashProposition, lang.Long]] = withdrawalRequestList.map(element =>
+      new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
 
     var tx: RegularTransaction = null
     try {

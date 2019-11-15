@@ -23,8 +23,8 @@ public final class RegularTransaction
     public static final byte TRANSACTION_TYPE_ID = 1;
 
     private List<RegularBox> inputs;
-    private List<Pair<PublicKey25519Proposition, Long>> outputs;
-    private List<Pair<MCPublicKeyHash, Long>> withdrawalRequests;
+    private List<Pair<PublicKey25519Proposition, Long>> regularOutputs;
+    private List<Pair<MCPublicKeyHashProposition, Long>> withdrawalOutputs;
     private List<Signature25519> signatures;
 
     private long fee;
@@ -36,24 +36,24 @@ public final class RegularTransaction
     // Serializers definition
     private static ListSerializer<RegularBox> boxSerializer =
             new ListSerializer<>(RegularBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-    private static ListSerializer<PublicKey25519Proposition> propositionSerializer =
+    private static ListSerializer<PublicKey25519Proposition> regularPropositionSerializer =
             new ListSerializer<>(PublicKey25519PropositionSerializer.getSerializer(), MAX_TRANSACTION_NEW_BOXES);
-    private static ListSerializer<MCPublicKeyHash> withdrawalPropositionSerializer =
-            new ListSerializer<>(MCPublicKeyHashSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
+    private static ListSerializer<MCPublicKeyHashProposition> withdrawalPropositionSerializer =
+            new ListSerializer<>(MCPublicKeyHashPropositionSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
     private static ListSerializer<Signature25519> signaturesSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
     private RegularTransaction(List<RegularBox> inputs,
                                List<Pair<PublicKey25519Proposition, Long>> outputs,
-                               List<Pair<MCPublicKeyHash, Long>> withdrawalRequests,
+                               List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests,
                                List<Signature25519> signatures,
                                long fee,
                                long timestamp) {
         if(inputs.size() != signatures.size())
             throw new IllegalArgumentException("Inputs list size is different to signatures list size!");
         this.inputs = inputs;
-        this.outputs = outputs;
-        this.withdrawalRequests = withdrawalRequests;
+        this.regularOutputs = outputs;
+        this.withdrawalOutputs = withdrawalRequests;
         this.signatures = signatures;
         this.fee = fee;
         this.timestamp = timestamp;
@@ -92,12 +92,12 @@ public final class RegularTransaction
     public synchronized List<NoncedBox<Proposition>> newBoxes() {
         if(newBoxes == null) {
             newBoxes = new ArrayList<>();
-            for (int i = 0; i < outputs.size(); i++) {
-                NoncedBox box = new RegularBox(outputs.get(i).getKey(), getNewBoxNonce(outputs.get(i).getKey(), i), outputs.get(i).getValue());
+            for (int i = 0; i < regularOutputs.size(); i++) {
+                NoncedBox box = new RegularBox(regularOutputs.get(i).getKey(), getNewBoxNonce(regularOutputs.get(i).getKey(), i), regularOutputs.get(i).getValue());
                 newBoxes.add(box);
             }
-            for (int i = 0; i < withdrawalRequests.size(); i++) {
-                NoncedBox box = new WithdrawalRequestBox(withdrawalRequests.get(i).getKey(), getNewBoxNonce(withdrawalRequests.get(i).getKey(), i), withdrawalRequests.get(i).getValue());
+            for (int i = 0; i < withdrawalOutputs.size(); i++) {
+                NoncedBox box = new WithdrawalRequestBox(withdrawalOutputs.get(i).getKey(), getNewBoxNonce(withdrawalOutputs.get(i).getKey(), i), withdrawalOutputs.get(i).getValue());
                 newBoxes.add(box);
             }
         }
@@ -124,11 +124,11 @@ public final class RegularTransaction
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
             return false;
 
-        for(Pair<PublicKey25519Proposition, Long> output : outputs)
+        for(Pair<PublicKey25519Proposition, Long> output : regularOutputs)
             if(output.getValue() <= 0)
                 return false;
 
-        for(Pair<MCPublicKeyHash, Long> withdrawalRequest : withdrawalRequests)
+        for(Pair<MCPublicKeyHashProposition, Long> withdrawalRequest : withdrawalOutputs)
             if(withdrawalRequest.getValue() <= 0)
                 return false;
 
@@ -151,15 +151,15 @@ public final class RegularTransaction
 
         List<PublicKey25519Proposition> outputPropositions = new ArrayList<>();
         ByteArrayOutputStream outputValuesBytes = new ByteArrayOutputStream();
-        for(Pair<PublicKey25519Proposition, Long> pair : outputs) {
+        for(Pair<PublicKey25519Proposition, Long> pair : regularOutputs) {
             outputPropositions.add(pair.getKey());
             outputValuesBytes.write(Longs.toByteArray(pair.getValue()), 0,8);
         }
-        byte[] outputPropositionsBytes = propositionSerializer.toBytes(outputPropositions);
+        byte[] outputPropositionsBytes = regularPropositionSerializer.toBytes(outputPropositions);
 
-        List<MCPublicKeyHash> withdrawalPropositions = new ArrayList<>();
+        List<MCPublicKeyHashProposition> withdrawalPropositions = new ArrayList<>();
         ByteArrayOutputStream withdrawalValuesBytes = new ByteArrayOutputStream();
-        for(Pair<MCPublicKeyHash, Long> pair : withdrawalRequests) {
+        for(Pair<MCPublicKeyHashProposition, Long> pair : withdrawalOutputs) {
             withdrawalPropositions.add(pair.getKey());
             withdrawalValuesBytes.write(Longs.toByteArray(pair.getValue()), 0,8);
         }
@@ -207,7 +207,7 @@ public final class RegularTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<PublicKey25519Proposition> outputPropositions = propositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<PublicKey25519Proposition> outputPropositions = regularPropositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         List<Pair<PublicKey25519Proposition, Long>> outputs =  new ArrayList<>();
@@ -219,11 +219,11 @@ public final class RegularTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<MCPublicKeyHash> withdrawalPropositions = withdrawalPropositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<MCPublicKeyHashProposition> withdrawalPropositions = withdrawalPropositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
-        List<Pair<MCPublicKeyHash, Long>> withdrawalRequests =  new ArrayList<>();
-        for(MCPublicKeyHash proposition : withdrawalPropositions) {
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests =  new ArrayList<>();
+        for(MCPublicKeyHashProposition proposition : withdrawalPropositions) {
             withdrawalRequests.add(new Pair<>(proposition, BytesUtils.getLong(bytes, offset)));
             offset += 8;
         }
@@ -240,7 +240,7 @@ public final class RegularTransaction
 
     public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
                                             List<Pair<PublicKey25519Proposition, Long>> to,
-                                            List<Pair<MCPublicKeyHash, Long>> withdrawalRequests,
+                                            List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests,
                                             long fee,
                                             long timestamp) {
         if(from == null || to == null)

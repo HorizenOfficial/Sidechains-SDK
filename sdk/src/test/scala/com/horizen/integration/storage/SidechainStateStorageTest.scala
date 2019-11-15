@@ -48,7 +48,7 @@ class SidechainStateStorageTest
 
     //Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set()).isSuccess)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Set()).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
@@ -62,7 +62,7 @@ class SidechainStateStorageTest
 
     //Test delete operation
     assertTrue("Update(delete) operation must be successful.",
-      sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(), bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet).isSuccess)
+      sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(), bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet, Set()).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version2, sidechainStateStorage.lastVersionId.get)
@@ -107,7 +107,7 @@ class SidechainStateStorageTest
 
     //Try to remove non-existent item
     assertFalse("Remove operation of non-existent item must not throw exception.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(_.id())).isFailure)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(_.id()), Set()).isFailure)
 
   }
 

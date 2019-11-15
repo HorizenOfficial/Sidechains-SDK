@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.MCPublicKeyHash;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -53,7 +53,7 @@ public class DefaultTransactionIncompatibilityCheckerTest {
         ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add(new Pair<>(pk7.publicImage(), 10L));
 
-        ArrayList<Pair<MCPublicKeyHash, Long>> withdrawalRequests = new ArrayList<>();
+        ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
 
         RegularTransaction newTx = RegularTransaction.create(from1, to, withdrawalRequests, fee, timestamp);
         RegularTransaction currentTx1 = RegularTransaction.create(from2, to, withdrawalRequests, fee, timestamp);

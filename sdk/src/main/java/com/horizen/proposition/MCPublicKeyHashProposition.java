@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
-public class MCPublicKeyHash implements Proposition {
+public final class MCPublicKeyHashProposition implements Proposition {
 
     public static final int KEY_LENGTH = 20;
 
     @JsonProperty("publicKey")
     private byte[] pubKeyHashBytes;
 
-    public MCPublicKeyHash(byte[] bytes)
+    public MCPublicKeyHashProposition(byte[] bytes)
     {
         if(bytes.length != KEY_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect pubKeyHash length, %d expected, %d found", KEY_LENGTH, bytes.length));
@@ -26,7 +26,7 @@ public class MCPublicKeyHash implements Proposition {
 
     @Override
     public PropositionSerializer serializer() {
-        return MCPublicKeyHashSerializer.getSerializer();
+        return MCPublicKeyHashPropositionSerializer.getSerializer();
     }
 
     @Override
@@ -38,15 +38,15 @@ public class MCPublicKeyHash implements Proposition {
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(obj instanceof MCPublicKeyHash))
+        if (!(obj instanceof MCPublicKeyHashProposition))
             return false;
         if (obj == this)
             return true;
-        return Arrays.equals(this.pubKeyHashBytes, ((MCPublicKeyHash) obj).bytes());
+        return Arrays.equals(this.pubKeyHashBytes, ((MCPublicKeyHashProposition) obj).bytes());
     }
 
-    public static MCPublicKeyHash parseBytes(byte[] bytes) {
-        return new MCPublicKeyHash(bytes);
+    public static MCPublicKeyHashProposition parseBytes(byte[] bytes) {
+        return new MCPublicKeyHashProposition(bytes);
     }
 
     public static int getLength() {

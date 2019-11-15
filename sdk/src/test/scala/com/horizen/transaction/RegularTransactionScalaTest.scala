@@ -7,7 +7,7 @@ import java.util.{ArrayList => JArrayList}
 import com.fasterxml.jackson.databind.JsonNode
 import javafx.util.{Pair => JPair}
 import com.horizen.box.RegularBox
-import com.horizen.proposition.{MCPublicKeyHash, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
@@ -27,7 +27,7 @@ class RegularTransactionScalaTest
 
     val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
     val to = new JArrayList[JPair[PublicKey25519Proposition, JLong]]
-    val withdrawalRequests = new JArrayList[JPair[MCPublicKeyHash, JLong]]
+    val withdrawalRequests = new JArrayList[JPair[MCPublicKeyHashProposition, JLong]]
 
     val creator = PrivateKey25519Creator.getInstance
     val pk1 = creator.generateSecret("test_seed1".getBytes)

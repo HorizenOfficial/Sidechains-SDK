@@ -38,8 +38,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   },
   s"Specified version is invalid. ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
 
-  private var withdrawalEpochInfo : WithdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
-
   override type NVCT = SidechainState
   //type HPMOD = SidechainBlock
 
@@ -119,8 +117,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
-        this.withdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, this.withdrawalEpochInfo, this.params)
-        applyChanges(cs, idToVersion(mod.id)) // check applyChanges implementation
+        applyChanges(cs, idToVersion(mod.id),
+          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo().getOrElse(WithdrawalEpochInfo(0,0)),
+            this.params)) // check applyChanges implementation
       })
     }
   }
@@ -131,7 +130,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag): Try[SidechainState] = Try {
+  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this, version.data,
       changes.toAppend.map(_.box).asJava,
@@ -139,8 +138,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       case Success(appState) =>
         new SidechainState(
           stateStorage
-          .update(version, this.withdrawalEpochInfo, changes.toAppend.map(_.box).toSet,
-                  changes.toRemove.map(_.boxId.array).toSet)
+          .update(version, withdrawalEpochInfo,
+                  changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
+                  changes.toRemove.map(_.boxId.array).toSet,
+                  changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
+                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet)
           .get,
           this.params, newVersion, appState)
       case Failure(exception) => throw exception

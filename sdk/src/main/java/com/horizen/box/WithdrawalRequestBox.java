@@ -2,24 +2,23 @@ package com.horizen.box;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.proposition.MCPublicKeyHash;
-import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 
 public final class WithdrawalRequestBox
-    implements NoncedBox<MCPublicKeyHash>,
-    CoinsBox<MCPublicKeyHash>
+    implements NoncedBox<MCPublicKeyHashProposition>,
+    CoinsBox<MCPublicKeyHashProposition>
 {
 
     public static final byte BOX_TYPE_ID = 2;
 
-    protected MCPublicKeyHash proposition;
+    protected MCPublicKeyHashProposition proposition;
     protected long nonce;
     protected long value;
 
-    public WithdrawalRequestBox(MCPublicKeyHash proposition,
+    public WithdrawalRequestBox(MCPublicKeyHashProposition proposition,
                                 long nonce,
                                 long value)
     {
@@ -38,7 +37,7 @@ public final class WithdrawalRequestBox
         return Blake2b256.hash(Bytes.concat(this.proposition.bytes(), Longs.toByteArray(this.nonce)));    }
 
     @Override
-    public MCPublicKeyHash proposition() {
+    public MCPublicKeyHashProposition proposition() {
         return this.proposition;
     }
 
@@ -63,9 +62,9 @@ public final class WithdrawalRequestBox
     }
 
     public static WithdrawalRequestBox parseBytes(byte[] bytes) {
-        MCPublicKeyHash t = MCPublicKeyHash.parseBytes(Arrays.copyOf(bytes, MCPublicKeyHash.getLength()));
-        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, MCPublicKeyHash.getLength(), MCPublicKeyHash.getLength() + 8));
-        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, MCPublicKeyHash.getLength() + 8, MCPublicKeyHash.getLength() + 16));
+        MCPublicKeyHashProposition t = MCPublicKeyHashProposition.parseBytes(Arrays.copyOf(bytes, MCPublicKeyHashProposition.getLength()));
+        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, MCPublicKeyHashProposition.getLength(), MCPublicKeyHashProposition.getLength() + 8));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, MCPublicKeyHashProposition.getLength() + 8, MCPublicKeyHashProposition.getLength() + 16));
         return new WithdrawalRequestBox(t, nonce, value);
     }
 

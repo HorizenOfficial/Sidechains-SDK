@@ -344,7 +344,7 @@ class SidechainWalletTest
     val blockId = Array[Byte](32)
     val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
     val to : JList[Pair[PublicKey25519Proposition, java.lang.Long]]= new JArrayList()
-    val withdrawalRequests : JList[Pair[MCPublicKeyHash, java.lang.Long]]= new JArrayList()
+    val withdrawalRequests : JList[Pair[MCPublicKeyHashProposition, java.lang.Long]]= new JArrayList()
 
     Random.nextBytes(blockId)
 

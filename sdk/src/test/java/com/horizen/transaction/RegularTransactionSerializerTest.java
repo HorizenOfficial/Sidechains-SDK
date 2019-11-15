@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.MCPublicKeyHash;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -11,7 +11,6 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
@@ -43,7 +42,7 @@ public class RegularTransactionSerializerTest {
         to.add(new Pair<>(pk5.publicImage(), 20L));
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
-        ArrayList<Pair<MCPublicKeyHash, Long>> withdrawalRequests = new ArrayList<>();
+        ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
         transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);

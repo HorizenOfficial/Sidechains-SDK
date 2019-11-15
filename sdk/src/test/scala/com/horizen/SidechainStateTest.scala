@@ -3,11 +3,11 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import javafx.util.{Pair => JPair}
-import com.horizen.block.SidechainBlock
-import com.horizen.box.RegularBox
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.box.{RegularBox, WithdrawalRequestBox}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.{MCPublicKeyHash, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
@@ -53,7 +53,7 @@ class SidechainStateTest
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests: JList[JPair[MCPublicKeyHash, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHash, java.lang.Long]]()
+    val withdrawalRequests: JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
     var totalFrom = 0L
 
 
@@ -208,12 +208,14 @@ class SidechainStateTest
     Mockito.when(mockedBoxStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
-      ArgumentMatchers.any[Set[Array[Byte]]]()))
+      ArgumentMatchers.any[Set[Array[Byte]]](),
+      ArgumentMatchers.any[Set[WithdrawalRequestBox]]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[Array[Byte]]](3)
+        val withdrawalRequestAppendList = answer.getArgument[Set[WithdrawalRequestBox]](4)
 
         boxVersion += version
 
@@ -228,6 +230,9 @@ class SidechainStateTest
         Success(mockedBoxStorage)
       })
 
+    Mockito.when(mockedBoxStorage.getWithdrawalEpochInfo())
+      .thenAnswer(answer => None)
+
     val mockedBlock = mock[SidechainBlock]
 
     Mockito.when(mockedBlock.id)
@@ -240,6 +245,9 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(boxVersion.last.data))
+
+    Mockito.when(mockedBlock.mainchainBlocks)
+      .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]()))
