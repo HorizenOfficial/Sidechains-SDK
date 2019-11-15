@@ -167,27 +167,15 @@ def generate_secrets(n, number_of_accounts):
 """
 Create directories for each node and configuration files inside them.
 For each node put also genesis data in configuration files.
-Configuration data must be automatically generated and different from the ones generated for the other nodes.
 
 Parameters:
  - dirname: directory name
  - n: sidechain node nth
  - genesis_secret:
- - genesis_info: a JSON object, to be included inside configuration file of the sidechain node nth, in the following form:
-             {
-                "scId": "id of the sidechain node",
-                "scGenesisBlockHex": "some value",
-                "powData": "some value",
-                "mcBlockHeight": xxx,
-                "mcNetwork": regtest|testnet|mainnet
-            }
+ - genesis_info: the genesis info used for start the sidechain node, provided by the mainchain node
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
 def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_config=MCConnectionInfo()):
-    """Create directories for each node and configuration files inside them.
-       For each node put also genesis data in configuration files.
-       Configuration data must be automatically generated and different from
-       the ones generated for the other nodes."""
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -230,12 +218,11 @@ def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_co
 
     return configsData
 
-
+"""
+Create directories for each node and default configuration files inside them.
+For each node put also genesis data in configuration files.
+"""
 def initialize_default_sc_datadir(dirname, n):
-    """Create directories for each node and configuration files inside them.
-       For each node put also genesis data in configuration files.
-       Configuration data must be automatically generated and different from
-       the ones generated for the other nodes."""
 
     genesis_secrets = {
         0: "6882a61d8a23a9582c7c7e659466524880953fa25d983f29a8e3aa745ee6de5c0c97174767fd137f1cf2e37f2e48198a11a3de60c4a060211040d7159b769266", \

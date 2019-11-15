@@ -4,7 +4,7 @@ import json
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true
+from test_framework.util import assert_equal, assert_true, start_nodes
 from SidechainTestFramework.scutil import check_mainchan_block_inclusion
 
 """
@@ -24,6 +24,9 @@ Test:
 class SCBootstrap(SidechainTestFramework):
 
     number_of_sidechains = 3
+
+    def setup_nodes(self):
+        return start_nodes(1, self.options.tmpdir, extra_args=["-websocket"])
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]

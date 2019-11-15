@@ -240,13 +240,13 @@ class SidechainTestFramework(BitcoinTestFramework):
             traceback.print_tb(sys.exc_info()[2])
 
         if not self.options.noshutdown: #Support for tests with MC only, SC only, MC/SC
+            if hasattr(self,"sc_nodes"):
+                print("Stopping SC nodes")
+                stop_sc_nodes(self.sc_nodes)
             if hasattr(self, "nodes"):
                 print("Stopping MC nodes")
                 stop_nodes(self.nodes)
                 wait_bitcoinds()
-            if hasattr(self,"sc_nodes"):
-                print("Stopping SC nodes")
-                stop_sc_nodes(self.sc_nodes)
         else:
             print("Note: client processes were not stopped and may still be running")
 

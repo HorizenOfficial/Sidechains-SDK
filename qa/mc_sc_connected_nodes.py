@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 import json
-
+import test_framework.authproxy
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -44,7 +44,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
         self.sync_all()
 
     def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
+        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir, extra_args=[["-websocket"],["-websocket"],["-websocket"]])
 
     def sc_setup_chain(self):
         mc_node_1 = self.nodes[0]
@@ -52,17 +52,17 @@ class MCSCConnectedNodes(SidechainTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             mc_node_1,
             SCCreationInfo("1".zfill(64), 100, 1000),
-            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_0))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, self.ws_port_mc_0))
         )
         sc_node_2_configuration = SCNodeConfiguration(
             mc_node_1,
             SCCreationInfo("2".zfill(64), 250, 1000),
-            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_0))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, self.ws_port_mc_0))
         )
         sc_node_3_configuration = SCNodeConfiguration(
             mc_node_2,
             SCCreationInfo("3".zfill(64), 450, 1000),
-            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_1))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, self.ws_port_mc_1))
         )
         network = SCNetworkConfiguration(sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
         self.bootstrap_sidechain_nodes(network)
