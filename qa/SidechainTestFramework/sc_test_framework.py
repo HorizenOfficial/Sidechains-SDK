@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 from netrc import netrc
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCNetworkConfiguration
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCNetworkConfiguration, SCBootstrapInfo
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -119,12 +119,7 @@ class SidechainTestFramework(BitcoinTestFramework):
      
      Output: a map of:
      - key: i, i=[1,...,n] with n=the number of sidechain nodes to be bootstrapped
-     - value: bootstrap information if the sidechain node i. An array of:
-        - sidechain_id
-        - account_secrets
-        - total_balance
-        - genesis_info
-    
+     - value: bootstrap information of the sidechain node i. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
     """
     def bootstrap_sidechain_nodes(self, network):
         self.sc_nodes_bootstrap_info = {}
@@ -143,24 +138,22 @@ class SidechainTestFramework(BitcoinTestFramework):
      - sc_node_configuration: an instance of SCNodeConfiguration (see sc_boostrap_info.py)
      
      Output: a map of:
-     - bootstrap information of the sidechain node. An array of:
-        - sidechain_id
-        - account_secrets
-        - total_balance
-        - genesis_info
+      - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
     """
     def bootstrap_sidechin_node(self, n, sc_node_configuration):
         account_secrets = generate_secrets(n, 1)
+        genesis_secret = account_secrets[0]["secret"]
+        genesis_public_key = account_secrets[0]["publicKey"]
         sc_creation_info = sc_node_configuration.sc_creation_info
-        sidechain_id = sc_creation_info.sc_id
+        sidechain_id = sc_creation_info.sidechain_id
         genesis_info = get_genesis_info(sidechain_id,
                                         sc_node_configuration.mc_node,
                                         sc_creation_info.withdrawal_epoch_length,
                                         account_secrets,
                                         [sc_creation_info.forward_amout])
         print "Sidechain created with id: " + sidechain_id
-        initialize_sc_datadir(self.options.tmpdir, n, account_secrets, genesis_info[0], sc_node_configuration.mc_connection_info)
-        return [sidechain_id, account_secrets, sc_creation_info.forward_amout, genesis_info[1]]
+        initialize_sc_datadir(self.options.tmpdir, n, genesis_secret, genesis_info[0], sc_node_configuration.mc_connection_info)
+        return SCBootstrapInfo(sidechain_id, [genesis_secret, genesis_public_key], sc_creation_info.forward_amout, genesis_info[1])
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()

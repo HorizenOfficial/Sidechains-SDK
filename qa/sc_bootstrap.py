@@ -8,17 +8,18 @@ from test_framework.util import assert_equal, assert_true
 from SidechainTestFramework.scutil import check_mainchan_block_inclusion
 
 """
-    Bootstrap 3 SC Nodes and start them with genesis info extracted from a mainchain node.
-    
-    - Load a MC node
+Check the bootstrap feature.
+
+Configuration: bootstrap 3 SC Nodes and start them with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
     - Create 3 SC nodes
     - Extract genesis info
     - Start SC nodes with that genesis info
-    
-    For each SC node verify:
-    - check all keys/boxes/balances are coherent with the default initialization
-    - verify MC block reference's inclusion
+
+Test:
+    -for each SC node verify:
+        - all keys/boxes/balances are coherent with the default initialization
+        - verify MC block is included inside all 3 SC nodes
 """
 class SCBootstrap(SidechainTestFramework):
 
@@ -84,11 +85,11 @@ class SCBootstrap(SidechainTestFramework):
         for i in range(self.number_of_sidechains):
             node = self.sc_nodes[i]
             node_info = sc_nodes_info[i]
-            mc_block = mc_nodes[0].getblock(str(node_info[3]))
+            mc_block = mc_nodes[0].getblock(str(node_info.mainchain_block_height))
             # check all keys/boxes/balances are coherent with the default initialization
-            self.check_genesis_balances(node, node_info[0], len(node_info[1]), len(node_info[1]), node_info[2]*100000000)
+            self.check_genesis_balances(node, node_info.sidechain_id, 1, 1, node_info.wallet_balance*100000000)
             # verify MC block reference's inclusion
-            check_mainchan_block_inclusion(node, node_info[0], 1, 0, mc_block, node_info[1], [node_info[2]], True)
+            check_mainchan_block_inclusion(node, node_info.sidechain_id, 1, 0, mc_block, [node_info.genesis_account[1]], [node_info.wallet_balance], True)
 
 
 if __name__ == "__main__":

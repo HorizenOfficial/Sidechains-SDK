@@ -172,22 +172,7 @@ Configuration data must be automatically generated and different from the ones g
 Parameters:
  - dirname: directory name
  - n: sidechain node nth
- - account_secrets: a JSON array of secrets, in the following form:
-            [
-                {
-                    "secret":"first secret",
-                    "publicKey":"first public key"
-                },
-                {
-                    "secret":"second secret",
-                    "publicKey":"second public key"
-                },
-                ...,
-                {
-                    "secret":"nth secret",
-                    "publicKey":"nth public key"
-                }
-            ]
+ - genesis_secret:
  - genesis_info: a JSON object, to be included inside configuration file of the sidechain node nth, in the following form:
              {
                 "scId": "id of the sidechain node",
@@ -198,7 +183,7 @@ Parameters:
             }
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_config=MCConnectionInfo()):
+def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_config=MCConnectionInfo()):
     """Create directories for each node and configuration files inside them.
        For each node put also genesis data in configuration files.
        Configuration data must be automatically generated and different from
@@ -214,9 +199,6 @@ def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_c
 
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
-    genesis_secrets = []
-    for i in range(len(account_secrets)):
-        genesis_secrets.append(str(account_secrets[i]["secret"]))
 
     jsonNode = generate_genesis_data(n, genesis_info)
     config = tmpConfig % {
@@ -227,7 +209,7 @@ def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_c
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': ','.join(['"{0}"'.format(value) for value in genesis_secrets])[1:-1],
+        'GENESIS_SECRETS': genesis_secret,
         'SIDECHAIN_ID': jsonNode["scId"],
         'GENESIS_DATA': jsonNode["scGenesisBlockHex"],
         'POW_DATA': jsonNode["powData"],
@@ -300,13 +282,13 @@ def initialize_default_sc_chain_clean(test_dir, num_nodes):
         initialize_default_sc_datadir(test_dir, i)
 
 
-def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info, array_of_MCConnectionInfo=[]):
+def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info, array_of_MCConnectionInfo=[]):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, account_secrets, genesis_info, get_websocket_configuration(i, array_of_MCConnectionInfo))
+        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], get_websocket_configuration(i, array_of_MCConnectionInfo))
 
 
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
@@ -419,7 +401,8 @@ def assert_true(condition, message=""):
     if not condition:
         raise AssertionError(message)
 
-def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index, mc_block, expected_keys, expected_balances, is_genesis):
+def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index,
+                                   mc_block, array_of_expected_public_keys, array_of_expected_sc_balances, is_genesis):
     print("Check inclusion block for sidechain id {0}.".format(sidechain_id))
     response = sc_node.block_best()
     height = response["result"]["height"]
@@ -429,15 +412,15 @@ def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_heig
         new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
         print("Checking that each public key has a box assigned with a non-zero value.")
         key_index = 0
-        for key in expected_keys:
+        for key in array_of_expected_public_keys:
             target = None
             for box in new_boxes:
-                if box["proposition"]["publicKey"] == key["publicKey"]:
+                if box["proposition"]["publicKey"] == key:
                     target = box
                     box_value = box["value"]
                     assert_true(box_value > 0,
                                 "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
-                    assert_equal(expected_balances[key_index] * 100000000, box_value,
+                    assert_equal(array_of_expected_sc_balances[key_index] * 100000000, box_value,
                                  "Unexpected value for box: {0} with public key: {1}".format(box["id"], key))
                     key_index+=1
                     break

@@ -10,8 +10,8 @@ SCCreationInfo: {
 """
 class SCCreationInfo(object):
 
-    def __init__(self, sc_id="".zfill(64), forward_amout=100, withdrawal_epoch_length=1000):
-        self.sc_id = sc_id
+    def __init__(self, sidechain_id="".zfill(64), forward_amout=100, withdrawal_epoch_length=1000):
+        self.sidechain_id = sidechain_id
         self.forward_amout = forward_amout
         self.withdrawal_epoch_length = withdrawal_epoch_length
 
@@ -78,3 +78,22 @@ class SCNetworkConfiguration(object):
 
     def __init__(self, *sc_nodes_configuration):
         self.sc_nodes_configuration = sc_nodes_configuration
+
+"""
+Information a sidechain node already bootstrapped.
+The JSON representation is only for documentation.
+
+SCBootstrapInfo: {
+    "sidechain_id":
+    "genesis_account": a tuple [secret, public key]
+    "wallet_balance":
+    "mainchain_block_height": the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
+}
+"""
+class SCBootstrapInfo(object):
+
+    def __init__(self, sidechain_id, genesis_account, wallet_balance, mainchain_block_height):
+        self.sidechain_id = sidechain_id
+        self.genesis_account = genesis_account
+        self.wallet_balance = wallet_balance
+        self.mainchain_block_height = mainchain_block_height
