@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 from netrc import netrc
 
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCNetworkConfiguration
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -18,6 +19,7 @@ import json
 import traceback
 import sys
 import shutil
+import sc_boostrap_info
 
 '''
 If you want to keep default behavior:
@@ -59,67 +61,106 @@ class SidechainTestFramework(BitcoinTestFramework):
         initialize_default_sc_chain_clean(self.options.tmpdir, 1)
 
     """
-    Bootstrap some sidechain nodes.
+    Bootstrap a network of sidechain nodes.
     
     Parameters:
-     - network: a map of:
-        - key: the mainchain node
-        - value: an map of information for each sidechain:
-            - key:
-            - value: an array of:
-                - number_of_accounts: the numbers of accounts to be created
-                - withdrawal_epoch_length
-                - websocket_conf: a websocket configuration. An array of:
-                    - address
-                    - connectionTimeout
-                    - reconnectionDelay
-                    - reconnectionMaxAttempts
+     - network: an instance of SCNetworkConfiguration (see sc_boostrap_info.py)
                     
     Example: 2 mainchain nodes and 3 sidechain nodes (with default websocket configuration) bootstrapped, respectively, from mainchain node first, first, and third.
+    The JSON representation is only for documentation.
     {
-        mc_node_1: {
-            0: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
-            1: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
-        }
-        mc_node_2: {
-            0: [3, 1000, [ws://localhost:8888, 100, 1, 1]]
-        }
+        network: [
+            sidechain_1_configuration: {
+                "sc_creation_info":{
+                "sc_id": "id_1"
+                "forward_amout": 200
+                "withdrawal_epoch_length": 1000
+                },
+                "mainchain_node": mc_node_1
+                "mc_connection_info":{
+                    "address": "ws://localhost:8888"
+                    "connectionTimeout": 100
+                    "reconnectionDelay": 1
+                    "reconnectionMaxAttempts": 1
+                }
+            },
+            sidechain_2_configuration: {
+                "sc_creation_info":{
+                "sc_id": "id_2"
+                "forward_amout": 300
+                "withdrawal_epoch_length": 1000
+                },
+                "mainchain_node": mc_node_1
+                "mc_connection_info":{
+                    "address": "ws://localhost:8888"
+                    "connectionTimeout": 100
+                    "reconnectionDelay": 1
+                    "reconnectionMaxAttempts": 1
+                }
+            
+            },
+            sidechain_3_configuration: {
+                "sc_creation_info":{
+                "sc_id": "id_3"
+                "forward_amout": 450
+                "withdrawal_epoch_length": 1000
+                },
+                "mainchain_node": mc_node_2
+                "mc_connection_info":{
+                    "address": "ws://localhost:8888"
+                    "connectionTimeout": 100
+                    "reconnectionDelay": 1
+                    "reconnectionMaxAttempts": 1
+                }
+            
+            }
+        ]
     }
      
      Output: a map of:
-     - key: i, i=[1,...,n] with n =t he number of sidechain nodes to be bootstrapped
+     - key: i, i=[1,...,n] with n=the number of sidechain nodes to be bootstrapped
      - value: bootstrap information if the sidechain node i. An array of:
         - sidechain_id
         - account_secrets
         - total_balance
         - genesis_info
     
-    NB: for each account add an amount of 100
     """
-    def bootstrap_sidechain(self, network={}):
+    def bootstrap_sidechain_nodes(self, network):
         self.sc_nodes_bootstrap_info = {}
-        total_number_of_sidechains = 0
-        for mc_node in network:
-            mc_node_values = network[mc_node]
-            number_of_sidechains_nodes = len(mc_node_values)
-            for i in range(number_of_sidechains_nodes):
-                sc_node_info = mc_node_values[i]
-                sc_index = i + total_number_of_sidechains
-                number_of_accounts = sc_node_info[0]
-                withdrawal_epoch_length = sc_node_info[1]
-                websocket_conf = sc_node_info[2]
-                account_secrets = generate_secrets(sc_index, number_of_accounts)
-                balances = []
-                total_balance = 100*number_of_accounts
-                for j in range(number_of_accounts):
-                    balances.append(100)
-                sidechain_id = ("{0}".format(sc_index)).zfill(64)
-                genesis_info = get_genesis_info(sidechain_id, mc_node, withdrawal_epoch_length, account_secrets, balances)
-                print "Sidechain created with id: " + sidechain_id
-                initialize_sc_datadir(self.options.tmpdir, sc_index, account_secrets, genesis_info[0], websocket_conf)
-                self.sc_nodes_bootstrap_info[sc_index] = [sidechain_id, account_secrets, total_balance, genesis_info[1]]
-            total_number_of_sidechains += number_of_sidechains_nodes
+        total_number_of_sidechains = len(network.sc_nodes_configuration)
+        for i in range(total_number_of_sidechains):
+            sc_node_conf = network.sc_nodes_configuration[i]
+            sc_nodes_bootstrap_info_i = self.bootstrap_sidechin_node(i, sc_node_conf)
+            self.sc_nodes_bootstrap_info[i] = sc_nodes_bootstrap_info_i
         return self.sc_nodes_bootstrap_info
+
+    """
+    Bootstrap one sidechain node.
+    
+    Parameters:
+     - n: sidechain node nth: used to create directory "sc_node_n"
+     - sc_node_configuration: an instance of SCNodeConfiguration (see sc_boostrap_info.py)
+     
+     Output: a map of:
+     - bootstrap information of the sidechain node. An array of:
+        - sidechain_id
+        - account_secrets
+        - total_balance
+        - genesis_info
+    """
+    def bootstrap_sidechin_node(self, n, sc_node_configuration):
+        account_secrets = generate_secrets(n, 1)
+        sc_creation_info = sc_node_configuration.sc_creation_info
+        sidechain_id = sc_creation_info.sc_id
+        genesis_info = get_genesis_info(sidechain_id,
+                                        sc_node_configuration.mc_node,
+                                        sc_creation_info.withdrawal_epoch_length,
+                                        account_secrets,
+                                        [sc_creation_info.forward_amout])
+        print "Sidechain created with id: " + sidechain_id
+        initialize_sc_datadir(self.options.tmpdir, n, account_secrets, genesis_info[0], sc_node_configuration.mc_connection_info)
+        return [sidechain_id, account_secrets, sc_creation_info.forward_amout, genesis_info[1]]
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()

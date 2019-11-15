@@ -2,11 +2,14 @@ import os
 import sys
 
 import json
+
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
+import sc_boostrap_info
 
 WAIT_CONST = 1
 
@@ -193,13 +196,9 @@ Parameters:
                 "mcBlockHeight": xxx,
                 "mcNetwork": regtest|testnet|mainnet
             }
- - websocket_config: an array of:
-    - address (default=ws://localhost:8888)
-    - connectionTimeout (milliseconds, default=100)
-    - reconnectionDelay (seconds, default=1)
-    - reconnectionMaxAttempts (default=1)
+ - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_config):
+def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_config=MCConnectionInfo()):
     """Create directories for each node and configuration files inside them.
        For each node put also genesis data in configuration files.
        Configuration data must be automatically generated and different from
@@ -234,10 +233,10 @@ def initialize_sc_datadir(dirname, n, account_secrets, genesis_info, websocket_c
         'POW_DATA': jsonNode["powData"],
         'BLOCK_HEIGHT': jsonNode["mcBlockHeight"],
         'NETWORK': str(jsonNode["mcNetwork"]),
-        'WEBSOCKET_ADDRESS': websocket_config[0],
-        'CONNECTION_TIMEOUT': websocket_config[1],
-        'RECONNECTION_DELAY': websocket_config[2],
-        'RECONNECTION_MAX_ATTEMPS': websocket_config[3]
+        'WEBSOCKET_ADDRESS': websocket_config.address,
+        'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
+        'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
+        'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts
     }
 
     configsData.append({
@@ -301,29 +300,17 @@ def initialize_default_sc_chain_clean(test_dir, num_nodes):
         initialize_default_sc_datadir(test_dir, i)
 
 
-def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info, map_of_websocket_conf={}):
+def initialize_sc_chain_clean(test_dir, num_nodes, account_secrets, genesis_info, array_of_MCConnectionInfo=[]):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, account_secrets, genesis_info, map_of_websocket_conf)
+        initialize_sc_datadir(test_dir, i, account_secrets, genesis_info, get_websocket_configuration(i, array_of_MCConnectionInfo))
 
 
-def get_websocket_configuration(index, map_of_websocket_conf):
-    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else create_websocket_configuration()
-
-
-"""
- Create a websocket configuration. An array of:
-    - address (default=ws://localhost:8888)
-    - connectionTimeout (milliseconds, default=100)
-    - reconnectionDelay (seconds, default=1)
-    - reconnectionMaxAttempts (default=1)
-"""
-def create_websocket_configuration(address="ws://localhost:8888", connectionTimeout=100, reconnectionDelay=1,
-                                   reconnectionMaxAttempts=1):
-    return [address, connectionTimeout, reconnectionDelay, reconnectionMaxAttempts]
+def get_websocket_configuration(index, array_of_MCConnectionInfo):
+    return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
@@ -432,7 +419,7 @@ def assert_true(condition, message=""):
     if not condition:
         raise AssertionError(message)
 
-def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index, mc_block, keys, is_genesis):
+def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index, mc_block, expected_keys, expected_balances, is_genesis):
     print("Check inclusion block for sidechain id {0}.".format(sidechain_id))
     response = sc_node.block_best()
     height = response["result"]["height"]
@@ -441,7 +428,8 @@ def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_heig
     if (is_genesis):
         new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
         print("Checking that each public key has a box assigned with a non-zero value.")
-        for key in keys:
+        key_index = 0
+        for key in expected_keys:
             target = None
             for box in new_boxes:
                 if box["proposition"]["publicKey"] == key["publicKey"]:
@@ -449,8 +437,9 @@ def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_heig
                     box_value = box["value"]
                     assert_true(box_value > 0,
                                 "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
-                    assert_equal(100 * 100000000, box_value,
+                    assert_equal(expected_balances[key_index] * 100000000, box_value,
                                  "Unexpected value for box: {0} with public key: {1}".format(box["id"], key))
+                    key_index+=1
                     break
         assert_true(target is not None, "Box related to public key: {0} not found".format(key))
         mc_block_version = mc_block["version"]

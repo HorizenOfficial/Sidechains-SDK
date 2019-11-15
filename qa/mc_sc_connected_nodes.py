@@ -1,9 +1,11 @@
 #!/usr/bin/env python2
 import json
 
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, websocket_port
-from SidechainTestFramework.scutil import create_websocket_configuration, check_mainchan_block_inclusion
+from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, websocket_port
+from SidechainTestFramework.scutil import check_mainchan_block_inclusion
 
 class MCSCConnectedNodes(SidechainTestFramework):
 
@@ -27,16 +29,25 @@ class MCSCConnectedNodes(SidechainTestFramework):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_chain(self):
-        network = {
-            self.nodes[0]:{
-                0: [1, 1000, create_websocket_configuration("ws://localhost:{0}".format(self.ws_port_mc_0))],
-                1: [2, 1000, create_websocket_configuration("ws://localhost:{0}".format(self.ws_port_mc_0))],
-            },
-            self.nodes[1]:{
-                0: [3, 1000, create_websocket_configuration("ws://localhost:{0}".format(self.ws_port_mc_1))]
-            }
-        }
-        self.bootstrap_sidechain(network)
+        mc_node_1 = self.nodes[0]
+        mc_node_2 = self.nodes[1]
+        sc_node_1_configuration = SCNodeConfiguration(
+            mc_node_2,
+            SCCreationInfo("1".zfill(64), 100, 1000),
+            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_0))
+        )
+        sc_node_2_configuration = SCNodeConfiguration(
+            mc_node_2,
+            SCCreationInfo("2".zfill(64), 250, 1000),
+            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_0))
+        )
+        sc_node_3_configuration = SCNodeConfiguration(
+            mc_node_2,
+            SCCreationInfo("3".zfill(64), 450, 1000),
+            MCConnectionInfo(address="ws://localhost:{0}".format(self.ws_port_mc_1))
+        )
+        network = SCNetworkConfiguration(sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
+        self.bootstrap_sidechain_nodes(network)
 
     def sc_setup_network(self, split=False):
         # SC network setup
@@ -66,22 +77,22 @@ class MCSCConnectedNodes(SidechainTestFramework):
         sc_info_2 = sc_nodes_info[2]
 
         # check mainchain block inclusion for sidechain nodes 1 and 2
-        check_mainchan_block_inclusion(sc_0, sc_info_0[0], 1, 0, mc_0.getblock(str(sc_info_0[3])), sc_info_0[1], True)
-        check_mainchan_block_inclusion(sc_1, sc_info_1[0], 1, 0, mc_0.getblock(str(sc_info_1[3])), sc_info_1[1], True)
+        check_mainchan_block_inclusion(sc_0, sc_info_0[0], 1, 0, mc_0.getblock(str(sc_info_0[3])), sc_info_0[1], [sc_info_0[2]], True)
+        check_mainchan_block_inclusion(sc_1, sc_info_1[0], 1, 0, mc_0.getblock(str(sc_info_1[3])), sc_info_1[1], [sc_info_1[2]], True)
 
         # check mainchain block inclusion for sidechain node 3
-        check_mainchan_block_inclusion(sc_2, sc_info_2[0], 1, 0, mc_1.getblock(str(sc_info_2[3])), sc_info_2[1], True)
+        check_mainchan_block_inclusion(sc_2, sc_info_2[0], 1, 0, mc_1.getblock(str(sc_info_2[3])), sc_info_2[1],  [sc_info_2[2]],True)
 
         block_hash = mc_0.generate(1)
         mc_0_new_block = mc_0.getblock(block_hash[0])
         sc_0.block_generate(json.dumps({"number":1}))
         sc_1.block_generate(json.dumps({"number":1}))
 
-        check_mainchan_block_inclusion(sc_0, sc_info_0[0], 2, 1, mc_0_new_block, sc_info_0[1], False)
-        check_mainchan_block_inclusion(sc_1, sc_info_1[0], 2, 0, mc_0_new_block, sc_info_1[1], False)
+        check_mainchan_block_inclusion(sc_0, sc_info_0[0], 2, 1, mc_0_new_block, sc_info_0[1], [sc_info_0[2]], False)
+        check_mainchan_block_inclusion(sc_1, sc_info_1[0], 2, 0, mc_0_new_block, sc_info_1[1], [sc_info_1[2]], False)
 
         try:
-            check_mainchan_block_inclusion(sc_2, sc_info_2[0], 1, 0, mc_0_new_block, sc_info_2[1], False)
+            check_mainchan_block_inclusion(sc_2, sc_info_2[0], 1, 0, mc_0_new_block, sc_info_2[1], [sc_info_2[2]], False)
             # SC node 2 should not to know information about block generated from MC node 0
             # Therefore the test must to fail
             assert_equal(1, 2)
@@ -90,10 +101,10 @@ class MCSCConnectedNodes(SidechainTestFramework):
             block_hash = mc_1.generate(1)
             mc_1_new_block = mc_1.getblock(block_hash[0])
             sc_2.block_generate(json.dumps({"number":1}))
-            check_mainchan_block_inclusion(sc_2, sc_info_2[0], 2, 0, mc_1_new_block, sc_info_2[1], False)
+            check_mainchan_block_inclusion(sc_2, sc_info_2[0], 2, 0, mc_1_new_block, sc_info_2[1], [sc_info_2[2]], False)
             try:
-                check_mainchan_block_inclusion(sc_0, sc_info_0[0], 2, 1, mc_1_new_block, sc_info_0[1], False)
-                check_mainchan_block_inclusion(sc_1, sc_info_1[0], 2, 0, mc_1_new_block, sc_info_1[1], False)
+                check_mainchan_block_inclusion(sc_0, sc_info_0[0], 2, 1, mc_1_new_block, sc_info_0[1], [sc_info_0[2]], False)
+                check_mainchan_block_inclusion(sc_1, sc_info_1[0], 2, 0, mc_1_new_block, sc_info_1[1], [sc_info_1[2]], False)
                 # SC nodes 0 and 1 should not to know information about block generated from MC node 1
                 # Therefore the test must to fail
                 assert_equal(1, 2)

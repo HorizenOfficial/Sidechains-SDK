@@ -1,9 +1,11 @@
 #!/usr/bin/env python2
 import json
 
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true
-from SidechainTestFramework.scutil import create_websocket_configuration, check_mainchan_block_inclusion
+from SidechainTestFramework.scutil import check_mainchan_block_inclusion
 
 """
     Bootstrap 3 SC Nodes and start them with genesis info extracted from a mainchain node.
@@ -23,14 +25,24 @@ class SCBootstrap(SidechainTestFramework):
     number_of_sidechains = 3
 
     def sc_setup_chain(self):
-        network = {
-            self.nodes[0]:{
-                0: [1, 1000, create_websocket_configuration()],
-                1: [2, 1000, create_websocket_configuration()],
-                2: [2, 1000, create_websocket_configuration()]
-            }
-        }
-        self.bootstrap_sidechain(network)
+        mc_node = self.nodes[0]
+        sc_node_1_configuration = SCNodeConfiguration(
+            mc_node,
+            SCCreationInfo("1".zfill(64), 100, 1000),
+            MCConnectionInfo()
+        )
+        sc_node_2_configuration = SCNodeConfiguration(
+            mc_node,
+            SCCreationInfo("2".zfill(64), 250, 1000),
+            MCConnectionInfo()
+        )
+        sc_node_3_configuration = SCNodeConfiguration(
+            mc_node,
+            SCCreationInfo("3".zfill(64), 450, 1000),
+            MCConnectionInfo()
+        )
+        network = SCNetworkConfiguration(sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
+        self.bootstrap_sidechain_nodes(network)
 
     def sc_setup_network(self, split=False):
         # SC network setup
@@ -76,7 +88,7 @@ class SCBootstrap(SidechainTestFramework):
             # check all keys/boxes/balances are coherent with the default initialization
             self.check_genesis_balances(node, node_info[0], len(node_info[1]), len(node_info[1]), node_info[2]*100000000)
             # verify MC block reference's inclusion
-            check_mainchan_block_inclusion(node, node_info[0], 1, 0, mc_block, node_info[1], True)
+            check_mainchan_block_inclusion(node, node_info[0], 1, 0, mc_block, node_info[1], [node_info[2]], True)
 
 
 if __name__ == "__main__":
