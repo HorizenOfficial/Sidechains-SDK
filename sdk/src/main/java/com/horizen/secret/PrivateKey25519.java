@@ -6,17 +6,14 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
+import com.horizen.utils.Ed25519;
 
 import java.util.Arrays;
 
 
 public final class PrivateKey25519 implements Secret
 {
-    public static final int KEY_LENGTH = Curve25519.KeyLength();
+    public static final int KEY_LENGTH = Ed25519.keyLength();
     public static final byte SECRET_TYPE_ID = 0;
 
     private byte[] _privateKeyBytes;
@@ -84,7 +81,7 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public Signature25519 sign(byte[] message) {
-        return new Signature25519(Curve25519.sign(_privateKeyBytes, message));
+        return new Signature25519(Ed25519.sign(_privateKeyBytes, message, _publicKeyBytes));
     }
 
     @Override

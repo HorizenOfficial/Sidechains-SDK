@@ -40,6 +40,12 @@
 			<groupId>org.scorexfoundation</groupId>
 			<artifactId>scorex-core_2.12</artifactId>
 			<version>2.0.0-RC4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.whispersystems</groupId>
+					<artifactId>curve25519-java</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
@@ -143,6 +149,13 @@
 			<artifactId>jaxb-api</artifactId>
 			<version>2.3.0</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.64</version>
+		</dependency>
+
 
 	</dependencies>
 

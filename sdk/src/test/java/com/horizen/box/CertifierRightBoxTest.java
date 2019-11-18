@@ -1,10 +1,10 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 
@@ -20,8 +20,8 @@ public class CertifierRightBoxTest
     @Before
     public void setUp() {
         byte[] anotherSeed = "certrighttestseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        proposition = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        proposition = new PublicKey25519Proposition(keyPair.getValue());
 
         nonce = 12345;
         value = 1;
@@ -49,8 +49,8 @@ public class CertifierRightBoxTest
 
 
         byte[] anotherSeed = "another test seed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair.getValue());
 
 
         CertifierRightBox box3 = new CertifierRightBox(anotherProposition, nonce, value, minimumWithdrawalEpoch);

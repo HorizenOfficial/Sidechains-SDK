@@ -1,11 +1,11 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -19,9 +19,9 @@ public class RegularBoxSerializerTest
 
     @Before
     public void setUp() {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/regularbox_bytes"
-        box = new RegularBox(new PublicKey25519Proposition(keyPair._2()), 1000, 10);
+        box = new RegularBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
     }
 
     @Test
