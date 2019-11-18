@@ -75,53 +75,62 @@ class MCSCConnectedNodes(SidechainTestFramework):
         print "Number of started mc nodes: {0}".format(len(mc_nodes), "The number of MC nodes is not {0}.".format(self.number_of_mc_nodes))
         print "Number of started sc nodes: {0}".format(len(sc_nodes), "The number of SC nodes is not {0}.".format(self.number_of_sidechains))
 
-        mc_0 = mc_nodes[0]
-        mc_1 = mc_nodes[1]
+        first_mainchain_node = mc_nodes[0]
+        second_mainchain_node = mc_nodes[1]
 
-        sc_0 = sc_nodes[0]
-        sc_1 = sc_nodes[1]
-        sc_2 = sc_nodes[2]
+        first_sidechain_node = sc_nodes[0]
+        second_sidechain_node = sc_nodes[1]
+        third_sidechain_node = sc_nodes[2]
 
         sc_nodes_info = self.sc_nodes_bootstrap_info
         assert_equal(self.number_of_sidechains, len(sc_nodes_info), "Not all sidechains have been successfully created.")
         print sc_nodes_info
 
-        sc_info_0 = sc_nodes_info[0]
-        sc_info_1 = sc_nodes_info[1]
-        sc_info_2 = sc_nodes_info[2]
+        first_sc_bootstrap_info = sc_nodes_info[0]
+        second_sc_bootstrap_info = sc_nodes_info[1]
+        third_sc_bootstrap_info = sc_nodes_info[2]
 
         # check mainchain block inclusion for sidechain nodes 1 and 2
-        check_mainchan_block_inclusion(sc_0, sc_info_0.sidechain_id, 1, 0,
-                                       mc_0.getblock(str(sc_info_0.mainchain_block_height)), [sc_info_0.genesis_account[1]], [sc_info_0.wallet_balance], True)
-        check_mainchan_block_inclusion(sc_1, sc_info_1.sidechain_id, 1, 0,
-                                       mc_0.getblock(str(sc_info_1.mainchain_block_height)), [sc_info_1.genesis_account[1]], [sc_info_1.wallet_balance], True)
+        check_mainchan_block_inclusion(first_sidechain_node, first_sc_bootstrap_info.sidechain_id, 1, 0,
+                                       first_mainchain_node.getblock(str(first_sc_bootstrap_info.mainchain_block_height)),
+                                       [first_sc_bootstrap_info.genesis_account[1]], [first_sc_bootstrap_info.wallet_balance], True)
+        check_mainchan_block_inclusion(second_sidechain_node, second_sc_bootstrap_info.sidechain_id, 1, 0,
+                                       first_mainchain_node.getblock(str(second_sc_bootstrap_info.mainchain_block_height)), 
+                                       [second_sc_bootstrap_info.genesis_account[1]], [second_sc_bootstrap_info.wallet_balance], True)
 
         # check mainchain block inclusion for sidechain node 3
-        check_mainchan_block_inclusion(sc_2, sc_info_2.sidechain_id, 1, 0,
-                                       mc_1.getblock(str(sc_info_2.mainchain_block_height)), [sc_info_2.genesis_account[1]],  [sc_info_2.wallet_balance],True)
+        check_mainchan_block_inclusion(third_sidechain_node, third_sc_bootstrap_info.sidechain_id, 1, 0,
+                                       second_mainchain_node.getblock(str(third_sc_bootstrap_info.mainchain_block_height)),
+                                       [third_sc_bootstrap_info.genesis_account[1]],  [third_sc_bootstrap_info.wallet_balance],True)
 
-        block_hash = mc_0.generate(1)
-        mc_0_new_block = mc_0.getblock(block_hash[0])
-        sc_0.block_generate(json.dumps({"number":1}))
-        sc_1.block_generate(json.dumps({"number":1}))
+        block_hash = first_mainchain_node.generate(1)
+        first_mainchain_node_new_block = first_mainchain_node.getblock(block_hash[0])
+        first_sidechain_node.block_generate(json.dumps({"number":1}))
+        second_sidechain_node.block_generate(json.dumps({"number":1}))
 
-        check_mainchan_block_inclusion(sc_0, sc_info_0.sidechain_id, 2, 1, mc_0_new_block, [sc_info_0.genesis_account[1]], [sc_info_0.wallet_balance], False)
-        check_mainchan_block_inclusion(sc_1, sc_info_1.sidechain_id, 2, 0, mc_0_new_block, [sc_info_1.genesis_account[1]], [sc_info_1.wallet_balance], False)
+        check_mainchan_block_inclusion(first_sidechain_node, first_sc_bootstrap_info.sidechain_id, 2, 1, first_mainchain_node_new_block,
+                                       [first_sc_bootstrap_info.genesis_account[1]], [first_sc_bootstrap_info.wallet_balance], False)
+        check_mainchan_block_inclusion(second_sidechain_node, second_sc_bootstrap_info.sidechain_id, 2, 0, first_mainchain_node_new_block,
+                                       [second_sc_bootstrap_info.genesis_account[1]], [second_sc_bootstrap_info.wallet_balance], False)
 
         try:
-            check_mainchan_block_inclusion(sc_2, sc_info_2.sidechain_id, 1, 0, mc_0_new_block, [sc_info_2.genesis_account[1]], [sc_info_2.wallet_balance], False)
+            check_mainchan_block_inclusion(third_sidechain_node, third_sc_bootstrap_info.sidechain_id, 1, 0, first_mainchain_node_new_block,
+                                           [third_sc_bootstrap_info.genesis_account[1]], [third_sc_bootstrap_info.wallet_balance], False)
             # SC node 2 should not to know information about block generated from MC node 0
             # Therefore the test must to fail
             assert_equal(1, 2)
         except AssertionError:
             print "SC node 2 doesn't include block generated from MC node 0."
-            block_hash = mc_1.generate(1)
-            mc_1_new_block = mc_1.getblock(block_hash[0])
-            sc_2.block_generate(json.dumps({"number":1}))
-            check_mainchan_block_inclusion(sc_2, sc_info_2.sidechain_id, 2, 0, mc_1_new_block, [sc_info_2.genesis_account[1]], [sc_info_2.wallet_balance], False)
+            block_hash = second_mainchain_node.generate(1)
+            second_mainchain_node_new_block = second_mainchain_node.getblock(block_hash[0])
+            third_sidechain_node.block_generate(json.dumps({"number":1}))
+            check_mainchan_block_inclusion(third_sidechain_node, third_sc_bootstrap_info.sidechain_id, 2, 0, second_mainchain_node_new_block,
+                                           [third_sc_bootstrap_info.genesis_account[1]], [third_sc_bootstrap_info.wallet_balance], False)
             try:
-                check_mainchan_block_inclusion(sc_0, sc_info_0.sidechain_id, 2, 1, mc_1_new_block, [sc_info_0.genesis_account[1]], [sc_info_0.wallet_balance], False)
-                check_mainchan_block_inclusion(sc_1, sc_info_1.sidechain_id, 2, 0, mc_1_new_block, [sc_info_1.genesis_account[1]], [sc_info_1.wallet_balance], False)
+                check_mainchan_block_inclusion(first_sidechain_node, first_sc_bootstrap_info.sidechain_id, 2, 1, second_mainchain_node_new_block,
+                                               [first_sc_bootstrap_info.genesis_account[1]], [first_sc_bootstrap_info.wallet_balance], False)
+                check_mainchan_block_inclusion(second_sidechain_node, second_sc_bootstrap_info.sidechain_id, 2, 0, second_mainchain_node_new_block,
+                                               [second_sc_bootstrap_info.genesis_account[1]], [second_sc_bootstrap_info.wallet_balance], False)
                 # SC nodes 0 and 1 should not to know information about block generated from MC node 1
                 # Therefore the test must to fail
                 assert_equal(1, 2)

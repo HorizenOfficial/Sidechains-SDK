@@ -126,7 +126,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         total_number_of_sidechains = len(network.sc_nodes_configuration)
         for i in range(total_number_of_sidechains):
             sc_node_conf = network.sc_nodes_configuration[i]
-            sc_nodes_bootstrap_info_i = self.bootstrap_sidechin_node(i, sc_node_conf)
+            sc_nodes_bootstrap_info_i = self.bootstrap_sidechain_node(i, sc_node_conf)
             self.sc_nodes_bootstrap_info[i] = sc_nodes_bootstrap_info_i
         return self.sc_nodes_bootstrap_info
 
