@@ -140,7 +140,7 @@ class SidechainTestFramework(BitcoinTestFramework):
      Output: a map of:
       - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
     """
-    def bootstrap_sidechin_node(self, n, sc_node_configuration):
+    def bootstrap_sidechain_node(self, n, sc_node_configuration):
         account_secrets = generate_secrets(n, 1)
         genesis_secret = account_secrets[0]["secret"]
         genesis_public_key = account_secrets[0]["publicKey"]
