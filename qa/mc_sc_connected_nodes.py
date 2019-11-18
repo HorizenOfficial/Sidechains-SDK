@@ -31,13 +31,9 @@ class MCSCConnectedNodes(SidechainTestFramework):
     number_of_sidechains = 3
     ws_port_mc_0 = websocket_port(0)
     ws_port_mc_1 = websocket_port(1)
-    mainchain_websocket_confs = {
-        0: ws_port_mc_0,
-        1: ws_port_mc_1
-    }
 
     def setup_chain(self):
-        initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes, self.mainchain_websocket_confs)
+        initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes, [self.ws_port_mc_0, self.ws_port_mc_1])
 
     def setup_network(self, split = False):
         self.nodes = self.setup_nodes()

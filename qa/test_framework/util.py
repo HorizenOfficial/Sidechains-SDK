@@ -152,16 +152,16 @@ def initialize_chain(test_dir):
         shutil.copytree(from_dir, to_dir)
         initialize_datadir(test_dir, i) # Overwrite port/rpcport in zcash.conf
 
-def initialize_chain_clean(test_dir, num_nodes, map_of_websocket_conf={}):
+def initialize_chain_clean(test_dir, num_nodes, array_of_websocket_port=[]):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_datadir(test_dir, i, get_websocket_configuration(i, map_of_websocket_conf))
+        initialize_datadir(test_dir, i, get_websocket_configuration(i, array_of_websocket_port))
 
-def get_websocket_configuration(index, map_of_websocket_conf):
-    return map_of_websocket_conf[index] if map_of_websocket_conf.has_key(index) else None
+def get_websocket_configuration(index, array_of_websocket_port):
+    return array_of_websocket_port[index] if index<len(array_of_websocket_port) else None
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''
@@ -476,17 +476,8 @@ def get_genesis_info(sidechain_id, mainchain_node, withdrawal_epoch_length, secr
         addresses.append({"address": secrets[i]["secret"], "amount": amount})
         total_amount += amount
 
-    mc_balance_before_sc_creation = mainchain_node.getbalance()
-    print "Mainchain node balance before creating the sidechain: {0}".format(mc_balance_before_sc_creation)
     transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, addresses)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
-    sc_create_transaction = mainchain_node.gettransaction(transaction_id)
-    mc_balance_after_sc_creation = mainchain_node.getbalance()
-    print "Mainchain node balance after creating the sidechain: {0}".format(mc_balance_after_sc_creation)
-    sc_create_fee = sc_create_transaction["fee"]
-    sc_create_amount = sc_create_transaction["amount"]
-    assert_equal(-total_amount, sc_create_amount)
-    assert_equal(mc_balance_after_sc_creation, mc_balance_before_sc_creation+sc_create_amount+sc_create_fee)
 
     mainchain_node.generate(1)
     return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount()]

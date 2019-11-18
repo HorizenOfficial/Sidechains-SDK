@@ -26,7 +26,7 @@ class SCBootstrap(SidechainTestFramework):
     number_of_sidechains = 3
 
     def setup_nodes(self):
-        return start_nodes(1, self.options.tmpdir, extra_args=["-websocket"])
+        return start_nodes(1, self.options.tmpdir, extra_args=[["-websocket"], ["-websocket"], ["-websocket"]])
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -82,7 +82,6 @@ class SCBootstrap(SidechainTestFramework):
 
         sc_nodes_info = self.sc_nodes_bootstrap_info
         assert_equal(self.number_of_sidechains, len(sc_nodes_info), "Not all sidechains have been successfully created.")
-        print sc_nodes_info
 
         # Check validity of genesis information
         for i in range(self.number_of_sidechains):
