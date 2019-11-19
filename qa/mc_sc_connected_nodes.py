@@ -1,11 +1,10 @@
 #!/usr/bin/env python2
 import json
-import test_framework.authproxy
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, websocket_port, connect_nodes_bi
-from SidechainTestFramework.scutil import check_mainchan_block_inclusion, connect_sc_nodes_bi, connect_sc_nodes
+from SidechainTestFramework.scutil import check_mainchan_block_inclusion, connect_sc_nodes
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -24,6 +23,8 @@ Test:
     - connect MC 1 to MC 2
     - connect SC 1 to SC 2 and SC 3
     - verify the block is included inside SC node 3
+    - MC 2 mine a new block
+    - verify the block is included inside SC nodes 1, 2 and 3
 """
 class MCSCConnectedNodes(SidechainTestFramework):
 
@@ -92,11 +93,14 @@ class MCSCConnectedNodes(SidechainTestFramework):
                                        first_mainchain_node_block,
                                        [genesis_account[1]], [wallet_balance], True)
 
-        # check mainchain block inclusion for sidechain node 3
         try:
+            # check mainchain block inclusion for sidechain node 3
             check_mainchan_block_inclusion(third_sidechain_node, sidechain_id, 1, 0,
                                            first_mainchain_node_block,
                                            [genesis_account[1]],  [wallet_balance],True)
+            # SC node 2 should not to know information about blocks generated from MC node 0
+            # Otherwise the test must to fail
+            assert_equal(1, 2)
             assert_equal(1, 2)
         except AssertionError:
             assert_equal(1, 1)
@@ -114,8 +118,8 @@ class MCSCConnectedNodes(SidechainTestFramework):
         try:
             check_mainchan_block_inclusion(third_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block,
                                            [genesis_account[1]], [wallet_balance], False)
-            # SC node 2 should not to know information about block generated from MC node 0
-            # Therefore the test must to fail
+            # SC node 2 should not to know information about blocks generated from MC node 0
+            # Otherwise the test must to fail
             assert_equal(1, 2)
         except AssertionError:
             print "SC node 2 doesn't include block generated from MC node 0."
@@ -126,6 +130,17 @@ class MCSCConnectedNodes(SidechainTestFramework):
             self.sc_sync_all()
             check_mainchan_block_inclusion(third_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block,
                                             [genesis_account[1]], [wallet_balance], False)
+            block_hash = second_mainchain_node.generate(1)
+            self.sync_all()
+            second_mainchain_node_new_block = second_mainchain_node.getblock(block_hash[0])
+            third_sidechain_node.block_generate(json.dumps({"number":1}))
+            self.sc_sync_all()
+            check_mainchan_block_inclusion(first_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block,
+                                           [genesis_account[1]], [wallet_balance], False)
+            check_mainchan_block_inclusion(second_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block,
+                                           [genesis_account[1]], [wallet_balance], False)
+            check_mainchan_block_inclusion(third_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block,
+                                           [genesis_account[1]], [wallet_balance], False)
 
 
 
