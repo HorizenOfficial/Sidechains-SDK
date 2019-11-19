@@ -391,7 +391,7 @@ def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_heig
     print("Check inclusion block for sidechain id {0}.".format(sidechain_id))
     response = sc_node.block_best()
     height = response["result"]["height"]
-    assert_equal(expected_sc_block_height, height, "The best block is not the genesis block.")
+    assert_equal(expected_sc_block_height, height, "The best block has not the specified height.")
     mc_block_json = response["result"]["block"]["mainchainBlocks"][sc_block_best_mainchain_blocks_index]
     if (is_genesis):
         new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
