@@ -4,7 +4,10 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import scorex.crypto.hash.Sha256;
 
-public class Ed25519 {
+public final class Ed25519 {
+
+    private Ed25519() {
+    }
 
     public static int keyLength() {
         return org.bouncycastle.math.ec.rfc8032.Ed25519.SECRET_KEY_SIZE;
@@ -15,13 +18,7 @@ public class Ed25519 {
     }
 
     public static Pair<byte[], byte[]> createKeyPair(byte[] seed) {
-        byte[] pvk = new byte[32];
-        System.arraycopy(Sha256.hash(seed), 0, pvk, 0, 32);
-        pvk[0] &= 248;
-        pvk[31] &= 127;
-        pvk[31] |= 64;
-
-        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(pvk, 0);
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(Sha256.hash(seed), 0);
         Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
 
         return new Pair<>(privateKey.getEncoded(), publicKey.getEncoded());

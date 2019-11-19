@@ -1,7 +1,5 @@
-package com.horizen.bouncycastle;
+package com.horizen.utils;
 
-import com.horizen.utils.Pair;
-import org.bouncycastle.math.ec.rfc8032.Ed25519;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.Test;
 
@@ -9,22 +7,28 @@ import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
-public class BouncyCastleTest {
+public class Ed25519Test {
 
     @Test
     public void testKeiPair() {
         byte[] seed = "seed1".getBytes();
-        Pair<byte[], byte[]> kp1 = com.horizen.utils.Ed25519.createKeyPair(seed);
-        Pair<byte[], byte[]> kp2 = com.horizen.utils.Ed25519.createKeyPair(seed);
+        Pair<byte[], byte[]> kp1 = Ed25519.createKeyPair(seed);
+        Pair<byte[], byte[]> kp2 = Ed25519.createKeyPair(seed);
+        Pair<byte[], byte[]> kp3 = Ed25519.createKeyPair("seed2".getBytes());
         byte[] pvk = kp1.getKey();
         byte[] pvk2 = kp2.getKey();
-        assertTrue(Arrays.equals(pvk, pvk2));
+        assertTrue("Private keys are not the same.", Arrays.equals(pvk, pvk2));
+        assertFalse("Private keys are the same.", Arrays.equals(pvk, kp3.getKey()));
         byte[] msg = "message to sign".getBytes();
-        byte[] signature = com.horizen.utils.Ed25519.sign(pvk, msg, kp1.getValue());
-        boolean isVerified = com.horizen.utils.Ed25519.verify(signature, msg, kp1.getValue());
-        assertTrue(isVerified);
-        isVerified = com.horizen.utils.Ed25519.verify(signature, msg, kp2.getValue());
-        assertTrue(isVerified);
+        byte[] signature = Ed25519.sign(pvk, msg, kp1.getValue());
+        boolean isVerified = Ed25519.verify(signature, msg, kp1.getValue());
+        assertTrue("Signature is not verified.", isVerified);
+        isVerified = Ed25519.verify(signature, msg, kp2.getValue());
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
     }
 
     @Test
@@ -37,11 +41,14 @@ public class BouncyCastleTest {
         byte[] privateKey = Hex.decode(strPrivateKey);
         byte[] publicKey = Hex.decode(strPublicKey);
         byte[] signature = Hex.decode(strSignature);
-        byte[] signatureBC = new byte[64];
-        Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, msg, 0, msg.length, signatureBC, 0);
-        boolean isVerified = Ed25519.verify(signatureBC, 0, publicKey, 0, msg, 0, msg.length);
-        assertTrue(Arrays.equals(signature, signatureBC));
-        assertTrue(isVerified);
+        byte[] signatureBC = Ed25519.sign(privateKey, msg, publicKey);
+        boolean isVerified = Ed25519.verify(signatureBC, msg, publicKey);
+        assertTrue("Signatures are not the same.", Arrays.equals(signature, signatureBC));
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
     }
 
     @Test
@@ -54,11 +61,14 @@ public class BouncyCastleTest {
         byte[] privateKey = Hex.decode(strPrivateKey);
         byte[] publicKey = Hex.decode(strPublicKey);
         byte[] signature = Hex.decode(strSignature);
-        byte[] signatureBC = new byte[64];
-        Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, msg, 0, msg.length, signatureBC, 0);
-        boolean isVerified = Ed25519.verify(signatureBC, 0, publicKey, 0, msg, 0, msg.length);
-        assertTrue(Arrays.equals(signature, signatureBC));
-        assertTrue(isVerified);
+        byte[] signatureBC = Ed25519.sign(privateKey, msg, publicKey);
+        boolean isVerified = Ed25519.verify(signatureBC, msg, publicKey);
+        assertTrue("Signatures are not the same.", Arrays.equals(signature, signatureBC));
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
     }
 
     @Test
@@ -71,11 +81,14 @@ public class BouncyCastleTest {
         byte[] privateKey = Hex.decode(strPrivateKey);
         byte[] publicKey = Hex.decode(strPublicKey);
         byte[] signature = Hex.decode(strSignature);
-        byte[] signatureBC = new byte[64];
-        Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, msg, 0, msg.length, signatureBC, 0);
-        boolean isVerified = Ed25519.verify(signatureBC, 0, publicKey, 0, msg, 0, msg.length);
-        assertTrue(Arrays.equals(signature, signatureBC));
-        assertTrue(isVerified);
+        byte[] signatureBC = Ed25519.sign(privateKey, msg, publicKey);
+        boolean isVerified = Ed25519.verify(signatureBC, msg, publicKey);
+        assertTrue("Signatures are not the same.", Arrays.equals(signature, signatureBC));
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
     }
 
     @Test
@@ -106,11 +119,14 @@ public class BouncyCastleTest {
         byte[] privateKey = Hex.decode(strPrivateKey);
         byte[] publicKey = Hex.decode(strPublicKey);
         byte[] signature = Hex.decode(strSignature);
-        byte[] signatureBC = new byte[64];
-        Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, msg, 0, msg.length, signatureBC, 0);
-        boolean isVerified = Ed25519.verify(signatureBC, 0, publicKey, 0, msg, 0, msg.length);
-        assertTrue(Arrays.equals(signature, signatureBC));
-        assertTrue(isVerified);
+        byte[] signatureBC = Ed25519.sign(privateKey, msg, publicKey);
+        boolean isVerified = Ed25519.verify(signatureBC, msg, publicKey);
+        assertTrue("Signatures are not the same.", Arrays.equals(signature, signatureBC));
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
     }
 
     @Test
@@ -123,10 +139,14 @@ public class BouncyCastleTest {
         byte[] privateKey = Hex.decode(strPrivateKey);
         byte[] publicKey = Hex.decode(strPublicKey);
         byte[] signature = Hex.decode(strSignature);
-        byte[] signatureBC = new byte[64];
-        Ed25519.sign(privateKey, 0, publicKey, 0, (byte[]) null, msg, 0, msg.length, signatureBC, 0);
-        boolean isVerified = Ed25519.verify(signatureBC, 0, publicKey, 0, msg, 0, msg.length);
-        assertTrue(Arrays.equals(signature, signatureBC));
-        assertTrue(isVerified);
+        byte[] signatureBC = Ed25519.sign(privateKey, msg, publicKey);
+        boolean isVerified = Ed25519.verify(signatureBC, msg, publicKey);
+        assertTrue("Signatures are not the same.", Arrays.equals(signature, signatureBC));
+        assertTrue("Signature is not verified.", isVerified);
+        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
+        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        isVerified = Ed25519.verify(signature, msg, badPublicKey);
+        assertFalse("Signature is verified.", isVerified);
+
     }
 }
