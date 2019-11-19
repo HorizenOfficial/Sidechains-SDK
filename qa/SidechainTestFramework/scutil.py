@@ -3,7 +3,7 @@ import sys
 
 import json
 
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -96,6 +96,7 @@ Generate a genesis info by calling ScBootstrappingTools with command "genesisinf
 Parameters:
  - n: sidechain node nth
  - genesis_info: genesis info provided by a mainchain node
+ - genesis_secret:
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
@@ -106,13 +107,12 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "mcNetwork": regtest|testnet|mainnet
 }
 """
-def generate_genesis_data(n, genesis_info):
+def generate_genesis_data(genesis_info, genesis_secret):
     lib_separator = ":"
     if sys.platform.startswith('win'):
         lib_separator = ";"
 
-    jsonSecret = generate_secrets(n, 1)[0]
-    jsonParameters = {"secret": jsonSecret["secret"], "info": genesis_info}
+    jsonParameters = {"secret": genesis_secret, "info": genesis_info}
     javaPs = subprocess.Popen(["java", "-cp",
                                "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                "com.horizen.ScBootstrappingTool",
@@ -125,7 +125,7 @@ def generate_genesis_data(n, genesis_info):
 """
 Generate secrets by calling ScBootstrappingTools with command "generatekey"
 Parameters:
- - n: sidechain node nth
+ - seed
  - number_of_accounts: the number of keys to be generated
  
 Output: a JSON array of pairs secret-public key.
@@ -145,14 +145,14 @@ Output: a JSON array of pairs secret-public key.
     }
 ]
 """
-def generate_secrets(n, number_of_accounts):
+def generate_secrets(seed, number_of_accounts):
     lib_separator = ":"
     if sys.platform.startswith('win'):
         lib_separator = ";"
 
     secrets = []
     for i in range(number_of_accounts):
-        jsonParameters = {"seed": "sidechain_seed_{0}_{1}".format(n, i + 1)}
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
         javaPs = subprocess.Popen(["java", "-cp",
                                    "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                    "com.horizen.ScBootstrappingTool",
@@ -171,11 +171,10 @@ For each node put also genesis data in configuration files.
 Parameters:
  - dirname: directory name
  - n: sidechain node nth
- - genesis_secret:
- - genesis_info: the genesis info used for start the sidechain node, provided by the mainchain node
+ - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_config=MCConnectionInfo()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_config=MCConnectionInfo()):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -188,7 +187,6 @@ def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_co
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
 
-    jsonNode = generate_genesis_data(n, genesis_info)
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -197,12 +195,12 @@ def initialize_sc_datadir(dirname, n, genesis_secret, genesis_info, websocket_co
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': genesis_secret,
-        'SIDECHAIN_ID': jsonNode["scId"],
-        'GENESIS_DATA': jsonNode["scGenesisBlockHex"],
-        'POW_DATA': jsonNode["powData"],
-        'BLOCK_HEIGHT': jsonNode["mcBlockHeight"],
-        'NETWORK': str(jsonNode["mcNetwork"]),
+        'GENESIS_SECRETS': bootstrap_info.genesis_account[0],
+        'SIDECHAIN_ID': bootstrap_info.sidechain_id,
+        'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
+        'POW_DATA': bootstrap_info.pow_data,
+        'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
+        'NETWORK': bootstrap_info.network,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,

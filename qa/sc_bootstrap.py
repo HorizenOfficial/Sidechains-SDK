@@ -24,6 +24,7 @@ Test:
 class SCBootstrap(SidechainTestFramework):
 
     number_of_sidechains = 3
+    sc_nodes_bootstrap_info=None
 
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir, extra_args=[["-websocket"], ["-websocket"], ["-websocket"]])
@@ -31,22 +32,17 @@ class SCBootstrap(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            mc_node,
-            SCCreationInfo("1".zfill(64), 100, 1000),
             MCConnectionInfo()
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            mc_node,
-            SCCreationInfo("2".zfill(64), 250, 1000),
             MCConnectionInfo()
         )
         sc_node_3_configuration = SCNodeConfiguration(
-            mc_node,
-            SCCreationInfo("3".zfill(64), 450, 1000),
             MCConnectionInfo()
         )
-        network = SCNetworkConfiguration(sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
-        self.bootstrap_sidechain_nodes(network)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, "1".zfill(64), 100, 1000),
+                                         sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
+        self.sc_nodes_bootstrap_info = self.bootstrap_sidechain_nodes(network)
 
     def sc_setup_network(self, split=False):
         # SC network setup
@@ -80,18 +76,15 @@ class SCBootstrap(SidechainTestFramework):
         print "Number of MC nodes: {0}".format(len(mc_nodes))
         assert_equal(1, len(mc_nodes), "The number of MC nodes is grater than 1.")
 
-        sc_nodes_info = self.sc_nodes_bootstrap_info
-        assert_equal(self.number_of_sidechains, len(sc_nodes_info), "Not all sidechains have been successfully created.")
-
         # Check validity of genesis information
         for i in range(self.number_of_sidechains):
             node = self.sc_nodes[i]
-            node_info = sc_nodes_info[i]
-            mc_block = mc_nodes[0].getblock(str(node_info.mainchain_block_height))
+            mc_block = mc_nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
             # check all keys/boxes/balances are coherent with the default initialization
-            self.check_genesis_balances(node, node_info.sidechain_id, 1, 1, node_info.wallet_balance*100000000)
+            self.check_genesis_balances(node, self.sc_nodes_bootstrap_info.sidechain_id, 1, 1, self.sc_nodes_bootstrap_info.wallet_balance*100000000)
             # verify MC block reference's inclusion
-            check_mainchan_block_inclusion(node, node_info.sidechain_id, 1, 0, mc_block, [node_info.genesis_account[1]], [node_info.wallet_balance], True)
+            check_mainchan_block_inclusion(node, self.sc_nodes_bootstrap_info.sidechain_id, 1, 0, mc_block,
+                                           [self.sc_nodes_bootstrap_info.genesis_account[1]], [self.sc_nodes_bootstrap_info.wallet_balance], True)
 
 
 if __name__ == "__main__":
