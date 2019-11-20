@@ -9,6 +9,9 @@ import static org.junit.Assert.*;
 
 public class Ed25519Test {
 
+    /**
+     * Given the same seed, verify that the key generator algorithm is deterministic.
+     */
     @Test
     public void deterministicKeysGeneration() {
         byte[] seed = "seed1".getBytes();
@@ -25,6 +28,29 @@ public class Ed25519Test {
         assertTrue("Public keys are not the same.", Arrays.equals(publicKey1, publicKey2));
     }
 
+    /**
+     * Given two different seeds, verify that the key pairs are different.
+     */
+    @Test
+    public void differentKeysGeneration() {
+        byte[] seed1 = "seed1".getBytes();
+        byte[] seed2 = "seed2".getBytes();
+
+        Pair<byte[], byte[]> keyPair1 = Ed25519.createKeyPair(seed1);
+        Pair<byte[], byte[]> keyPair2 = Ed25519.createKeyPair(seed2);
+
+        byte[] privateKey1 = keyPair1.getKey();
+        byte[] privateKey2 = keyPair2.getKey();
+        byte[] publicKey1 = keyPair1.getValue();
+        byte[] publicKey2 = keyPair2.getValue();
+
+        assertFalse("Private keys are the same.", Arrays.equals(privateKey1, privateKey2));
+        assertFalse("Public keys are the same.", Arrays.equals(publicKey1, publicKey2));
+    }
+
+    /**
+     * Verify that the signing algorithm is deterministic.
+     */
     @Test
     public void deterministicSignature() {
         byte[] seed = "seed1".getBytes();
@@ -49,6 +75,9 @@ public class Ed25519Test {
         assertFalse("Signatures are the same.", Arrays.equals(signature1, signature3));
     }
 
+    /**
+     * Verify that the verification algorithm is deterministic.
+     */
     @Test
     public void signatureVerification() {
         byte[] seed = "seed1".getBytes();
@@ -69,8 +98,8 @@ public class Ed25519Test {
         isVerified = Ed25519.verify(signature, msg, publicKey2);
         assertTrue("Signature is not verified.", isVerified);
 
-        String strBadPublicKey = "dc172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf";
-        byte[] badPublicKey = Hex.decode(strBadPublicKey);
+        byte[] badPublicKey = Arrays.copyOf(publicKey1, 32);
+        badPublicKey[0] = publicKey1[1];
         isVerified = Ed25519.verify(signature, msg, badPublicKey);
         assertFalse("Signature is verified.", isVerified);
     }
