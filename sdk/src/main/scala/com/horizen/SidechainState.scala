@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional => JOptional}
+import java.util.{Optional => JOptional, List => JList}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
@@ -49,7 +49,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
 
   // get closed box from State storage
   override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
-    stateStorage.get(boxId)
+    stateStorage.getBox(boxId)
   }
 
   override def getClosedBox(boxId: Array[Byte]): JOptional[Box[_ <: Proposition]] = {
@@ -57,6 +57,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       case Some(box) => JOptional.of(box)
       case None => JOptional.empty()
     }
+  }
+
+  def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(WithdrawalEpochInfo(epoch, 0)).asScala.toList
+  }
+
+  override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(WithdrawalEpochInfo(epoch, 0))
   }
 
   // Note: aggregate New boxes and spent boxes for Block
@@ -118,7 +126,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id),
-          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo().getOrElse(WithdrawalEpochInfo(0,0)),
+          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)),
             this.params)) // check applyChanges implementation
       })
     }

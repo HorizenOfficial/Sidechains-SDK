@@ -46,9 +46,8 @@ trait TransactionFixture extends BoxFixture {
     var totalFrom = 0L
 
     for(box <- inputBoxes) {
-      val value = 10 + Random.nextInt(10)
       from.add(new JPair(box, inputSecrets.find(_.publicImage().equals(box.proposition())).get))
-      totalFrom += value
+      totalFrom += box.value()
     }
 
     val minimumFee = 0L
@@ -119,5 +118,40 @@ trait TransactionFixture extends BoxFixture {
   def getIncompatibleTransactionList () : List[RegularTransaction] = {
     val txLst = List[RegularTransaction](getIncompatibleTransaction)
     txLst
+  }
+
+  def getRegularTransaction(inputBoxList: Seq[RegularBox], inputSecretList: Seq[PrivateKey25519],
+                            outputList: Seq[PublicKey25519Proposition],
+                            withdrawalList: Seq[MCPublicKeyHashProposition]) : RegularTransaction = {
+    val from = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+    val to = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
+    val withdrawalRequests = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
+    var totalFrom = 0L
+
+    for(box <- inputBoxList) {
+      from.add(new JPair(box, inputSecretList.find(_.publicImage().equals(box.proposition())).get))
+      totalFrom += box.value()
+    }
+
+    val minimumFee = 0L
+    val maxTo = totalFrom - minimumFee
+    var totalTo = 0L
+    val outputSize = outputList.size + withdrawalList.size
+
+    for(proposition <- outputList) {
+      val value = maxTo / outputSize
+      to.add(new JPair(proposition, value))
+      totalTo += value
+    }
+
+    for(proposition <- withdrawalList) {
+      val value = maxTo / outputSize
+      withdrawalRequests.add(new JPair(proposition, value))
+      totalTo += value
+    }
+
+    val fee = totalFrom - totalTo
+
+    RegularTransaction.create(from, to, withdrawalRequests, fee, System.currentTimeMillis - Random.nextInt(10000))
   }
 }

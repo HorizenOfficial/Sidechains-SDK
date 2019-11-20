@@ -1,6 +1,7 @@
 package com.horizen.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
@@ -43,6 +44,11 @@ public final class MCPublicKeyHashProposition implements Proposition {
         if (obj == this)
             return true;
         return Arrays.equals(this.pubKeyHashBytes, ((MCPublicKeyHashProposition) obj).bytes());
+    }
+
+    @Override
+    public String toString() {
+        return BytesUtils.toHexString(pubKeyHashBytes);
     }
 
     public static MCPublicKeyHashProposition parseBytes(byte[] bytes) {

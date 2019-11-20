@@ -3,6 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.Box;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.node.NodeWallet;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
@@ -135,6 +136,8 @@ public class RegularTransactionCreatorTest {
 
     NodeWallet defaultWallet;
 
+    MCPublicKeyHashProposition mcPublicKeyHashProposition;
+
     @Before
     public void beforeEachTest() {
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
@@ -144,6 +147,9 @@ public class RegularTransactionCreatorTest {
         pk4 = creator.generateSecret("test_seed4".getBytes());
         pk5 = creator.generateSecret("test_seed5".getBytes());
         pk6 = creator.generateSecret("test_seed6".getBytes());
+
+        SecretFixtureClass secretFixture = new SecretFixtureClass();
+        mcPublicKeyHashProposition = secretFixture.getMCPublicKeyHashProposition();
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
         boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 30), 1000L));
@@ -165,6 +171,8 @@ public class RegularTransactionCreatorTest {
 
         to.add( new Pair<>(pk4.publicImage(), 20L));
         to.add( new Pair<>(pk5.publicImage(), 30L));
+
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
         RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, withdrawalRequests, pk6.publicImage(), 10, new ArrayList<byte[]>());
 
         assertEquals("RegularTransactionCreator: change expected.", 3, transaction.newBoxes().size());
@@ -189,6 +197,7 @@ public class RegularTransactionCreatorTest {
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
         List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
 
@@ -205,7 +214,7 @@ public class RegularTransactionCreatorTest {
 
 
         // Test 2: fee = total_from - total_to
-        fee = 50L;
+        fee = 40L;
         exceptionOccurred = false;
         try {
             RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, pk5.publicImage(), fee, new ArrayList<byte[]>());
@@ -217,7 +226,7 @@ public class RegularTransactionCreatorTest {
 
 
         // Test 3: fee < total_from - total_to
-        fee = 50L;
+        fee = 30L;
         exceptionOccurred = false;
         try {
             RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, pk5.publicImage(), fee, new ArrayList<byte[]>());
@@ -246,13 +255,14 @@ public class RegularTransactionCreatorTest {
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
         List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
         PublicKey25519Proposition changeAddress = pk5.publicImage();
 
         // Test 1: fee = total_from - total_to -> no change occurrence in newBoxes()
         boolean occurrenceExpected = false;
-        long fee = 50l;
+        long fee = 40L;
 
         RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, changeAddress, fee, new ArrayList<byte[]>());
 
@@ -266,7 +276,7 @@ public class RegularTransactionCreatorTest {
 
         // Test 2: fee < total_from - total_to -> change occurrence expected in newBoxes() and equal to 10
         occurrenceExpected = false;
-        fee = 40l;
+        fee = 30L;
         transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, changeAddress, fee, new ArrayList<byte[]>());
 
         boxes = transaction.newBoxes();
@@ -294,10 +304,9 @@ public class RegularTransactionCreatorTest {
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
         PublicKey25519Proposition changeAddress = pk6.publicImage();
 
-
         // Test 1: empty 'to' list
         // total 'from' value is 60, total 'to' value is 0
-        long fee = 60l;
+        long fee = 60L;
         RegularTransaction transaction = RegularTransactionCreator.create(wallet, new ArrayList<>(), new ArrayList<>(), changeAddress, fee, new ArrayList<byte[]>());
         assertEquals("Test1: Boxes list expected to be empty", 0, transaction.newBoxes().size());
 
@@ -331,7 +340,7 @@ public class RegularTransactionCreatorTest {
 
         // Test 1: exclude pk1 key -> now suitable keys in wallet
         boolean exceptionOccurred = false;
-        long fee = 10l;
+        long fee = 10L;
 
         ArrayList<byte[]> boxIdsToExclude = new ArrayList<>();
         boxIdsToExclude.add(boxToExclude.id());

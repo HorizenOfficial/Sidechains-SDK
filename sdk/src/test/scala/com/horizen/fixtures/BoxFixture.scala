@@ -1,9 +1,8 @@
 package com.horizen.fixtures
 
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
-
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import java.util.{ArrayList => JArrayList, List => JList}
 
@@ -104,6 +103,14 @@ trait BoxFixture
       wboxList.add(new WalletBox(b, bytesToId(txId), Random.nextInt(100000)))
 
     wboxList
+  }
+
+  def getWithdrawalRequestBox : WithdrawalRequestBox = {
+    new WithdrawalRequestBox(getMCPublicKeyHashProposition, 1, Random.nextInt(100))
+  }
+
+  def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long) : WithdrawalRequestBox = {
+    new WithdrawalRequestBox(key, nonce, value)
   }
 
 }

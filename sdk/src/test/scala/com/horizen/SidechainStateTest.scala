@@ -102,7 +102,7 @@ class SidechainStateTest
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedBoxStorage.lastVersionId).thenReturn(Some(boxVersion.last))
 
-    Mockito.when(mockedBoxStorage.get(ArgumentMatchers.any[Array[Byte]]()))
+    Mockito.when(mockedBoxStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
@@ -199,7 +199,7 @@ class SidechainStateTest
     Mockito.when(mockedBoxStorage.lastVersionId)
         .thenAnswer(answer => {Some(boxVersion.last)})
 
-    Mockito.when(mockedBoxStorage.get(ArgumentMatchers.any[Array[Byte]]()))
+    Mockito.when(mockedBoxStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
@@ -230,7 +230,7 @@ class SidechainStateTest
         Success(mockedBoxStorage)
       })
 
-    Mockito.when(mockedBoxStorage.getWithdrawalEpochInfo())
+    Mockito.when(mockedBoxStorage.getWithdrawalEpochInfo)
       .thenAnswer(answer => None)
 
     val mockedBlock = mock[SidechainBlock]

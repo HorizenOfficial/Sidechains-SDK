@@ -216,11 +216,10 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
     "reply at /sendCoinsToAddress" in {
       // parameter 'format' = true
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
-      val withdrawalRequests: List[TransactionOutput] = List()
       Post(basePath + "sendCoinsToAddress")
         .withEntity(
           //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
-          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput,withdrawalRequests,None))
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None))
         ) ~> sidechainTransactionApiRoute ~> check {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue

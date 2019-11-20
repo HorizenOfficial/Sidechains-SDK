@@ -37,7 +37,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~ sendCoinsToAddress ~ sendTransaction
+    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins
   }
 
   private var companion: SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
@@ -302,12 +303,30 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     entity(as[ReqSendCoinsToAddress]) { body =>
       withNodeView { sidechainNodeView =>
         val outputList = body.outputs
-        val withdrawalRequestList = body.withdrawalRequests
         val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          val regularTransaction = createRegularTransactionSimplified_(outputList, withdrawalRequestList,
+          val regularTransaction = createRegularTransactionSimplified_(outputList, List(),
+            fee.getOrElse(0L), wallet, sidechainNodeView)
+          validateAndSendTransaction(regularTransaction)
+        } catch {
+          case t: Throwable =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+        }
+      }
+    }
+  }
+
+  def withdrawCoins: Route = (post & path("withdrawCoins")) {
+    entity(as[ReqWithdrawCoins]) { body =>
+      withNodeView { sidechainNodeView =>
+        val withdrawalOutputsList = body.outputs
+        val fee = body.fee
+        val wallet = sidechainNodeView.getNodeWallet
+
+        try {
+          val regularTransaction = createRegularTransactionSimplified_(List(), withdrawalOutputsList,
             fee.getOrElse(0L), wallet, sidechainNodeView)
           validateAndSendTransaction(regularTransaction)
         } catch {
@@ -407,8 +426,14 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
-                                                withdrawalRequests: List[TransactionOutput],
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqWithdrawCoins(outputs: List[TransactionOutput],
+                                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }

@@ -3,6 +3,7 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.proposition.MCPublicKeyHashProposition;
+import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -84,4 +85,10 @@ public final class WithdrawalRequestBox
         return Arrays.equals(id(), ((WithdrawalRequestBox) obj).id())
                 && value() == ((WithdrawalRequestBox) obj).value();
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s(id: %s, proposition: %s, nonce: %d, value: %d)", this.getClass().toString(), BytesUtils.toHexString(id()), proposition, nonce, value);
+    }
+
 }

@@ -57,7 +57,7 @@ class SidechainStateStorageTest
 
     for (b <- bList1 ++ bList2) {
       assertEquals("Storage must contain specified box - " + b,
-        b, sidechainStateStorage.get(b.id()).get)
+        b, sidechainStateStorage.getBox(b.id()).get)
     }
 
     //Test delete operation
@@ -71,12 +71,12 @@ class SidechainStateStorageTest
 
     for (b <- bList1.slice(1, bList1.size) ++ bList2.slice(1, bList2.size)) {
       assertEquals("Storage must contain specified box - " + b,
-        b, sidechainStateStorage.get(b.id()).get)
+        b, sidechainStateStorage.getBox(b.id()).get)
     }
 
     for (b <- bList1.slice(0, 1) ++ bList2.slice(0, 1)) {
       assertTrue("Storage must not contain specified box - " + b,
-        sidechainStateStorage.get(b.id()).isEmpty)
+        sidechainStateStorage.getBox(b.id()).isEmpty)
     }
 
     //Test rollback operation
@@ -90,7 +90,7 @@ class SidechainStateStorageTest
 
     for (b <- bList1 ++ bList2) {
       assertEquals("Storage must contain specified box - " + b,
-        b, sidechainStateStorage.get(b.id()).get)
+        b, sidechainStateStorage.getBox(b.id()).get)
     }
   }
 

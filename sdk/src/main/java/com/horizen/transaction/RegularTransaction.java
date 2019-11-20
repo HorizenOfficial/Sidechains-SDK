@@ -92,12 +92,16 @@ public final class RegularTransaction
     public synchronized List<NoncedBox<Proposition>> newBoxes() {
         if(newBoxes == null) {
             newBoxes = new ArrayList<>();
-            for (int i = 0; i < regularOutputs.size(); i++) {
-                NoncedBox box = new RegularBox(regularOutputs.get(i).getKey(), getNewBoxNonce(regularOutputs.get(i).getKey(), i), regularOutputs.get(i).getValue());
+            int boxIndex = 0;
+            for (int i = 0; i < regularOutputs.size(); i++, boxIndex++) {
+                NoncedBox box = new RegularBox(regularOutputs.get(i).getKey(), getNewBoxNonce(regularOutputs.get(i).getKey(), boxIndex),
+                        regularOutputs.get(i).getValue());
                 newBoxes.add(box);
             }
-            for (int i = 0; i < withdrawalOutputs.size(); i++) {
-                NoncedBox box = new WithdrawalRequestBox(withdrawalOutputs.get(i).getKey(), getNewBoxNonce(withdrawalOutputs.get(i).getKey(), i), withdrawalOutputs.get(i).getValue());
+            for (int i = 0; i < withdrawalOutputs.size(); i++, boxIndex++) {
+                NoncedBox box = new WithdrawalRequestBox(withdrawalOutputs.get(i).getKey(),
+                        getNewBoxNonce(withdrawalOutputs.get(i).getKey(), boxIndex),
+                        withdrawalOutputs.get(i).getValue());
                 newBoxes.add(box);
             }
         }
@@ -165,6 +169,8 @@ public final class RegularTransaction
         }
         byte[] withdrawalPropositionsBytes = withdrawalPropositionSerializer.toBytes(withdrawalPropositions);
 
+        String s = BytesUtils.toHexString(withdrawalPropositionsBytes);
+
         byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
 
         return Bytes.concat(                                            // minimum RegularTransaction length is 40 bytes
@@ -219,6 +225,8 @@ public final class RegularTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
+        String s = BytesUtils.toHexString(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+
         List<MCPublicKeyHashProposition> withdrawalPropositions = withdrawalPropositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
@@ -243,11 +251,11 @@ public final class RegularTransaction
                                             List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests,
                                             long fee,
                                             long timestamp) {
-        if(from == null || to == null)
+        if(from == null || to == null || withdrawalRequests == null)
             throw new IllegalArgumentException("Parameters can't be null.");
         if(from.size() > MAX_TRANSACTION_UNLOCKERS)
             throw new IllegalArgumentException("Transaction from count is too large.");
-        if(to.size() > MAX_TRANSACTION_NEW_BOXES)
+        if(to.size() + withdrawalRequests.size() > MAX_TRANSACTION_NEW_BOXES)
             throw new IllegalArgumentException("Transaction to count is too large.");
 
         List<RegularBox> inputs = new ArrayList<>();

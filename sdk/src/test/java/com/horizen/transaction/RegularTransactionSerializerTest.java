@@ -1,18 +1,22 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
+import com.horizen.utils.BytesUtils;
 import javafx.util.Pair;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
@@ -23,6 +27,9 @@ public class RegularTransactionSerializerTest {
     public void beforeEachTest() {
         long fee = 10;
         long timestamp = 1547798549470L;
+
+        SecretFixtureClass secretFixture = new SecretFixtureClass();
+
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
         PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
@@ -40,13 +47,14 @@ public class RegularTransactionSerializerTest {
         ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add(new Pair<>(pk4.publicImage(), 10L));
         to.add(new Pair<>(pk5.publicImage(), 20L));
-        to.add(new Pair<>(pk6.publicImage(), 90L));
+        to.add(new Pair<>(pk6.publicImage(), 30L));
 
         ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+        withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
+        withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
         transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);
-
 
         //Save transaction to binary file for regression tests.
         /*
@@ -57,7 +65,6 @@ public class RegularTransactionSerializerTest {
         } catch (Throwable e) {
         }
         */
-
     }
 
     @Test
@@ -91,6 +98,11 @@ public class RegularTransactionSerializerTest {
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();
+        byte[] m1 = transaction.messageToSign();
+        byte[] m2 = parsedTransaction.messageToSign();
+        boolean b = Arrays.equals(m1, m2);
+        String i1 = transaction.id();
+        String i2 = parsedTransaction.id();
         assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
         assertEquals("Transaction is different to origin.", transaction.fee(), parsedTransaction.fee());
         assertEquals("Transaction is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());

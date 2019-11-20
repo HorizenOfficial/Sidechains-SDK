@@ -20,8 +20,7 @@ public class WithdrawalRequestBoxSerializerTest
 
     @Before
     public void setUp() {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
-        // Note: current box bytes are also stored in "src/test/resources/WithdrawalRequestBox_bytes"
+        // Note: current box bytes are also stored in "src/test/resources/withdrawalrequestbox_bytes"
         box = new WithdrawalRequestBox(new MCPublicKeyHashProposition(new byte[MCPublicKeyHashProposition.KEY_LENGTH]), 1000, 10);
 
         //Save box to binary file for regression tests.
@@ -40,7 +39,7 @@ public class WithdrawalRequestBoxSerializerTest
         BoxSerializer<WithdrawalRequestBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
 
-        WithdrawalRequestBox box2 = serializer.parseBytesTry(bytes).get();
+        WithdrawalRequestBox box2 = serializer.parseBytes(bytes);
         assertTrue("Boxes expected to be equal", box.equals(box2));
 
 

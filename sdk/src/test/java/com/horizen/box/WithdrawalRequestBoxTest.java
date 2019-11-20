@@ -18,8 +18,6 @@ public class WithdrawalRequestBoxTest
 
     @Before
     public void setUp() {
-        byte[] anotherSeed = "testseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
         proposition = new MCPublicKeyHashProposition(new byte[20]);
 
         nonce = 12345;
@@ -46,7 +44,6 @@ public class WithdrawalRequestBoxTest
 
 
         byte[] anotherSeed = "another test seed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
         byte[] mcKey1 = new byte[MCPublicKeyHashProposition.KEY_LENGTH];
         Arrays.fill(mcKey1, (byte) 1);
         MCPublicKeyHashProposition anotherProposition = new MCPublicKeyHashProposition(mcKey1);

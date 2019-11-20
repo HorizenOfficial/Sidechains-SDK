@@ -3,6 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
+import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -17,6 +18,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
+
+import com.horizen.fixtures.*;
 
 public class RegularTransactionTest {
 
@@ -120,5 +123,64 @@ public class RegularTransactionTest {
             exceptionOccurred = true;
         }
         assertEquals("Test2: Exception during RegularTransaction creation expected", true, exceptionOccurred);
+
+        // Test 3: withdrawalRequests is null
+        exceptionOccurred = false;
+        try {
+            RegularTransaction.create(from, to, null, fee, timestamp);
+        }
+        catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertEquals("Test3: Exception during RegularTransaction creation expected", true, exceptionOccurred);
+
+    }
+
+    @Test
+    public void withdrawalRequestTest() {
+
+        SecretFixtureClass secretFixture = new SecretFixtureClass();
+
+        //Test 1 create new transaction with withdrawal requests only
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequestList = new ArrayList<>();
+        withdrawalRequestList.add(new Pair(secretFixture.getMCPublicKeyHashProposition(), 70L));
+        withdrawalRequestList.add(new Pair(secretFixture.getMCPublicKeyHashProposition(), 50L));
+
+        RegularTransaction tx1 = RegularTransaction.create(from, new ArrayList<>(), withdrawalRequestList, fee, timestamp);
+
+        List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
+        assertTrue("Transaction must be semantically valid.", tx1.semanticValidity());
+        assertEquals("Count of new boxes must be the same as count of withdrawal requests.",
+                withdrawalRequestList.size(), tx1NewBoxes.size());
+        for(NoncedBox box : tx1NewBoxes ) {
+            assertTrue("Box must be WithdrawalRequestBox", box instanceof WithdrawalRequestBox);
+            assertTrue("Transaction must contain new box for specified key and value.",
+                    withdrawalRequestList.contains(new Pair(box.proposition(), box.value())));
+        }
+
+        //Test 2 create new transaction with regular boxes and withdrawal requests
+        List<Pair<PublicKey25519Proposition, Long>> regularOutputList = new ArrayList<>();
+        regularOutputList.add(new Pair(secretFixture.getSecret().publicImage(), 55L));
+        regularOutputList.add(new Pair(secretFixture.getSecret().publicImage(), 55L));
+        withdrawalRequestList.clear();
+        withdrawalRequestList.add(new Pair(secretFixture.getMCPublicKeyHashProposition(), 10L));
+        withdrawalRequestList.add(new Pair(secretFixture.getMCPublicKeyHashProposition(), 30L));
+
+        RegularTransaction tx2 = RegularTransaction.create(from, regularOutputList, withdrawalRequestList, fee, timestamp);
+
+        List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
+        assertTrue("Transaction must be semantically valid.", tx2.semanticValidity());
+        assertEquals("Count of new boxes must be the same as count of regular boxes and withdrawal requests.",
+                regularOutputList.size() + withdrawalRequestList.size(), tx2NewBoxes.size());
+        for(NoncedBox box : tx2NewBoxes ) {
+            if (box instanceof RegularBox)
+                assertTrue("Transaction must contain new box for specified key and value.",
+                        regularOutputList.contains(new Pair(box.proposition(), box.value())));
+            else if (box instanceof WithdrawalRequestBox)
+                assertTrue("Transaction must contain new box for specified key and value.",
+                        withdrawalRequestList.contains(new Pair(box.proposition(), box.value())));
+            else
+                fail("Box must be instance of RegularBox or WithdrawalRequestBox.");
+        }
     }
 }

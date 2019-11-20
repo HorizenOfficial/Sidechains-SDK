@@ -26,11 +26,11 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
-  private val epochInformationKey = calculateKey("Epoch information".getBytes)
+  private[horizen] val epochInformationKey = calculateKey("Epoch information".getBytes)
 
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
-  private def getWithdrawalRequestsKey(withdrawalEpochInfo: WithdrawalEpochInfo) : ByteArrayWrapper = {
+  private[horizen] def getWithdrawalRequestsKey(withdrawalEpochInfo: WithdrawalEpochInfo) : ByteArrayWrapper = {
     calculateKey(Ints.toByteArray(withdrawalEpochInfo.epoch))
   }
 
@@ -38,31 +38,41 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def get(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
+  def getBox(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
     storage.get(calculateKey(boxId)) match {
-      case v if v.isPresent => {
+      case v if v.isPresent =>
         sidechainBoxesCompanion.parseBytesTry(v.get().data) match {
           case Success(box) => Option(box)
-          case Failure(exception) => {
+          case Failure(exception) =>
             log.error("Error while WalletBox parsing.", exception)
             Option.empty
-          }
         }
-      }
       case _ => Option.empty
     }
   }
 
-  def getWithdrawalEpochInfo() : Option[WithdrawalEpochInfo] = {
+  def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = {
     storage.get(epochInformationKey) match {
-      case v if v.isPresent => WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data).toOption
-      case _ => None
+      case v if v.isPresent =>
+        WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data) match {
+          case Success(withdrawalEpochInfo) => Option(withdrawalEpochInfo)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch info information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
     }
   }
 
   def getWithdrawalRequests(withdrawalEpochInfo: WithdrawalEpochInfo) : JList[WithdrawalRequestBox] = {
     storage.get(getWithdrawalRequestsKey(withdrawalEpochInfo)) match {
-      case v if v.isPresent => withdrawalRequestSerializer.parseBytes(v.get().data)
+      case v if v.isPresent =>
+        withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
+          case Success(withdrawalRequests) => withdrawalRequests
+          case Failure(exception) =>
+            log.error("Error while withdrawal requests parsing.", exception)
+            new JArrayList[WithdrawalRequestBox]()
+        }
       case _ => new JArrayList[WithdrawalRequestBox]()
     }
   }
@@ -89,6 +99,9 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
         new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))))
 
+    updateList.add(new JPair(epochInformationKey,
+      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+
     if (withdrawalRequestAppendList.nonEmpty) {
       val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo)
 
@@ -96,9 +109,6 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
-
-      updateList.add(new JPair(epochInformationKey,
-        new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     }
 

@@ -2,8 +2,10 @@ package com.horizen.fixtures
 
 import com.horizen.secret._
 import com.horizen.customtypes._
+import java.util.{ArrayList => JArrayList, List => JList}
 
-import java.util.{List => JList, ArrayList => JArrayList}
+import com.horizen.proposition.MCPublicKeyHashProposition
+
 import scala.util.Random
 
 trait SecretFixture {
@@ -62,6 +64,23 @@ trait SecretFixture {
 
     keysList
   }
+
+  def getMCPublicKeyHashProposition : MCPublicKeyHashProposition = {
+    val keyHashBytes = new Array[Byte](MCPublicKeyHashProposition.KEY_LENGTH)
+    Random.nextBytes(keyHashBytes)
+
+    new MCPublicKeyHashProposition(keyHashBytes)
+  }
+
+  def getMCPublicKeyHashPropositionList(count: Int) : JList[MCPublicKeyHashProposition] = {
+    val keyList = new JArrayList[MCPublicKeyHashProposition]()
+
+    for (i <- 1 to count)
+      keyList.add(getMCPublicKeyHashProposition)
+
+    keyList
+  }
+
 }
 
 class SecretFixtureClass extends SecretFixture
