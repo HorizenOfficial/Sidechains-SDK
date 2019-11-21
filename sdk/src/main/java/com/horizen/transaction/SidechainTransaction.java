@@ -50,8 +50,9 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
     public final boolean semanticValidity() {
         List<B> boxes = newBoxes();
         for(int i = 0; i < boxes.size(); i++) {
-            if(boxes.get(i).nonce() != getNewBoxNonce(boxes.get(i).proposition(), i))
+            if(boxes.get(i).nonce() != getNewBoxNonce(boxes.get(i).proposition(), i)) {
                 return false;
+            }
         }
         return transactionSemanticValidity();
     }

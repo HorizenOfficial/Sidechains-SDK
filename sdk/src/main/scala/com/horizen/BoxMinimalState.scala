@@ -3,11 +3,10 @@ package com.horizen
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
-import scorex.core.{PersistentNodeViewModifier, VersionTag}
 import scorex.core.transaction.state.{BoxStateChanges, MinimalState, ModifierValidation, TransactionValidation}
-import scorex.core.idToVersion
+import scorex.core.{PersistentNodeViewModifier, VersionTag, idToVersion}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 trait BoxMinimalState[P <: Proposition,
     BX <: Box[P],
