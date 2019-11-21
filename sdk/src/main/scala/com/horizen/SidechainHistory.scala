@@ -44,21 +44,16 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
-    semanticBlockValidators.map(_.validate(block)).foreach {
-      case Failure(e) =>
-        throw e
-      case _ =>
-    }
+    for(validator <- semanticBlockValidators)
+      validator.validate(block).get
 
     // Non-genesis blocks mast have a parent already present in History
-    if(!isGenesisBlock(block.id) && storage.blockInfoById(block.parentId).isEmpty)
+    val parentBlockInfoOption: Option[SidechainBlockInfo] = storage.blockInfoById(block.parentId)
+    if(!isGenesisBlock(block.id) && parentBlockInfoOption.isEmpty)
       throw new IllegalArgumentException("Sidechain block %s appending failed: parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    historyBlockValidators.map(_.validate(block, this)).foreach {
-      case Failure(e) =>
-        throw e
-      case _ =>
-    }
+    for(validator <- historyBlockValidators)
+      validator.validate(block, this).get
 
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
@@ -68,49 +63,39 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
         )
       }
       else {
-        storage.blockInfoById(block.parentId) match {
-          case Some(parentBlockInfo) =>
-            val blockInfo: SidechainBlockInfo = calculateBlockInfo(block, parentBlockInfo)
-            // Check if we retrieved the next block of best chain
-            if(block.parentId.equals(bestBlockId)) {
-              (
-                storage.update(block, blockInfo),
-                ProgressInfo(None, Seq(), Seq(block), Seq())
-              )
-            } else {
-              // Check if retrieved block is the best one, but from another chain
-              if(isBestBlock(block, parentBlockInfo.score)) {
-                  bestForkChanges(block) match { // get info to switch to another chain
-                    case Success(progInfo) =>
-                      (
-                        storage.update(block, blockInfo),
-                        progInfo
-                      )
-                    case Failure(e) =>
-                      //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
-                      (
-                        storage.update(block, blockInfo),
-                        // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
-                        ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
-                      )
-
-                  }
-              } else {
-                // We retrieved block from another chain that is not the best one
+        val parentBlockInfo = parentBlockInfoOption.get
+        val blockInfo: SidechainBlockInfo = calculateBlockInfo(block, parentBlockInfo)
+        // Check if we retrieved the next block of best chain
+        if (block.parentId.equals(bestBlockId)) {
+          (
+            storage.update(block, blockInfo),
+            ProgressInfo(None, Seq(), Seq(block), Seq())
+          )
+        } else {
+          // Check if retrieved block is the best one, but from another chain
+          if (isBestBlock(block, parentBlockInfo.score)) {
+            bestForkChanges(block) match { // get info to switch to another chain
+              case Success(progInfo) =>
                 (
                   storage.update(block, blockInfo),
+                  progInfo
+                )
+              case Failure(e) =>
+                //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+                (
+                  storage.update(block, blockInfo),
+                  // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                   ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
                 )
-              }
+
             }
-          case None =>
-            // Parent is not present inside history -> unreachable case at the moment
-            // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
-            // TO DO: do we need to save it to history storage to prevent double downloading or it's cached somewhere?
+          } else {
+            // We retrieved block from another chain that is not the best one
             (
-              Success(storage),
+              storage.update(block, blockInfo),
               ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
             )
+          }
         }
       }
     }
