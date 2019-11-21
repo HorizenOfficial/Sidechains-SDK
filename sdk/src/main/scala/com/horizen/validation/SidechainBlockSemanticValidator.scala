@@ -3,12 +3,11 @@ package com.horizen.validation
 import com.horizen.block.SidechainBlock
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
-import scorex.core.block.BlockValidator
 import scorex.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 
-class SidechainBlockValidator(params: NetworkParams) extends BlockValidator[SidechainBlock] {
+class SidechainBlockSemanticValidator(params: NetworkParams) extends SemanticBlockValidator {
   override def validate(block: SidechainBlock): Try[Unit] = {
     if (block.semanticValidity(params)) {
       Success()

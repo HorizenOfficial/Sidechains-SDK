@@ -9,7 +9,8 @@ case class TestNetParams(
                           override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)),
                           override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
                           override val genesisPoWData: Seq[(Int, Int)] = Seq(),
-                          override val mainchainCreationBlockHeight: Int = 1
+                          override val mainchainCreationBlockHeight: Int = 1,
+                          override val withdrawalEpochLength: Int = 100
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
