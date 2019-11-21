@@ -1,10 +1,10 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 
@@ -19,8 +19,8 @@ public class RegularBoxTest
     @Before
     public void setUp() {
         byte[] anotherSeed = "testseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        proposition = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        proposition = new PublicKey25519Proposition(keyPair.getValue());
 
         nonce = 12345;
         value = 10;
@@ -46,8 +46,8 @@ public class RegularBoxTest
 
 
         byte[] anotherSeed = "another test seed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair.getValue());
 
         RegularBox box3 = new RegularBox(anotherProposition, nonce, value);
         assertEquals("Boxes hash codes expected to be different", false, box1.hashCode() == box3.hashCode());

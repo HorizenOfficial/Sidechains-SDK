@@ -1,10 +1,10 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -18,9 +18,9 @@ public class PublicKey25519PropositionSerializerTest {
 
     @Before
     public void beforeEachTest() {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
         // Note: current proposition bytes are also stored in "src/test/resources/publickey25519proposition_bytes"
-        proposition = new PublicKey25519Proposition(keyPair._2());
+        proposition = new PublicKey25519Proposition(keyPair.getValue());
     }
 
     @Test
