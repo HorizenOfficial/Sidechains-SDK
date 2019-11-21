@@ -52,7 +52,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       blockInfo.parentId,
       validity,
       blockInfo.mainchainBlockReferenceHashes,
-      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.index)
+      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.lastEpochIndex)
     )
   }
 

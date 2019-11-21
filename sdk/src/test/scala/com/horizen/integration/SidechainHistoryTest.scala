@@ -63,7 +63,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   def genesisTest(): Unit = {
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     val history = historyTry.get
@@ -79,7 +79,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   def appendTest(): Unit = {
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history: SidechainHistory = historyTry.get
@@ -143,15 +143,16 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     // Test 3: try to append block that parent is absent
     val unknownBlock = generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 444L)
     history.append(unknownBlock) match {
-      case Success((hist, prog)) =>
-        history = hist
-        progressInfo = prog
+      case Success((_, _)) =>
+        assertFalse("Exception expected during appending a block without parent present in History.", true)
       case Failure(e) =>
-        assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
+        e match {
+          case _: IllegalArgumentException =>
+          case _ => assertFalse("IllegalArgumentException expected during appending a block without parent present in History: %s".format(e.getMessage), true)
+        }
     }
 
     assertFalse("Block expected to be NOT present.", history.contains(unknownBlock.id))
-    assertEquals("Different progress info expected.", ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()), progressInfo)
 
 
     // Test 4: try to append semantically invalid block
@@ -163,7 +164,6 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     }
 
     assertFalse("Block expected to be NOT present.", history.contains(invalidBlock.id))
-    assertEquals("Different progress info expected.", ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()), progressInfo)
 
 
     // Test 5: try to add block b2
@@ -297,7 +297,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
     // Init chain with 10 blocks
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history = historyTry.get
@@ -382,7 +382,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   def applicableTryTest(): Unit = {
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history: SidechainHistory = historyTry.get
@@ -408,7 +408,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     val sidechainHistoryStorage1 = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
     // Create first history object
-    val history1Try = SidechainHistory.genesisHistory(sidechainHistoryStorage1, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val history1Try = SidechainHistory.genesisHistory(sidechainHistoryStorage1, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history1 creation expected to be successful. ", history1Try.isSuccess)
     var history1: SidechainHistory = history1Try.get
     // Init history1 with 19 more blocks
@@ -432,7 +432,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     val sidechainHistoryStorage2 = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
     // Create second history object
-    val history2Try = SidechainHistory.genesisHistory(sidechainHistoryStorage2, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)))
+    val history2Try = SidechainHistory.genesisHistory(sidechainHistoryStorage2, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history2 creation expected to be successful. ", history2Try.isSuccess)
     var history2: SidechainHistory = history2Try.get
     // Init history2 with 18 more blocks

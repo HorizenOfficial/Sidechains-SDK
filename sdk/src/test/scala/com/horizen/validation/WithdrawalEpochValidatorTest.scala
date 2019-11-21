@@ -141,7 +141,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(params.withdrawalEpochLength).thenReturn(withdrawalEpochLength)
 
 
-    // Test 1: valid block - no MC block references, parent is missed
+    // Test 1: invalid block - no MC block references, parent is missed
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
@@ -153,8 +153,11 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn(None)
-    assertTrue("Sidechain block with missed parent expected to be valid.", validator.validate(block, history).isSuccess)
-
+    assertTrue("Sidechain block with missed parent expected to be invalid.", validator.validate(block, history).isFailure)
+    validator.validate(block, history).failed.get match {
+      case _: IllegalArgumentException =>
+      case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
+    }
 
     // Test 2: valid block - no MC block references, parent is the last block of previous epoch
     block = SidechainBlock.create(
@@ -273,6 +276,67 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       ))
     })
     assertTrue("Sidechain block with SC transactions and MCBlock references that lead to the epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
+    validator.validate(block, history).failed.get match {
+      case _: IllegalArgumentException =>
+      case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
+    }
+
+
+    // Test 11: invalid block - with 1 MCBlockRef with sc creation tx with declared
+    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val mcBlockRefRegTestParams = RegTestParams(scId.data)
+    // parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
+    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(mcBlockRef),
+      Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      sidechainTransactionsCompanion,
+      mcBlockRefRegTestParams
+    ).get
+
+    assertTrue("Sidechain non-genesis block with 1 MC block references with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    validator.validate(block, history).failed.get match {
+      case _: IllegalArgumentException =>
+      case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
+    }
+
+
+    // Test 12: invalid block - with 2 MCBlockRef, the second one is with sc creation tx
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef),
+      Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      sidechainTransactionsCompanion,
+      mcBlockRefRegTestParams
+    ).get
+
+    assertTrue("Sidechain non-genesis block with 2 MC block references, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    validator.validate(block, history).failed.get match {
+      case _: IllegalArgumentException =>
+      case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
+    }
+
+
+    // Test 13: invalid block - with 3 MCBlockRef, the second one is with sc creation tx
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(id = Some(new ByteArrayWrapper(mcBlockRef.hash)))),
+      Seq(),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      sidechainTransactionsCompanion,
+      mcBlockRefRegTestParams
+    ).get
+
+    assertTrue("Sidechain non-genesis block with 3 MC block references, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)

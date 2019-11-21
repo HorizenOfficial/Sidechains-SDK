@@ -9,19 +9,22 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.validation.SidechainBlockValidator
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, idToBytes}
 
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory private (val storage: SidechainHistoryStorage, params: NetworkParams, validators: Seq[SidechainBlockValidator])
+class SidechainHistory private (val storage: SidechainHistoryStorage,
+                                params: NetworkParams,
+                                semanticBlockValidators: Seq[SemanticBlockValidator],
+                                historyBlockValidators: Seq[HistoryBlockValidator])
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
@@ -41,7 +44,17 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
-    validators.map(_.validate(block, this)).foreach {
+    semanticBlockValidators.map(_.validate(block)).foreach {
+      case Failure(e) =>
+        throw e
+      case _ =>
+    }
+
+    // Non-genesis blocks mast have a parent already present in History
+    if(!isGenesisBlock(block.id) && storage.blockInfoById(block.parentId).isEmpty)
+      throw new IllegalArgumentException("Sidechain block %s appending failed: parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
+
+    historyBlockValidators.map(_.validate(block, this)).foreach {
       case Failure(e) =>
         throw e
       case _ =>
@@ -91,7 +104,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
               }
             }
           case None =>
-            // Parent is not present inside history
+            // Parent is not present inside history -> unreachable case at the moment
             // TO DO: Request for common chain till current unknown block. Check Scorex RC4 for possible solution
             // TO DO: do we need to save it to history storage to prevent double downloading or it's cached somewhere?
             (
@@ -101,7 +114,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
         }
       }
     }
-    new SidechainHistory(newStorage.get, params, validators) -> progressInfo
+    new SidechainHistory(newStorage.get, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
   }
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
@@ -212,18 +225,18 @@ class SidechainHistory private (val storage: SidechainHistoryStorage, params: Ne
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
       newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id).get).get
-      new SidechainHistory(newStorage, params, validators)
+      new SidechainHistory(newStorage, params, semanticBlockValidators, historyBlockValidators)
   }
 
   override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
     val newHistory: SidechainHistory = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
-      new SidechainHistory(newStorage, params, validators)
+      new SidechainHistory(newStorage, params, semanticBlockValidators, historyBlockValidators)
     } match {
       case Success(history) => history
       case Failure(e) =>
         //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
-        new SidechainHistory(storage, params, validators)
+        new SidechainHistory(storage, params, semanticBlockValidators, historyBlockValidators)
     }
 
     // In case when we try to apply some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
@@ -455,10 +468,11 @@ object SidechainHistory
 {
   private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
                                       params: NetworkParams,
-                                      validators: Seq[SidechainBlockValidator]) : Option[SidechainHistory] = {
+                                      semanticBlockValidators: Seq[SemanticBlockValidator],
+                                      historyBlockValidators: Seq[HistoryBlockValidator]) : Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
-      Some(new SidechainHistory(historyStorage, params, validators))
+      Some(new SidechainHistory(historyStorage, params, semanticBlockValidators, historyBlockValidators))
     else
       None
   }
@@ -466,10 +480,11 @@ object SidechainHistory
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
-                                      validators: Seq[SidechainBlockValidator]) : Try[SidechainHistory] = Try {
+                                      semanticBlockValidators: Seq[SemanticBlockValidator],
+                                      historyBlockValidators: Seq[HistoryBlockValidator]) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty)
-      new SidechainHistory(historyStorage, params, validators)
+      new SidechainHistory(historyStorage, params, semanticBlockValidators, historyBlockValidators)
         .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
     else
       throw new RuntimeException("History storage is not empty!")

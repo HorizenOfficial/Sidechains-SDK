@@ -8,7 +8,7 @@ import scorex.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 
-class MainchainPoWValidator(params: NetworkParams) extends SidechainBlockValidator {
+class MainchainPoWValidator(params: NetworkParams) extends HistoryBlockValidator {
   override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = {
     if(ProofOfWorkVerifier.checkNextWorkRequired(block, history.storage, params)) {
       Success()
