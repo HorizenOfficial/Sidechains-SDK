@@ -1,7 +1,6 @@
 package com.horizen.chain
 
-import java.io.File
-import java.nio.file.Files
+import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
@@ -58,11 +57,13 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
       assertEquals("SidechainBlockInfo reference is different", info.mainchainBlockReferenceHashes(index), references(index))
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", info.withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
-    /*
-    val out = Some(new FileOutputStream("src/test/resources/sidechainblockinfo_bytes"))
-    out.get.write(bytes)
-    out.get.close()
-*/
+
+//    Uncomment and run if you want to update regression data.
+//    val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainblockinfo_hex"))
+//    out.write(BytesUtils.toHexString(bytes))
+//    out.close()
+
+
 
     // Test 2: try to deserialize broken bytes.
     assertTrue("SidechainBlockInfo expected to be not parsed due to broken data.", SidechainBlockInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
@@ -73,8 +74,8 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     var bytes: Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val file = new File(classLoader.getResource("sidechainblockinfo_bytes").getFile)
-      bytes = Files.readAllBytes(file.toPath)
+      val file = new FileReader(classLoader.getResource("sidechainblockinfo_hex").getFile)
+      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
     }
     catch {
       case e: Exception =>

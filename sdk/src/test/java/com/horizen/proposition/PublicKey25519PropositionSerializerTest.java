@@ -1,13 +1,13 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.File;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -19,8 +19,16 @@ public class PublicKey25519PropositionSerializerTest {
     @Before
     public void beforeEachTest() {
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
-        // Note: current proposition bytes are also stored in "src/test/resources/publickey25519proposition_bytes"
+        // Note: current proposition bytes are also stored in "src/test/resources/publickey25519proposition_hex"
         proposition = new PublicKey25519Proposition(keyPair.getValue());
+
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/publickey25519proposition_hex"));
+//            out.write(BytesUtils.toHexString(proposition.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
@@ -41,8 +49,8 @@ public class PublicKey25519PropositionSerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("publickey25519proposition_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("publickey25519proposition_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

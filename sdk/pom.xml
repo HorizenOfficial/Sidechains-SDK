@@ -240,13 +240,13 @@
 			<testResource>
 				<directory>${basedir}/src/test/resources</directory>
 				<includes>
-					<include>publickey25519proposition_bytes</include>
-					<include>privatekey25519_bytes</include>
-					<include>regulartransaction_bytes</include>
-					<include>regularbox_bytes</include>
-					<include>certifierrightbox_bytes</include>
-					<include>sidechainblockinfo_bytes</include>
-					<include>sidechainsyncinfo_bytes</include>
+					<include>publickey25519proposition_hex</include>
+					<include>privatekey25519_hex</include>
+					<include>regulartransaction_hex</include>
+					<include>regularbox_hex</include>
+					<include>certifierrightbox_hex</include>
+					<include>sidechainblockinfo_hex</include>
+					<include>sidechainsyncinfo_hex</include>
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
 					<include>mcblock473173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->

@@ -1,14 +1,14 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.File;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
@@ -20,8 +20,16 @@ public class CertifierRightBoxSerializerTest
     @Before
     public void setUp() {
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
-        // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_bytes"
+        // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_hex"
         box = new CertifierRightBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 20, 10);
+
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/certifierrightbox_hex"));
+//            out.write(BytesUtils.toHexString(box.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
@@ -42,8 +50,8 @@ public class CertifierRightBoxSerializerTest
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("certifierrightbox_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("certifierrightbox_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);
