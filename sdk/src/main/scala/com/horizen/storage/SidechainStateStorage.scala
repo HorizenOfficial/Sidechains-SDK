@@ -30,8 +30,8 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
-  private[horizen] def getWithdrawalRequestsKey(withdrawalEpochInfo: WithdrawalEpochInfo) : ByteArrayWrapper = {
-    calculateKey(Ints.toByteArray(withdrawalEpochInfo.epoch))
+  private[horizen] def getWithdrawalRequestsKey(epoch: Int) : ByteArrayWrapper = {
+    calculateKey(Ints.toByteArray(epoch))
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -64,8 +64,8 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  def getWithdrawalRequests(withdrawalEpochInfo: WithdrawalEpochInfo) : JList[WithdrawalRequestBox] = {
-    storage.get(getWithdrawalRequestsKey(withdrawalEpochInfo)) match {
+  def getWithdrawalRequests(epoch: Int) : JList[WithdrawalRequestBox] = {
+    storage.get(getWithdrawalRequestsKey(epoch)) match {
       case v if v.isPresent =>
         withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
           case Success(withdrawalRequests) => withdrawalRequests
@@ -103,11 +103,11 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     if (withdrawalRequestAppendList.nonEmpty) {
-      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo)
+      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch)
 
       withdrawalRequestList.addAll(withdrawalRequestAppendList.asJavaCollection)
 
-      updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo),
+      updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
 
     }

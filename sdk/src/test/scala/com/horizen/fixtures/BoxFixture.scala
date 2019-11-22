@@ -106,7 +106,7 @@ trait BoxFixture
   }
 
   def getWithdrawalRequestBox : WithdrawalRequestBox = {
-    new WithdrawalRequestBox(getMCPublicKeyHashProposition, 1, Random.nextInt(100))
+    new WithdrawalRequestBox(getMCPublicKeyHashProposition, Random.nextInt(100), Random.nextInt(100))
   }
 
   def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long) : WithdrawalRequestBox = {

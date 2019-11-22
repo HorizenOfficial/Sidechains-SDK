@@ -169,8 +169,6 @@ public final class RegularTransaction
         }
         byte[] withdrawalPropositionsBytes = withdrawalPropositionSerializer.toBytes(withdrawalPropositions);
 
-        String s = BytesUtils.toHexString(withdrawalPropositionsBytes);
-
         byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
 
         return Bytes.concat(                                            // minimum RegularTransaction length is 40 bytes
@@ -224,8 +222,6 @@ public final class RegularTransaction
 
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
-
-        String s = BytesUtils.toHexString(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
         List<MCPublicKeyHashProposition> withdrawalPropositions = withdrawalPropositionSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;

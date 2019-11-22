@@ -60,11 +60,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   }
 
   def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(WithdrawalEpochInfo(epoch, 0)).asScala.toList
+    stateStorage.getWithdrawalRequests(epoch).asScala.toList
   }
 
   override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(WithdrawalEpochInfo(epoch, 0))
+    stateStorage.getWithdrawalRequests(epoch)
   }
 
   // Note: aggregate New boxes and spent boxes for Block

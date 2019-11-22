@@ -98,11 +98,6 @@ public class RegularTransactionSerializerTest {
         assertEquals("Transaction serialization failed.", true, t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();
-        byte[] m1 = transaction.messageToSign();
-        byte[] m2 = parsedTransaction.messageToSign();
-        boolean b = Arrays.equals(m1, m2);
-        String i1 = transaction.id();
-        String i2 = parsedTransaction.id();
         assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
         assertEquals("Transaction is different to origin.", transaction.fee(), parsedTransaction.fee());
         assertEquals("Transaction is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
