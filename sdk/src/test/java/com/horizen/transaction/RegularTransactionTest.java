@@ -48,9 +48,9 @@ public class RegularTransactionTest {
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                -6657850661250491378L,
-                 7448162453660083174L,
-                -6018300252468265464L)
+                384769921723993316L,
+                -7787981619319975853L,
+                1511446075117796171L)
         );
     }
 
