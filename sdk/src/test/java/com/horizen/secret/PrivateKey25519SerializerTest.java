@@ -18,6 +18,7 @@ public class PrivateKey25519SerializerTest {
         // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_hex"
         key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes());
 
+//     Uncomment and run if you want to update regression data.
 //        try {
 //            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/privatekey25519_hex"));
 //            out.write(BytesUtils.toHexString(key.bytes()));

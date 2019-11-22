@@ -44,12 +44,13 @@ public class RegularTransactionSerializerTest {
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
 
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
-            out.write(BytesUtils.toHexString(transaction.bytes()));
-            out.close();
-        } catch (Throwable e) {
-        }
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
+//            out.write(BytesUtils.toHexString(transaction.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test

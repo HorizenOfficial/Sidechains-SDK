@@ -23,6 +23,7 @@ public class RegularBoxSerializerTest
         // Note: current box bytes are also stored in "src/test/resources/regularbox_hex"
         box = new RegularBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
 
+//     Uncomment and run if you want to update regression data.
 //        try {
 //            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regularbox_hex"));
 //            out.write(BytesUtils.toHexString(box.bytes()));

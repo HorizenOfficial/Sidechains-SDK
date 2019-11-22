@@ -22,6 +22,7 @@ public class PublicKey25519PropositionSerializerTest {
         // Note: current proposition bytes are also stored in "src/test/resources/publickey25519proposition_hex"
         proposition = new PublicKey25519Proposition(keyPair.getValue());
 
+//     Uncomment and run if you want to update regression data.
 //        try {
 //            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/publickey25519proposition_hex"));
 //            out.write(BytesUtils.toHexString(proposition.bytes()));

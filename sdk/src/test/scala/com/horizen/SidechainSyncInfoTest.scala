@@ -42,6 +42,7 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
 
 
+//    Uncomment and run if you want to update regression data.
 //    val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainsyncinfo_hex"))
 //    out.write(BytesUtils.toHexString(bytes))
 //    out.close()

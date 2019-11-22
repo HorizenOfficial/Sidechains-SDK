@@ -58,6 +58,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", info.withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
 
+//    Uncomment and run if you want to update regression data.
 //    val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainblockinfo_hex"))
 //    out.write(BytesUtils.toHexString(bytes))
 //    out.close()

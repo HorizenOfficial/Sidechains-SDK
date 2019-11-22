@@ -23,6 +23,7 @@ public class CertifierRightBoxSerializerTest
         // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_hex"
         box = new CertifierRightBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 20, 10);
 
+//     Uncomment and run if you want to update regression data.
 //        try {
 //            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/certifierrightbox_hex"));
 //            out.write(BytesUtils.toHexString(box.bytes()));
