@@ -5,7 +5,7 @@ import java.util
 import java.util.{ArrayList => JArrayList}
 
 import com.fasterxml.jackson.databind.JsonNode
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.RegularBox
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}

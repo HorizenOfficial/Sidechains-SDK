@@ -10,6 +10,7 @@ import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
+import com.horizen.params.TestNetParams;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -17,7 +18,7 @@ import com.horizen.secret.PrivateKey25519Serializer;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.VarInt;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -244,8 +245,9 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-            case 1: // testnet
                 return new MainNetParams(scId, null, null, null, 1, 100);
+            case 1: // testnet
+                return new TestNetParams(scId, null, null, null, 1, 100);
             case 2: // regtest
                 return new RegTestParams(scId, null, null, null, 1, 100);
         }

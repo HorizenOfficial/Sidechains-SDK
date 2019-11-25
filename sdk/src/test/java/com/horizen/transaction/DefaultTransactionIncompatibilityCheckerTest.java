@@ -5,7 +5,7 @@ import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import org.junit.Test;
 
 import java.util.ArrayList;

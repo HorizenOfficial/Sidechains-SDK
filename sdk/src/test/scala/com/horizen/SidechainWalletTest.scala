@@ -9,7 +9,7 @@ import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import javafx.util.Pair
+import com.horizen.utils.Pair
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 

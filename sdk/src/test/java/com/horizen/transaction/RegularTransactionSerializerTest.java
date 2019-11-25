@@ -7,7 +7,7 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.BytesUtils;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;

@@ -4,7 +4,7 @@ import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}

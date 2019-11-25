@@ -4,10 +4,8 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.secret.PrivateKey25519
 import com.horizen.box.RegularBox
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
-import javafx.util.{Pair => JPair}
-
+import com.horizen.utils.{Pair => JPair}
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {

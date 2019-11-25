@@ -11,7 +11,7 @@ import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;

@@ -17,7 +17,7 @@ import com.horizen.{SidechainTypes, transaction}
 import com.horizen.transaction._
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.settings.RESTApiSettings
-import javafx.util.Pair
+import com.horizen.utils.Pair
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
