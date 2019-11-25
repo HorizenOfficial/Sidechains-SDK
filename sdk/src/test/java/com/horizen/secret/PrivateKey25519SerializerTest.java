@@ -1,13 +1,12 @@
 package com.horizen.secret;
 
 
+import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.File;
-import java.nio.file.Files;
-
+import java.io.*;
 import static org.junit.Assert.*;
 
 public class PrivateKey25519SerializerTest {
@@ -16,8 +15,16 @@ public class PrivateKey25519SerializerTest {
 
     @Before
     public void beforeEachTest() {
-        // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_bytes"
+        // Note: current secret bytes are also stored in "src/test/resources/privatekey25519_hex"
         key = PrivateKey25519Creator.getInstance().generateSecret("12345".getBytes());
+
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/privatekey25519_hex"));
+//            out.write(BytesUtils.toHexString(key.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
@@ -34,8 +41,8 @@ public class PrivateKey25519SerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("privatekey25519_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("privatekey25519_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

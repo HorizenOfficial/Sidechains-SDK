@@ -3,8 +3,8 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.List;
@@ -27,8 +27,8 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
 
     @Override
     public PrivateKey25519 generateSecret(byte[] seed) {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(seed);
-        return new PrivateKey25519(keyPair._1, keyPair._2);
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(seed);
+        return new PrivateKey25519(keyPair.getKey(), keyPair.getValue());
     }
 
     @Override

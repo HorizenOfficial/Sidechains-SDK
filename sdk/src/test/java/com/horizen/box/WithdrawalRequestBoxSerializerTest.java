@@ -1,13 +1,14 @@
 package com.horizen.box;
 
 import com.horizen.proposition.MCPublicKeyHashProposition;
+import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;
 import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
-import java.io.File;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.Arrays;
 
@@ -26,8 +27,8 @@ public class WithdrawalRequestBoxSerializerTest
         //Save box to binary file for regression tests.
         /*
         try {
-            FileOutputStream out = new FileOutputStream("src/test/resources/withdrawalrequestbox_bytes");
-            out.write(box.serializer().toBytes(box));
+            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/withdrawalrequestbox_hex"));
+            out.write(BytesUtils.toHexString(box.serializer().toBytes(box)));
             out.close();
         } catch (Throwable e) {
         }
@@ -53,8 +54,8 @@ public class WithdrawalRequestBoxSerializerTest
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("withdrawalrequestbox_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("withdrawalrequestbox_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertTrue(e.toString(), false);

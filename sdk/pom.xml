@@ -46,6 +46,12 @@
 			<groupId>org.scorexfoundation</groupId>
 			<artifactId>scorex-core_2.12</artifactId>
 			<version>2.0.0-RC4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.whispersystems</groupId>
+					<artifactId>curve25519-java</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
@@ -155,6 +161,13 @@
 			<artifactId>leveldb-api</artifactId>
 			<version>0.12</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15on</artifactId>
+			<version>1.64</version>
+		</dependency>
+
 
 		<!-- https://mvnrepository.com/artifact/org.ethereum/leveldbjni-all -->
 		<dependency>
@@ -227,17 +240,17 @@
 			<testResource>
 				<directory>${basedir}/src/test/resources</directory>
 				<includes>
-					<include>publickey25519proposition_bytes</include>
-					<include>mcpublickeyhashproposition_bytes</include>
-					<include>privatekey25519_bytes</include>
-					<include>regulartransaction_bytes</include>
-					<include>regularbox_bytes</include>
-					<include>withdrawalrequestbox_bytes</include>
-					<include>certifierrightbox_bytes</include>
-					<include>sidechainblockinfo_bytes</include>
-					<include>sidechainsyncinfo_bytes</include>
+					<include>publickey25519proposition_hex</include>
+					<include>privatekey25519_hex</include>
+					<include>regulartransaction_hex</include>
+					<include>regularbox_hex</include>
+					<include>certifierrightbox_hex</include>
+					<include>sidechainblockinfo_hex</include>
+					<include>sidechainsyncinfo_hex</include>
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
 					<include>mcblock473173</include>
+					<include>withdrawalrequestbox_hex</include>
+					<include>mcpublickeyhashproposition_hex</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->

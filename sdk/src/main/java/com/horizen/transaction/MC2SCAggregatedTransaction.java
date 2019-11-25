@@ -120,6 +120,10 @@ public final class MC2SCAggregatedTransaction
         return Arrays.copyOf(_mc2scTransactionsMerkleRootHash, _mc2scTransactionsMerkleRootHash.length);
     }
 
+    public List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs() {
+        return Collections.unmodifiableList(_mc2scTransactionsOutputs);
+    }
+
     public boolean semanticValidity() {
         // Transaction is valid if it contains all mc2sc transactions and merkle root based on them is equal to the one defined in constructor.
         if (_mc2scTransactionsMerkleRootHash == null || _mc2scTransactionsMerkleRootHash.length != 32

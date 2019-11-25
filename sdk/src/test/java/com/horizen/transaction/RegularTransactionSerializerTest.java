@@ -12,9 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -53,14 +51,14 @@ public class RegularTransactionSerializerTest {
         withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
-        // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
+        // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);
 
-        //Save transaction to binary file for regression tests.
+//      Uncomment and run if you want to update regression data.
         /*
         try {
-            FileOutputStream out = new FileOutputStream("src/test/resources/regulartransaction_bytes");
-            out.write(transaction.serializer().toBytes(transaction));
+            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
+            out.write(BytesUtils.toHexString(transaction.bytes()));
             out.close();
         } catch (Throwable e) {
         }
@@ -85,8 +83,8 @@ public class RegularTransactionSerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("regulartransaction_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

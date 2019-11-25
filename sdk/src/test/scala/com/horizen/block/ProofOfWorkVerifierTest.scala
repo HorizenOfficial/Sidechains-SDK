@@ -171,10 +171,9 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val sidechainId: Array[Byte] = null
       override val sidechainGenesisBlockId: ModifierId = null
       override val mainchainCreationBlockHeight: Int = 1
-      override val withdrawalEpochLength: Int = 100
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))
-
+      override val withdrawalEpochLength: Int = 100
     }
 
 

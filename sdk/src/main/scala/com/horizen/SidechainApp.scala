@@ -14,7 +14,6 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction.TransactionSerializer
 import scorex.core.{ModifierTypeId, NodeViewModifier}
-import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.network.message.MessageSpec
 import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
@@ -90,7 +89,8 @@ class SidechainApp @Inject()
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
       genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight
+      sidechainSettings.genesisData.mcBlockHeight,
+      sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "testnet" => TestNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -104,7 +104,8 @@ class SidechainApp @Inject()
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
       genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight
+      sidechainSettings.genesisData.mcBlockHeight,
+      sidechainSettings.genesisData.withdrawalEpochLength
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -141,9 +142,7 @@ class SidechainApp @Inject()
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock, // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
-    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params))
-  )
+    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =

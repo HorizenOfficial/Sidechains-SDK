@@ -1,24 +1,24 @@
 package com.horizen.chain
 
-import java.io.ByteArrayOutputStream
 import java.util
 
-import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block.SidechainBlock
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
-import scala.util.Try
+import scala.collection.mutable.ArrayBuffer
 
 case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
                               semanticValidity: ModifierSemanticValidity,
-                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId]) extends BytesSerializable with LinkedElement[ModifierId] {
+                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId],
+                              withdrawalEpochInfo: WithdrawalEpochInfo,
+                             ) extends BytesSerializable with LinkedElement[ModifierId] {
 
   override def getParentId: ModifierId = parentId
 
@@ -38,64 +38,25 @@ object SidechainBlockInfo {
 }
 
 object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo] {
-  override def toBytes(obj: SidechainBlockInfo): Array[Byte] = {
-
-    val mainchainBlockReferencesStream = new ByteArrayOutputStream
-    obj.mainchainBlockReferenceHashes.foreach { ref =>
-      mainchainBlockReferencesStream.write(ref.data)
-    }
-
-    Ints.toByteArray(obj.height) ++
-      Longs.toByteArray(obj.score) ++
-      idToBytes(obj.parentId) ++
-      Array(obj.semanticValidity.code) ++
-      mainchainBlockReferencesStream.toByteArray
-  }
-
-  override def parseBytesTry(bytes: Array[Byte]): Try[SidechainBlockInfo] = Try {
-    var offset: Int = 0
-
-    val height: Int = BytesUtils.getInt(bytes, offset)
-    offset += 4
-
-    val score: Long = BytesUtils.getLong(bytes, offset)
-    offset += 8
-
-    val parentId = bytesToId(bytes.slice(offset, offset + NodeViewModifier.ModifierIdSize))
-    offset += NodeViewModifier.ModifierIdSize
-
-    val semanticValidityCode: Byte = bytes(offset)
-    offset += 1
-
-    var refIds: Seq[MainchainBlockReferenceId] = Seq()
-    val remainingBytes = (bytes.length - offset)
-    require(remainingBytes % mainchainBlockReferenceIdSize == 0, "Input data is corrupted")
-    val remainingElementsCount = remainingBytes / mainchainBlockReferenceIdSize
-
-    (1 to remainingElementsCount).foreach { _ =>
-      val reference = byteArrayToMainchainBlockReferenceId(bytes.slice(offset, offset + mainchainBlockReferenceIdSize))
-      refIds = refIds :+ reference
-      offset += mainchainBlockReferenceIdSize
-    }
-
-    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), refIds)
-  }
-
-  //TODO Finish implementation
   override def serialize(obj: SidechainBlockInfo, w: Writer): Unit = {
     w.putInt(obj.height)
     w.putLong(obj.score)
     w.putBytes(idToBytes(obj.parentId))
     w.put(obj.semanticValidity.code)
+    w.putInt(obj.mainchainBlockReferenceHashes.size)
     obj.mainchainBlockReferenceHashes.foreach(id => w.putBytes(id.data))
+    WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
   }
 
   private def readMainchainReferencesIds(r: Reader): Seq[MainchainBlockReferenceId] = {
-    val references: Seq[MainchainBlockReferenceId] = Seq()
-    val length = r.remaining / mainchainBlockReferenceIdSize
-    require((r.remaining % mainchainBlockReferenceIdSize) == 0)
+    var references: ArrayBuffer[MainchainBlockReferenceId] = ArrayBuffer()
+    val length = r.getInt()
 
-    (0 to length).foreach(references :+ byteArrayToMainchainBlockReferenceId(r.getBytes(mainchainBlockReferenceIdSize)))
+    (0 until length).foreach(_ => {
+      val bytes = r.getBytes(mainchainBlockReferenceIdSize)
+      references.append(byteArrayToMainchainBlockReferenceId(bytes))
+    })
+
     references
   }
 
@@ -105,7 +66,8 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
     val semanticValidityCode = r.getByte()
     val mainChainReferences = readMainchainReferencesIds(r)
+    val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
-    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences)
+    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo)
   }
 }

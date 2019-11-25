@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.serialization.Views;
-import scorex.crypto.signatures.Curve25519;
+import com.horizen.utils.Ed25519;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -14,7 +14,7 @@ import java.util.Objects;
 public final class Signature25519
         implements ProofOfKnowledge<PrivateKey25519, PublicKey25519Proposition> {
 
-    public static int SIGNATURE_LENGTH = Curve25519.SignatureLength();
+    public static int SIGNATURE_LENGTH = Ed25519.signatureLength();
 
     @JsonProperty("signature")
     byte[] _signatureBytes;
@@ -29,7 +29,7 @@ public final class Signature25519
 
     @Override
     public boolean isValid(PublicKey25519Proposition proposition, byte[] message) {
-        return Curve25519.verify(_signatureBytes, message, proposition.pubKeyBytes());
+        return Ed25519.verify(_signatureBytes, message, proposition.pubKeyBytes());
     }
 
     @Override

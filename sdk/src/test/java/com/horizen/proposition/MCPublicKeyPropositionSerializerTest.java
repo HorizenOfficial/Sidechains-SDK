@@ -8,8 +8,7 @@ import scala.Tuple2;
 import scala.util.Try;
 import scorex.crypto.signatures.Curve25519;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.Arrays;
 
@@ -31,8 +30,8 @@ public class MCPublicKeyPropositionSerializerTest {
         //Save box to binary file for regression tests.
         /*
         try {
-            FileOutputStream out = new FileOutputStream("src/test/resources/mcpublickeyhashproposition_bytes");
-            out.write(proposition.serializer().toBytes(proposition));
+            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/mcpublickeyhashproposition_hex"));
+            out.write(BytesUtils.toHexString(proposition.serializer().toBytes(proposition)));
             out.close();
         } catch (Throwable e) {
         }
@@ -58,8 +57,8 @@ public class MCPublicKeyPropositionSerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("mcpublickeyhashproposition_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("mcpublickeyhashproposition_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

@@ -4,12 +4,15 @@ import java.time.Instant
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.NoncedBox
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.transaction.SidechainTransaction
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
+import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
@@ -29,6 +32,43 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       companion,
       null
     ).get
+  }
+
+  def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None, validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      1,
+      (1L << 32) + 1,
+      bytesToId(new Array[Byte](32)),
+      validity,
+      Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
+      WithdrawalEpochInfo(1, 1)
+    )
+  }
+
+  def changeBlockInfoValidity(blockInfo: SidechainBlockInfo, validity: ModifierSemanticValidity): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      blockInfo.height,
+      blockInfo.score,
+      blockInfo.parentId,
+      validity,
+      blockInfo.mainchainBlockReferenceHashes,
+      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.lastEpochIndex)
+    )
+  }
+
+  def generateBlockInfo(block: SidechainBlock,
+                        parentBlockInfo: SidechainBlockInfo,
+                        params: NetworkParams,
+                        customScore: Option[Long] = None,
+                        validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      parentBlockInfo.height + 1,
+      customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1),
+      block.parentId,
+      validity,
+      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+    )
   }
 
   def generateGenesisBlockWithNoMainchainReferences(companion: SidechainTransactionsCompanion, basicSeed: Long = 6543211L, genesisMainchainBlockHash: Option[Array[Byte]] = None): SidechainBlock = {
