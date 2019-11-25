@@ -1,5 +1,5 @@
 """
-A mainchain node uses SCCreationInfo to create a sidechain.
+All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
 
 SCCreationInfo: {
@@ -40,7 +40,7 @@ class MCConnectionInfo(object):
 
 
 """
-All information needed to bootstrap one sidechain node connected to a mainchain node.
+Information needed to start a sidechain node connected to specific mainchain node.
 The JSON representation is only for documentation.
 
 SCNodeConfiguration: {
@@ -78,13 +78,13 @@ class SCNetworkConfiguration(object):
         self.sc_nodes_configuration = sc_nodes_configuration
 
 """
-Information a sidechain node already bootstrapped.
+Information about sidechain network already bootstrapped.
 The JSON representation is only for documentation.
 
 SCBootstrapInfo: {
     "sidechain_id":
     "genesis_account": a tuple [secret, public key]
-    "wallet_balance":
+    "genesis_account_balance":
     "mainchain_block_height": the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
     "sidechain_genesis_block_hex":
     "pow_data":
@@ -93,10 +93,10 @@ SCBootstrapInfo: {
 """
 class SCBootstrapInfo(object):
 
-    def __init__(self, sidechain_id, genesis_account, wallet_balance, mainchain_block_height, sidechain_genesis_block_hex, pow_data, network):
+    def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height, sidechain_genesis_block_hex, pow_data, network):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
-        self.wallet_balance = wallet_balance
+        self.genesis_account_balance = genesis_account_balance
         self.mainchain_block_height = mainchain_block_height
         self.sidechain_genesis_block_hex = sidechain_genesis_block_hex
         self.pow_data = pow_data

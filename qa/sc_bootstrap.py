@@ -5,7 +5,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes
-from SidechainTestFramework.scutil import check_mainchan_block_inclusion
+from SidechainTestFramework.scutil import check_mainchan_block_inclusion, bootstrap_sidechain_nodes, \
+    start_sc_nodes
 
 """
 Check the bootstrap feature.
@@ -27,7 +28,7 @@ class SCBootstrap(SidechainTestFramework):
     sc_nodes_bootstrap_info=None
 
     def setup_nodes(self):
-        return start_nodes(1, self.options.tmpdir, extra_args=[["-websocket"], ["-websocket"], ["-websocket"]])
+        return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -42,11 +43,10 @@ class SCBootstrap(SidechainTestFramework):
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, "1".zfill(64), 100, 1000),
                                          sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
-        self.sc_nodes_bootstrap_info = self.bootstrap_sidechain_nodes(network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
-    def sc_setup_network(self, split=False):
-        # SC network setup
-        self.sc_nodes = self.sc_setup_nodes(self.number_of_sidechains)
+    def sc_setup_nodes(self):
+        return start_sc_nodes(self.number_of_sidechains, self.options.tmpdir)
 
     def check_genesis_balances(self, sc_node, sidechain_id, expected_keys_count, expected_boxes_count, expected_wallet_balance):
         print("Genesis checks for sidechain id {0}.".format(sidechain_id))
@@ -81,10 +81,10 @@ class SCBootstrap(SidechainTestFramework):
             node = self.sc_nodes[i]
             mc_block = mc_nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
             # check all keys/boxes/balances are coherent with the default initialization
-            self.check_genesis_balances(node, self.sc_nodes_bootstrap_info.sidechain_id, 1, 1, self.sc_nodes_bootstrap_info.wallet_balance*100000000)
+            self.check_genesis_balances(node, self.sc_nodes_bootstrap_info.sidechain_id, 1, 1, self.sc_nodes_bootstrap_info.genesis_account_balance*100000000)
             # verify MC block reference's inclusion
             check_mainchan_block_inclusion(node, self.sc_nodes_bootstrap_info.sidechain_id, 1, 0, mc_block,
-                                           [self.sc_nodes_bootstrap_info.genesis_account[1]], [self.sc_nodes_bootstrap_info.wallet_balance], True)
+                                           [self.sc_nodes_bootstrap_info.genesis_account[1]], [self.sc_nodes_bootstrap_info.genesis_account_balance], True)
 
 
 if __name__ == "__main__":

@@ -3,8 +3,10 @@ import json
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, websocket_port, connect_nodes_bi
-from SidechainTestFramework.scutil import check_mainchan_block_inclusion, connect_sc_nodes
+from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
+    websocket_port_by_mc_node_index, connect_nodes_bi
+from SidechainTestFramework.scutil import check_mainchan_block_inclusion, connect_sc_nodes, \
+    bootstrap_sidechain_nodes, start_sc_nodes
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -30,39 +32,32 @@ class MCSCConnectedNodes(SidechainTestFramework):
 
     number_of_mc_nodes = 2
     number_of_sidechains = 3
-    ws_port_mc_0 = websocket_port(0)
-    ws_port_mc_1 = websocket_port(1)
     sc_nodes_bootstrap_info=None
 
     def setup_chain(self):
-        initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes, [self.ws_port_mc_0, self.ws_port_mc_1])
-
-    def setup_network(self, split = False):
-        self.nodes = self.setup_nodes()
-        self.sync_all()
+        initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
 
     def setup_nodes(self):
-        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir, extra_args=[["-websocket"],["-websocket"],["-websocket"]])
+        return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_chain(self):
         mc_node_1 = self.nodes[0]
         mc_node_2 = self.nodes[1]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, self.ws_port_mc_0))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, self.ws_port_mc_0))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
         sc_node_3_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, self.ws_port_mc_1))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, websocket_port_by_mc_node_index(1)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000),
                                          sc_node_1_configuration, sc_node_2_configuration, sc_node_3_configuration)
-        self.sc_nodes_bootstrap_info = self.bootstrap_sidechain_nodes(network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
-    def sc_setup_network(self, split=False):
-        # SC network setup
-        self.sc_nodes = self.sc_setup_nodes(self.number_of_sidechains)
+    def sc_setup_nodes(self):
+        return start_sc_nodes(self.number_of_sidechains, self.options.tmpdir)
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -80,7 +75,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
         third_sidechain_node = sc_nodes[2]
 
         sidechain_id = self.sc_nodes_bootstrap_info.sidechain_id
-        wallet_balance = self.sc_nodes_bootstrap_info.wallet_balance
+        wallet_balance = self.sc_nodes_bootstrap_info.genesis_account_balance
         genesis_account = self.sc_nodes_bootstrap_info.genesis_account
         mainchain_block_height = self.sc_nodes_bootstrap_info.mainchain_block_height
         first_mainchain_node_block = first_mainchain_node.getblock(str(mainchain_block_height))

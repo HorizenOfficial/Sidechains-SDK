@@ -27,7 +27,7 @@ def p2p_port(n):
     return 11000 + n + os.getpid()%999
 def rpc_port(n):
     return 12000 + n + os.getpid()%999
-def websocket_port(n):
+def websocket_port_by_mc_node_index(n):
     return 13000 + n + os.getpid()%999
 
 def check_json_precision():
@@ -152,16 +152,13 @@ def initialize_chain(test_dir):
         shutil.copytree(from_dir, to_dir)
         initialize_datadir(test_dir, i) # Overwrite port/rpcport in zcash.conf
 
-def initialize_chain_clean(test_dir, num_nodes, array_of_websocket_port=[]):
+def initialize_chain_clean(test_dir, num_nodes):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_datadir(test_dir, i, get_websocket_configuration(i, array_of_websocket_port))
-
-def get_websocket_configuration(index, array_of_websocket_port):
-    return array_of_websocket_port[index] if index<len(array_of_websocket_port) else None
+        initialize_datadir(test_dir, i, websocket_port_by_mc_node_index(i))
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''
@@ -190,7 +187,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "bitcoind")
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest"]
+    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open("/dev/null", "w+")
