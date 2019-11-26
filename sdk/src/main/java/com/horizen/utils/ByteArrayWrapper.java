@@ -13,4 +13,11 @@ public class ByteArrayWrapper extends io.iohk.iodb.ByteArrayWrapper {
     public ByteArrayWrapper(io.iohk.iodb.ByteArrayWrapper wrapper) {
         this(wrapper.data());
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[" + (
+                size() == 8 ? String.valueOf(BytesUtils.getLong(data(), 0)) + "L" : BytesUtils.toHexString(data())) + "]";
+    }
+
 }

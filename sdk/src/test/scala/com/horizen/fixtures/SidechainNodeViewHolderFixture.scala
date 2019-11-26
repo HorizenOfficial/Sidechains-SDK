@@ -10,15 +10,14 @@ import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActor
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
-import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
+import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
-import com.horizen.validation.{MainchainPoWValidator, SidechainBlockValidator}
-import com.horizen.validation.SidechainBlockValidator
+import com.horizen.validation.{MainchainPoWValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
@@ -61,14 +60,23 @@ trait SidechainNodeViewHolderFixture
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
       genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight
+      sidechainSettings.genesisData.mcBlockHeight,
+      sidechainSettings.genesisData.withdrawalEpochLength
     )
-    case "mainnet" | "testnet" => MainNetParams(
+    case "testnet" => TestNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
       genesisPowData,
       sidechainSettings.genesisData.mcBlockHeight
+    )
+    case "mainnet" => MainNetParams(
+      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      genesisBlock.id,
+      genesisBlock.mainchainBlocks.head.hash,
+      genesisPowData,
+      sidechainSettings.genesisData.mcBlockHeight,
+      sidechainSettings.genesisData.withdrawalEpochLength
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -98,8 +106,7 @@ trait SidechainNodeViewHolderFixture
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, genesisBlock,
-    Seq(new SidechainBlockValidator(params), new MainchainPoWValidator(sidechainHistoryStorage, params)))
+    defaultApplicationWallet, defaultApplicationState, genesisBlock)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 

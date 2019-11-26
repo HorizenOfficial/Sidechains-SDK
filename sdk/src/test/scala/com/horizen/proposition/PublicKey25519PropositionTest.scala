@@ -2,11 +2,11 @@ package com.horizen.proposition
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.serialization.ApplicationJsonSerializer
+import com.horizen.utils.Ed25519
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
-import scorex.crypto.signatures.Curve25519
 
 class PublicKey25519PropositionScalaTest
   extends JUnitSuite
@@ -15,9 +15,9 @@ class PublicKey25519PropositionScalaTest
   @Test
   def testToJson(): Unit = {
     val seed = "12345".getBytes
-    val keyPair = Curve25519.createKeyPair(seed)
-    val privateKey = keyPair._1
-    val publicKey = keyPair._2
+    val keyPair = Ed25519.createKeyPair(seed)
+    val privateKey = keyPair.getKey
+    val publicKey = keyPair.getValue
 
     val prop1 = new PublicKey25519Proposition(publicKey)
 

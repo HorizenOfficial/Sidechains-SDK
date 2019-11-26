@@ -16,7 +16,8 @@ case class GenesisDataSettings(
                         scId: String,
                         mcBlockHeight: Int,
                         powData: String,
-                        mcNetwork: String
+                        mcNetwork: String,
+                        withdrawalEpochLength: Int
                               )
 
 case class WalletSettings(

@@ -5,7 +5,7 @@ import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,9 +48,9 @@ public class RegularTransactionTest {
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                3911136990993187881L,
-                -2589583342552885352L,
-                -6555861982699909223L)
+                384769921723993316L,
+                -7787981619319975853L,
+                1511446075117796171L)
         );
     }
 

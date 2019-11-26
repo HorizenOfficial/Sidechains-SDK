@@ -7,7 +7,7 @@ import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.utils.ByteArrayWrapper
-import javafx.util.Pair
+import com.horizen.utils.Pair
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 

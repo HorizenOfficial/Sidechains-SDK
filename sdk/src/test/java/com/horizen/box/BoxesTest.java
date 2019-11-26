@@ -1,9 +1,9 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Test;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import static org.junit.Assert.assertEquals;
 
@@ -12,8 +12,8 @@ public class BoxesTest {
     @Test
     public void BoxesTest_DifferentBoxTypesComparisonTest() {
         byte[] anotherSeed = "testseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        PublicKey25519Proposition proposition = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(keyPair.getValue());
 
         long nonce = 1234;
         long value = 0;

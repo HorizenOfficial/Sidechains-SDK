@@ -8,7 +8,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils._
-import javafx.util.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
@@ -76,6 +76,11 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   def bestBlock: SidechainBlock = {
     require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
     blockById(bestBlockId).get
+  }
+
+  def bestBlockInfo: SidechainBlockInfo = {
+    require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
+    blockInfoById(bestBlockId).get
   }
 
   def blockById(blockId: ModifierId): Option[SidechainBlock] = {
@@ -161,20 +166,13 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     new MainchainBlockReferenceInfo(mcId, referenceInfo.getParentId, genesisHeight, idToBytes(sidechainBlockId))
   }
 
-  def update(block: SidechainBlock, chainScore: Long): Try[SidechainHistoryStorage] = Try {
+  def update(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
     require(block != null, "SidechainBlock must be NOT NULL.")
+    require(block.parentId == blockInfo.parentId, "Passed BlockInfo data conflicts to passed Block.")
 
     val toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList()
 
     // add short block info
-    val blockInfo: SidechainBlockInfo = SidechainBlockInfo(
-      heightOf(block.parentId).getOrElse(0) + 1, // to do: check, what for orphan blocks?
-      chainScore,
-      block.parentId,
-      ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block)
-    )
-
     toUpdate.add(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes)))
 
     // add block
@@ -184,7 +182,6 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       new ByteArrayWrapper(nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
-
 
     this
   }

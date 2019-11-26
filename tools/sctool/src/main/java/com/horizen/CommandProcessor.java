@@ -10,14 +10,16 @@ import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
+import com.horizen.params.TestNetParams;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.secret.PrivateKey25519Serializer;
 import com.horizen.transaction.SidechainTransaction;
+import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.VarInt;
-import javafx.util.Pair;
+import com.horizen.utils.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -193,7 +195,7 @@ public class CommandProcessor {
 
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
-            String sidechainBlockHex = BytesUtils.toHexString(SidechainBlock.create(
+            SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
@@ -202,7 +204,19 @@ public class CommandProcessor {
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()
-            ).get().bytes());
+            ).get();
+
+            int withdrawalEpochLength;
+            try {
+                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlocks().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+            }
+            catch (Exception e) {
+                printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                return;
+            }
+
+            String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
 
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
@@ -211,6 +225,7 @@ public class CommandProcessor {
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
+            resJson.put("withdrawalEpochLength", withdrawalEpochLength);
             String res = resJson.toString();
             printer.print(res);
 
@@ -222,7 +237,8 @@ public class CommandProcessor {
                         powData,
                         BytesUtils.toHexString(scId),
                         sidechainBlockHex,
-                        mcNetworkName
+                        mcNetworkName,
+                        withdrawalEpochLength
                 );
         } catch (Exception e) {
             printer.print("Error: 'info' data is corrupted.");
@@ -245,10 +261,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
+                return new MainNetParams(scId, null, null, null, 1, 100);
             case 1: // testnet
-                return new MainNetParams(scId, null, null, null, 1);
+                return new TestNetParams(scId, null, null, null, 1, 100);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1);
+                return new RegTestParams(scId, null, null, null, 1, 100);
         }
         return null;
 
@@ -261,7 +278,8 @@ public class CommandProcessor {
             String powData,
             String scId,
             String scBlockHex,
-            String mcNetworkName) {
+            String mcNetworkName,
+            int withdrawalEpochLength) {
         try {
             String templateConf = new String(Files.readAllBytes(Paths.get(pathToSourceConfig)), StandardCharsets.UTF_8);
 
@@ -274,6 +292,7 @@ public class CommandProcessor {
                             "\t\tpowData = \"" + powData + "\"\n" +
                             "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
                             "\t\tmcNetwork = " + mcNetworkName + "\n" +
+                            "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
                         "\t}\n" +
                     "}\n";
 

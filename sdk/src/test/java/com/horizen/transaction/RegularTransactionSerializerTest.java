@@ -4,13 +4,13 @@ import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
-import javafx.util.Pair;
+import com.horizen.utils.BytesUtils;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
 import scala.util.Try;
 
-import java.io.File;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.ArrayList;
 
 import static org.junit.Assert.*;
@@ -41,18 +41,16 @@ public class RegularTransactionSerializerTest {
         to.add(new Pair<>(pk5.publicImage(), 20L));
         to.add(new Pair<>(pk6.publicImage(), 90L));
 
-        // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_bytes"
+        // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
 
-        /*
-        //Save transaction to binary file for regression tests.
-        try {
-            FileOutputStream out = new FileOutputStream("src/test/resources/regulartransaction_bytes");
-            out.write(transaction.serializer().toBytes(transaction));
-            out.close();
-        } catch (Throwable e) {
-        }
-        */
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
+//            out.write(BytesUtils.toHexString(transaction.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
@@ -73,8 +71,8 @@ public class RegularTransactionSerializerTest {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("regulartransaction_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

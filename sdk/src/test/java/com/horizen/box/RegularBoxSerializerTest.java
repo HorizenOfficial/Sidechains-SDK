@@ -1,14 +1,14 @@
 package com.horizen.box;
 
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.BytesUtils;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
-import java.io.File;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
@@ -19,9 +19,17 @@ public class RegularBoxSerializerTest
 
     @Before
     public void setUp() {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
-        // Note: current box bytes are also stored in "src/test/resources/regularbox_bytes"
-        box = new RegularBox(new PublicKey25519Proposition(keyPair._2()), 1000, 10);
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
+        // Note: current box bytes are also stored in "src/test/resources/regularbox_hex"
+        box = new RegularBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
+
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regularbox_hex"));
+//            out.write(BytesUtils.toHexString(box.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
@@ -43,8 +51,8 @@ public class RegularBoxSerializerTest
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("regularbox_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("regularbox_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
             assertEquals(e.toString(), true, false);

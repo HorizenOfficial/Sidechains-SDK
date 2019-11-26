@@ -14,8 +14,8 @@ import com.horizen.params.MainNetParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
-import com.horizen.utils.BytesUtils
-import javafx.util.Pair
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.Pair
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.bytesToId
