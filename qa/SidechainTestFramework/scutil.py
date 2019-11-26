@@ -106,6 +106,7 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "powData": "some value",
     "mcBlockHeight": xxx,
     "mcNetwork": regtest|testnet|mainnet
+    "withdrawalEpochLength": xxx
 }
 """
 def generate_genesis_data(genesis_info, genesis_secret):
@@ -202,6 +203,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'POW_DATA': bootstrap_info.pow_data,
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
+        'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
@@ -521,7 +523,8 @@ def create_sidechain(sc_creation_info):
     print "Sidechain created with id: " + sidechain_id
     genesis_data = generate_genesis_data(genesis_info[0], genesis_secret)
     return SCBootstrapInfo(sidechain_id, [genesis_secret, genesis_public_key], sc_creation_info.forward_amout, genesis_info[1],
-                           genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"])
+                           genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
+                           sc_creation_info.withdrawal_epoch_length)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
