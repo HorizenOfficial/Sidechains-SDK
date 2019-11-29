@@ -1,15 +1,16 @@
 package com.horizen
 
-import java.util.{Optional => JOptional}
+import java.util.{Optional => JOptional, List => JList}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.box.{Box, CoinsBox}
+import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
 import com.horizen.node.NodeState
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateStorage}
+import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
@@ -18,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
-class SidechainState private[horizen] (stateStorage: SidechainStateStorage, override val version: VersionTag, applicationState: ApplicationState)
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage, params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)
   extends
     BoxMinimalState[SidechainTypes#SCP,
                     SidechainTypes#SCB,
@@ -48,7 +49,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
 
   // get closed box from State storage
   override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
-    stateStorage.get(boxId)
+    stateStorage.getBox(boxId)
   }
 
   override def getClosedBox(boxId: Array[Byte]): JOptional[Box[_ <: Proposition]] = {
@@ -56,6 +57,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
       case Some(box) => JOptional.of(box)
       case None => JOptional.empty()
     }
+  }
+
+  def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(epoch).asScala.toList
+  }
+
+  override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(epoch)
   }
 
   // Note: aggregate New boxes and spent boxes for Block
@@ -116,7 +125,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
-        applyChanges(cs, idToVersion(mod.id)) // check applyChanges implementation
+        applyChanges(cs, idToVersion(mod.id),
+          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)),
+            this.params)) // check applyChanges implementation
       })
     }
   }
@@ -127,15 +138,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag): Try[SidechainState] = Try {
-    val version = versionToBytes(newVersion)
-    applicationState.onApplyChanges(this, version,
+  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo): Try[SidechainState] = Try {
+    val version = new ByteArrayWrapper(versionToBytes(newVersion))
+    applicationState.onApplyChanges(this, version.data,
       changes.toAppend.map(_.box).asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
-        new SidechainState(stateStorage.update(new ByteArrayWrapper(version), changes.toAppend.map(_.box).toSet,
-                                    changes.toRemove.map(_.boxId.array).toSet).get,
-                       newVersion, applicationState)
+        new SidechainState(
+          stateStorage
+          .update(version, withdrawalEpochInfo,
+                  changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
+                  changes.toRemove.map(_.boxId.array).toSet,
+                  changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
+                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet)
+          .get,
+          this.params, newVersion, appState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -151,7 +168,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, over
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, to, appState)
+      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, this.params, to, appState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -189,19 +206,20 @@ object SidechainState
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  private[horizen] def restoreState(stateStorage: SidechainStateStorage, applicationState: ApplicationState) : Option[SidechainState] = {
+  private[horizen] def restoreState(stateStorage: SidechainStateStorage, params: NetworkParams, applicationState: ApplicationState) : Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+      Some(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     else
       None
   }
 
-  private[horizen] def genesisState(stateStorage: SidechainStateStorage, applicationState: ApplicationState,
+  private[horizen] def genesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
+                                    applicationState: ApplicationState,
                                     genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, idToVersion(genesisBlock.parentId), applicationState)
+      new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")

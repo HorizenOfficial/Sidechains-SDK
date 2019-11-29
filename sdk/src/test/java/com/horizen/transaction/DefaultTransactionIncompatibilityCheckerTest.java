@@ -1,6 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
@@ -52,10 +53,12 @@ public class DefaultTransactionIncompatibilityCheckerTest {
         ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add(new Pair<>(pk7.publicImage(), 10L));
 
-        RegularTransaction newTx = RegularTransaction.create(from1, to, fee, timestamp);
-        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee, timestamp);
-        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, fee, timestamp);
-        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, fee, timestamp);
+        ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+
+        RegularTransaction newTx = RegularTransaction.create(from1, to, withdrawalRequests, fee, timestamp);
+        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, withdrawalRequests, fee, timestamp);
+        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, withdrawalRequests, fee, timestamp);
+        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, withdrawalRequests, fee, timestamp);
 
         DefaultTransactionIncompatibilityChecker checker = new DefaultTransactionIncompatibilityChecker();
 
