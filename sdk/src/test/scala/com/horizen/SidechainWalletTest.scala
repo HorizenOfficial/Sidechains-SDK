@@ -15,7 +15,7 @@ import java.lang.{Byte => JByte}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
-import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
+import com.horizen.storage.{IODBStoreAdapter, SidechainOpenedWalletBoxStorage, SidechainSecretStorage, SidechainWalletBoxOperationStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, TransactionSerializer}
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
@@ -161,8 +161,11 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedOpenedWalletBoxStorage1: SidechainOpenedWalletBoxStorage = mock[SidechainOpenedWalletBoxStorage]
+    val mockedWalletBoxOperationStorage1: SidechainWalletBoxOperationStorage = mock[SidechainWalletBoxOperationStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet("seed".getBytes, mockedWalletBoxStorage1, mockedSecretStorage1, mockedWalletTransactionStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes, mockedWalletBoxStorage1, mockedSecretStorage1,
+      mockedWalletTransactionStorage1, mockedOpenedWalletBoxStorage1, mockedWalletBoxOperationStorage1, mockedApplicationWallet)
 
     // Prepare list of transactions:
     /*
@@ -287,8 +290,11 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedOpenedWalletBoxStorage1: SidechainOpenedWalletBoxStorage = mock[SidechainOpenedWalletBoxStorage]
+    val mockedWalletBoxOperationStorage1: SidechainWalletBoxOperationStorage = mock[SidechainWalletBoxOperationStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, mockedWalletTransactionStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
+      mockedWalletTransactionStorage1, mockedOpenedWalletBoxStorage1, mockedWalletBoxOperationStorage1, mockedApplicationWallet)
 
     val expectedException = new IllegalArgumentException("on rollback exception")
     var rollbackEventOccurred = false
@@ -384,8 +390,11 @@ class SidechainWalletTest
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedOpenedWalletBoxStorage1: SidechainOpenedWalletBoxStorage = mock[SidechainOpenedWalletBoxStorage]
+    val mockedWalletBoxOperationStorage1: SidechainWalletBoxOperationStorage = mock[SidechainWalletBoxOperationStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, mockedWalletTransactionStorage1, mockedApplicationWallet)
+    val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
+      mockedWalletTransactionStorage1, mockedOpenedWalletBoxStorage1, mockedWalletBoxOperationStorage1, mockedApplicationWallet)
     val secret1 = getSecret("testSeed1".getBytes())
     val secret2 = getSecret("testSeed2".getBytes())
 
