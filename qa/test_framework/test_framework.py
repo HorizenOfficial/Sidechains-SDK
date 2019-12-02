@@ -21,12 +21,12 @@ from util import assert_equal, check_json_precision, \
 
 
 '''
-The workflow is performed by calling the following methods:
+The workflow is the following:
 1- add_options
 3- setup_chain
 4- setup_network
 
-Override the proper methods if you want to keep default behavior.
+Override the proper methods if you want to change default behavior.
 
 Default behavior: the framework starts 4 MC nodes, all connected as a chain.
             **********          **********          **********          **********

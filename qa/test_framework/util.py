@@ -459,7 +459,7 @@ Output: an array of two information:
  - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
 
 """
-def get_genesis_info(sidechain_id, mainchain_node, withdrawal_epoch_length, secrets, amounts):
+def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdrawal_epoch_length, secrets, amounts):
     number_of_blocks_to_enable_sc_logic = 219
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks

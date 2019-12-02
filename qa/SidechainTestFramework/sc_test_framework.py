@@ -7,7 +7,7 @@ from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
     initialize_chain_clean, \
-    start_nodes, stop_nodes, get_genesis_info, \
+    start_nodes, stop_nodes, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
@@ -21,7 +21,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 
 '''
-The workflow is performed by calling the following methods:
+The workflow is the following:
 1- add_options      (for MC nodes)
 2- sc_add_options   (for SC nodes)
 3- setup_chain      (for MC nodes)
@@ -29,7 +29,7 @@ The workflow is performed by calling the following methods:
 5- sc_setup_chain   (for SC nodes)
 6- sc_setup_network (for SC nodes)
 
-Override the proper methods if you want to keep default behavior.
+Override the proper methods if you want to change default behavior.
 
 Default behavior: the framework starts 1 SC node connected to 1 MC node.
             *************          *************

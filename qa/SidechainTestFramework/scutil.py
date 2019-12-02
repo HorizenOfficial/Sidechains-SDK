@@ -3,14 +3,14 @@ import sys
 
 import json
 
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
 
-from test_framework.util import get_genesis_info
+from test_framework.util import initialize_new_sidechain_in_mainchain
 
 WAIT_CONST = 1
 
@@ -197,7 +197,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': bootstrap_info.genesis_account[0],
+        'GENESIS_SECRETS': bootstrap_info.genesis_account.privateKey+bootstrap_info.genesis_account.publicKey,
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
@@ -389,59 +389,90 @@ def assert_true(condition, message=""):
     if not condition:
         raise AssertionError(message)
 
-def check_mainchan_block_inclusion(sc_node, sidechain_id, expected_sc_block_height, sc_block_best_mainchain_blocks_index,
-                                   mc_block, array_of_expected_public_keys, array_of_expected_sc_balances, is_genesis):
-    print("Check inclusion block for sidechain id {0}.".format(sidechain_id))
-    response = sc_node.block_best()
-    height = response["result"]["height"]
-    assert_equal(expected_sc_block_height, height, "The best block has not the specified height.")
-    mc_block_json = response["result"]["block"]["mainchainBlocks"][sc_block_best_mainchain_blocks_index]
-    if (is_genesis):
-        new_boxes = mc_block_json["sidechainRelatedAggregatedTransaction"]["newBoxes"]
-        print("Checking that each public key has a box assigned with a non-zero value.")
-        key_index = 0
-        for key in array_of_expected_public_keys:
-            target = None
-            for box in new_boxes:
-                if box["proposition"]["publicKey"] == key:
-                    target = box
-                    box_value = box["value"]
-                    assert_true(box_value > 0,
-                                "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
-                    assert_equal(array_of_expected_sc_balances[key_index] * 100000000, box_value,
-                                 "Unexpected value for box: {0} with public key: {1}".format(box["id"], key))
-                    key_index+=1
-                    break
-        assert_true(target is not None, "Box related to public key: {0} not found".format(key))
-        mc_block_version = mc_block["version"]
-        mc_block_merkleroot = mc_block["merkleroot"]
-        mc_block_time = mc_block["time"]
-        mc_block_nonce = mc_block["nonce"]
+def is_mainchain_block_included(sc_node, sidechain_id, expected_sc_block_height,
+                                sc_block_best_mainchain_blocks_index, expected_mc_block):
+    try:
+        print("Check mainchain block inclusion for sidechain id {0}.".format(sidechain_id))
+        response = sc_node.block_best()
+
+        height = response["result"]["height"]
+        assert_equal(expected_sc_block_height, height, "The best block has not the specified height.")
+
+        mc_block_json = response["result"]["block"]["mainchainBlocks"][sc_block_best_mainchain_blocks_index]
+
+        expected_mc_block_version = expected_mc_block["version"]
+        expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
+        expected_mc_block_time = expected_mc_block["time"]
+        expected_mc_block_nonce = expected_mc_block["nonce"]
+
         sc_mc_block_version = mc_block_json["header"]["version"]
         sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
         sc_mc_block_time = mc_block_json["header"]["time"]
         sc_mc_block_nonce = mc_block_json["header"]["nonce"]
-        assert_equal(mc_block_version, sc_mc_block_version)
-        assert_equal(mc_block_merkleroot, sc_mc_block_merkleroot)
-        assert_equal(mc_block_time, sc_mc_block_time)
-        assert_equal(mc_block_nonce, sc_mc_block_nonce)
 
-    response_2 = sc_node.mainchain_bestBlockReferenceInfo()
-    parent_hash = response_2["result"]["blockReferenceInfo"]["parentHash"]
-    hash = response_2["result"]["blockReferenceInfo"]["hash"]
-    sidechain_block_id = response_2["result"]["blockReferenceInfo"]["sidechainBlockId"]
-    height = response_2["result"]["blockReferenceInfo"]["height"]
-    sc_block_id = response["result"]["block"]["id"]
-    mc_block_hash = mc_block["hash"]
-    mc_block_height = mc_block["height"]
-    assert_equal(mc_block_hash, hash)
-    assert_equal(mc_block_height, height)
-    assert_equal(sc_block_id, sidechain_block_id)
-    mc_block_previousblockhash = mc_block["previousblockhash"]
-    sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
-    assert_equal(mc_block_previousblockhash, sc_mc_block_previousblockhash)
-    assert_equal(mc_block_previousblockhash, parent_hash)
+        assert_equal(expected_mc_block_version, sc_mc_block_version)
+        assert_equal(expected_mc_block_merkleroot, sc_mc_block_merkleroot)
+        assert_equal(expected_mc_block_time, sc_mc_block_time)
+        assert_equal(expected_mc_block_nonce, sc_mc_block_nonce)
 
+        response_2 = sc_node.mainchain_bestBlockReferenceInfo()
+        parent_hash = response_2["result"]["blockReferenceInfo"]["parentHash"]
+        hash = response_2["result"]["blockReferenceInfo"]["hash"]
+        sidechain_block_id = response_2["result"]["blockReferenceInfo"]["sidechainBlockId"]
+        height = response_2["result"]["blockReferenceInfo"]["height"]
+        sc_block_id = response["result"]["block"]["id"]
+
+        expected_mc_block_hash = expected_mc_block["hash"]
+        expected_mc_block_height = expected_mc_block["height"]
+
+        assert_equal(expected_mc_block_hash, hash)
+        assert_equal(expected_mc_block_height, height)
+
+        assert_equal(sc_block_id, sidechain_block_id)
+
+        expected_mc_block_previousblockhash = expected_mc_block["previousblockhash"]
+
+        sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
+        assert_equal(expected_mc_block_previousblockhash, sc_mc_block_previousblockhash)
+        assert_equal(expected_mc_block_previousblockhash, parent_hash)
+
+        return True
+    except Exception:
+        return False
+
+def check_sidechain_boxes(sc_node, sidechain_id, array_of_expected_public_keys, expected_boxes_count, array_of_expected_sc_balances):
+    print("Check boxes for sidechain id {0}.".format(sidechain_id))
+
+    response = sc_node.wallet_allPublicKeys()
+    public_keys = response["result"]["propositions"]
+    assert_equal(len(array_of_expected_public_keys), len(public_keys), "Unexpected number of public keys")
+
+    response = sc_node.wallet_allBoxes()
+    boxes = response["result"]["boxes"]
+    assert_equal(expected_boxes_count, len(boxes), "Unexpected number of boxes")
+
+    expected_wallet_balance = 0
+
+    print("Checking that each public key has a box assigned with a non-zero value.")
+    key_index = 0
+    for key in array_of_expected_public_keys:
+        target = None
+        for box in boxes:
+            if box["proposition"]["publicKey"] == key:
+                target = box
+                box_value = box["value"]
+                assert_true(box_value > 0,
+                            "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
+                assert_equal(array_of_expected_sc_balances[key_index] * 100000000, box_value,
+                                "Unexpected value for box: {0} with public key: {1}".format(box["id"], key))
+                expected_wallet_balance += array_of_expected_sc_balances[key_index] * 100000000
+                key_index+=1
+                break
+    assert_true(target is not None, "Box related to public key: {0} not found".format(key))
+
+    response = sc_node.wallet_balance()
+    balance = response["result"]
+    assert_equal(expected_wallet_balance, int(balance["balance"]), "Unexpected balance")
 
     """
 Bootstrap a network of sidechain nodes.
@@ -489,14 +520,14 @@ network: {
     }
 }
  
- Output: a map of:
+ Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
 def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
-    total_number_of_sidechains = len(network.sc_nodes_configuration)
+    total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info)
-    for i in range(total_number_of_sidechains):
+    for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
     return sc_nodes_bootstrap_info
@@ -507,7 +538,7 @@ Create a sidechain transaction inside a mainchain node.
 Parameters:
  - sc_creation_info: an instance of SCCreationInfo (see sc_boostrap_info.py)
  
- Output: a map of:
+ Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
 def create_sidechain(sc_creation_info):
@@ -515,14 +546,15 @@ def create_sidechain(sc_creation_info):
     genesis_secret = account_secrets[0]["secret"]
     genesis_public_key = account_secrets[0]["publicKey"]
     sidechain_id = sc_creation_info.sidechain_id
-    genesis_info = get_genesis_info(sidechain_id,
+    genesis_info = initialize_new_sidechain_in_mainchain(sidechain_id,
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     account_secrets,
-                                    [sc_creation_info.forward_amout])
+                                    [sc_creation_info.forward_amount])
     print "Sidechain created with id: " + sidechain_id
     genesis_data = generate_genesis_data(genesis_info[0], genesis_secret)
-    return SCBootstrapInfo(sidechain_id, [genesis_secret, genesis_public_key], sc_creation_info.forward_amout, genesis_info[1],
+    genesis_account = Account(genesis_secret[0:len(genesis_secret)/2], genesis_public_key)
+    return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length)
 
@@ -537,3 +569,11 @@ Parameters:
 """
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
+
+"""
+Utility method to generate sc blocks.
+
+Return the output of the Api REST request /block/generate
+"""
+def sc_generate_blocks(sc_node, number=1):
+    return sc_node.block_generate(json.dumps({"number":number}))
