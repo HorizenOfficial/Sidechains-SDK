@@ -5,8 +5,9 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
-from SidechainTestFramework.scutil import check_sidechain_boxes, connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included, sc_generate_blocks
+from SidechainTestFramework.scutil import check_regularbox_balance, connect_sc_nodes, \
+    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, sc_generate_blocks, \
+    is_mainchain_block_included_in_sidechain_block_reference_info
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -74,7 +75,6 @@ class MCSCConnectedNodes(SidechainTestFramework):
         second_sidechain_node = sc_nodes[1]
         third_sidechain_node = sc_nodes[2]
 
-        sidechain_id = self.sc_nodes_bootstrap_info.sidechain_id
         wallet_balance = self.sc_nodes_bootstrap_info.genesis_account_balance
         genesis_account = self.sc_nodes_bootstrap_info.genesis_account
         mainchain_block_height = self.sc_nodes_bootstrap_info.mainchain_block_height
@@ -82,37 +82,88 @@ class MCSCConnectedNodes(SidechainTestFramework):
 
         # verify genesis information for SC node 1, 2 and 3
         # verify the mc block is included inside SC nodes 1, 2 and 3
-        sc_1_mc_block_inclusion = is_mainchain_block_included(first_sidechain_node, sidechain_id, 1, 0,
+        first_sc_node_best_block = first_sidechain_node.block_best()["result"]
+        second_sc_node_best_block = second_sidechain_node.block_best()["result"]
+        third_sc_node_best_block = third_sidechain_node.block_best()["result"]
+
+        assert_equal(first_sc_node_best_block["height"], 1, "The best block has not the specified height.")
+        assert_equal(second_sc_node_best_block["height"], 1, "The best block has not the specified height.")
+        assert_equal(third_sc_node_best_block["height"], 1, "The best block has not the specified height.")
+
+        sc_1_mc_block_inclusion = is_mainchain_block_included_in_sc_block(first_sc_node_best_block["block"],
                                                               first_mainchain_node_block)
-        sc_2_mc_block_inclusion = is_mainchain_block_included(second_sidechain_node, sidechain_id, 1, 0,
+        sc_2_mc_block_inclusion = is_mainchain_block_included_in_sc_block(second_sc_node_best_block["block"],
                                                               first_mainchain_node_block)
-        sc_3_mc_block_inclusion = is_mainchain_block_included(third_sidechain_node, sidechain_id, 1, 0,
+        sc_3_mc_block_inclusion = is_mainchain_block_included_in_sc_block(third_sc_node_best_block["block"],
                                                               first_mainchain_node_block)
         assert_true(sc_1_mc_block_inclusion, "The mainchain block is not included for SC node 1.")
         assert_true(sc_2_mc_block_inclusion, "The mainchain block is not included for SC node 2.")
         assert_true(sc_3_mc_block_inclusion, "The mainchain block is not included for SC node 3.")
 
-        check_sidechain_boxes(first_sidechain_node, sidechain_id, [genesis_account.publicKey], 1, [wallet_balance])
-        check_sidechain_boxes(second_sidechain_node, sidechain_id, [genesis_account.publicKey], 1, [wallet_balance])
-        check_sidechain_boxes(third_sidechain_node, sidechain_id, [genesis_account.publicKey], 1, [wallet_balance])
+        first_sc_mc_best_block_ref_info = first_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        second_sc_mc_best_block_ref_info = second_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        third_sc_mc_best_block_ref_info = third_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                first_sc_mc_best_block_ref_info, first_mainchain_node_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                second_sc_mc_best_block_ref_info, first_mainchain_node_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                third_sc_mc_best_block_ref_info, first_mainchain_node_block),
+            "The mainchain block is not included inside SC block reference info.")
+
+        check_regularbox_balance(first_sidechain_node, [genesis_account.publicKey], [1], [wallet_balance])
+        check_regularbox_balance(second_sidechain_node, [genesis_account.publicKey], [1], [wallet_balance])
+        check_regularbox_balance(third_sidechain_node, [genesis_account.publicKey], [1], [wallet_balance])
 
         # MC 1 mine a new block
-        block_hash = first_mainchain_node.generate(1)
-        first_mainchain_node_new_block = first_mainchain_node.getblock(block_hash[0])
+        block_hash = first_mainchain_node.generate(1)[0]
+        first_mainchain_node_new_block = first_mainchain_node.getblock(block_hash)
 
         # SC node 1 and 2 forge 1 SC block
         sc_generate_blocks(first_sidechain_node)
         sc_generate_blocks(second_sidechain_node)
 
         # verify the block is included inside SC nodes 1 and 2
-        sc_1_mc_block_inclusion = is_mainchain_block_included(first_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block)
-        sc_2_mc_block_inclusion = is_mainchain_block_included(second_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block)
+        first_sc_node_best_block = first_sidechain_node.block_best()["result"]
+        second_sc_node_best_block = second_sidechain_node.block_best()["result"]
+        third_sc_node_best_block = third_sidechain_node.block_best()["result"]
+
+        assert_equal(first_sc_node_best_block["height"], 2, "The best block has not the specified height.")
+        assert_equal(second_sc_node_best_block["height"], 2, "The best block has not the specified height.")
+        assert_false(third_sc_node_best_block["height"]==2, "The best block has not the specified height.")
+
+        sc_1_mc_block_inclusion = is_mainchain_block_included_in_sc_block(first_sc_node_best_block["block"],
+                                                                               first_mainchain_node_new_block)
+        sc_2_mc_block_inclusion = is_mainchain_block_included_in_sc_block(second_sc_node_best_block["block"],
+                                                                               first_mainchain_node_new_block)
         assert_true(sc_1_mc_block_inclusion, "The mainchain block is not included for SC node 1.")
         assert_true(sc_2_mc_block_inclusion, "The mainchain block is not included for SC node 2.")
 
         # verify the mc block is NOT included inside SC node 3
-        sc_3_mc_block_inclusion = is_mainchain_block_included(third_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block)
+        sc_3_mc_block_inclusion = is_mainchain_block_included_in_sc_block(third_sc_node_best_block["block"],
+                                                                               first_mainchain_node_new_block)
         assert_false(sc_3_mc_block_inclusion, "The mainchain block is included for SC node 3.")
+
+        first_sc_mc_best_block_ref_info = first_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        second_sc_mc_best_block_ref_info = second_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        third_sc_mc_best_block_ref_info = third_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                first_sc_mc_best_block_ref_info, first_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                second_sc_mc_best_block_ref_info, first_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_false(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                third_sc_mc_best_block_ref_info, first_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
 
         # connect MC 1 to MC 2
         connect_nodes_bi(self.nodes, 0, 1)
@@ -124,25 +175,50 @@ class MCSCConnectedNodes(SidechainTestFramework):
         self.sc_sync_all()
 
         # verify the block is included inside SC node 3
-        sc_3_mc_block_inclusion = is_mainchain_block_included(third_sidechain_node, sidechain_id, 2, 0, first_mainchain_node_new_block)
+        third_sc_node_best_block = third_sidechain_node.block_best()["result"]
+        sc_3_mc_block_inclusion = is_mainchain_block_included_in_sc_block(third_sc_node_best_block["block"], first_mainchain_node_new_block)
         assert_true(sc_3_mc_block_inclusion, "The mainchain block is not included for SC node 3.")
 
         # MC 2 mine a new block
-        block_hash = second_mainchain_node.generate(1)
+        block_hash = second_mainchain_node.generate(1)[0]
         self.sync_all()
-        second_mainchain_node_new_block = second_mainchain_node.getblock(block_hash[0])
+        second_mainchain_node_new_block = second_mainchain_node.getblock(block_hash)
 
         # SC node 3 forges 1 SC block
         sc_generate_blocks(third_sidechain_node)
         self.sc_sync_all()
 
         # verify the block is included inside SC nodes 1, 2 and 3
-        sc_1_mc_block_inclusion = is_mainchain_block_included(first_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block)
-        sc_2_mc_block_inclusion = is_mainchain_block_included(second_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block)
-        sc_3_mc_block_inclusion = is_mainchain_block_included(third_sidechain_node, sidechain_id, 3, 0, second_mainchain_node_new_block)
+        first_sc_node_best_block = first_sidechain_node.block_best()["result"]
+        second_sc_node_best_block = second_sidechain_node.block_best()["result"]
+        third_sc_node_best_block = third_sidechain_node.block_best()["result"]
+
+        assert_equal(first_sc_node_best_block["height"], 3, "The best block has not the specified height.")
+        assert_equal(second_sc_node_best_block["height"], 3, "The best block has not the specified height.")
+        assert_equal(third_sc_node_best_block["height"], 3, "The best block has not the specified height.")
+
+        sc_1_mc_block_inclusion = is_mainchain_block_included_in_sc_block(first_sc_node_best_block["block"], second_mainchain_node_new_block)
+        sc_2_mc_block_inclusion = is_mainchain_block_included_in_sc_block(second_sc_node_best_block["block"], second_mainchain_node_new_block)
+        sc_3_mc_block_inclusion = is_mainchain_block_included_in_sc_block(third_sc_node_best_block["block"], second_mainchain_node_new_block)
         assert_true(sc_1_mc_block_inclusion, "The mainchain block is not included for SC node 1.")
         assert_true(sc_2_mc_block_inclusion, "The mainchain block is not included for SC node 2.")
         assert_true(sc_3_mc_block_inclusion, "The mainchain block is not included for SC node 3.")
+
+        first_sc_mc_best_block_ref_info = first_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        second_sc_mc_best_block_ref_info = second_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        third_sc_mc_best_block_ref_info = third_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                first_sc_mc_best_block_ref_info, second_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                second_sc_mc_best_block_ref_info, second_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(
+                third_sc_mc_best_block_ref_info, second_mainchain_node_new_block),
+            "The mainchain block is not included inside SC block reference info.")
 
 
 if __name__ == "__main__":

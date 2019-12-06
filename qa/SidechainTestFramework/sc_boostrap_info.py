@@ -83,14 +83,14 @@ An account.
 The JSON representation is only for documentation.
 
 Account: {
-    "privateKey": "a private key",
+    "secret":
     "publicKey": "a public key"
 }
 """
 class Account(object):
 
-    def __init__(self, privateKey, publicKey):
-        self.privateKey = privateKey
+    def __init__(self, secret, publicKey):
+        self.secret = secret
         self.publicKey = publicKey
 
 
