@@ -13,20 +13,19 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
 """
 Check the bootstrap feature.
 
-Configuration: bootstrap 3 SC Nodes and start them with genesis info extracted from a mainchain node.
+Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
-    - Create 3 SC nodes
+    - Create 1 SC node
     - Extract genesis info
-    - Start SC nodes with that genesis info
+    - Start SC node with that genesis info
 
 Test:
-    -for each SC node verify:
-        - all keys/boxes/balances are coherent with the default initialization
-        - verify MC block is included inside all 3 SC nodes
+    For the SC node:
+        - verify that all keys/boxes/balances are coherent with the default initialization
+        - verify the MC block is included
 """
 class SCBootstrap(SidechainTestFramework):
 
-    number_of_sidechain_nodes = 1
     sc_nodes_bootstrap_info=None
 
     def setup_nodes(self):
@@ -41,31 +40,28 @@ class SCBootstrap(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
-        mc_nodes = self.nodes
+        sc_node = self.sc_nodes[0]
+        mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
+        sc_best_block = sc_node.block_best()["result"]
 
-        # Check validity of genesis information
-        for i in range(self.number_of_sidechain_nodes):
-            node = self.sc_nodes[i]
-            mc_block = mc_nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
-            sc_best_block = node.block_best()["result"]
+        assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
 
-            assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
-            # verify MC block reference's inclusion
-            res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
-            assert_true(res, "The mainchain block is not included for SC node {0}.".format(i))
+        # verify MC block reference's inclusion
+        res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
+        assert_true(res, "The mainchain block is not included in SC node.")
 
-            sc_mc_best_block_ref_info = node.mainchain_bestBlockReferenceInfo()["result"]
-            assert_true(
-                is_mainchain_block_included_in_sidechain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
-                "The mainchain block is not included inside SC block reference info.")
+        sc_mc_best_block_ref_info = sc_node.mainchain_bestBlockReferenceInfo()["result"]
+        assert_true(
+            is_mainchain_block_included_in_sidechain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
+            "The mainchain block is not included inside SC block reference info.")
 
-            # check all keys/boxes/balances are coherent with the default initialization
-            check_regularbox_balance(node,
-                                  [self.sc_nodes_bootstrap_info.genesis_account.publicKey], [1],
-                                  [self.sc_nodes_bootstrap_info.genesis_account_balance])
+        # check all keys/boxes/balances are coherent with the default initialization
+        check_regularbox_balance(sc_node,
+                                 [self.sc_nodes_bootstrap_info.genesis_account.publicKey], [1],
+                                 [self.sc_nodes_bootstrap_info.genesis_account_balance])
 
 
 if __name__ == "__main__":

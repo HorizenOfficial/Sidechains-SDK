@@ -187,7 +187,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': bootstrap_info.genesis_account.secret,
+        'GENESIS_SECRETS': str('"'+bootstrap_info.genesis_account.secret+'"') if bootstrap_info.genesis_account is not None else '',
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
@@ -549,9 +549,14 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info)
+    genesis_account = sc_nodes_bootstrap_info.genesis_account
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
+        if i>0:
+            sc_nodes_bootstrap_info.__setattr__("genesis_account", None)
         bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+
+    sc_nodes_bootstrap_info.__setattr__("genesis_account", genesis_account)
     return sc_nodes_bootstrap_info
 
 """
