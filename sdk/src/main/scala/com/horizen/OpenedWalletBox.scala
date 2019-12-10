@@ -21,7 +21,7 @@ class OpenedWalletBox (override val box: SidechainTypes#SCB, override val transa
       openTransaction.id, openTransaction.timestamp())
   }
 
-  override def toString: String = s"WalletBox($box, ${encoder.encode(transactionId)}, $createdAt, " +
+  override def toString: String = s"OpenedWalletBox($box, ${encoder.encode(transactionId)}, $createdAt, " +
     s"${encoder.encode(transactionId)}, $openedAt)"
 
   override def serializer (sidechainBoxesCompanion: SidechainBoxesCompanion) : WalletBoxSerializer =

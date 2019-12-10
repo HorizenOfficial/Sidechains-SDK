@@ -128,8 +128,6 @@ class SidechainApp @Inject()
   protected val sidechainOpenedWalletBoxStorage = new SidechainOpenedWalletBoxStorage(
     registerStorage(openedWalletBoxStorage),
     sidechainBoxesCompanion)
-  protected val sidechainWalletBoxOperationStorage = new SidechainWalletBoxOperationStorage(
-    registerStorage(walletBoxOperationStorage))
   protected val sidechainStateStorage = new SidechainStateStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
@@ -149,7 +147,7 @@ class SidechainApp @Inject()
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage,
-    sidechainOpenedWalletBoxStorage, sidechainWalletBoxOperationStorage, params, timeProvider,
+    sidechainOpenedWalletBoxStorage, params, timeProvider,
     applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
 

@@ -43,6 +43,12 @@ class SidechainOpenedWalletBoxStorage(storage : Storage, sidechainBoxesCompanion
     }
   }
 
+  def getAll : List[OpenedWalletBox] = {
+    storage.getAll.asScala.map(baw => {
+      openedWalletBoxSerializer.parseBytes(baw.getValue.data)
+    }).toList
+  }
+
   def update (version : ByteArrayWrapper,
               openedWalletBoxAppendList : Set[OpenedWalletBox]) : Try[SidechainOpenedWalletBoxStorage] = Try {
     require(openedWalletBoxAppendList != null, "List of OpenedWalletBoxes to append must be NOT NULL. Use empty List instead.")

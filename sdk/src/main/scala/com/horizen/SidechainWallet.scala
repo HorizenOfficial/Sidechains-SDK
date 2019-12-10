@@ -8,13 +8,13 @@ import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
-import com.horizen.wallet.ApplicationWallet
+import com.horizen.wallet.{ApplicationWallet, SidechainWalletReader, SidechainWalletTransactionAPI}
 import com.horizen.node.NodeWallet
 import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
-import com.horizen.storage.{IODBStoreAdapter, SidechainOpenedWalletBoxStorage, SidechainSecretStorage, SidechainWalletBoxOperationStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage, WalletBoxOperation}
-import com.horizen.transaction.Transaction
+import com.horizen.storage.{IODBStoreAdapter, SidechainOpenedWalletBoxStorage, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
+import com.horizen.transaction.{BoxTransaction, Transaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToVersion}
@@ -43,7 +43,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-case class UpdateException (val e: Throwable, val rollbackOperations: Seq[ByteArrayWrapper => Try[Any]])
+case class UpdateException (val e: Throwable, val rollbackOperations: Seq[(ByteArrayWrapper, ByteArrayWrapper => Try[Any])])
   extends Throwable
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
@@ -51,7 +51,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                                         secretStorage: SidechainSecretStorage,
                                         walletTransactionStorage: SidechainWalletTransactionStorage,
                                         openedWalletBoxStorage: SidechainOpenedWalletBoxStorage,
-                                        walletBoxOperationStorage: SidechainWalletBoxOperationStorage,
                                         applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
@@ -60,10 +59,15 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet]
   with SidechainTypes
   with NodeWallet
+  with SidechainWalletReader
 {
   override type NVCT = SidechainWallet
 
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
+
+  private val transactionsAPI = new SidechainWalletTransactionAPI()
+
+  transactionsAPI.onStartup(this)
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
@@ -115,7 +119,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val pubKeys = publicKeys()
     val boxesInWallet = boxes().map(_.box.id())
 
-    val rollbackList = new ListBuffer[ByteArrayWrapper => Try[Any]]
+    val rollbackList = new ListBuffer[(ByteArrayWrapper, ByteArrayWrapper => Try[Any])]
 
     val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] = modifier.transactions
       .foldLeft(Map.empty[ByteArrayWrapper, SidechainTypes#SCBT]) {
@@ -139,42 +143,32 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val openedWalletBoxes = boxes().filter(wb => boxIdsToRemove.exists(b => java.util.Arrays.equals(wb.box.id(), b)))
       .map(wb => new OpenedWalletBox(wb, txBoxes(new ByteArrayWrapper(wb.box.id()))))
 
-    val walletBoxOperations = newBoxes.map(wb => WalletBoxOperation(0, wb.box.id())) ++
-      boxIdsToRemove.map(boxId => WalletBoxOperation(1, boxId))
-
     try {
       var ver = walletBoxStorage.lastVersionId
 
       walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList) match {
-        case Success(s) if ver.isPresent => rollbackList.append(ver => s.rollback(ver))
+        case Success(s) if ver.isPresent => rollbackList.append((ver.get(), ver => s.rollback(ver)))
         case Failure(e) => throw UpdateException(e, rollbackList)
       }
 
       ver = walletTransactionStorage.lastVersionId
 
       walletTransactionStorage.update(new ByteArrayWrapper(version), transactions) match {
-        case Success(s) if ver.isPresent => rollbackList.append(ver => s.rollback(ver))
+        case Success(s) if ver.isPresent => rollbackList.append((ver.get(), ver => s.rollback(ver)))
         case Failure(e) => throw UpdateException(e, rollbackList)
       }
 
       ver = openedWalletBoxStorage.lastVersionId
 
       openedWalletBoxStorage.update(new ByteArrayWrapper(version), openedWalletBoxes.toSet) match {
-        case Success(s) if ver.isPresent => rollbackList.append(ver => s.rollback(ver))
+        case Success(s) if ver.isPresent => rollbackList.append((ver.get(), ver => s.rollback(ver)))
         case Failure(e) => throw UpdateException(e, rollbackList)
       }
 
-      ver = walletBoxOperationStorage.lastVersionId
-
-      walletBoxOperationStorage.update(new ByteArrayWrapper(version),
-        Instant.ofEpochMilli(modifier.timestamp).atZone(ZoneId.systemDefault()).toLocalDate,
-        walletBoxOperations.toSet) match {
-        case Success(s) if ver.isPresent => rollbackList.append(ver => s.rollback(ver))
-        case Failure(e) => throw UpdateException(e, rollbackList)
-      }
+      transactionsAPI.update(this, version, newBoxes.toList.asJava, openedWalletBoxes.toList.asJava, transactions.toList.asJava)
 
     } catch {
-      case exception: UpdateException => exception.rollbackOperations.foreach(f => f)
+      case exception: UpdateException => exception.rollbackOperations.foreach(f => f._2(f._1))
         throw exception.e
     }
 
@@ -190,6 +184,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val version = BytesUtils.fromHexString(to)
     walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
     applicationWallet.onRollback(version)
+    transactionsAPI.rollback(this, version)
     this
   }
 
@@ -242,6 +237,50 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   }
 
   override def walletSeed(): Array[Byte] = seed
+
+  override def getWalletBox(boxId: Array[Byte]): JOptional[WalletBox] = {
+    walletBoxStorage.get(boxId).orElse(openedWalletBoxStorage.get(boxId)) match {
+      case Some(wb) => JOptional.of(wb)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getAllWalletBoxes: JList[WalletBox] = {
+    (walletBoxStorage.getAll ++ openedWalletBoxStorage.getAll).asJava
+  }
+
+  override def getOpenedWalletBox(boxId: Array[Byte]): JOptional[OpenedWalletBox] = {
+    openedWalletBoxStorage.get(boxId) match {
+      case Some(wb) => JOptional.of(wb)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getAllOpenedWalletBoxes: JList[OpenedWalletBox] = {
+    openedWalletBoxStorage.getAll.asJava
+  }
+
+  override def getClosedWalletBox(boxId: Array[Byte]): JOptional[WalletBox] = {
+    walletBoxStorage.get(boxId) match {
+      case Some(wb) => JOptional.of(wb)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getAllClosedWalletBoxes: JList[WalletBox] = {
+    walletBoxStorage.getAll.asJava
+  }
+
+  override def getTransaction(transactionId: Array[Byte]): JOptional[BoxTransaction[SCP, Box[SCP]]] = {
+    walletTransactionStorage.get(transactionId) match {
+      case Some(transaction) => JOptional.of(transaction)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getAllTransaction: JList[BoxTransaction[SCP, Box[SCP]]] = {
+    walletTransactionStorage.getAll.asJava
+  }
 }
 
 object SidechainWallet
@@ -251,12 +290,11 @@ object SidechainWallet
                                      secretStorage: SidechainSecretStorage,
                                      walletTransactionStorage: SidechainWalletTransactionStorage,
                                      openedWalletBoxStorage: SidechainOpenedWalletBoxStorage,
-                                     walletBoxOperationStorage: SidechainWalletBoxOperationStorage,
                                      applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
 
     if (!walletBoxStorage.isEmpty)
       Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
-        openedWalletBoxStorage, walletBoxOperationStorage, applicationWallet))
+        openedWalletBoxStorage, applicationWallet))
     else
       None
   }
@@ -266,13 +304,12 @@ object SidechainWallet
                                      secretStorage: SidechainSecretStorage,
                                      walletTransactionStorage: SidechainWalletTransactionStorage,
                                      openedWalletBoxStorage: SidechainOpenedWalletBoxStorage,
-                                     walletBoxOperationStorage: SidechainWalletBoxOperationStorage,
                                      applicationWallet: ApplicationWallet,
                                      genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
       new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
-        openedWalletBoxStorage, walletBoxOperationStorage, applicationWallet)
+        openedWalletBoxStorage, applicationWallet)
         .scanPersistent(genesisBlock)
     else
       throw new RuntimeException("WalletBox storage is not empty!")
