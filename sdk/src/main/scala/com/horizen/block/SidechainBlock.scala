@@ -52,8 +52,8 @@ class SidechainBlock (
   override lazy val id: ModifierId =
     bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
-  override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
-    var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
+  override lazy val transactions: Seq[SidechainTypes#SCBT] = {
+    var txs = Seq[SidechainTypes#SCBT]()
 
     for(b <- mainchainBlocks) {
       if (b.sidechainRelatedAggregatedTransaction.isDefined) {
@@ -61,7 +61,7 @@ class SidechainBlock (
       }
     }
     for(tx <- sidechainTransactions)
-      txs = txs :+ tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]
+      txs = txs :+ tx.asInstanceOf[SidechainTypes#SCBT]
     txs
   }
 
@@ -184,7 +184,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     SidechainBlock.MAX_MC_BLOCKS_NUMBER
   )
 
-  private val _sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
+  private val _sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](
     companion,
     SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
   )
@@ -199,7 +199,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.append(bw)
 
     val tw = w.newWriter()
-    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava, tw)
+    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[SidechainTypes#SCBT]).toList.asJava, tw)
     w.putInt(tw.length())
     w.append(tw)
 

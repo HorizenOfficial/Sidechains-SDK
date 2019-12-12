@@ -78,21 +78,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
 
-        def searchTransactionInMemoryPool(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInMemoryPool(id: String): Option[SidechainTypes#SCBT] = {
           var opt = memoryPool.getTransactionById(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlock(id: String, blockHash: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlock(id: String, blockHash: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlockchain(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideBlockchain(id)
           if (opt.isPresent)
             Option(opt.get())
@@ -103,7 +103,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var format = body.format.getOrElse(false)
         var blockHash = body.blockHash.getOrElse("")
         var txIndex = body.transactionIndex.getOrElse(false)
-        var transaction: Option[Transaction] = None
+        var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
 
@@ -221,7 +221,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             if (body.format.getOrElse(false))
               ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
             else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction.asInstanceOf[SidechainTypes#SCBT]))))
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -249,7 +249,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           if (body.format.getOrElse(false))
             ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
           else
-            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
+            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction.asInstanceOf[SidechainTypes#SCBT]))))
         } catch {
           case t: Throwable =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
