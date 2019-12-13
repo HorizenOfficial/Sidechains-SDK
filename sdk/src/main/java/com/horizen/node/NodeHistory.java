@@ -6,8 +6,6 @@ import com.horizen.box.Box;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.Transaction;
-import scala.util.Try;
 
 import java.util.List;
 import java.util.Optional;

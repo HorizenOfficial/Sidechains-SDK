@@ -337,7 +337,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     }
   }
 
-  private def validateAndSendTransaction(transaction: Transaction) = {
+  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT) = {
     withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
@@ -380,7 +380,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactions(transactions: List[Transaction]) extends SuccessResponse
+  private[api] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
@@ -389,7 +389,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: Transaction) extends SuccessResponse
+  private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
@@ -398,7 +398,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespDecodeTransactionBytes(transaction: Transaction) extends SuccessResponse
+  private[api] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionInput(boxId: String)

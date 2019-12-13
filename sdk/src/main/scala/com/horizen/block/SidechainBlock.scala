@@ -14,7 +14,7 @@ import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
-import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
+import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.ListSerializer
 import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.core.block.Block
@@ -86,7 +86,6 @@ class SidechainBlock (
   }
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    return true
     if(parentId == null || parentId.length != 64
         || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER

@@ -8,7 +8,6 @@ import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
