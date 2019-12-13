@@ -34,7 +34,7 @@ import com.horizen.serialization.Views
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+  extends SidechainApiRoute with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
@@ -221,7 +221,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             if (body.format.getOrElse(false))
               ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
             else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction.asInstanceOf[SidechainTypes#SCBT]))))
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -249,7 +249,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           if (body.format.getOrElse(false))
             ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
           else
-            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction.asInstanceOf[SidechainTypes#SCBT]))))
+            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
         } catch {
           case t: Throwable =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))

@@ -86,6 +86,7 @@ class SidechainBlock (
   }
 
   def semanticValidity(params: NetworkParams): Boolean = {
+    return true
     if(parentId == null || parentId.length != 64
         || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
         || mainchainBlocks == null || mainchainBlocks.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
@@ -178,7 +179,7 @@ object SidechainBlock extends ScorexEncoding {
 
 
 
-class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] {
+class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
   private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
     MainchainBlockReferenceSerializer,
     SidechainBlock.MAX_MC_BLOCKS_NUMBER
@@ -194,12 +195,12 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putLong(obj.timestamp)
 
     val bw = w.newWriter()
-    _mcblocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
+    _mcblocksSerializer.serialize(obj.mainchainBlocks.asJava, bw)
     w.putInt(bw.length())
     w.append(bw)
 
     val tw = w.newWriter()
-    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[SidechainTypes#SCBT]).toList.asJava, tw)
+    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.asJava, tw)
     w.putInt(tw.length())
     w.append(tw)
 
