@@ -381,18 +381,18 @@ def assert_true(condition, message=""):
 
 
 """
-Verify if a mainchain block is included in a sidechain block reference info.
+Verify if a mainchain block data is equal to mainchain block reference info data.
 
 Parameters:
- - sc_block_reference_info: the JSON representation of a mainchain block reference info. See com.horizen.node.util.MainchainBlockReferenceInfo
+ - mc_block_reference_info: the JSON representation of a mainchain block reference info. See com.horizen.node.util.MainchainBlockReferenceInfo
  - expected_mc_block: the JSON representation of a mainchain block
 """
-def is_mainchain_block_included_in_sidechain_block_reference_info(sc_block_reference_info, expected_mc_block):
+def check_mainchain_block_reference_info(mc_block_reference_info, expected_mc_block):
     try:
 
-        parent_hash = sc_block_reference_info["blockReferenceInfo"]["parentHash"]
-        hash = sc_block_reference_info["blockReferenceInfo"]["hash"]
-        height = sc_block_reference_info["blockReferenceInfo"]["height"]
+        parent_hash = mc_block_reference_info["blockReferenceInfo"]["parentHash"]
+        hash = mc_block_reference_info["blockReferenceInfo"]["hash"]
+        height = mc_block_reference_info["blockReferenceInfo"]["height"]
 
         expected_mc_block_hash = expected_mc_block["hash"]
         expected_mc_block_height = expected_mc_block["height"]
@@ -416,87 +416,82 @@ Parameters:
  - expected_mc_block: the JSON representation of a mainchain block
 """
 def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
-    try:
-        mc_block_json = sc_block["mainchainBlocks"][0]
 
-        expected_mc_block_version = expected_mc_block["version"]
-        expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
-        expected_mc_block_time = expected_mc_block["time"]
-        expected_mc_block_nonce = expected_mc_block["nonce"]
+    mc_blocks_json = sc_block["mainchainBlocks"]
+    is_mac_block_included = False
 
-        sc_mc_block_version = mc_block_json["header"]["version"]
-        sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
-        sc_mc_block_time = mc_block_json["header"]["time"]
-        sc_mc_block_nonce = mc_block_json["header"]["nonce"]
+    for mc_block_json in mc_blocks_json:
+        try:
+            expected_mc_block_version = expected_mc_block["version"]
+            expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
+            expected_mc_block_time = expected_mc_block["time"]
+            expected_mc_block_nonce = expected_mc_block["nonce"]
 
-        assert_equal(expected_mc_block_version, sc_mc_block_version)
-        assert_equal(expected_mc_block_merkleroot, sc_mc_block_merkleroot)
-        assert_equal(expected_mc_block_time, sc_mc_block_time)
-        assert_equal(expected_mc_block_nonce, sc_mc_block_nonce)
+            sc_mc_block_version = mc_block_json["header"]["version"]
+            sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
+            sc_mc_block_time = mc_block_json["header"]["time"]
+            sc_mc_block_nonce = mc_block_json["header"]["nonce"]
 
-        expected_mc_block_previousblockhash = expected_mc_block["previousblockhash"]
+            assert_equal(expected_mc_block_version, sc_mc_block_version)
+            assert_equal(expected_mc_block_merkleroot, sc_mc_block_merkleroot)
+            assert_equal(expected_mc_block_time, sc_mc_block_time)
+            assert_equal(expected_mc_block_nonce, sc_mc_block_nonce)
 
-        sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
-        assert_equal(expected_mc_block_previousblockhash, sc_mc_block_previousblockhash)
+            expected_mc_block_previousblockhash = expected_mc_block["previousblockhash"]
 
-        return True
-    except Exception:
-        return False
+            sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
+            assert_equal(expected_mc_block_previousblockhash, sc_mc_block_previousblockhash)
+
+            is_mac_block_included = True
+        except Exception:
+            continue
+
+    return is_mac_block_included
 
 """
-For given PublicKey25519 verify the number of related regular boxes and verify the sum of their balances.
+Verify the wallet balance is equal to an expected balance.
 
 Parameters:
  - sc_node: a sidechain node
- - array_of_expected_public_keys: array of public keys.
-                    [pubKey_1, pubKey_2, ..., pubKey_n]
- - array_of_expected_boxes_count: array of expected boxes count for each public key of the second parameter.
-                    [boxes_count_for_pubKey_1, boxes_count_for_pubKey_2, ..., boxes_count_for_pubKey_n]
- - array_of_expected_sc_balances: array of expected balances for each public key of the second parameter.
-                    [balance_for_pubKey_1, balance_for_pubKey_2, ..., balance_for_pubKey_n]
+ - expected_wallet_balance
 """
-def check_regularbox_balance(sc_node, array_of_expected_public_keys, array_of_expected_boxes_count, array_of_expected_sc_balances):
-
-    response = sc_node.wallet_allPublicKeys()
-    public_keys = response["result"]["propositions"]
-    assert_equal(len(array_of_expected_public_keys), len(public_keys), "Unexpected number of public keys")
-
-    response = sc_node.wallet_allBoxes()
-    boxes = response["result"]["boxes"]
-
-    expected_wallet_balance = 0
-
-    print("Checking that each public key has a box assigned with a non-zero value.")
-    key_index = 0
-    for key in array_of_expected_public_keys:
-        target = None
-        boxes_balance = 0
-        boxes_count = 0
-        for box in boxes:
-            if box["proposition"]["publicKey"] == key and box["typeId"] == 1:
-                target = box
-                box_value = box["value"]
-                assert_true(box_value > 0,
-                            "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
-                boxes_balance += box_value
-                boxes_count += 1
-
-            assert_equal(array_of_expected_boxes_count[key_index], boxes_count,
-                         "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
-                         .format(key, array_of_expected_boxes_count[key_index], boxes_count))
-            assert_equal(array_of_expected_sc_balances[key_index] * 100000000, boxes_balance,
-                         "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
-                         .format(key, array_of_expected_sc_balances[key_index] * 100000000, boxes_balance))
-            expected_wallet_balance += array_of_expected_sc_balances[key_index] * 100000000
-            key_index += 1
-
-        assert_true(target is not None, "Box related to public key: {0} not found".format(key))
-
+def check_wallet_balance(sc_node, expected_wallet_balance):
     response = sc_node.wallet_balance()
     balance = response["result"]
-    assert_equal(expected_wallet_balance, int(balance["balance"]), "Unexpected balance")
+    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected balance")
 
-    """
+
+"""
+For a given Account verify the number of related regular boxes and verify the sum of their balances.
+
+Parameters:
+ - sc_node: a sidechain node
+ - account: an instance of Account (see sc_bootstrap_info.py)
+ - expected_boxes_count: the number of expected boxes for that account
+ - expected_balance: expected balance for that account
+"""
+def check_regularbox_balance(sc_node, account, expected_boxes_count, expected_balance):
+    response = sc_node.wallet_allBoxes()
+    boxes = response["result"]["boxes"]
+    boxes_balance = 0
+    boxes_count = 0
+    pub_key = account.publicKey
+    for box in boxes:
+        if box["proposition"]["publicKey"] == pub_key and box["typeId"] == 1:
+            box_value = box["value"]
+            assert_true(box_value > 0,
+                        "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
+            boxes_balance += box_value
+            boxes_count += 1
+
+    assert_equal(expected_boxes_count, boxes_count,
+                "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
+                .format(pub_key, expected_boxes_count, boxes_count))
+    assert_equal(expected_balance * 100000000, boxes_balance,
+                "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
+                .format(pub_key, expected_balance * 100000000, boxes_balance))
+
+"""
 Bootstrap a network of sidechain nodes.
 
 Parameters:
@@ -549,14 +544,20 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info)
-    genesis_account = sc_nodes_bootstrap_info.genesis_account
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i>0:
-            sc_nodes_bootstrap_info.__setattr__("genesis_account", None)
+            bootstrap_sidechain_node(dirname, i, SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
+                                                                 None,
+                                                                 sc_nodes_bootstrap_info.genesis_account_balance,
+                                                                 sc_nodes_bootstrap_info.mainchain_block_height,
+                                                                 sc_nodes_bootstrap_info.sidechain_genesis_block_hex,
+                                                                 sc_nodes_bootstrap_info.pow_data,
+                                                                 sc_nodes_bootstrap_info.network,
+                                                                 sc_nodes_bootstrap_info.withdrawal_epoch_length),
+                                                                 sc_node_conf)
         bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
 
-    sc_nodes_bootstrap_info.__setattr__("genesis_account", genesis_account)
     return sc_nodes_bootstrap_info
 
 """

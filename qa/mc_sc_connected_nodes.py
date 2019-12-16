@@ -7,7 +7,7 @@ from test_framework.util import assert_equal, initialize_chain_clean, start_node
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
 from SidechainTestFramework.scutil import check_regularbox_balance, connect_sc_nodes, \
     bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, sc_generate_blocks, \
-    is_mainchain_block_included_in_sidechain_block_reference_info
+    check_mainchain_block_reference_info, check_wallet_balance
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -89,16 +89,16 @@ class MCSCConnectedNodes(SidechainTestFramework):
         first_sc_mc_best_block_ref_info = first_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
         second_sc_mc_best_block_ref_info = second_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
         assert_true(
-            is_mainchain_block_included_in_sidechain_block_reference_info(
+            check_mainchain_block_reference_info(
                 first_sc_mc_best_block_ref_info, first_mainchain_node_block),
             "The mainchain block is not included inside SC block reference info.")
         assert_true(
-            is_mainchain_block_included_in_sidechain_block_reference_info(
+            check_mainchain_block_reference_info(
                 second_sc_mc_best_block_ref_info, first_mainchain_node_block),
             "The mainchain block is not included inside SC block reference info.")
 
-        check_regularbox_balance(first_sidechain_node, [genesis_account.publicKey], [1], [wallet_balance])
-        check_regularbox_balance(second_sidechain_node, [], [1], [])
+        check_regularbox_balance(first_sidechain_node, genesis_account, 1, wallet_balance)
+        check_wallet_balance(first_sidechain_node, wallet_balance)
 
         # MC 1 mine a new block
         block_hash = first_mainchain_node.generate(1)[0]
@@ -124,11 +124,11 @@ class MCSCConnectedNodes(SidechainTestFramework):
         first_sc_mc_best_block_ref_info = first_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
         second_sc_mc_best_block_ref_info = second_sidechain_node.mainchain_bestBlockReferenceInfo()["result"]
         assert_true(
-            is_mainchain_block_included_in_sidechain_block_reference_info(
+            check_mainchain_block_reference_info(
                 first_sc_mc_best_block_ref_info, first_mainchain_node_new_block),
             "The mainchain block is not included inside SC block reference info.")
         assert_false(
-            is_mainchain_block_included_in_sidechain_block_reference_info(
+            check_mainchain_block_reference_info(
                 second_sc_mc_best_block_ref_info, first_mainchain_node_new_block),
             "The mainchain block is not included inside SC block reference info.")
 
