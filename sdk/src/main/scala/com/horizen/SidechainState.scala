@@ -178,7 +178,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = ???
 
-  def getConsensusEpochInfo: ConsensusEpochInfo = ???
+  def getCurrentConsensusEpochInfo: ConsensusEpochInfo = ???
 
 }
 
