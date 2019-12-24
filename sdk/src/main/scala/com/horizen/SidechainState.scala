@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{Optional => JOptional, List => JList}
+import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
@@ -10,8 +10,8 @@ import com.horizen.proposition.Proposition
 import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ConsensusEpochInfo, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
 
@@ -175,6 +175,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
   }
+
+  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = ???
+
+  def getConsensusEpochInfo: ConsensusEpochInfo = ???
 
 }
 

@@ -14,11 +14,10 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ConsensusEpochInfo}
 import io.iohk.iodb.LSMStore
 import scorex.core.{VersionTag, bytesToVersion, idToVersion}
 import scorex.util.ScorexLogging
-import com.horizen.utils.BytesUtils
 
 import scala.util.{Failure, Random, Success, Try}
 import scala.collection.JavaConverters._
@@ -192,6 +191,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
   }
 
   override def walletSeed(): Array[Byte] = seed
+
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo) = ???
 }
 
 object SidechainWallet

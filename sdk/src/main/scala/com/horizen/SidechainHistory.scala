@@ -9,7 +9,7 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, ConsensusEpochInfo, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
@@ -446,6 +446,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReference] = {
     storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
   }
+
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo) = ???
 }
 
 
