@@ -52,6 +52,8 @@ public class SimpleAppModule
         File walletTransactionStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletTransaction");
         File stateStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/state");
         File historyStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/history");
+        File consensusStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/consensusData");
+
 
 
         // Here I can add my custom rest api and/or override existing one
@@ -101,6 +103,9 @@ public class SimpleAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
                 .toInstance(IODBStorageUtil.getStorage(historyStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("ConsensusStorage"))
+                .toInstance(IODBStorageUtil.getStorage(consensusStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))

@@ -6,6 +6,7 @@ import java.util.{HashMap => JHashMap}
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures.{IODBStoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -22,7 +23,6 @@ import org.scalatest.mockito.MockitoSugar
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.settings.ScorexSettings
-import scorex.util.ModifierId
 
 import scala.util.{Failure, Success}
 
@@ -61,9 +61,12 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
   @Test
   def genesisTest(): Unit = {
-    val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
-      sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val sidechainHistoryStorage = new SidechainHistoryStorage(
+      new IODBStoreAdapter(getStore()),
+      sidechainTransactionsCompanion,
+      params)
+    val consensusDataStorage = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     val history = historyTry.get
@@ -79,7 +82,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   def appendTest(): Unit = {
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val consensusDataStorage = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history: SidechainHistory = historyTry.get
@@ -297,7 +301,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
     // Init chain with 10 blocks
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val consensusDataStorage = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history = historyTry.get
@@ -382,7 +387,8 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   def applicableTryTest(): Unit = {
     val sidechainHistoryStorage = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
-    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val consensusDataStorage = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    val historyTry = SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
 
     var history: SidechainHistory = historyTry.get
@@ -408,7 +414,9 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     val sidechainHistoryStorage1 = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
     // Create first history object
-    val history1Try = SidechainHistory.genesisHistory(sidechainHistoryStorage1, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val consensusDataStorage1 = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    val history1Try = SidechainHistory.genesisHistory(sidechainHistoryStorage1, consensusDataStorage1, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+
     assertTrue("Genesis history1 creation expected to be successful. ", history1Try.isSuccess)
     var history1: SidechainHistory = history1Try.get
     // Init history1 with 19 more blocks
@@ -431,8 +439,10 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     val sidechainHistoryStorage2 = new SidechainHistoryStorage(new IODBStoreAdapter(getStore()),
       sidechainTransactionsCompanion, params)
+    val consensusDataStorage2 = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+
     // Create second history object
-    val history2Try = SidechainHistory.genesisHistory(sidechainHistoryStorage2, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
+    val history2Try = SidechainHistory.genesisHistory(sidechainHistoryStorage2, consensusDataStorage2, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq())
     assertTrue("Genesis history2 creation expected to be successful. ", history2Try.isSuccess)
     var history2: SidechainHistory = history2Try.get
     // Init history2 with 18 more blocks
