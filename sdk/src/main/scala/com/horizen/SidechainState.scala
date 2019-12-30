@@ -176,7 +176,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     Failure(exception)
   }
 
-  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = ???
+  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = false
 
   def getCurrentConsensusEpochInfo: ConsensusEpochInfo = ???
 

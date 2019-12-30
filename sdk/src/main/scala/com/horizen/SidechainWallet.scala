@@ -133,11 +133,12 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     this
   }
 
-  // rollback BoxStore only. SecretStore must not changed
+  // rollback BoxStorage and TransactionsStorage only. SecretStorage must not change.
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
+    walletTransactionStorage.rollback(new ByteArrayWrapper(version)).get
     applicationWallet.onRollback(version)
     this
   }
@@ -192,7 +193,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
 
   override def walletSeed(): Array[Byte] = seed
 
-  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo) = ???
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = this
 }
 
 object SidechainWallet

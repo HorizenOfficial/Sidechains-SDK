@@ -447,7 +447,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
   }
 
-  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo) = ???
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainHistory = this
 }
 
 
