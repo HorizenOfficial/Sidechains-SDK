@@ -193,7 +193,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
 
   override def walletSeed(): Array[Byte] = seed
 
-  def applyConsensusEpochInfo(epochInfo: StakeConsensusEpochInfo) = ???
+  def applyStakeConsensusEpochInfo(epochInfo: StakeConsensusEpochInfo): SidechainWallet = this
 }
 
 object SidechainWallet

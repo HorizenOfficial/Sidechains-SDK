@@ -459,8 +459,9 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     consensusDataStorage.addNonceConsensusEpochInfo(lastBlockInEpoch, nonceEpochInfo)
   }
 
-  def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): Unit = {
+  def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
     consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
+    this
   }
 
   private def getPreviousEpoch(lastBlockInEpoch: ModifierId): ModifierId = ???
