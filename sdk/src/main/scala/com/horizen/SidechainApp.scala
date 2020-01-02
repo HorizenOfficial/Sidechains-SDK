@@ -1,7 +1,8 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
-import java.util.{List => JList, HashMap => JHashMap}
+import java.util.{HashMap => JHashMap, List => JList}
+
 import com.horizen.utils.Pair
 import akka.actor.ActorRef
 import com.horizen.api.http._
@@ -34,6 +35,7 @@ import scala.collection.immutable.Map
 import scala.io.Source
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.utils.BytesUtils
 
 class SidechainApp @Inject()
@@ -48,6 +50,7 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
+   @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
@@ -131,7 +134,9 @@ class SidechainApp @Inject()
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
-
+  protected val consensusDataStorage = new ConsensusDataStorage(
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
+    registerStorage(consensusStorage))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -139,7 +144,10 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
+    sidechainSettings,
+    sidechainHistoryStorage,
+    consensusDataStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
     applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure

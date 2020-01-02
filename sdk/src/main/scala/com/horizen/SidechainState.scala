@@ -4,13 +4,15 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
+import com.horizen.consensus.StakeConsensusEpochInfo
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ConsensusEpochInfo, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import scorex.util.ModifierId
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
@@ -176,9 +178,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     Failure(exception)
   }
 
+  // TODO
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = false
 
-  def getCurrentConsensusEpochInfo: ConsensusEpochInfo = ???
+  // TODO
+  // Returns lastBlockInEpoch and StakeConsensusEpochInfo for that epoch
+  def getCurrentStakeConsensusEpochInfo: (ModifierId, StakeConsensusEpochInfo) = ???
 
 }
 
