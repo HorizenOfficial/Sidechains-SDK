@@ -12,6 +12,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import scorex.util.ModifierId
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.ScorexLogging
@@ -177,9 +178,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     Failure(exception)
   }
 
-  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = ???
+  // TODO
+  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = false
 
-  def getCurrentConsensusEpochInfo: StakeConsensusEpochInfo = ???
+  // TODO
+  // Returns lastBlockInEpoch and StakeConsensusEpochInfo for that epoch
+  def getCurrentStakeConsensusEpochInfo: (ModifierId, StakeConsensusEpochInfo) = ???
 
 }
 
