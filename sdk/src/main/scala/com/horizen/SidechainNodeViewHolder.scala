@@ -155,7 +155,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       if (state.version != branchingPoint) {
         (
           state.rollbackTo(idToVersion(branchingPoint)),
-          vault().rollback(idToVersion(branchingPoint)),
+          wallet.rollback(idToVersion(branchingPoint)),
           trimChainSuffix(suffixApplied, branchingPoint)
         )
       } else (Success(state), Success(wallet), IndexedSeq())

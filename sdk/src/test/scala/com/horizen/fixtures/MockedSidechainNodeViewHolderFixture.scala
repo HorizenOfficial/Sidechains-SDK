@@ -20,9 +20,8 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
 trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
-  implicit lazy val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
-
-  def getMockedSidechainNodeViewHolderRef(history: SidechainHistory, state: SidechainState, wallet: SidechainWallet, mempool: SidechainMemoryPool): ActorRef = {
+  def getMockedSidechainNodeViewHolderRef(history: SidechainHistory, state: SidechainState, wallet: SidechainWallet, mempool: SidechainMemoryPool)
+                                         (implicit actorSystem: ActorSystem): ActorRef = {
     val sidechainSettings = mock[SidechainSettings]
     val scorexSettings = mock[ScorexSettings]
     val networkSettings = mock[NetworkSettings]
