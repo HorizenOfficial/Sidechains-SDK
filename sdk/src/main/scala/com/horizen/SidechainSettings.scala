@@ -25,10 +25,15 @@ case class WalletSettings(
                         genesisSecrets: Seq[String]
                          )
 
+case class MainchainSettings(
+                              path: String
+                            )
+
 
 case class SidechainSettings(
                         scorexSettings: ScorexSettings,
                         genesisData: GenesisDataSettings,
                         websocket: WebSocketSettings,
-                        wallet: WalletSettings
+                        wallet: WalletSettings,
+                        mainchainSettings: MainchainSettings
                             )
