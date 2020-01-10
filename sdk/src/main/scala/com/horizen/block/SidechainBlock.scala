@@ -14,7 +14,7 @@ import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
-import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
+import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.ListSerializer
 import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.core.block.Block
@@ -52,8 +52,8 @@ class SidechainBlock (
   override lazy val id: ModifierId =
     bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
-  override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
-    var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
+  override lazy val transactions: Seq[SidechainTypes#SCBT] = {
+    var txs = Seq[SidechainTypes#SCBT]()
 
     for(b <- mainchainBlocks) {
       if (b.sidechainRelatedAggregatedTransaction.isDefined) {
@@ -61,7 +61,7 @@ class SidechainBlock (
       }
     }
     for(tx <- sidechainTransactions)
-      txs = txs :+ tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]
+      txs = txs :+ tx.asInstanceOf[SidechainTypes#SCBT]
     txs
   }
 
@@ -178,13 +178,13 @@ object SidechainBlock extends ScorexEncoding {
 
 
 
-class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] {
+class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
   private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
     MainchainBlockReferenceSerializer,
     SidechainBlock.MAX_MC_BLOCKS_NUMBER
   )
 
-  private val _sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
+  private val _sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](
     companion,
     SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
   )
@@ -194,12 +194,12 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putLong(obj.timestamp)
 
     val bw = w.newWriter()
-    _mcblocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
+    _mcblocksSerializer.serialize(obj.mainchainBlocks.asJava, bw)
     w.putInt(bw.length())
     w.append(bw)
 
     val tw = w.newWriter()
-    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava, tw)
+    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.asJava, tw)
     w.putInt(tw.length())
     w.append(tw)
 
