@@ -3,6 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.Box;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.node.NodeWallet;
 import com.horizen.proposition.MCPublicKeyHashProposition;
@@ -125,7 +126,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 }
 
-public class RegularTransactionCreatorTest {
+public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     PrivateKey25519 pk1;
     PrivateKey25519 pk2;
@@ -152,9 +153,9 @@ public class RegularTransactionCreatorTest {
         mcPublicKeyHashProposition = secretFixture.getMCPublicKeyHashProposition();
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 30), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 40), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 50), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 30), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 40), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 50), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -182,9 +183,9 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_FeeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -240,9 +241,9 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_ChangeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -292,9 +293,9 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_OutputsTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -324,7 +325,7 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_BoxIdsToExcludeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox boxToExclude = new RegularBox(pk1.publicImage(), 1, 100);
+        RegularBox boxToExclude = getRegularBox(pk1.publicImage(), 1, 100);
         boxesWithCreationTime.add(new Pair<>(boxToExclude, 1000L));
 
         List<Secret> secrets = new ArrayList<>();
@@ -356,10 +357,10 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_InputsOrderTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox expectedBox = new RegularBox(pk3.publicImage(), 1, 10);
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), 3L));
+        RegularBox expectedBox = getRegularBox(pk3.publicImage(), 1, 10);
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 3L));
         boxesWithCreationTime.add(new Pair<>(expectedBox, 1L));
-        boxesWithCreationTime.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 10), 2L));
+        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 10), 2L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);

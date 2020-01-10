@@ -4,8 +4,10 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.secret.PrivateKey25519
 import com.horizen.box.RegularBox
 import java.util.{ArrayList => JArrayList, List => JList}
+
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import com.horizen.utils.{Pair => JPair}
+
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {
@@ -18,7 +20,7 @@ trait TransactionFixture extends BoxFixture {
 
     for(secret <- inputsSecrets) {
       val value = 10 + Random.nextInt(10)
-      from.add(new JPair(new RegularBox(secret.publicImage(), Random.nextInt(1000), value), secret))
+      from.add(new JPair(getRegularBox(secret.publicImage(), Random.nextInt(1000), value), secret))
       totalFrom += value
     }
 
@@ -68,8 +70,8 @@ trait TransactionFixture extends BoxFixture {
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
     val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
-    from.add(new JPair(new RegularBox(pk1.publicImage(), 1, 10), pk1))
-    from.add(new JPair(new RegularBox(pk2.publicImage(), 1, 20), pk2))
+    from.add(new JPair(getRegularBox(pk1.publicImage(), 1, 10), pk1))
+    from.add(new JPair(getRegularBox(pk2.publicImage(), 1, 20), pk2))
 
     to.add(new JPair(pk7.publicImage(), 10L))
 
@@ -81,8 +83,8 @@ trait TransactionFixture extends BoxFixture {
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
     val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
-    from.add(new JPair(new RegularBox(pk3.publicImage(), 1, 10), pk3))
-    from.add(new JPair(new RegularBox(pk4.publicImage(), 1, 10), pk4))
+    from.add(new JPair(getRegularBox(pk3.publicImage(), 1, 10), pk3))
+    from.add(new JPair(getRegularBox(pk4.publicImage(), 1, 10), pk4))
 
     to.add(new JPair(pk7.publicImage(), 10L))
 
@@ -94,8 +96,8 @@ trait TransactionFixture extends BoxFixture {
     val to : JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
     val withdrawalRequests : JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
 
-    from.add(new JPair(new RegularBox(pk1.publicImage(), 1, 10), pk1))
-    from.add(new JPair(new RegularBox(pk6.publicImage(), 1, 10), pk6))
+    from.add(new JPair(getRegularBox(pk1.publicImage(), 1, 10), pk1))
+    from.add(new JPair(getRegularBox(pk6.publicImage(), 1, 10), pk6))
 
     to.add(new JPair(pk7.publicImage(), 10L))
 

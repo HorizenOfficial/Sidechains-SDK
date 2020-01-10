@@ -4,6 +4,9 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.*;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.*;
 import com.horizen.proof.Signature25519;
@@ -23,6 +26,7 @@ public final class RegularTransaction
     public static final byte TRANSACTION_TYPE_ID = 1;
 
     private List<RegularBox> inputs;
+    private List<BoxData> outputs;
     private List<Pair<PublicKey25519Proposition, Long>> regularOutputs;
     private List<Pair<MCPublicKeyHashProposition, Long>> withdrawalOutputs;
     private List<Signature25519> signatures;
@@ -94,14 +98,15 @@ public final class RegularTransaction
             newBoxes = new ArrayList<>();
             int boxIndex = 0;
             for (int i = 0; i < regularOutputs.size(); i++, boxIndex++) {
-                NoncedBox box = new RegularBox(regularOutputs.get(i).getKey(), getNewBoxNonce(regularOutputs.get(i).getKey(), boxIndex),
-                        regularOutputs.get(i).getValue());
+                NoncedBox box = new RegularBox(
+                        new RegularBoxData(regularOutputs.get(i).getKey(), regularOutputs.get(i).getValue()),
+                        getNewBoxNonce(regularOutputs.get(i).getKey(), boxIndex));
                 newBoxes.add(box);
             }
             for (int i = 0; i < withdrawalOutputs.size(); i++, boxIndex++) {
-                NoncedBox box = new WithdrawalRequestBox(withdrawalOutputs.get(i).getKey(),
-                        getNewBoxNonce(withdrawalOutputs.get(i).getKey(), boxIndex),
-                        withdrawalOutputs.get(i).getValue());
+                NoncedBox box = new WithdrawalRequestBox(
+                        new WithdrawalRequestBoxData(withdrawalOutputs.get(i).getKey(), withdrawalOutputs.get(i).getValue()),
+                        getNewBoxNonce(withdrawalOutputs.get(i).getKey(), boxIndex));
                 newBoxes.add(box);
             }
         }

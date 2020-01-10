@@ -8,25 +8,24 @@ import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.{Box, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.BoxFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import com.horizen.utils.Pair
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Curve25519
 import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success}
 
-class SidechainNodeViewUtilMocks extends MockitoSugar {
+class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
 
   val mainchainBlockReferenceInfoRef = new MainchainBlockReferenceInfo(
     BytesUtils.fromHexString("0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0"),
@@ -36,9 +35,9 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
   val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
   val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
   val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  val box_1 = new RegularBox(secret1.publicImage(), 1, 10)
-  val box_2 = new RegularBox(secret2.publicImage(), 1, 20)
-  val box_3 = new RegularBox(secret3.publicImage(), 1, 30)
+  val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
+  val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
+  val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList()
 

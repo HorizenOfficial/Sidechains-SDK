@@ -1,6 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -14,11 +15,10 @@ import scala.util.Try;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
-public class RegularTransactionSerializerTest {
+public class RegularTransactionSerializerTest extends BoxFixtureClass {
     RegularTransaction transaction;
 
     @Before
@@ -34,9 +34,9 @@ public class RegularTransactionSerializerTest {
         PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
 
         ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
-        from.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 60), pk1));
-        from.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 50), pk2));
-        from.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 20), pk3));
+        from.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 60), pk1));
+        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 50), pk2));
+        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 20), pk3));
 
         PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());

@@ -1,12 +1,12 @@
 package com.horizen.transaction
 
 import java.lang.{Long => JLong}
-import java.util
 import java.util.{ArrayList => JArrayList}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.RegularBox
+import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.serialization.ApplicationJsonSerializer
@@ -14,10 +14,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
-import scorex.crypto.signatures.Curve25519
 
-class RegularTransactionScalaTest
-  extends JUnitSuite
+class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
 {
 
   @Test
@@ -34,9 +32,9 @@ class RegularTransactionScalaTest
     val pk2 = creator.generateSecret("test_seed2".getBytes)
     val pk3 = creator.generateSecret("test_seed3".getBytes)
 
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(pk1.publicImage, 1, 60), pk1))
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(pk2.publicImage, 1, 50), pk2))
-    from.add(new JPair[RegularBox, PrivateKey25519](new RegularBox(pk3.publicImage, 1, 20), pk3))
+    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk1.publicImage(), 1, 60), pk1))
+    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk2.publicImage(), 1, 50), pk2))
+    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk3.publicImage(), 1, 20), pk3))
 
     val pk4 = creator.generateSecret("test_seed4".getBytes)
     val pk5 = creator.generateSecret("test_seed5".getBytes)

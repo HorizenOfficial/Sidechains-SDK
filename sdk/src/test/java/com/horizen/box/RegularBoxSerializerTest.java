@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
@@ -13,7 +14,7 @@ import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
-public class RegularBoxSerializerTest
+public class RegularBoxSerializerTest extends BoxFixtureClass
 {
     RegularBox box;
 
@@ -21,7 +22,7 @@ public class RegularBoxSerializerTest
     public void setUp() {
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/regularbox_hex"
-        box = new RegularBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
+        box = getRegularBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 10);
 
 //     Uncomment and run if you want to update regression data.
 //        try {

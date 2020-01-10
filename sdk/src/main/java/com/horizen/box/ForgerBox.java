@@ -1,7 +1,10 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
+import com.horizen.box.data.ForgerBoxData;
+import com.horizen.box.data.ForgerBoxDataSerializer;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.vrf.VRFPublicKey;
 
@@ -9,30 +12,34 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public final class ForgerBox
-        extends PublicKey25519NoncedBox<PublicKey25519Proposition>
+        extends AbstractNoncedBox<PublicKey25519Proposition, ForgerBoxData>
         implements CoinsBox<PublicKey25519Proposition>
 {
-    public static final byte BOX_TYPE_ID = 2;
+    public static final byte BOX_TYPE_ID = 3;
 
-    private final PublicKey25519Proposition rewardProposition;
-    private final VRFPublicKey vrfPubKey;
-
-    public ForgerBox(PublicKey25519Proposition proposition, long nonce, long value,
-                     PublicKey25519Proposition rewardProposition, VRFPublicKey vrfPubKey)
+    public ForgerBox(ForgerBoxData boxData, long nonce)
     {
-        super(new PublicKey25519Proposition(proposition.pubKeyBytes()), nonce, value);
+        super(boxData, nonce);
+    }
 
-        Objects.requireNonNull(rewardProposition, "rewardProposition shall be defined");
-        Objects.requireNonNull(vrfPubKey, "vrfPubKey shall be defined");
+    @Override
+    public byte boxTypeId() {
+        return BOX_TYPE_ID;
+    }
 
-        this.rewardProposition = new PublicKey25519Proposition(rewardProposition.pubKeyBytes());
-        this.vrfPubKey = new VRFPublicKey(vrfPubKey.bytes());
+    @JsonProperty("vrfPubKey")
+    public VRFPublicKey vrfPubKey() {
+        return boxData.vrfPublicKey();
+    }
+
+    @JsonProperty("rewardProposition")
+    public PublicKey25519Proposition rewardProposition() {
+        return boxData.rewardProposition();
     }
 
     @Override
     public byte[] bytes() {
-        return Bytes.concat(_proposition.bytes(), Longs.toByteArray(_nonce), Longs.toByteArray(_value),
-                rewardProposition.bytes(), vrfPubKey.bytes());
+        return Bytes.concat(Longs.toByteArray(nonce), ForgerBoxDataSerializer.getSerializer().toBytes(boxData));
     }
 
     @Override
@@ -41,55 +48,28 @@ public final class ForgerBox
     }
 
     @Override
-    public byte boxTypeId() {
-        return BOX_TYPE_ID;
-    }
-
-    public VRFPublicKey vrfPubKey() {
-        return vrfPubKey;
-    }
-
-    public PublicKey25519Proposition rewardProposition() {
-        return rewardProposition;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        ForgerBox forgerBox = (ForgerBox) o;
-        return vrfPubKey.equals(forgerBox.vrfPubKey) &&
-                rewardProposition.equals(forgerBox.rewardProposition);
+    public boolean equals(Object obj) {
+        if (!super.equals(obj))
+            return false;
+        ForgerBox forgerBox = (ForgerBox) obj;
+        return vrfPubKey().equals(forgerBox.vrfPubKey()) &&
+                rewardProposition().equals(forgerBox.rewardProposition());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), vrfPubKey, rewardProposition);
+        return Objects.hash(super.hashCode(), vrfPubKey(), rewardProposition());
     }
 
-    public static int length() {
-        int nonceOffset = PublicKey25519Proposition.getLength();
-        int valueOffset = nonceOffset + Longs.BYTES;
-        int rewardPropositionOffset = valueOffset + Longs.BYTES;
-        int vrfPubKeyOffset = rewardPropositionOffset + PublicKey25519Proposition.getLength();
-        int totalOffset = vrfPubKeyOffset + VRFPublicKey.length();
-
-        return totalOffset;
+    @Override
+    public String toString() {
+        return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, rewardProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), rewardProposition(), nonce());
     }
 
     public static ForgerBox parseBytes(byte[] bytes) {
-        int nonceOffset = PublicKey25519Proposition.getLength();
-        int valueOffset = nonceOffset + Longs.BYTES;
-        int rewardPropositionOffset = valueOffset + Longs.BYTES;
-        int vrfPubKeyOffset = rewardPropositionOffset + PublicKey25519Proposition.getLength();
+        long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
+        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, Longs.BYTES, bytes.length));
 
-        PublicKey25519Proposition proposition = PublicKey25519Proposition.parseBytes(Arrays.copyOf(bytes, PublicKey25519Proposition.getLength()));
-        long nonce = Longs.fromByteArray(Arrays.copyOfRange(bytes, nonceOffset, valueOffset));
-        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, rewardPropositionOffset));
-        PublicKey25519Proposition rewardProposition = PublicKey25519Proposition.parseBytes(Arrays.copyOfRange(bytes, rewardPropositionOffset, vrfPubKeyOffset));
-        VRFPublicKey vrfPublicKey = VRFPublicKey.parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
-
-        return new ForgerBox(proposition, nonce, value, rewardProposition, vrfPublicKey);
+        return new ForgerBox(boxData, nonce);
     }
 }

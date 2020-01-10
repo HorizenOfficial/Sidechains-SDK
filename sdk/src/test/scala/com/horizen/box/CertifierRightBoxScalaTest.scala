@@ -1,6 +1,7 @@
 package com.horizen.box
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, Ed25519}
@@ -9,8 +10,7 @@ import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
-class CertifierRightBoxScalaTest
-  extends JUnitSuite
+class CertifierRightBoxScalaTest extends JUnitSuite with BoxFixture
 {
 
   @Test
@@ -24,7 +24,7 @@ class CertifierRightBoxScalaTest
     val nonce = 12345
     val value = 10
     val minimumWithdrawalEpoch = 5
-    val box = new CertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch)
+    val box = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()

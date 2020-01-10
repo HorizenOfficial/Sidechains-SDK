@@ -1,13 +1,14 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-public class BoxesTest {
+public class BoxesTest extends BoxFixtureClass {
 
     @Test
     public void BoxesTest_DifferentBoxTypesComparisonTest() {
@@ -19,12 +20,12 @@ public class BoxesTest {
         long value = 0;
         long minimumWithdrawalEpoch = 1;
 
-        // Boxes has the same proposition, nonce and value (value if any CertifierRightBox is 0)
-        RegularBox regularBox = new RegularBox(proposition, nonce, value);
-        CertifierRightBox certifierRightBox = new CertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch);
+        // Boxes has the same proposition, nonce and value
+        RegularBox regularBox = getRegularBox(proposition, nonce, value);
+        CertifierRightBox certifierRightBox = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch);
 
-        assertEquals("Boxes expected to have different type ids", false, regularBox.boxTypeId() == certifierRightBox.boxTypeId());
+        assertFalse("Boxes expected to have different type ids", regularBox.boxTypeId() == certifierRightBox.boxTypeId());
         assertEquals("Boxes expected to have the same hash", regularBox.hashCode(), certifierRightBox.hashCode());
-        assertEquals("Boxes expected not to be equal", false, regularBox.equals(certifierRightBox));
+        assertNotEquals("Boxes expected not to be equal", regularBox, certifierRightBox);
     }
 }

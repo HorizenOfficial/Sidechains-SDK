@@ -1,16 +1,18 @@
 package com.horizen.fixtures
 
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import com.horizen.box.data.{CertifierRightBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
 import com.horizen.utils.BytesUtils
+import com.horizen.vrf.VRFPublicKey
 
 import scala.collection.JavaConverters._
 
@@ -21,12 +23,17 @@ trait BoxFixture
 {
 
   def getRegularBox () : RegularBox = {
-    new RegularBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100))
+    new RegularBox(new RegularBoxData(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], Random.nextInt(100)), 1)
   }
 
   def getRegularBox (secret : Secret, nonce: Int, value: Int) : RegularBox = {
-    new RegularBox(secret.publicImage().asInstanceOf[PublicKey25519Proposition], nonce, value)
+    new RegularBox(new RegularBoxData(secret.publicImage().asInstanceOf[PublicKey25519Proposition], value), nonce)
   }
+
+  def getRegularBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): RegularBox = {
+    new RegularBox(new RegularBoxData(proposition, value), nonce)
+  }
+
 
   def getRegularBoxList (count : Int) : JList[RegularBox] = {
     val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
@@ -47,7 +54,11 @@ trait BoxFixture
   }
 
   def getCertifierRightBox () : CertifierRightBox = {
-    new CertifierRightBox(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], 1, Random.nextInt(100), Random.nextInt(100))
+    new CertifierRightBox(new CertifierRightBoxData(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], Random.nextInt(100), Random.nextInt(100)), 1)
+  }
+
+  def getCertifierRightBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long, activeFromWithdrawalEpoch: Long) : CertifierRightBox = {
+    new CertifierRightBox(new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch), nonce)
   }
 
   def getCretifierRightBoxList (count : Int) : JList[CertifierRightBox] = {
@@ -106,13 +117,17 @@ trait BoxFixture
   }
 
   def getWithdrawalRequestBox : WithdrawalRequestBox = {
-    new WithdrawalRequestBox(getMCPublicKeyHashProposition, Random.nextInt(100), Random.nextInt(100))
+    new WithdrawalRequestBox(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100)), Random.nextInt(100))
   }
 
   def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long) : WithdrawalRequestBox = {
-    new WithdrawalRequestBox(key, nonce, value)
+    new WithdrawalRequestBox(new WithdrawalRequestBoxData(key, value), nonce)
   }
 
+  def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
+                   rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
+    new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey), nonce)
+  }
 }
 
 class BoxFixtureClass extends BoxFixture

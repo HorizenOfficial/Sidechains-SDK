@@ -21,7 +21,7 @@ import static org.junit.Assert.*;
 
 import com.horizen.fixtures.*;
 
-public class RegularTransactionTest {
+public class RegularTransactionTest extends BoxFixtureClass {
 
     long fee;
     long timestamp;
@@ -41,9 +41,9 @@ public class RegularTransactionTest {
         PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
 
         from = new ArrayList<>();
-        from.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 60), pk1));
-        from.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 50), pk2));
-        from.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 20), pk3));
+        from.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 60), pk1));
+        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 50), pk2));
+        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 20), pk3));
 
         PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());

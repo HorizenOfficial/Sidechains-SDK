@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
@@ -10,7 +11,7 @@ import java.util.Random;
 
 import static org.junit.Assert.*;
 
-public class ForgerBoxTest {
+public class ForgerBoxTest extends BoxFixtureClass {
 
     @Test
     public void getterTest() {
@@ -26,7 +27,7 @@ public class ForgerBoxTest {
         PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
 
         VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey())._2();
-        ForgerBox box = new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
+        ForgerBox box = getForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
 
         assertEquals("Proposition shall be equal", proposition, box.proposition());
         assertEquals("Nonce shall be equal", nonce, box.nonce());
@@ -38,7 +39,7 @@ public class ForgerBoxTest {
     @Test
     public void equalsAndHashTest() {
         ForgerBox left = ForgerBoxGenerator.generateForgerBox(1);
-        ForgerBox sameAsLeft = new ForgerBox(left.proposition(), left.nonce(), left.value(), left.rewardProposition(), left.vrfPubKey());
+        ForgerBox sameAsLeft = getForgerBox(left.proposition(),  left.nonce(), left.value(), left.rewardProposition(), left.vrfPubKey());
         ForgerBox right = ForgerBoxGenerator.generateForgerBox(2);
 
         assertEquals("Forger boxes with same data shall be equals", left, sameAsLeft);

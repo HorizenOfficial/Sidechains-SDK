@@ -1,6 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -12,7 +13,7 @@ import java.util.ArrayList;
 
 import static org.junit.Assert.*;
 
-public class DefaultTransactionIncompatibilityCheckerTest {
+public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClass {
 
     @Test
     public void DefaultTransactionIncompatibilityCheckerTest_IncompatibilityTest() {
@@ -29,23 +30,23 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
         // Set inputs for 'newTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from1 = new ArrayList<>();
-        from1.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), pk1));
-        from1.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 10), pk2));
+        from1.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
+        from1.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 10), pk2));
 
         // Set inputs for 'currentTx1': compatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from2 = new ArrayList<>();
-        from2.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 10), pk3));
-        from2.add(new Pair<>(new RegularBox(pk4.publicImage(), 1, 10), pk4));
+        from2.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 10), pk3));
+        from2.add(new Pair<>(getRegularBox(pk4.publicImage(), 1, 10), pk4));
 
         // Set inputs for 'currentTx2': compatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from3 = new ArrayList<>();
-        from3.add(new Pair<>(new RegularBox(pk5.publicImage(), 1, 10), pk5));
-        from3.add(new Pair<>(new RegularBox(pk6.publicImage(), 1, 10), pk6));
+        from3.add(new Pair<>(getRegularBox(pk5.publicImage(), 1, 10), pk5));
+        from3.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
 
         // Set inputs for 'currentTx3': incompatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from4 = new ArrayList<>();
-        from4.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), pk1));
-        from4.add(new Pair<>(new RegularBox(pk6.publicImage(), 1, 10), pk6));
+        from4.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
+        from4.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
 
 
         // Set outputs, the same for all transactions
