@@ -14,6 +14,7 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 
 import com.horizen.block.SidechainBlock
+import com.horizen.box.data.{BoxData, RegularBoxData}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, TransactionSerializer}
@@ -343,8 +344,7 @@ class SidechainWalletTest
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
     val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
-    val to : JList[Pair[PublicKey25519Proposition, java.lang.Long]]= new JArrayList()
-    val withdrawalRequests : JList[Pair[MCPublicKeyHashProposition, java.lang.Long]]= new JArrayList()
+    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
 
     Random.nextBytes(blockId)
 
@@ -352,9 +352,9 @@ class SidechainWalletTest
       from.add(new Pair(boxList(i).box.asInstanceOf[RegularBox], secretList(i).asInstanceOf[PrivateKey25519]))
 
     for (i <- 0 to 2)
-      to.add(new Pair(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], 10L))
+      to.add(new RegularBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], 10L))
 
-    val tx : RegularTransaction = RegularTransaction.create(from, to, withdrawalRequests, 10L, 1547798549470L)
+    val tx : RegularTransaction = RegularTransaction.create(from, to, 10L, 1547798549470L)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(Seq(tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]))

@@ -1,15 +1,16 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.RegularBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
-import com.horizen.proposition.MCPublicKeyHashProposition;
-import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -51,35 +52,32 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
 
         // Set outputs, the same for all transactions
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
-        ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add(new Pair<>(pk7.publicImage(), 10L));
+        List<BoxData> to = new ArrayList<>();
+        to.add(new RegularBoxData(pk7.publicImage(), 10L));
 
-        ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
-
-        RegularTransaction newTx = RegularTransaction.create(from1, to, withdrawalRequests, fee, timestamp);
-        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, withdrawalRequests, fee, timestamp);
-        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, withdrawalRequests, fee, timestamp);
-        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, withdrawalRequests, fee, timestamp);
+        RegularTransaction newTx = RegularTransaction.create(from1, to, fee, timestamp);
+        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee, timestamp);
+        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, fee, timestamp);
+        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, fee, timestamp);
 
         DefaultTransactionIncompatibilityChecker checker = new DefaultTransactionIncompatibilityChecker();
 
 
         // Test 1: test against empty list
-        assertEquals("Transaction expected to be compatible to empty list", true,
-                checker.isTransactionCompatible(newTx, new ArrayList<>()));
+        assertTrue("Transaction expected to be compatible to empty list", checker.isTransactionCompatible(newTx, new ArrayList<>()));
 
 
         // Test 2: test against compatible list
         ArrayList<BoxTransaction> compatibleList = new ArrayList<>();
         compatibleList.add(currentTx1);
         compatibleList.add(currentTx2);
-        assertEquals("Transaction expected to be compatible to list", true, checker.isTransactionCompatible(newTx, compatibleList));
+        assertTrue("Transaction expected to be compatible to list", checker.isTransactionCompatible(newTx, compatibleList));
 
 
         // Test 3: test against incompatible list
         ArrayList<BoxTransaction> incompatibleList = new ArrayList<>();
         incompatibleList.add(currentTx1);
         incompatibleList.add(currentTx3);
-        assertEquals("Transaction expected to be incompatible to list", false, checker.isTransactionCompatible(newTx, incompatibleList));
+        assertFalse("Transaction expected to be incompatible to list", checker.isTransactionCompatible(newTx, incompatibleList));
     }
 }

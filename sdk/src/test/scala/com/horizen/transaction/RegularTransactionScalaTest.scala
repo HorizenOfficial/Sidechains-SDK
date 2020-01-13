@@ -1,13 +1,13 @@
 package com.horizen.transaction
 
-import java.lang.{Long => JLong}
-import java.util.{ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.RegularBox
+import com.horizen.box.data.{BoxData, RegularBoxData}
 import com.horizen.fixtures.BoxFixture
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
+import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.assertEquals
@@ -24,8 +24,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val timestamp = 1547798549470L
 
     val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
-    val to = new JArrayList[JPair[PublicKey25519Proposition, JLong]]
-    val withdrawalRequests = new JArrayList[JPair[MCPublicKeyHashProposition, JLong]]
+    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
 
     val creator = PrivateKey25519Creator.getInstance
     val pk1 = creator.generateSecret("test_seed1".getBytes)
@@ -40,11 +39,11 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val pk5 = creator.generateSecret("test_seed5".getBytes)
     val pk6 = creator.generateSecret("test_seed6".getBytes)
 
-    to.add(new JPair[PublicKey25519Proposition, JLong](pk4.publicImage, 10L))
-    to.add(new JPair[PublicKey25519Proposition, JLong](pk5.publicImage, 20L))
-    to.add(new JPair[PublicKey25519Proposition, JLong](pk6.publicImage, 90L))
+    to.add(new RegularBoxData(pk4.publicImage, 10L))
+    to.add(new RegularBoxData(pk5.publicImage, 20L))
+    to.add(new RegularBoxData(pk6.publicImage, 90L))
 
-    val transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp)
+    val transaction = RegularTransaction.create(from, to, fee, timestamp)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()

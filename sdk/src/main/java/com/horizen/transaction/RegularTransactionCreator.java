@@ -2,8 +2,10 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.box.RegularBox;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.RegularBoxData;
 import com.horizen.node.NodeWallet;
-import com.horizen.proposition.MCPublicKeyHashProposition;
+import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
@@ -15,9 +17,10 @@ import java.util.List;
 
 public class RegularTransactionCreator {
 
-    public static RegularTransaction create(NodeWallet wallet, List<Pair<PublicKey25519Proposition, Long>> to,
-                                            List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests,
-                                            PublicKey25519Proposition changeAddress, long fee,
+    public static RegularTransaction create(NodeWallet wallet,
+                                            List<BoxData> to,
+                                            PublicKey25519Proposition changeAddress,
+                                            long fee,
                                             List<byte[]> boxIdsToExclude) {
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
@@ -26,20 +29,14 @@ public class RegularTransactionCreator {
         // 4. construct inputs and outputs lists, timestamp
         // 5. try to do RegularTransaction.create(...)
 
-        if(wallet == null || to == null || withdrawalRequests == null || changeAddress == null || boxIdsToExclude == null)
+        if(wallet == null || to == null || changeAddress == null || boxIdsToExclude == null)
             throw new IllegalArgumentException("Parameters can't be null.");
 
         long toAmount = 0;
-        for(Pair<PublicKey25519Proposition, Long> pair : to) {
-            if (pair.getValue() < 0)
+        for(BoxData boxData : to) {
+            if (boxData.value() < 0)
                 throw new IllegalArgumentException("Output values must be >= 0.");
-            toAmount += pair.getValue();
-        }
-
-        for(Pair<MCPublicKeyHashProposition, Long> pair : withdrawalRequests) {
-            if (pair.getValue() < 0)
-                throw new IllegalArgumentException("WithdrawalRequest values must be >= 0.");
-            toAmount += pair.getValue();
+            toAmount += boxData.value();
         }
 
         if (fee < 0)
@@ -67,13 +64,13 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
-        List<Pair<PublicKey25519Proposition, Long>> sendTo = new ArrayList<>(to);
+        List<BoxData> sendTo = new ArrayList<>(to);
         if(currentAmount > toAmount) {
-            sendTo.add(new Pair<>(changeAddress, currentAmount - toAmount));
+            sendTo.add(new RegularBoxData(changeAddress, currentAmount - toAmount));
         }
 
         // NOTE: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
         long timestamp = System.currentTimeMillis();
-        return RegularTransaction.create(from, sendTo, withdrawalRequests, fee, timestamp);
+        return RegularTransaction.create(from, sendTo, fee, timestamp);
     }
 }

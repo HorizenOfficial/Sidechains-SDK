@@ -7,9 +7,10 @@ import com.horizen.box.{RegularBox, WithdrawalRequestBox}
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.RegularBox
+import com.horizen.box.data.{BoxData, RegularBoxData}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
@@ -54,8 +55,7 @@ class SidechainStateTest
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
-    val withdrawalRequests: JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
+    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
     var totalFrom = 0L
 
 
@@ -71,13 +71,13 @@ class SidechainStateTest
 
     for(s <- getSecretList(outputsCount).asScala) {
     val value = maxTo / outputsCount
-    to.add(new JPair(s.publicImage().asInstanceOf[PublicKey25519Proposition], value))
+    to.add(new RegularBoxData(s.publicImage().asInstanceOf[PublicKey25519Proposition], value))
     totalTo += value
   }
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, withdrawalRequests, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
 
   }
 

@@ -26,6 +26,12 @@ trait SecretFixture {
     pkc.generateSecret(seed)
   }
 
+  def getPrivateKey25519: PrivateKey25519 = {
+    val seed = new Array[Byte](32)
+    Random.nextBytes(seed)
+    pkc.generateSecret(seed)
+  }
+
   def getSecret(seed: Array[Byte]) : Secret = {
     pkc.generateSecret(seed)
   }

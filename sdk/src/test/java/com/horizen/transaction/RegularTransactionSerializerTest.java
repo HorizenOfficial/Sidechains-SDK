@@ -1,10 +1,11 @@
 package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
-import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
-import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.BytesUtils;
@@ -15,6 +16,7 @@ import scala.util.Try;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -25,8 +27,6 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
     public void beforeEachTest() {
         long fee = 10;
         long timestamp = 1547798549470L;
-
-        SecretFixtureClass secretFixture = new SecretFixtureClass();
 
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
@@ -42,17 +42,16 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
         PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
 
-        ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add(new Pair<>(pk4.publicImage(), 10L));
-        to.add(new Pair<>(pk5.publicImage(), 20L));
-        to.add(new Pair<>(pk6.publicImage(), 30L));
+        List<BoxData> to = new ArrayList<>();
+        to.add(new RegularBoxData(pk4.publicImage(), 10L));
+        to.add(new RegularBoxData(pk5.publicImage(), 20L));
+        to.add(new RegularBoxData(pk6.publicImage(), 30L));
 
-        ArrayList<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
-        withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
-        withdrawalRequests.add(new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
+        to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
+        to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
-        transaction = RegularTransaction.create(from, to, withdrawalRequests, fee, timestamp);
+        transaction = RegularTransaction.create(from, to, fee, timestamp);
 
 //      Uncomment and run if you want to update regression data.
         /*
@@ -71,11 +70,11 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         byte[] bytes = serializer.toBytes(transaction);
 
         Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
-        assertEquals("Transaction serialization failed.", true, t.isSuccess());
-        assertEquals("Deserialized transactions expected to be equal", true, transaction.id().equals(t.get().id()));
+        assertTrue("Transaction serialization failed.", t.isSuccess());
+        assertTrue("Deserialized transactions expected to be equal", transaction.id().equals(t.get().id()));
 
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertEquals("Failure during parsing expected", true, failureExpected);
+        assertTrue("Failure during parsing expected", failureExpected);
     }
 
     @Test
@@ -87,13 +86,13 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
-            assertEquals(e.toString(), true, false);
+            fail(e.toString());
             return;
         }
 
         TransactionSerializer serializer = transaction.serializer();
         Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
-        assertEquals("Transaction serialization failed.", true, t.isSuccess());
+        assertTrue("Transaction serialization failed.", t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();
         assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());

@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.lang.Byte
-import java.util.function.Consumer
 import java.{lang, util}
 
 import akka.actor.{ActorRef, ActorRefFactory}
@@ -29,8 +28,10 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.box.data.{BoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.serialization.Views
-
+import java.util.{ArrayList => JArrayList, List => JList}
+import scala.collection.JavaConversions._
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -41,7 +42,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     sendCoinsToAddress ~ sendTransaction ~ withdrawCoins
   }
 
-  private var companion: SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+  private var companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   /**
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
@@ -184,38 +185,34 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           var inSum: Long = 0
           var outSum: Long = 0
 
-          val inputs: IndexedSeq[Pair[RegularBox, PrivateKey25519]] = inputBoxes.map(box => {
+          val inputs: JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
+          inputBoxes.foreach(box => {
             var secret = wallet.secretByPublicKey(box.proposition())
             var privateKey = secret.get().asInstanceOf[PrivateKey25519]
             wallet.secretByPublicKey(box.proposition()).get().asInstanceOf[PrivateKey25519]
-            new Pair(
-              box.asInstanceOf[RegularBox],
-              privateKey)
-          }
-          ).toIndexedSeq
+            inputs.add(new Pair(box.asInstanceOf[RegularBox], privateKey))
+          })
 
-          val outputs: IndexedSeq[Pair[PublicKey25519Proposition, lang.Long]] = body.transactionOutputs.map(element =>
-            new Pair(
-              PublicKey25519PropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value))
-          ).toIndexedSeq
+          val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+          body.transactionOutputs.foreach(element =>
+            outputs.add(new RegularBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value)))
+          )
+          body.withdrawalRequests.foreach(element =>
+            outputs.add(new WithdrawalRequestBoxData(
+              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value)))
+          )
 
-          val withdrawalRequests: IndexedSeq[Pair[MCPublicKeyHashProposition, lang.Long]] = body.withdrawalRequests.map(element =>
-            new Pair(
-              MCPublicKeyHashPropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value))
-          ).toIndexedSeq
-
-          inputs.foreach(pair => inSum += pair.getKey.value())
-          outputs.foreach(pair => outSum += pair.getValue)
-
+          inputs.forEach(pair => inSum += pair.getKey.value())
+          outputs.forEach(boxData => outSum += boxData.value())
           val fee: Long = inSum - outSum
 
           try {
             val regularTransaction = RegularTransaction.create(
-              JavaConverters.seqAsJavaList(inputs),
-              JavaConverters.seqAsJavaList(outputs),
-              JavaConverters.seqAsJavaList(withdrawalRequests),
+              inputs,
+              outputs,
               fee, System.currentTimeMillis())
 
             if (body.format.getOrElse(false))
@@ -267,25 +264,25 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     val memoryPool = sidechainNodeView.getNodeMemoryPool
     val boxIdsToExclude: ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
 
-    memoryPool.getTransactionsSortedByFee(memoryPool.getSize).forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
-      override def accept(t: transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]): Unit = {
-        t.boxIdsToOpen().forEach(new Consumer[ByteArrayWrapper] {
-          override def accept(t: ByteArrayWrapper): Unit = {
-            boxIdsToExclude += t.data
-          }
-        })
-      }
-    })
+    for(transaction <- memoryPool.getTransactionsSortedByFee(memoryPool.getSize).asScala)
+      for(id <- transaction.boxIdsToOpen())
+        boxIdsToExclude += id.data
 
-    var outputs: java.util.List[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
-      new Pair(new PublicKey25519Proposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
-
-    var withdrawalRequests: java.util.List[Pair[MCPublicKeyHashProposition, lang.Long]] = withdrawalRequestList.map(element =>
-      new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
+    val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    outputList.foreach(element =>
+      outputs.add(new RegularBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value)))
+    )
+    withdrawalRequestList.foreach(element =>
+      outputs.add(new WithdrawalRequestBoxData(
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value)))
+    )
 
     var tx: RegularTransaction = null
     try {
-      tx = RegularTransactionCreator.create(wallet, outputs, withdrawalRequests,
+      tx = RegularTransactionCreator.create(wallet, outputs,
         wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
     }
     catch {
