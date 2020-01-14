@@ -52,8 +52,8 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
-        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), getVRFPublicKey()));
-        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), getVRFPublicKey()));
+        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), getVRFPublicKey(111)));
+        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), getVRFPublicKey(221)));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);

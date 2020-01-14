@@ -34,21 +34,21 @@ public class RegularBoxSerializerTest extends BoxFixtureClass
     }
 
     @Test
-    public void RegularBoxSerializerTest_SerializationTest() {
+    public void serializationTest() {
         BoxSerializer<RegularBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
 
         RegularBox box2 = serializer.parseBytesTry(bytes).get();
-        assertEquals("Boxes expected to be equal", true, box.equals(box2));
+        assertEquals("Boxes expected to be equal", box, box2);
 
 
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertEquals("Failure during parsing expected", true, failureExpected);
+        assertTrue("Failure during parsing expected", failureExpected);
 
     }
 
     @Test
-    public void RegularBoxSerializerTest_RegressionTest() {
+    public void regressionTest() {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
@@ -56,16 +56,16 @@ public class RegularBoxSerializerTest extends BoxFixtureClass
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
-            assertEquals(e.toString(), true, false);
+            fail(e.toString());
             return;
         }
 
         BoxSerializer<RegularBox> serializer = box.serializer();
         Try<RegularBox> t = serializer.parseBytesTry(bytes);
-        assertEquals("Box serialization failed.", true, t.isSuccess());
+        assertTrue("Box serialization failed.", t.isSuccess());
 
         RegularBox parsedBox = t.get();
-        assertEquals("Box is different to origin.", true, Arrays.equals(box.id(), parsedBox.id()));
-        assertEquals("Box is different to origin.", true, Arrays.equals(box.bytes(), parsedBox.bytes()));
+        assertTrue("Box is different to origin.", Arrays.equals(box.id(), parsedBox.id()));
+        assertTrue("Box is different to origin.", Arrays.equals(box.bytes(), parsedBox.bytes()));
     }
 }

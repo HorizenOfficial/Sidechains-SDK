@@ -4,8 +4,6 @@ import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import java.util.Arrays;
 
@@ -26,21 +24,21 @@ public class WithdrawalRequestBoxTest extends BoxFixtureClass
     }
 
     @Test
-    public void WithdrawalRequestBox_CreationTest() {
+    public void creationTest() {
         WithdrawalRequestBox box = getWithdrawalRequestBox(proposition, nonce, value);
 
-        assertTrue("WithdrawalRequestBox creation: proposition is wrong", proposition.equals(box.proposition()));
-        assertTrue("WithdrawalRequestBox creation: nonce is wrong", box.nonce() == nonce);
-        assertTrue("WithdrawalRequestBox creation: value is wrong", box.value() == value);
+        assertEquals("WithdrawalRequestBox creation: proposition is wrong", proposition, box.proposition());
+        assertEquals("WithdrawalRequestBox creation: nonce is wrong", box.nonce(), nonce);
+        assertEquals("WithdrawalRequestBox creation: value is wrong", box.value(), value);
     }
 
     @Test
-    public void WithdrawalRequestBox_ComparisonTest() {
+    public void comparisonTest() {
         WithdrawalRequestBox box1 = getWithdrawalRequestBox(proposition, nonce, value);
         WithdrawalRequestBox box2 = getWithdrawalRequestBox(proposition, nonce, value);
 
-        assertTrue("Boxes hash codes expected to be equal", box1.hashCode() == box2.hashCode());
-        assertTrue("Boxes expected to be equal", box1.equals(box2));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box2.hashCode());
+        assertEquals("Boxes expected to be equal", box1, box2);
         assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box2.id()));
 
 
@@ -50,20 +48,20 @@ public class WithdrawalRequestBoxTest extends BoxFixtureClass
         MCPublicKeyHashProposition anotherProposition = new MCPublicKeyHashProposition(mcKey1);
 
         WithdrawalRequestBox box3 = getWithdrawalRequestBox(anotherProposition, nonce, value);
-        assertFalse("Boxes hash codes expected to be different", box1.hashCode() == box3.hashCode());
-        assertFalse("Boxes expected to be different", box1.equals(box3));
+        assertNotEquals("Boxes hash codes expected to be different", box1.hashCode(), box3.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box3);
         assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box3.id()));
 
 
         WithdrawalRequestBox box4 = getWithdrawalRequestBox(proposition, nonce + 1, value);
-        assertTrue("Boxes hash codes expected to be equal", box1.hashCode() == box4.hashCode());
-        assertFalse("Boxes expected to be different", box1.equals(box4));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box4.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box4);
         assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box4.id()));
 
 
         WithdrawalRequestBox box5 = getWithdrawalRequestBox(proposition, nonce, value + 1);
-        assertTrue("Boxes hash codes expected to be equal", box1.hashCode() == box5.hashCode());
-        assertFalse("Boxes expected to be different", box1.equals(box5));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box5.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box5);
         assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box5.id()));
     }
 }

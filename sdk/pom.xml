@@ -244,6 +244,7 @@
 					<include>privatekey25519_hex</include>
 					<include>regulartransaction_hex</include>
 					<include>regularbox_hex</include>
+                    <include>forgerrbox_hex</include>
 					<include>certifierrightbox_hex</include>
 					<include>sidechainblockinfo_hex</include>
 					<include>sidechainsyncinfo_hex</include>

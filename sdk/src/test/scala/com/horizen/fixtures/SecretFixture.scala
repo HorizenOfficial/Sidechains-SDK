@@ -88,6 +88,11 @@ trait SecretFixture {
 
     new VRFPublicKey(keyHashBytes)
   }
+
+  def getVRFPublicKey(seed: Long): VRFPublicKey = {
+    Random.setSeed(seed)
+    getVRFPublicKey
+  }
 }
 
 class SecretFixtureClass extends SecretFixture

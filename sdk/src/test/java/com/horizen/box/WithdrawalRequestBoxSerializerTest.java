@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
 {
@@ -34,12 +35,12 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
     }
 
     @Test
-    public void WithdrawalRequestBoxSerializerTest_SerializationTest() {
+    public void serializationTest() {
         BoxSerializer<WithdrawalRequestBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
 
         WithdrawalRequestBox box2 = serializer.parseBytes(bytes);
-        assertTrue("Boxes expected to be equal", box.equals(box2));
+        assertEquals("Boxes expected to be equal", box, box2);
 
 
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
@@ -48,7 +49,7 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
     }
 
     @Test
-    public void WithdrawalRequestBoxSerializerTest_RegressionTest() {
+    public void regressionTest() {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
@@ -56,7 +57,7 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
-            assertTrue(e.toString(), false);
+            fail(e.toString());
             return;
         }
 

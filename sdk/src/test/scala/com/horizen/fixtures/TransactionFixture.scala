@@ -5,7 +5,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.box.RegularBox
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.box.data.{BoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.utils.{Pair => JPair}
 
@@ -119,9 +119,11 @@ trait TransactionFixture extends BoxFixture {
     txLst
   }
 
-  def getRegularTransaction(inputBoxList: Seq[RegularBox], inputSecretList: Seq[PrivateKey25519],
-                            outputList: Seq[PublicKey25519Proposition],
-                            withdrawalList: Seq[MCPublicKeyHashProposition]) : RegularTransaction = {
+  def getRegularTransaction(inputBoxList: Seq[RegularBox],
+                            inputSecretList: Seq[PrivateKey25519],
+                            regularOutputsPropositions: Seq[PublicKey25519Proposition],
+                            withdrawalOutputsPropositions: Seq[MCPublicKeyHashProposition],
+                            forgerOutputsPropositions: Seq[PublicKey25519Proposition]) : RegularTransaction = {
     val from = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
     var totalFrom = 0L
@@ -134,17 +136,23 @@ trait TransactionFixture extends BoxFixture {
     val minimumFee = 0L
     val maxTo = totalFrom - minimumFee
     var totalTo = 0L
-    val outputSize = outputList.size + withdrawalList.size
+    val outputSize = regularOutputsPropositions.size + withdrawalOutputsPropositions.size + forgerOutputsPropositions.size
 
-    for(proposition <- outputList) {
+    for(proposition <- regularOutputsPropositions) {
       val value = maxTo / outputSize
       to.add(new RegularBoxData(proposition, value))
       totalTo += value
     }
 
-    for(proposition <- withdrawalList) {
+    for(proposition <- withdrawalOutputsPropositions) {
       val value = maxTo / outputSize
       to.add(new WithdrawalRequestBoxData(proposition, value))
+      totalTo += value
+    }
+
+    for(proposition <- forgerOutputsPropositions) {
+      val value = maxTo / outputSize
+      to.add(new ForgerBoxData(proposition, value, proposition, getVRFPublicKey))
       totalTo += value
     }
 

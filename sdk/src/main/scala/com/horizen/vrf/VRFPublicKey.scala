@@ -1,5 +1,7 @@
 package com.horizen.vrf
 
+// TO DO: add json representation to all VRF related classes
+
 class VRFPublicKey(val key: Array[Byte]) {
   require(key.length == VRFPublicKey.length)
   def verify(message: Array[Byte], proof: VRFProof): Boolean = ??? // jni call to Rust impl

@@ -11,7 +11,7 @@ import static org.junit.Assert.*;
 public class BoxesTest extends BoxFixtureClass {
 
     @Test
-    public void BoxesTest_DifferentBoxTypesComparisonTest() {
+    public void differentBoxTypesComparisonTest() {
         byte[] anotherSeed = "testseed".getBytes();
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(keyPair.getValue());
@@ -24,7 +24,7 @@ public class BoxesTest extends BoxFixtureClass {
         RegularBox regularBox = getRegularBox(proposition, nonce, value);
         CertifierRightBox certifierRightBox = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch);
 
-        assertFalse("Boxes expected to have different type ids", regularBox.boxTypeId() == certifierRightBox.boxTypeId());
+        assertNotEquals("Boxes expected to have different type ids", regularBox.boxTypeId(), certifierRightBox.boxTypeId());
         assertEquals("Boxes expected to have the same hash", regularBox.hashCode(), certifierRightBox.hashCode());
         assertNotEquals("Boxes expected not to be equal", regularBox, certifierRightBox);
     }

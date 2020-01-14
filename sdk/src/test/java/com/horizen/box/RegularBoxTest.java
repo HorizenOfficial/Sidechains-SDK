@@ -28,22 +28,22 @@ public class RegularBoxTest extends BoxFixtureClass
     }
 
     @Test
-    public void RegularBox_CreationTest() {
+    public void creationTest() {
         RegularBox box = getRegularBox(proposition, nonce, value);
 
-        assertEquals("RegularBox creation: proposition is wrong", true, box.proposition() == proposition);
-        assertEquals("RegularBox creation: nonce is wrong", true, box.nonce() == nonce);
-        assertEquals("RegularBox creation: value is wrong", true, box.value() == value);
+        assertEquals("RegularBox creation: proposition is wrong", box.proposition(), proposition);
+        assertEquals("RegularBox creation: nonce is wrong", box.nonce(), nonce);
+        assertEquals("RegularBox creation: value is wrong", box.value(), value);
     }
 
     @Test
-    public void RegularBox_ComparisonTest() {
+    public void comparisonTest() {
         RegularBox box1 = getRegularBox(proposition, nonce, value);
         RegularBox box2 = getRegularBox(proposition, nonce, value);
 
-        assertEquals("Boxes hash codes expected to be equal", true, box1.hashCode() == box2.hashCode());
-        assertEquals("Boxes expected to be equal", true, box1.equals(box2));
-        assertEquals("Boxes ids expected to be equal", true, Arrays.equals(box1.id(), box2.id()));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box2.hashCode());
+        assertEquals("Boxes expected to be equal", box1, box2);
+        assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box2.id()));
 
 
         byte[] anotherSeed = "another test seed".getBytes();
@@ -51,20 +51,20 @@ public class RegularBoxTest extends BoxFixtureClass
         PublicKey25519Proposition anotherProposition = new PublicKey25519Proposition(keyPair.getValue());
 
         RegularBox box3 = getRegularBox(anotherProposition, nonce, value);
-        assertEquals("Boxes hash codes expected to be different", false, box1.hashCode() == box3.hashCode());
-        assertEquals("Boxes expected to be different", false, box1.equals(box3));
-        assertEquals("Boxes ids expected to be different", false, Arrays.equals(box1.id(), box3.id()));
+        assertNotEquals("Boxes hash codes expected to be different", box1.hashCode(), box3.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box3);
+        assertNotEquals("Boxes ids expected to be different", Arrays.equals(box1.id(), box3.id()));
 
 
         RegularBox box4 = getRegularBox(proposition, nonce + 1, value);
-        assertEquals("Boxes hash codes expected to be equal", true, box1.hashCode() == box4.hashCode());
-        assertEquals("Boxes expected to be different", false, box1.equals(box4));
-        assertEquals("Boxes ids expected to be different", false, Arrays.equals(box1.id(), box4.id()));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box4.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box4);
+        assertNotEquals("Boxes ids expected to be different", Arrays.equals(box1.id(), box4.id()));
 
 
         RegularBox box5 = getRegularBox(proposition, nonce, value + 1);
-        assertEquals("Boxes hash codes expected to be equal", true, box1.hashCode() == box5.hashCode());
-        assertEquals("Boxes expected to be different", false, box1.equals(box5));
-        assertEquals("Boxes ids expected to be equal", true, Arrays.equals(box1.id(), box5.id()));
+        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box5.hashCode());
+        assertNotEquals("Boxes expected to be different", box1, box5);
+        assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box5.id()));
     }
 }

@@ -176,7 +176,10 @@ class SidechainWalletTest
     val transaction1 = getRegularTransaction(boxList.slice(0, 3).map(_.box.asInstanceOf[RegularBox]),
       secretList.map(_.asInstanceOf[PrivateKey25519]), secretList.slice(4, 5).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
     val transaction2 = getRegularTransaction(boxList.slice(3, 5).map(_.box.asInstanceOf[RegularBox]),
-      secretList.map(_.asInstanceOf[PrivateKey25519]), Seq(secretList(1), secretList(3)).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
+      secretList.map(_.asInstanceOf[PrivateKey25519]),
+      Seq(secretList(1)).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]),
+      Seq(),
+      Seq(secretList(3)).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
 
     // create mocked SidechainBlock
     val blockId = new Array[Byte](32)
