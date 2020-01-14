@@ -3,7 +3,7 @@ package com.horizen
 import language.implicitConversions
 import java.util.{List => JList}
 
-import com.horizen.box.{Box, CertifierRightBox, NoncedBox, RegularBox}
+import com.horizen.box._
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
@@ -28,6 +28,8 @@ trait SidechainTypes {
   implicit def regularBoxToScb(b: RegularBox): SCB = b.asInstanceOf[SCB]
 
   implicit def certifierRightBoxToScb(b: CertifierRightBox): SCB = b.asInstanceOf[SCB]
+
+  implicit def forgerBoxToScb(b: ForgerBox): SCB = b.asInstanceOf[SCB]
 
   implicit def regularBoxJavaListToScbtJavaList(bl: JList[RegularBox]): JList[SCB] = bl.asInstanceOf[JList[SCB]]
 

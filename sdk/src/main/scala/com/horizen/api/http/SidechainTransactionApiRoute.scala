@@ -26,9 +26,11 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{BoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.serialization.Views
 import java.util.{ArrayList => JArrayList, List => JList}
+
+import com.horizen.vrf.VRFPublicKey
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -36,7 +38,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake
   }
 
   private var companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
@@ -191,15 +193,25 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           })
 
           val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
-          body.transactionOutputs.foreach(element =>
+          body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)))
+              new lang.Long(element.value))
+            )
           )
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
               MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)))
+              new lang.Long(element.value))
+            )
+          )
+          body.forgerOutputs.foreach(element =>
+            outputs.add(new ForgerBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value),
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
+              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey)))  // TODO: replace with VRFPublicKeySerializer later
+            )
           )
 
           inputs.forEach(pair => inSum += pair.getKey.value())
@@ -232,13 +244,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   def createRegularTransactionSimplified: Route = (post & path("createRegularTransactionSimplified")) {
     entity(as[ReqCreateRegularTransactionSimplified]) { body =>
       withNodeView { sidechainNodeView =>
-        var outputList = body.transactionOutputs
+        var outputList = body.regularOutputs
         var withdrawalRequestList = body.withdrawalRequests
+        var forgerOutputList = body.forgerOutputs
         var fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          var regularTransaction = createRegularTransactionSimplified_(outputList, withdrawalRequestList, fee, wallet, sidechainNodeView)
+          var regularTransaction = createRegularTransactionSimplified_(outputList, withdrawalRequestList, forgerOutputList, fee, wallet, sidechainNodeView)
 
           if (body.format.getOrElse(false))
             ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
@@ -255,6 +268,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   // Note: method should return Try[RegularTransaction]
   private def createRegularTransactionSimplified_(outputList: List[TransactionOutput],
                                                   withdrawalRequestList: List[TransactionOutput],
+                                                  forgerOutputsList: List[TransactionForgerOutput],
                                                   fee: Long, wallet: NodeWallet,
                                                   sidechainNodeView: SidechainNodeView): RegularTransaction = {
 
@@ -275,6 +289,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       outputs.add(new WithdrawalRequestBoxData(
         MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value)))
+    )
+    forgerOutputsList.foreach(element =>
+      outputs.add(new ForgerBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
+        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey)))  // TODO: replace with VRFPublicKeySerializer later
+      )
     )
 
     var tx: RegularTransaction = null
@@ -301,7 +323,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          val regularTransaction = createRegularTransactionSimplified_(outputList, List(),
+          val regularTransaction = createRegularTransactionSimplified_(outputList, List(), List(),
             fee.getOrElse(0L), wallet, sidechainNodeView)
           validateAndSendTransaction(regularTransaction)
         } catch {
@@ -320,7 +342,26 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          val regularTransaction = createRegularTransactionSimplified_(List(), withdrawalOutputsList,
+          val regularTransaction = createRegularTransactionSimplified_(List(), withdrawalOutputsList, List(),
+            fee.getOrElse(0L), wallet, sidechainNodeView)
+          validateAndSendTransaction(regularTransaction)
+        } catch {
+          case t: Throwable =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+        }
+      }
+    }
+  }
+
+  def makeForgerStake: Route = (post & path("makeForgerStake")) {
+    entity(as[ReqCreateForgerCoins]) { body =>
+      withNodeView { sidechainNodeView =>
+        val forgerOutputsList = body.outputs
+        val fee = body.fee
+        val wallet = sidechainNodeView.getNodeWallet
+
+        try {
+          val regularTransaction = createRegularTransactionSimplified_(List(), List(), forgerOutputsList,
             fee.getOrElse(0L), wallet, sidechainNodeView)
           validateAndSendTransaction(regularTransaction)
         } catch {
@@ -401,20 +442,25 @@ object SidechainTransactionRestScheme {
   private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionForgerOutput(publicKey: String, rewardKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateRegularTransaction(transactionInputs: List[TransactionInput],
-                                                      transactionOutputs: List[TransactionOutput],
+                                                      regularOutputs: List[TransactionOutput],
                                                       withdrawalRequests: List[TransactionOutput],
+                                                      forgerOutputs: List[TransactionForgerOutput],
                                                       format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
-    require(transactionOutputs.nonEmpty, "Empty outputs list")
+    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateRegularTransactionSimplified(transactionOutputs: List[TransactionOutput],
+  private[api] case class ReqCreateRegularTransactionSimplified(regularOutputs: List[TransactionOutput],
                                                                 withdrawalRequests: List[TransactionOutput],
+                                                                forgerOutputs: List[TransactionForgerOutput],
                                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
                                                                 format: Option[Boolean]) {
-    require(transactionOutputs.nonEmpty, "Empty outputs list")
+    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
     require(fee >= 0, "Negative fee. Fee must be >= 0")
   }
 
@@ -427,6 +473,13 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqWithdrawCoins(outputs: List[TransactionOutput],
+                                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateForgerCoins(outputs: List[TransactionForgerOutput],
                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")

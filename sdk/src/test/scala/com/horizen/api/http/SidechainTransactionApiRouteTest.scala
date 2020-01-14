@@ -4,7 +4,7 @@ import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodReject
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.api.http.SidechainTransactionErrorResponse.{ErrorByteTransactionParsing, ErrorNotFoundTransactionInput, GenericTransactionError}
-import com.horizen.api.http.SidechainTransactionRestScheme.{ReqAllTransactions, ReqCreateRegularTransaction, ReqDecodeTransactionBytes, ReqSendCoinsToAddress, TransactionInput, TransactionOutput}
+import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.SerializationUtil
@@ -159,30 +159,31 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       val transactionInput: List[TransactionInput] = allBoxes.asScala.map(box => TransactionInput(BytesUtils.toHexString(box.id()))).toList
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
       val withdrawalRequests: List[TransactionOutput] = List()
+      val forgerOutputs: List[TransactionForgerOutput] = List()
 
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput, transactionOutput, withdrawalRequests, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         //println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       // parameter 'format' = false
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput, transactionOutput, withdrawalRequests, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2, transactionOutput, withdrawalRequests, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         //println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
       }
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head),transactionOutput,withdrawalRequests,None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head), transactionOutput, withdrawalRequests, forgerOutputs, None))) ~> sidechainTransactionApiRoute ~> check {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
