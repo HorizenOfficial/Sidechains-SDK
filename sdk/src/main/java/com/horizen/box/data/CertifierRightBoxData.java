@@ -43,4 +43,12 @@ public final class CertifierRightBoxData extends AbstractBoxData<PublicKey25519P
 
         return new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!super.equals(obj))
+            return false;
+        CertifierRightBoxData boxData = (CertifierRightBoxData) obj;
+        return activeFromWithdrawalEpoch() == boxData.activeFromWithdrawalEpoch();
+    }
 }

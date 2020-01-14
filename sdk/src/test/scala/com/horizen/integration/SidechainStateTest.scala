@@ -57,7 +57,7 @@ class SidechainStateTest
   val boxVersion = getVersion
   val transactionList = new ListBuffer[RegularTransaction]()
 
-  val secretList = new ListBuffer[Secret]()
+  val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
@@ -78,9 +78,9 @@ class SidechainStateTest
     val maxTo = totalFrom - minimumFee
     var totalTo = 0L
 
-    for(s <- getSecretList(outputsCount).asScala) {
+    for(s <- getPrivateKey25519List(outputsCount).asScala) {
       val value = maxTo / outputsCount
-      to.add(new RegularBoxData(s.publicImage().asInstanceOf[PublicKey25519Proposition], value))
+      to.add(new RegularBoxData(s.publicImage(), value))
       totalTo += value
     }
 
@@ -94,7 +94,7 @@ class SidechainStateTest
   def setUp() : Unit = {
 
     secretList.clear()
-    secretList ++= getSecretList(5).asScala
+    secretList ++= getPrivateKey25519List(5).asScala
 
     boxList.clear()
     boxList ++= getRegularBoxList(secretList.asJava).asScala.toList

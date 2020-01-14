@@ -1,12 +1,11 @@
 package com.horizen.transaction;
 
-import com.horizen.box.BoxUnlocker;
-import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
-import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.box.*;
 import com.horizen.box.data.BoxData;
+import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.RegularBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
+import com.horizen.customtypes.CustomBoxData;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -64,7 +63,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
     }
 
     @Test
-    public void RegularTransaction_SuccessCreationTest() {
+    public void regularBoxTest() {
         RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
         assertEquals("Exception during RegularTransaction creation: fee is different!", fee, transaction.fee());
         assertEquals("Exception during RegularTransaction creation: fee is different!", timestamp, transaction.timestamp());
@@ -123,17 +122,25 @@ public class RegularTransactionTest extends BoxFixtureClass {
             exceptionOccurred = true;
         }
         assertTrue("Test2: Exception during RegularTransaction creation expected", exceptionOccurred);
+
+        // Test 3: to contains unsupported box type item - CustomBox
+        exceptionOccurred = false;
+        to.add(new CustomBoxData(getCustomPrivateKey().publicImage(), 5L));
+        try {
+            RegularTransaction.create(from, to, fee, timestamp);
+        }
+        catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Test3: Exception during RegularTransaction creation expected", exceptionOccurred);
     }
 
     @Test
     public void withdrawalRequestTest() {
-
-        SecretFixtureClass secretFixture = new SecretFixtureClass();
-
-        //Test 1 create new transaction with withdrawal requests only
-        List<BoxData> to = new ArrayList<>();
-        to.add(new WithdrawalRequestBoxData(secretFixture.getMCPublicKeyHashProposition(), 70L));
-        to.add(new WithdrawalRequestBoxData(secretFixture.getMCPublicKeyHashProposition(), 50L));
+        // Test 1: Create new transaction with withdrawal requests only
+        to.clear();
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 70L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 50L));
 
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
 
@@ -143,16 +150,17 @@ public class RegularTransactionTest extends BoxFixtureClass {
                 to.size(), tx1NewBoxes.size());
         for(NoncedBox box : tx1NewBoxes ) {
             assertTrue("Box must be WithdrawalRequestBox", box instanceof WithdrawalRequestBox);
-            assertTrue("Transaction must contain new box for specified key and value.",
+            assertTrue("Transaction must contain new box for specified withdrawal requests data.",
                     to.contains(new WithdrawalRequestBoxData((MCPublicKeyHashProposition)box.proposition(), box.value())));
         }
 
-        //Test 2 create new transaction with regular boxes and withdrawal requests
+
+        // Test 2: Create new transaction with regular boxes and withdrawal requests
         to.clear();
-        to.add(new RegularBoxData(secretFixture.getPrivateKey25519().publicImage(), 55L));
-        to.add(new RegularBoxData(secretFixture.getPrivateKey25519().publicImage(), 55L));
-        to.add(new WithdrawalRequestBoxData(secretFixture.getMCPublicKeyHashProposition(), 10L));
-        to.add(new WithdrawalRequestBoxData(secretFixture.getMCPublicKeyHashProposition(), 30L));
+        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 30L));
+        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 50L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 10L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 30L));
 
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
 
@@ -162,13 +170,62 @@ public class RegularTransactionTest extends BoxFixtureClass {
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {
             if (box instanceof RegularBox)
-                assertTrue("Transaction must contain new box for specified key and value.",
+                assertTrue("Transaction must contain new box for specified regular boxes data.",
                         to.contains(new RegularBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
             else if (box instanceof WithdrawalRequestBox)
-                assertTrue("Transaction must contain new box for specified key and value.",
+                assertTrue("Transaction must contain new box for specified withdrawal requests data.",
                         to.contains(new WithdrawalRequestBoxData((MCPublicKeyHashProposition)box.proposition(), box.value())));
             else
-                fail("Box must be instance of RegularBox or WithdrawalRequestBox.");
+                fail("Box must be an instance of RegularBox or WithdrawalRequestBox.");
+        }
+    }
+
+    @Test
+    public void forgerBoxTest() {
+        // Test 1: Create new transaction with forger boxes only
+        to.clear();
+        to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 70L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
+        to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 40L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
+        to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 10L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
+
+        RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
+
+        List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
+        assertTrue("Transaction must be semantically valid.", tx1.semanticValidity());
+        assertEquals("Count of new boxes must be the same as count of forger boxes.",
+                to.size(), tx1NewBoxes.size());
+        for(NoncedBox box : tx1NewBoxes ) {
+            assertTrue("Box must be ForgerBox", box instanceof ForgerBox);
+            ForgerBox forgerBox = (ForgerBox)box;
+            assertTrue("Transaction must contain new box for specified forger boxes data.",
+                    to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.rewardProposition(), forgerBox.vrfPubKey())));
+        }
+
+
+        // Test 2: Create new transaction with regular boxes and forger boxes
+        to.clear();
+        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 30L));
+        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 50L));
+        to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 30L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
+        to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 10L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
+
+        RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
+
+        List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
+        assertTrue("Transaction must be semantically valid.", tx2.semanticValidity());
+        assertEquals("Count of new boxes must be the same as count of regular boxes and forger boxes.",
+                to.size(), tx2NewBoxes.size());
+        for(NoncedBox box : tx2NewBoxes ) {
+            if (box instanceof RegularBox)
+                assertTrue("Transaction must contain new box for specified regular boxes data.",
+                        to.contains(new RegularBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
+            else if (box instanceof ForgerBox) {
+                ForgerBox forgerBox = (ForgerBox)box;
+                assertTrue("Transaction must contain new box for specified forger boxes data.",
+                        to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.rewardProposition(), forgerBox.vrfPubKey())));
+            }
+            else
+                fail("Box must be an instance of RegularBox or ForgerBox.");
         }
     }
 }

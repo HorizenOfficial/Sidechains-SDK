@@ -67,7 +67,7 @@ class SidechainWalletTest
   def setUp() : Unit = {
 
     // Set base Secrets data
-    secretList ++= getSecretList(5).asScala
+    secretList ++= getPrivateKey25519List(5).asScala
     secretVersions += getVersion
 
     for (s <- secretList) {
@@ -112,7 +112,7 @@ class SidechainWalletTest
 
 
     // Set base WalletBox data
-    boxList ++= getWalletBoxList(getRegularBoxList(secretList.asJava)).asScala
+    boxList ++= getWalletBoxList(getRegularBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
     boxVersions += getVersion
 
     for (b <- boxList) {
@@ -348,13 +348,20 @@ class SidechainWalletTest
 
     Random.nextBytes(blockId)
 
-    for (i <- 0 to 2)
+    var inputsAmount: Long = 0L
+    for (i <- 0 to 2) {
       from.add(new Pair(boxList(i).box.asInstanceOf[RegularBox], secretList(i).asInstanceOf[PrivateKey25519]))
+      inputsAmount += boxList(i).box.value()
+    }
 
-    for (i <- 0 to 2)
-      to.add(new RegularBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], 10L))
+    var outputsAmount: Long = 0L
+    for (i <- 0 to 2) {
+      val value = 10L
+      to.add(new RegularBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], value))
+      outputsAmount += value
+    }
 
-    val tx : RegularTransaction = RegularTransaction.create(from, to, 10L, 1547798549470L)
+    val tx : RegularTransaction = RegularTransaction.create(from, to, inputsAmount - outputsAmount, 1547798549470L)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(Seq(tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]))
@@ -386,8 +393,8 @@ class SidechainWalletTest
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
     val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1, mockedWalletTransactionStorage1, mockedApplicationWallet)
-    val secret1 = getSecret("testSeed1".getBytes())
-    val secret2 = getSecret("testSeed2".getBytes())
+    val secret1 = getPrivateKey25519("testSeed1".getBytes())
+    val secret2 = getPrivateKey25519("testSeed2".getBytes())
 
 
     // Test 1: test secret(proposition) and secretByPublicKey(proposition)
@@ -508,7 +515,7 @@ class SidechainWalletTest
     assertTrue("Wallet must not contain specified Secret.", sidechainWallet.secret(secretList(0).publicImage()).isEmpty)
 
     //TEST for - Wallet.addSecret
-    val s = getCustomSecret()
+    val s = getCustomPrivateKey
 
     res = sidechainWallet.addSecret(s)
     assertTrue("Wallet successful Secret add expected, instead exception occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)

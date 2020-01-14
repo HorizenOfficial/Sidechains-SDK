@@ -130,15 +130,26 @@ public final class RegularTransaction
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
             return false;
 
-        for(BoxData output: outputs)
-            if(output.value() <= 0)
-                return false;
+        // check supported new boxes data
+        if(!checkSupportedBoxDataTypes(outputs))
+            return false;
 
+        Long outputsAmount = 0L;
+        for(BoxData output: outputs) {
+            if (output.value() <= 0)
+                return false;
+            outputsAmount += output.value();
+        }
+
+        Long inputsAmount = 0L;
         for(int i = 0; i < inputs.size(); i++) {
             if (!signatures.get(i).isValid(inputs.get(i).proposition(), messageToSign()))
                 return false;
+            inputsAmount += inputs.get(i).value();
         }
-        // to do: we should also verify that amount of inputs equal to the amount of outputs + fee
+
+        if(inputsAmount != outputsAmount + fee)
+            return false;
 
         return true;
     }

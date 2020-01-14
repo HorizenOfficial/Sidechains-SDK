@@ -15,7 +15,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
 
   @Test
   def WalletBox_CreationTest() {
-    val box = getRegularBox(getSecret("seed1".getBytes), 1, 100)
+    val box = getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100)
     val transactionId = bytesToId(new Array[Byte](32))
     val creationTime = 10000
 
@@ -52,7 +52,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
   @Test
   def WalletBox_ComparisonTest(): Unit = {
     val walletBox1 = new WalletBox(
-      getRegularBox(getSecret("seed1".getBytes), 1, 100),
+      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(new Array[Byte](32)),
       10000)
     var walletBox2: WalletBox = null
@@ -60,7 +60,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
 
     // Test 1: compare 2 equals wallet boxes
     walletBox2 = new WalletBox(
-      getRegularBox(getSecret("seed1".getBytes), 1, 100),
+      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(new Array[Byte](32)),
       10000)
     assertEquals("WalletBoxes hash codes expected to be equal", walletBox1.hashCode, walletBox2.hashCode)
@@ -69,7 +69,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
 
     // Test 2: change box
     walletBox2 = new WalletBox(
-      getRegularBox(getSecret("seed2".getBytes), 2, 200),
+      getRegularBox(getPrivateKey25519("seed2".getBytes), 2, 200),
       bytesToId(new Array[Byte](32)),
       10000)
 
@@ -82,7 +82,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
     Random.nextBytes(anotherTransactionIdBytes)
 
     walletBox2 = new WalletBox(
-      getRegularBox(getSecret("seed1".getBytes), 1, 100),
+      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(anotherTransactionIdBytes),
       10000)
 
@@ -92,7 +92,7 @@ class WalletBoxTest extends JUnitSuite with BoxFixture {
 
     // Test 4: change creationTime
     walletBox2 = new WalletBox(
-      getRegularBox(getSecret("seed1".getBytes), 1, 100),
+      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(new Array[Byte](32)),
       20000)
     assertEquals("WalletBoxes hash codes expected to be equal", walletBox1.hashCode, walletBox2.hashCode)

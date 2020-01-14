@@ -64,54 +64,57 @@ trait TransactionFixture extends BoxFixture {
     RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
   }
 
-  def getTransaction () : RegularTransaction = {
+  def getRegularTransaction: RegularTransaction = {
     val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
 
     from.add(new JPair(getRegularBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(getRegularBox(pk2.publicImage(), 1, 20), pk2))
 
-    to.add(new RegularBoxData(pk7.publicImage(), 10L))
+    to.add(new RegularBoxData(pk7.publicImage(), 20L))
 
     RegularTransaction.create(from, to, 10L, 1547798549470L)
   }
 
-  def getCompatibleTransaction () : RegularTransaction = {
-    val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+  def getCompatibleTransaction: RegularTransaction = {
+    val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
 
     from.add(new JPair(getRegularBox(pk3.publicImage(), 1, 10), pk3))
     from.add(new JPair(getRegularBox(pk4.publicImage(), 1, 10), pk4))
 
-    to.add(new RegularBoxData(pk7.publicImage(), 10L))
+    to.add(new RegularBoxData(pk7.publicImage(), 15L))
 
     RegularTransaction.create(from, to, 5L, 1547798549470L)
   }
 
-  def getIncompatibleTransaction () : RegularTransaction = {
-    val from : JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+  def getIncompatibleTransaction: RegularTransaction = {
+    val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
 
     from.add(new JPair(getRegularBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(getRegularBox(pk6.publicImage(), 1, 10), pk6))
 
-    to.add(new RegularBoxData(pk7.publicImage(), 10L))
+    to.add(new RegularBoxData(pk7.publicImage(), 15L))
 
     RegularTransaction.create(from, to, 5L, 1547798549470L)
   }
 
 
-  def getTransactionList () : List[RegularTransaction] = {
-    val txLst = List[RegularTransaction](getTransaction)
-    txLst
+  def getRegularTransactionList(count: Int): JList[RegularTransaction] = {
+    val transactionList : JList[RegularTransaction] = new JArrayList[RegularTransaction]()
+    for (i <- 1 to count) {
+      transactionList.add(getRegularTransaction)
+    }
+    transactionList
   }
 
-  def getCompatibleTransactionList () : List[RegularTransaction] = {
+  def getCompatibleTransactionList: List[RegularTransaction] = {
     val txLst = List[RegularTransaction](getCompatibleTransaction)
     txLst
   }
 
-  def getIncompatibleTransactionList () : List[RegularTransaction] = {
+  def getIncompatibleTransactionList: List[RegularTransaction] = {
     val txLst = List[RegularTransaction](getIncompatibleTransaction)
     txLst
   }

@@ -110,7 +110,7 @@ class SidechainStateStorageTest
 
 
     // Test 2: test failed update, when Storage throws an exception
-    val box = getRegularBox()
+    val box = getRegularBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(boxList(3).id()), Set())
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)

@@ -7,20 +7,18 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.{Box, RegularBox}
+import com.horizen.box.RegularBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proposition._
 import com.horizen.secret.PrivateKey25519
-import com.horizen.{SidechainTypes, transaction}
+import com.horizen.SidechainTypes
 import com.horizen.transaction._
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import com.horizen.utils.Pair
 
-import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import JacksonSupport._
@@ -31,7 +29,6 @@ import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.box.data.{BoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.serialization.Views
 import java.util.{ArrayList => JArrayList, List => JList}
-import scala.collection.JavaConversions._
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -262,11 +259,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
                                                   sidechainNodeView: SidechainNodeView): RegularTransaction = {
 
     val memoryPool = sidechainNodeView.getNodeMemoryPool
-    val boxIdsToExclude: ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
+    val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
 
     for(transaction <- memoryPool.getTransactionsSortedByFee(memoryPool.getSize).asScala)
-      for(id <- transaction.boxIdsToOpen())
-        boxIdsToExclude += id.data
+      for(id <- transaction.boxIdsToOpen().asScala)
+        boxIdsToExclude.add(id.data)
 
     val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
     outputList.foreach(element =>
@@ -283,7 +280,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     var tx: RegularTransaction = null
     try {
       tx = RegularTransactionCreator.create(wallet, outputs,
-        wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
+        wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude)
     }
     catch {
       case e: Exception => log.error(s"RegularTransaction creaion error: ${e.getMessage}")

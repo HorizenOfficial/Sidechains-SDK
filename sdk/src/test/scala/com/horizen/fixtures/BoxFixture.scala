@@ -1,9 +1,9 @@
 package com.horizen.fixtures
 
-import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+import scorex.core.bytesToId
 import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
-import com.horizen.secret.Secret
+import com.horizen.secret.PrivateKey25519
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.box.data.{CertifierRightBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
@@ -11,7 +11,6 @@ import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
-import com.horizen.utils.BytesUtils
 import com.horizen.vrf.VRFPublicKey
 
 import scala.collection.JavaConverters._
@@ -22,12 +21,12 @@ trait BoxFixture
   with SidechainTypes
 {
 
-  def getRegularBox () : RegularBox = {
-    new RegularBox(new RegularBoxData(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], Random.nextInt(100)), 1)
+  def getRegularBox: RegularBox = {
+    new RegularBox(new RegularBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100)), 1)
   }
 
-  def getRegularBox (secret : Secret, nonce: Int, value: Int) : RegularBox = {
-    new RegularBox(new RegularBoxData(secret.publicImage().asInstanceOf[PublicKey25519Proposition], value), nonce)
+  def getRegularBox(privateKey: PrivateKey25519, nonce: Long, value: Long): RegularBox = {
+    new RegularBox(new RegularBoxData(privateKey.publicImage(), value), nonce)
   }
 
   def getRegularBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): RegularBox = {
@@ -35,69 +34,69 @@ trait BoxFixture
   }
 
 
-  def getRegularBoxList (count : Int) : JList[RegularBox] = {
-    val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
+  def getRegularBoxList(count: Int): JList[RegularBox] = {
+    val boxList: JList[RegularBox] = new JArrayList[RegularBox]()
 
     for (i <- 1 to count)
-      boxList.add(getRegularBox())
+      boxList.add(getRegularBox)
 
     boxList
   }
 
-  def getRegularBoxList (secretList : JList[Secret]) : JList[RegularBox] = {
-    val boxList : JList[RegularBox] = new JArrayList[RegularBox]()
+  def getRegularBoxList(secretList: JList[PrivateKey25519]): JList[RegularBox] = {
+    val boxList: JList[RegularBox] = new JArrayList[RegularBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getRegularBox(s, 1, Random.nextInt(100)))
+      boxList.add(getRegularBox(s.publicImage(), 1, Random.nextInt(100)))
 
     boxList
   }
 
-  def getCertifierRightBox () : CertifierRightBox = {
-    new CertifierRightBox(new CertifierRightBoxData(getSecret().publicImage().asInstanceOf[PublicKey25519Proposition], Random.nextInt(100), Random.nextInt(100)), 1)
+  def getCertifierRightBox: CertifierRightBox = {
+    new CertifierRightBox(new CertifierRightBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), Random.nextInt(100)), 1)
   }
 
-  def getCertifierRightBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long, activeFromWithdrawalEpoch: Long) : CertifierRightBox = {
+  def getCertifierRightBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long, activeFromWithdrawalEpoch: Long): CertifierRightBox = {
     new CertifierRightBox(new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch), nonce)
   }
 
-  def getCretifierRightBoxList (count : Int) : JList[CertifierRightBox] = {
-    val boxList : JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
+  def getCretifierRightBoxList(count: Int): JList[CertifierRightBox] = {
+    val boxList: JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
 
     for (i <- 1 to count)
-      boxList.add(getCertifierRightBox())
+      boxList.add(getCertifierRightBox)
 
     boxList
   }
 
-  def getCustomBox () : CustomBox = {
-    new CustomBox(getCustomSecret().publicImage().asInstanceOf[CustomPublicKeyProposition], Random.nextInt(100))
+  def getCustomBox: CustomBox = {
+    new CustomBox(new CustomBoxData(getCustomPrivateKey.publicImage(), Random.nextInt(100)), Random.nextInt(1000))
   }
 
-  def getCustomBoxList (count : Int) : JList[CustomBox] = {
-    val boxList : JList[CustomBox] = new JArrayList[CustomBox]()
+  def getCustomBoxList(count: Int): JList[CustomBox] = {
+    val boxList: JList[CustomBox] = new JArrayList()
 
     for (i <- 1 to count)
-      boxList.add(getCustomBox())
+      boxList.add(getCustomBox)
 
     boxList
   }
 
 
-  def getWalletBox (boxClass : Class[_ <: Box[_ <: Proposition]]) : WalletBox = {
+  def getWalletBox(boxClass: Class[_ <: Box[_ <: Proposition]]): WalletBox = {
     val txId = new Array[Byte](32)
     Random.nextBytes(txId)
 
     boxClass match {
-      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox(), bytesToId(txId), Random.nextInt(100000))
-      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox(), bytesToId(txId), Random.nextInt(100000))
-      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox().asInstanceOf[SidechainTypes#SCB], bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox, bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox, bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[CustomBox] => new WalletBox(getCustomBox.asInstanceOf[SidechainTypes#SCB], bytesToId(txId), Random.nextInt(100000))
       case _ => null
     }
   }
 
-  def getWalletBoxList (boxClass : Class[_ <: Box[_ <: Proposition]], count : Int) : JList[WalletBox] = {
-    val boxList : JList[WalletBox] = new JArrayList[WalletBox]()
+  def getWalletBoxList(boxClass: Class[_ <: Box[_ <: Proposition]], count: Int): JList[WalletBox] = {
+    val boxList: JList[WalletBox] = new JArrayList[WalletBox]()
 
     for (i <- 1 to count)
       boxList.add(getWalletBox(boxClass))
@@ -105,8 +104,8 @@ trait BoxFixture
     boxList
   }
 
-  def getWalletBoxList (boxList : JList[SidechainTypes#SCB]) : JList[WalletBox] = {
-    val wboxList : JList[WalletBox] = new JArrayList[WalletBox]()
+  def getWalletBoxList(boxList: JList[SidechainTypes#SCB]): JList[WalletBox] = {
+    val wboxList: JList[WalletBox] = new JArrayList[WalletBox]()
     val txId = new Array[Byte](32)
     Random.nextBytes(txId)
 
@@ -116,11 +115,11 @@ trait BoxFixture
     wboxList
   }
 
-  def getWithdrawalRequestBox : WithdrawalRequestBox = {
+  def getWithdrawalRequestBox: WithdrawalRequestBox = {
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100)), Random.nextInt(100))
   }
 
-  def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long) : WithdrawalRequestBox = {
+  def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long): WithdrawalRequestBox = {
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(key, value), nonce)
   }
 

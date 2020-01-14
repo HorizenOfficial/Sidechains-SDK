@@ -5,6 +5,7 @@ import com.horizen.customtypes._
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.proposition.MCPublicKeyHashProposition
+import com.horizen.vrf.VRFPublicKey
 
 import scala.util.Random
 
@@ -20,25 +21,19 @@ trait SecretFixture {
 
   val pk7 = pkc.generateSecret("seed7".getBytes())
 
-  def getSecret() : Secret = {
-    val seed = new Array[Byte](32)
-    Random.nextBytes(seed)
-    pkc.generateSecret(seed)
-  }
-
   def getPrivateKey25519: PrivateKey25519 = {
     val seed = new Array[Byte](32)
     Random.nextBytes(seed)
     pkc.generateSecret(seed)
   }
 
-  def getSecret(seed: Array[Byte]) : Secret = {
+  def getPrivateKey25519(seed: Array[Byte]): PrivateKey25519 = {
     pkc.generateSecret(seed)
   }
 
-  def getSecretList(count : Int) : JList[Secret] = {
+  def getPrivateKey25519List(count: Int): JList[PrivateKey25519] = {
     val seed = new Array[Byte](32)
-    val keysList : JList[Secret] = new JArrayList[Secret]()
+    val keysList : JList[PrivateKey25519] = new JArrayList()
     for (i <- 1 to count) {
       Random.nextBytes(seed)
       keysList.add(pkc.generateSecret(seed))
@@ -46,7 +41,7 @@ trait SecretFixture {
     keysList
   }
 
-  def getCustomSecret() : Secret = {
+  def getCustomPrivateKey: CustomPrivateKey = {
     val privateBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
     val publicBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
 
@@ -56,10 +51,10 @@ trait SecretFixture {
     new CustomPrivateKey(privateBytes, publicBytes)
   }
 
-  def getCustomSecretList(count : Int) : JList[Secret] = {
+  def getCustomPrivateKeyList(count: Int): JList[CustomPrivateKey] = {
     val privateBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
     val publicBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
-    val keysList : JList[Secret] = new JArrayList[Secret]()
+    val keysList: JList[CustomPrivateKey] = new JArrayList()
 
     for (i <- 1 to count) {
       Random.nextBytes(privateBytes)
@@ -71,14 +66,14 @@ trait SecretFixture {
     keysList
   }
 
-  def getMCPublicKeyHashProposition : MCPublicKeyHashProposition = {
+  def getMCPublicKeyHashProposition: MCPublicKeyHashProposition = {
     val keyHashBytes = new Array[Byte](MCPublicKeyHashProposition.KEY_LENGTH)
     Random.nextBytes(keyHashBytes)
 
     new MCPublicKeyHashProposition(keyHashBytes)
   }
 
-  def getMCPublicKeyHashPropositionList(count: Int) : JList[MCPublicKeyHashProposition] = {
+  def getMCPublicKeyHashPropositionList(count: Int): JList[MCPublicKeyHashProposition] = {
     val keyList = new JArrayList[MCPublicKeyHashProposition]()
 
     for (i <- 1 to count)
@@ -87,6 +82,12 @@ trait SecretFixture {
     keyList
   }
 
+  def getVRFPublicKey: VRFPublicKey = {
+    val keyHashBytes = new Array[Byte](VRFPublicKey.length)
+    Random.nextBytes(keyHashBytes)
+
+    new VRFPublicKey(keyHashBytes)
+  }
 }
 
 class SecretFixtureClass extends SecretFixture

@@ -30,8 +30,8 @@ class SidechainSecretStorageTest
 
   @Test def testCoreTypes(): Unit = {
     val sidechainSecretStorage = new SidechainSecretStorage(new IODBStoreAdapter(getStore()), sidechainSecretsCompanion)
-    val secret = getSecret()
-    val secretList = getSecretList(3).asScala.toList
+    val secret = getPrivateKey25519
+    val secretList = getPrivateKey25519List(3).asScala.toList
     var res: Try[SidechainSecretStorage] = null
 
 
@@ -99,7 +99,7 @@ class SidechainSecretStorageTest
   def testCustomTypes() : Unit = {
     val (store1, dir) = getStoreWithPath()
     val ss1 = new SidechainSecretStorage(new IODBStoreAdapter(store1), sidechainSecretsCompanion)
-    val customSecret = getCustomSecret()
+    val customSecret = getCustomPrivateKey
     var exceptionThrown = false
     var ss2 : SidechainSecretStorage = null
     var customSecret2 : Option[Secret] = null

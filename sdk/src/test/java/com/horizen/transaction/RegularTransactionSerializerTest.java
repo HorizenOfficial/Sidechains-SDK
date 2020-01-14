@@ -2,6 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.RegularBox;
 import com.horizen.box.data.BoxData;
+import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.RegularBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
@@ -35,12 +36,13 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
 
         ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
         from.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 60), pk1));
-        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 50), pk2));
-        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 20), pk3));
+        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 2, 50), pk2));
+        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 3, 90), pk3));
 
         PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
         PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
+        PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
 
         List<BoxData> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
@@ -49,6 +51,9 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
 
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
+
+        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), getVRFPublicKey()));
+        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), getVRFPublicKey()));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
@@ -65,20 +70,23 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
     }
 
     @Test
-    public void RegularTransactionSerializerTest_SerializationTest() {
+    public void serializationTest() {
         TransactionSerializer serializer = transaction.serializer();
         byte[] bytes = serializer.toBytes(transaction);
 
+        // Test 1: Correct bytes deserialization
         Try<RegularTransaction> t = serializer.parseBytesTry(bytes);
         assertTrue("Transaction serialization failed.", t.isSuccess());
-        assertTrue("Deserialized transactions expected to be equal", transaction.id().equals(t.get().id()));
+        assertEquals("Deserialized transactions expected to be equal", transaction.id(), t.get().id());
 
+
+        // Test 2: try to parse broken bytes
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 
     @Test
-    public void RegularTransactionSerializerTest_RegressionTest() {
+    public void regressionTest() {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();

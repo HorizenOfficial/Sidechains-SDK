@@ -157,7 +157,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))
 
-    to.add(new RegularBoxData(secret3.publicImage(), 10L))
+    to.add(new RegularBoxData(secret3.publicImage(), box_1.value() + box_2.value() - fee))
 
     RegularTransaction.create(from, to, fee, 1547798549470L)
   }
