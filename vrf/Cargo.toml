@@ -1,0 +1,9 @@
+[package]
+name = "vrflib"
+version = "0.1.0"
+
+[dependencies]
+jni = "0.5.3"
+
+[lib]
+crate_type = ["cdylib"]

@@ -1,0 +1,790 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.horizen:Sidechains-SDK:jar:0.1-SNAPSHOT
+[WARNING] 'build.plugins.plugin.version' for org.scala-tools:maven-scala-plugin is missing. @ line 182, column 12
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Sidechains-SDK                                                     [jar]
+[INFO] Sidechains-SDK-simpleapp                                           [jar]
+[INFO] Sidechains-SDK-ScBootstrappingTools                                [jar]
+[INFO] Sidechains                                                         [pom]
+[INFO] 
+[INFO] ---------------------< com.horizen:Sidechains-SDK >---------------------
+[INFO] Building Sidechains-SDK 0.1-SNAPSHOT                               [1/4]
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The POM for org.slf4j:slf4j-api:jar:1.8.0-beta1-SNAPSHOT is missing, no dependency information available
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK ---
+[INFO] Deleting D:\Repositories\Sidechains-SDK\sdk\target
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:compile (compile-scala-sources) @ Sidechains-SDK ---
+[INFO] Checking for multiple versions of scala
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  org.scorexfoundation:scorex-core_2.12:2.0.0-RC4 requires scala version: 2.12.3
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\main\java:-1: info: compiling
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\main\scala:-1: info: compiling
+[INFO] Compiling 180 source files to D:\Repositories\Sidechains-SDK\sdk\target\classes at 1579005345099
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\SidechainNodeViewHolder.scala:69: warning: non-variable type argument com.horizen.secret.Secret in type pattern com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[com.horizen.secret.Secret] is unchecked since it is eliminated by erasure
+[INFO]     case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
+[INFO]                                                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:117: warning: This catches all Throwables. If this is really intended, use `case ex : Throwable` to clear this warning.
+[ERROR]             case ex => log.error("Event parsing was failed by handler: " + ex.getMessage)
+[INFO]                  ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:135: warning: This catches all Throwables. If this is really intended, use `case ex : Throwable` to clear this warning.
+[INFO]           case ex => promise.failure(ex)
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:61: warning: match may not be exhaustive.
+[INFO] It would fail on the following input: None
+[INFO]       eventHandlersPool.get(eventType) match {
+[INFO]                            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:149: warning: match may not be exhaustive.
+[INFO] It would fail on the following input: None
+[INFO]     requestsPool.remove(requestId) match {
+[INFO]                        ^
+[WARNING] warning: there was one deprecation warning
+[WARNING] warning: there were three deprecation warnings (since 2.11.0)
+[WARNING] warning: there were four deprecation warnings in total; re-run with -deprecation for details
+[WARNING] warning: there were 6 feature warnings; re-run with -feature for details
+[WARNING] 9 warnings found
+[INFO] prepare-compile in 0 s
+[INFO] compile in 17 s
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ Sidechains-SDK ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 86 source files to D:\Repositories\Sidechains-SDK\sdk\target\classes
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/main/java/com/horizen/proposition/Proposition.java: Some input files use unchecked or unsafe operations.
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/main/java/com/horizen/proposition/Proposition.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:testCompile (compile-scala-tests) @ Sidechains-SDK ---
+[INFO] Checking for multiple versions of scala
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  org.scorexfoundation:scorex-core_2.12:2.0.0-RC4 requires scala version: 2.12.3
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\test\java:-1: info: compiling
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\test\scala:-1: info: compiling
+[INFO] Compiling 112 source files to D:\Repositories\Sidechains-SDK\sdk\target\test-classes at 1579005364706
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:41: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block id doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:48: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block parentId doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:55: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block timestamp doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:63: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction id doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:71: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction fee doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:79: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction timestamp doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:88: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]         case _ => fail("Transaction unlockers in json have invalid format.")
+[INFO]              ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:91: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction unlockers do not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:100: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]         case _ => fail("Transaction newBoxes in json have invalid format.")
+[INFO]              ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:103: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction new boxes do not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:83: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:86: warning: unreachable code due to variable pattern 'result' on line 83
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:86: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:104: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:107: warning: unreachable code due to variable pattern 'result' on line 104
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:107: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:149: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:152: warning: unreachable code due to variable pattern 'result' on line 149
+[INFO]           case _ => fail("Serialization failed for object MainchainBlockResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:152: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainBlockResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:173: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]       case result =>
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:186: warning: unreachable code due to variable pattern 'result' on line 173
+[INFO]       case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:186: warning: unreachable code
+[INFO]       case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainApiRouteTest.scala:201: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[ERROR]       case error =>
+[INFO]            ^
+[ERROR] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainApiRouteTest.scala:207: warning: unreachable code due to variable pattern 'error' on line 201
+[ERROR]       case _ => fail("Serialization failed for object SidechainApiErrorResponseScheme")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainApiRouteTest.scala:207: warning: unreachable code
+[ERROR]       case _ => fail("Serialization failed for object SidechainApiErrorResponseScheme")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:96: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:100: warning: unreachable code due to variable pattern 'result' on line 96
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:100: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:149: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:159: warning: unreachable code due to variable pattern 'result' on line 149
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:159: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:192: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:195: warning: unreachable code due to variable pattern 'result' on line 192
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:195: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:212: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:217: warning: unreachable code due to variable pattern 'result' on line 212
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:217: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:233: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:237: warning: unreachable code due to variable pattern 'result' on line 233
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:237: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:254: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:257: warning: unreachable code due to variable pattern 'result' on line 254
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:257: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:311: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:325: warning: unreachable code due to variable pattern 'result' on line 311
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:325: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:42: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:66: warning: unreachable code due to variable pattern 'result' on line 42
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:66: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:83: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:100: warning: unreachable code due to variable pattern 'result' on line 83
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:100: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:118: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:122: warning: unreachable code due to variable pattern 'result' on line 118
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:122: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:138: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:144: warning: unreachable code due to variable pattern 'result' on line 138
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:144: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:105: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:109: warning: unreachable code due to variable pattern 'result' on line 105
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:109: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:118: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:122: warning: unreachable code due to variable pattern 'result' on line 118
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:122: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:60: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node =>
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:63: warning: unreachable code due to variable pattern 'node' on line 60
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:63: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:57: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:65: warning: unreachable code due to variable pattern 'result' on line 57
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:65: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:83: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node =>
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:86: warning: unreachable code due to variable pattern 'node' on line 83
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:86: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:80: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:88: warning: unreachable code due to variable pattern 'result' on line 80
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:88: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:107: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node => node.asInt() shouldBe 5500
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:108: warning: unreachable code due to variable pattern 'node' on line 107
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:108: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:104: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:110: warning: unreachable code due to variable pattern 'result' on line 104
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:110: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:131: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node => assertTrue(node.isTextual)
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:132: warning: unreachable code due to variable pattern 'node' on line 131
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:132: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:127: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:134: warning: unreachable code due to variable pattern 'result' on line 127
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:134: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:154: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node =>
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:157: warning: unreachable code due to variable pattern 'node' on line 154
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:157: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:151: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:159: warning: unreachable code due to variable pattern 'result' on line 151
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:159: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] warning: there were 6 deprecation warnings (since 2.11.0); re-run with -deprecation for details
+[WARNING] warning: there were 30 feature warnings; re-run with -feature for details
+[WARNING] 96 warnings found
+[INFO] prepare-compile in 0 s
+[INFO] compile in 18 s
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ Sidechains-SDK ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 25 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:testCompile (default-testCompile) @ Sidechains-SDK ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 43 source files to D:\Repositories\Sidechains-SDK\sdk\target\test-classes
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/test/java/com/horizen/customtypes/SemanticallyInvalidTransaction.java: Some input files use unchecked or unsafe operations.
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/test/java/com/horizen/customtypes/SemanticallyInvalidTransaction.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ Sidechains-SDK ---
+[INFO] Surefire report directory: D:\Repositories\Sidechains-SDK\sdk\target\surefire-reports
+
+-------------------------------------------------------
+ T E S T S
+-------------------------------------------------------
+Running com.horizen.actors.SidechainNodeViewHolderTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.634 sec
+Running com.horizen.api.http.MainchainBlockApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.596 sec
+Running com.horizen.api.http.SidechainBlockApiRouteTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.383 sec
+Running com.horizen.api.http.SidechainNodeApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.472 sec
+Running com.horizen.api.http.SidechainTransactionApiRouteTest
+HttpResponse(200 OK,List(),HttpEntity.Strict(application/json,{
+  "result" : {
+    "transaction" : {
+      "modifierTypeId" : 2,
+      "id" : "7b4c7de0986c29b821a38d6795312c121b7ee7092a38f8ccd368ee31aa462c23",
+      "fee" : 30,
+      "timestamp" : 1579005395348,
+      "newBoxes" : [ {
+        "typeId" : 1,
+        "value" : 30,
+        "id" : "75b27dff917620e88adf20b9d62cfe150e17de5d56d7c8e63a4dff1d79147afa",
+        "proposition" : {
+          "publicKey" : "d5b8ea24a2646dc84a7b8dd50fbf97e2c4f10d12ab48fb6f514cfb380a321959"
+        },
+        "nonce" : -1216465270513598540
+      } ],
+      "unlockers" : [ {
+        "closedBoxId" : "ada54fe3f3ff97803b4bdcb24e70386c912754fdc78342f1a81fe5e686040dc3",
+        "boxKey" : {
+          "signature" : "bbbbd608b5fd6e02fcc63032c39e7d454f00f165f55a8a38263786f3b8902e2dd1c3382ed37278ac61f70955f475874d09aa936581a25c5bf370b728db1cf00e"
+        }
+      }, {
+        "closedBoxId" : "5498aa301cebc96c0c7449826a3d3fe44ee9e96f2f29d6184d907ce1b57230f3",
+        "boxKey" : {
+          "signature" : "0b6d813d533e7e04026e63d2aebaff115405235c1de3544e7265a7fdefd93eae0a13e4649325c83b408d90819e635eca91b0f05f6ba780d83ae8e116a9330a0a"
+        }
+      }, {
+        "closedBoxId" : "f50466fb9f7cecc7508641c5ffe276a9fe41e6232c45b8efe415019d8960a2f3",
+        "boxKey" : {
+          "signature" : "edbb7377e672559f4eeca4be1eee8ba359bccfe039a54ed9d20d59a8d77fa7ab762be4fa4855437cad92542bd747de0af452736fe5fbb431da9114df0aea540a"
+        }
+      } ]
+    }
+  }
+}),HttpProtocol(HTTP/1.1))
+HttpResponse(200 OK,List(),HttpEntity.Strict(application/json,{
+  "error" : {
+    "code" : "0204",
+    "description" : "GenericTransactionError",
+    "detail" : "Created transaction is semantically invalid."
+  }
+}),HttpProtocol(HTTP/1.1))
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.303 sec
+Running com.horizen.api.http.SidechainWalletApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.218 sec
+Running com.horizen.block.EquihashTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 sec
+Running com.horizen.block.MainchainBlockReferenceTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.078 sec
+Running com.horizen.block.MainchainHeaderTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 sec
+Running com.horizen.block.MainchainTransactionTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.block.MainchainTxCertifierLockCrosschainOutputTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.block.MainchainTxForwardTransferCrosschainOutputTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.block.ProofOfWorkVerifierTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.084 sec
+Running com.horizen.block.SidechainBlockTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.BoxesTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.CertifierRightBoxScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.box.CertifierRightBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.CertifierRightBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.ForgerBoxTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.RegularBoxScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.RegularBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.RegularBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.WithdrawalRequestBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.box.WithdrawalRequestBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.chain.ActiveChainTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.chain.ElementsChainTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.chain.SidechainBlockInfoTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.companion.SidechainBoxesCompanionTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.companion.SidechainSecretsCompanionTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.integration.SidechainHistoryTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.283 sec
+Running com.horizen.integration.SidechainStateTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 sec
+Running com.horizen.integration.storage.SidechainHistoryStorageTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 sec
+Running com.horizen.integration.storage.SidechainSecretStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 sec
+Running com.horizen.integration.storage.SidechainStateStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.02 sec
+Running com.horizen.integration.storage.SidechainWalletBoxStorageTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.042 sec
+Running com.horizen.node.util.MainchainBlockReferenceInfoTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proof.Signature25519ScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proof.Signature25519SerializerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proof.Signature25519Test
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.MCPublicKeyHashPropositionTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.MCPublicKeyPropositionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.proposition.PublicKey25519PropositionScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.PublicKey25519PropositionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.proposition.PublicKey25519PropositionTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.secret.PrivateKey25519SerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.secret.PrivateKey25519Test
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.SidechainMemoryPoolTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.SidechainStateTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec
+Running com.horizen.SidechainSyncInfoTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec
+Running com.horizen.SidechainWalletTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.246 sec
+Running com.horizen.storage.SidechainHistoryStorageTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 sec
+Running com.horizen.storage.SidechainSecretStorageTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.storage.SidechainStateStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.storage.SidechainWalletBoxStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.storage.StorageTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 sec
+Running com.horizen.transaction.DefaultTransactionIncompatibilityCheckerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.transaction.RegularTransactionCreatorTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.transaction.RegularTransactionScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.transaction.RegularTransactionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.transaction.RegularTransactionTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.ByteArrayWrapperTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.BytesUtilsTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.Ed25519Test
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.ListSerializerTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.utils.MerklePathTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.MerkleTreeTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.UtilsTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.WithdrawalEpochUtilsTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.validation.WithdrawalEpochValidatorTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.02 sec
+Running com.horizen.vrf.VRFProofTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.WalletBoxSerializerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.WalletBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.websocket.MainchainNodeChannelImplTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.163 sec
+Running com.horizen.websocket.WebSocketChannelImplTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.516 sec
+Running com.horizen.websocket.WebSocketCommunicationClientTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.036 sec
+
+Results :
+
+Tests run: 234, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ Sidechains-SDK ---
+[INFO] Building jar: D:\Repositories\Sidechains-SDK\sdk\target\Sidechains-SDK-0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- maven-install-plugin:2.5.2:install-file (install-jar-lib) @ Sidechains-SDK ---
+[INFO] Installing D:\Repositories\Sidechains-SDK\sdk\target\Sidechains-SDK-0.1-SNAPSHOT.jar to C:\Users\Sergii.Makukha\.m2\repository\com\horizen\Sidechains-SDK\0.1-SNAPSHOT\Sidechains-SDK-0.1-SNAPSHOT.jar
+[INFO] Installing D:\Repositories\Sidechains-SDK\sdk\pom.xml to C:\Users\Sergii.Makukha\.m2\repository\com\horizen\Sidechains-SDK\0.1-SNAPSHOT\Sidechains-SDK-0.1-SNAPSHOT.pom
+[INFO] 
+[INFO] ----------------< com.horizen:Sidechains-SDK-simpleapp >----------------
+[INFO] Building Sidechains-SDK-simpleapp 0.1-SNAPSHOT                     [2/4]
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK-simpleapp ---
+[INFO] Deleting D:\Repositories\Sidechains-SDK\examples\simpleapp\target
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:resources (copy-resources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:resources (default-resources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK-simpleapp ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 4 source files to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\classes
+[INFO] 
+[INFO] --- maven-resources-plugin:3.1.0:testResources (default-testResources) @ Sidechains-SDK-simpleapp ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory D:\Repositories\Sidechains-SDK\examples\simpleapp\src\test\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:testCompile (default-testCompile) @ Sidechains-SDK-simpleapp ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ Sidechains-SDK-simpleapp ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ Sidechains-SDK-simpleapp ---
+[INFO] Building jar: D:\Repositories\Sidechains-SDK\examples\simpleapp\target\Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- maven-dependency-plugin:3.1.1:copy-dependencies (copy-dependencies) @ Sidechains-SDK-simpleapp ---
+[INFO] Copying scorex-util_2.12-0.1.3.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scorex-util_2.12-0.1.3.jar
+[INFO] Copying shapeless_2.12-2.3.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\shapeless_2.12-2.3.2.jar
+[INFO] Copying aopalliance-1.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\aopalliance-1.0.jar
+[INFO] Copying scala-java8-compat_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-java8-compat_2.12-0.8.0.jar
+[INFO] Copying ssl-config-core_2.12-0.3.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\ssl-config-core_2.12-0.3.6.jar
+[INFO] Copying paranamer-2.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\paranamer-2.8.jar
+[INFO] Copying bcprov-jdk15on-1.64.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\bcprov-jdk15on-1.64.jar
+[INFO] Copying akka-http_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http_2.12-10.1.6.jar
+[INFO] Copying machinist_2.12-0.6.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\machinist_2.12-0.6.2.jar
+[INFO] Copying jackson-core-2.9.9.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jackson-core-2.9.9.jar
+[INFO] Copying akka-protobuf_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-protobuf_2.12-2.5.19.jar
+[INFO] Copying akka-stream_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-stream_2.12-2.5.19.jar
+[INFO] Copying circe-jawn_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-jawn_2.12-0.8.0.jar
+[INFO] Copying scalacheck_2.12-1.13.5.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scalacheck_2.12-1.13.5.jar
+[INFO] Copying test-interface-1.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\test-interface-1.0.jar
+[INFO] Copying tyrus-standalone-client-1.15.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\tyrus-standalone-client-1.15.jar
+[INFO] Copying reactive-streams-1.0.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\reactive-streams-1.0.2.jar
+[INFO] Copying circe-core_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-core_2.12-0.9.0.jar
+[INFO] Copying cats-kernel_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-kernel_2.12-1.0.1.jar
+[INFO] Copying lz4-1.3.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\lz4-1.3.0.jar
+[INFO] Copying iodb_2.12-0.3.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\iodb_2.12-0.3.2.jar
+[INFO] Copying commons-net-3.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\commons-net-3.6.jar
+[INFO] Copying akka-http-core_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http-core_2.12-10.1.6.jar
+[INFO] Copying guava-21.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\guava-21.0.jar
+[INFO] Copying weupnp-0.1.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\weupnp-0.1.4.jar
+[INFO] Copying akka-parsing_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-parsing_2.12-10.1.6.jar
+[INFO] Copying jackson-databind-2.9.9.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jackson-databind-2.9.9.jar
+[INFO] Copying jackson-module-scala_2.12-2.9.9.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jackson-module-scala_2.12-2.9.9.jar
+[INFO] Copying akka-http-circe_2.12-1.19.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-http-circe_2.12-1.19.0.jar
+[INFO] Copying supertagged_2.12-1.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\supertagged_2.12-1.4.jar
+[INFO] Copying guice-4.2.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\guice-4.2.2.jar
+[INFO] Copying circe-generic_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-generic_2.12-0.8.0.jar
+[INFO] Copying cats-core_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-core_2.12-1.0.1.jar
+[INFO] Copying cats-macros_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\cats-macros_2.12-1.0.1.jar
+[INFO] Copying leveldb-api-0.12.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\leveldb-api-0.12.jar
+[INFO] Copying jackson-annotations-2.9.9.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jackson-annotations-2.9.9.jar
+[INFO] Copying config-1.3.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\config-1.3.1.jar
+[INFO] Copying scrypto_2.12-2.1.6.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scrypto_2.12-2.1.6.jar
+[INFO] Copying scala-logging_2.12-3.9.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-logging_2.12-3.9.2.jar
+[INFO] Copying circe-numbers_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-numbers_2.12-0.9.0.jar
+[INFO] Copying scala-library-2.12.8.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-library-2.12.8.jar
+[INFO] Copying Sidechains-SDK-0.1-SNAPSHOT.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\Sidechains-SDK-0.1-SNAPSHOT.jar
+[INFO] Copying leveldbjni-all-1.18.3.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\leveldbjni-all-1.18.3.jar
+[INFO] Copying javax.inject-1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\javax.inject-1.jar
+[INFO] Copying scala-parser-combinators_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-parser-combinators_2.12-1.1.1.jar
+[INFO] Copying macro-compat_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\macro-compat_2.12-1.1.1.jar
+[INFO] Copying slf4j-simple-1.7.25.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\slf4j-simple-1.7.25.jar
+[INFO] Copying scala-reflect-2.12.7.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scala-reflect-2.12.7.jar
+[INFO] Copying circe-parser_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\circe-parser_2.12-0.8.0.jar
+[INFO] Copying ficus_2.12-1.4.2.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\ficus_2.12-1.4.2.jar
+[INFO] Copying logback-classic-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\logback-classic-1.3.0-alpha4.jar
+[INFO] Copying slf4j-api-1.7.25.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\slf4j-api-1.7.25.jar
+[INFO] Copying jackson-module-paranamer-2.9.9.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jackson-module-paranamer-2.9.9.jar
+[INFO] Copying logback-core-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\logback-core-1.3.0-alpha4.jar
+[INFO] Copying leveldb-0.12.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\leveldb-0.12.jar
+[INFO] Copying scorex-core_2.12-2.0.0-RC4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\scorex-core_2.12-2.0.0-RC4.jar
+[INFO] Copying akka-actor_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\akka-actor_2.12-2.5.19.jar
+[INFO] Copying jawn-parser_2.12-0.10.4.jar to D:\Repositories\Sidechains-SDK\examples\simpleapp\target\lib\jawn-parser_2.12-0.10.4.jar
+[INFO] 
+[INFO] ----------< com.horizen:Sidechains-SDK-ScBootstrappingTools >-----------
+[INFO] Building Sidechains-SDK-ScBootstrappingTools 0.1-SNAPSHOT          [3/4]
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Deleting D:\Repositories\Sidechains-SDK\tools\sctool\target
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory D:\Repositories\Sidechains-SDK\tools\sctool\src\main\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 5 source files to D:\Repositories\Sidechains-SDK\tools\sctool\target\classes
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory D:\Repositories\Sidechains-SDK\tools\sctool\src\test\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:testCompile (default-testCompile) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Building jar: D:\Repositories\Sidechains-SDK\tools\sctool\target\Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- maven-dependency-plugin:3.1.1:copy-dependencies (copy-dependencies) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Copying scorex-util_2.12-0.1.3.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scorex-util_2.12-0.1.3.jar
+[INFO] Copying shapeless_2.12-2.3.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\shapeless_2.12-2.3.2.jar
+[INFO] Copying aopalliance-1.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\aopalliance-1.0.jar
+[INFO] Copying scala-java8-compat_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scala-java8-compat_2.12-0.8.0.jar
+[INFO] Copying ssl-config-core_2.12-0.3.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\ssl-config-core_2.12-0.3.6.jar
+[INFO] Copying paranamer-2.8.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\paranamer-2.8.jar
+[INFO] Copying bcprov-jdk15on-1.64.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\bcprov-jdk15on-1.64.jar
+[INFO] Copying akka-http_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-http_2.12-10.1.6.jar
+[INFO] Copying machinist_2.12-0.6.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\machinist_2.12-0.6.2.jar
+[INFO] Copying jackson-core-2.9.9.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jackson-core-2.9.9.jar
+[INFO] Copying akka-protobuf_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-protobuf_2.12-2.5.19.jar
+[INFO] Copying akka-stream_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-stream_2.12-2.5.19.jar
+[INFO] Copying circe-jawn_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\circe-jawn_2.12-0.8.0.jar
+[INFO] Copying scalacheck_2.12-1.13.5.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scalacheck_2.12-1.13.5.jar
+[INFO] Copying test-interface-1.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\test-interface-1.0.jar
+[INFO] Copying tyrus-standalone-client-1.15.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\tyrus-standalone-client-1.15.jar
+[INFO] Copying reactive-streams-1.0.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\reactive-streams-1.0.2.jar
+[INFO] Copying circe-core_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\circe-core_2.12-0.9.0.jar
+[INFO] Copying cats-kernel_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\cats-kernel_2.12-1.0.1.jar
+[INFO] Copying lz4-1.3.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\lz4-1.3.0.jar
+[INFO] Copying iodb_2.12-0.3.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\iodb_2.12-0.3.2.jar
+[INFO] Copying commons-net-3.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\commons-net-3.6.jar
+[INFO] Copying akka-http-core_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-http-core_2.12-10.1.6.jar
+[INFO] Copying guava-21.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\guava-21.0.jar
+[INFO] Copying weupnp-0.1.4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\weupnp-0.1.4.jar
+[INFO] Copying akka-parsing_2.12-10.1.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-parsing_2.12-10.1.6.jar
+[INFO] Copying jackson-databind-2.9.9.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jackson-databind-2.9.9.jar
+[INFO] Copying jackson-module-scala_2.12-2.9.9.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jackson-module-scala_2.12-2.9.9.jar
+[INFO] Copying akka-http-circe_2.12-1.19.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-http-circe_2.12-1.19.0.jar
+[INFO] Copying supertagged_2.12-1.4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\supertagged_2.12-1.4.jar
+[INFO] Copying guice-4.2.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\guice-4.2.2.jar
+[INFO] Copying circe-generic_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\circe-generic_2.12-0.8.0.jar
+[INFO] Copying cats-core_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\cats-core_2.12-1.0.1.jar
+[INFO] Copying cats-macros_2.12-1.0.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\cats-macros_2.12-1.0.1.jar
+[INFO] Copying leveldb-api-0.12.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\leveldb-api-0.12.jar
+[INFO] Copying jackson-annotations-2.9.9.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jackson-annotations-2.9.9.jar
+[INFO] Copying config-1.3.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\config-1.3.1.jar
+[INFO] Copying scrypto_2.12-2.1.6.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scrypto_2.12-2.1.6.jar
+[INFO] Copying scala-logging_2.12-3.9.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scala-logging_2.12-3.9.2.jar
+[INFO] Copying circe-numbers_2.12-0.9.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\circe-numbers_2.12-0.9.0.jar
+[INFO] Copying scala-library-2.12.8.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scala-library-2.12.8.jar
+[INFO] Copying Sidechains-SDK-0.1-SNAPSHOT.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\Sidechains-SDK-0.1-SNAPSHOT.jar
+[INFO] Copying leveldbjni-all-1.18.3.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\leveldbjni-all-1.18.3.jar
+[INFO] Copying javax.inject-1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\javax.inject-1.jar
+[INFO] Copying scala-parser-combinators_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scala-parser-combinators_2.12-1.1.1.jar
+[INFO] Copying macro-compat_2.12-1.1.1.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\macro-compat_2.12-1.1.1.jar
+[INFO] Copying slf4j-simple-1.7.25.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\slf4j-simple-1.7.25.jar
+[INFO] Copying scala-reflect-2.12.7.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scala-reflect-2.12.7.jar
+[INFO] Copying circe-parser_2.12-0.8.0.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\circe-parser_2.12-0.8.0.jar
+[INFO] Copying ficus_2.12-1.4.2.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\ficus_2.12-1.4.2.jar
+[INFO] Copying logback-classic-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\logback-classic-1.3.0-alpha4.jar
+[INFO] Copying slf4j-api-1.7.25.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\slf4j-api-1.7.25.jar
+[INFO] Copying jackson-module-paranamer-2.9.9.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jackson-module-paranamer-2.9.9.jar
+[INFO] Copying logback-core-1.3.0-alpha4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\logback-core-1.3.0-alpha4.jar
+[INFO] Copying leveldb-0.12.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\leveldb-0.12.jar
+[INFO] Copying scorex-core_2.12-2.0.0-RC4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\scorex-core_2.12-2.0.0-RC4.jar
+[INFO] Copying akka-actor_2.12-2.5.19.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\akka-actor_2.12-2.5.19.jar
+[INFO] Copying jawn-parser_2.12-0.10.4.jar to D:\Repositories\Sidechains-SDK\tools\sctool\target\lib\jawn-parser_2.12-0.10.4.jar
+[INFO] 
+[INFO] -----------------------< com.horizen:Sidechains >-----------------------
+[INFO] Building Sidechains 0.1-SNAPSHOT                                   [4/4]
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains ---
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Sidechains 0.1-SNAPSHOT:
+[INFO] 
+[INFO] Sidechains-SDK ..................................... SUCCESS [01:11 min]
+[INFO] Sidechains-SDK-simpleapp ........................... SUCCESS [  4.152 s]
+[INFO] Sidechains-SDK-ScBootstrappingTools ................ SUCCESS [  0.642 s]
+[INFO] Sidechains ......................................... SUCCESS [  0.001 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:16 min
+[INFO] Finished at: 2020-01-14T14:36:59+02:00
+[INFO] ------------------------------------------------------------------------

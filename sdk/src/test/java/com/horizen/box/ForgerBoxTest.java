@@ -25,7 +25,7 @@ public class ForgerBoxTest {
         Pair<byte[], byte[]> rewardKeyPair = Ed25519.createKeyPair(propositionKeyPair.getKey());
         PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
 
-        VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey())._2();
+        VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey()).getValue();
         ForgerBox box = new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
 
         assertEquals("Proposition shall be equal", proposition, box.proposition());

@@ -21,7 +21,7 @@ public class ForgerBoxGenerator {
         Pair<byte[], byte[]> rewardKeyPair = Ed25519.createKeyPair(propositionKeyPair.getKey());
         PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
 
-        VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey())._2();
+        VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey()).getValue();
         return new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
     }
 

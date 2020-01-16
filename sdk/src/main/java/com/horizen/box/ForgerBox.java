@@ -73,7 +73,7 @@ public final class ForgerBox
         int valueOffset = nonceOffset + Longs.BYTES;
         int rewardPropositionOffset = valueOffset + Longs.BYTES;
         int vrfPubKeyOffset = rewardPropositionOffset + PublicKey25519Proposition.getLength();
-        int totalOffset = vrfPubKeyOffset + VRFPublicKey.length();
+        int totalOffset = vrfPubKeyOffset + VRFPublicKey.KEY_LENGTH;
 
         return totalOffset;
     }
