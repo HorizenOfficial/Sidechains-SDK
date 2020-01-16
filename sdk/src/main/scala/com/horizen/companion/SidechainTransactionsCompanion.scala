@@ -12,7 +12,6 @@ case class SidechainTransactionsCompanion(customSerializers: JHashMap[JByte, Tra
     new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]() {{
       put(RegularTransaction.TRANSACTION_TYPE_ID, RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
       put(MC2SCAggregatedTransaction.TRANSACTION_TYPE_ID, MC2SCAggregatedTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
-      // put(WithdrawalRequestTransaction.TRANSACTION_TYPE_ID, WithdrawalRequestTransaction.getSerializer)
-      // put(CertifierUnlockRequestTransaction.TRANSACTION_TYPE_ID,  CertifierUnlockRequestTransaction.getSerializer)
+      put(ForgingStakeTransaction.TRANSACTION_TYPE_ID, ForgingStakeTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
     }},
     customSerializers)
