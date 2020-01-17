@@ -3,7 +3,7 @@ package com.horizen.transaction;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class ForgingStakeTransactionSerializer implements TransactionSerializer<ForgingStakeTransaction>
+public final class ForgingStakeTransactionSerializer implements TransactionSerializer<ForgingStakeTransaction>
 {
     private static ForgingStakeTransactionSerializer serializer;
 

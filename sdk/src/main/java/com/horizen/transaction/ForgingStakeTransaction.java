@@ -17,7 +17,7 @@ import com.horizen.utils.Pair;
 
 import java.util.*;
 
-public class ForgingStakeTransaction
+public final class ForgingStakeTransaction
         extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
     public static final byte TRANSACTION_TYPE_ID = 3;
