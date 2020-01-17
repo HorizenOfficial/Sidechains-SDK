@@ -456,6 +456,7 @@ paths:
                     properties:
                       boxId:
                         type: string
+                        description: id of RegularBox
                 regularOutputs:
                   type: array
                   items:
@@ -772,6 +773,91 @@ paths:
                     type: object
                     properties:
                       transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/spendForgingStake:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a forging stake spending transaction
+      description: Create and sign a forging stake spending transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: spendForgingStake
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionInputs
+                - regularOutputs
+                - forgerOutputs
+              properties:
+                transactionInputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - boxId
+                    properties:
+                      boxId:
+                        type: string
+                        description: id of ForgerBox
+                regularOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                forgerOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - vrfPubKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      rewardKey:
+                        type: string
+                      vrfPubKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'

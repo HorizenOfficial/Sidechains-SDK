@@ -40,6 +40,9 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("timestamp")
     public abstract long timestamp();
 
+    @JsonProperty("typeId")
+    public abstract byte transactionTypeId();
+
     public abstract boolean semanticValidity();
 
     public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {

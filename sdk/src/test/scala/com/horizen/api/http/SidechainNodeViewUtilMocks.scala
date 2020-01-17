@@ -37,9 +37,11 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
   val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
   val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
   val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
+  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
   val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
   val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
   val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
+  val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList
 
@@ -110,6 +112,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
     list.add(box_1.asInstanceOf[Box[Proposition]])
     list.add(box_2.asInstanceOf[Box[Proposition]])
     list.add(box_3.asInstanceOf[Box[Proposition]])
+    list.add(box_4.asInstanceOf[Box[Proposition]])
     list
   }
 
@@ -144,6 +147,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
       if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
       else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)
       else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret3.publicImage().bytes))) Optional.of(secret3)
+      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret4.publicImage().bytes))) Optional.of(secret4)
       else Optional.empty()
     })
 

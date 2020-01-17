@@ -7,7 +7,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.RegularBox
+import com.horizen.box.{ForgerBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proposition._
@@ -38,7 +38,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
   }
 
   private var companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
@@ -188,7 +188,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
           inputBoxes.foreach(box => {
             var secret = wallet.secretByPublicKey(box.proposition())
             var privateKey = secret.get().asInstanceOf[PrivateKey25519]
-            wallet.secretByPublicKey(box.proposition()).get().asInstanceOf[PrivateKey25519]
             inputs.add(new Pair(box.asInstanceOf[RegularBox], privateKey))
           })
 
@@ -406,6 +405,69 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     }
   }
 
+  /**
+    * Create and sign a ForgingStakeTransaction, specifying inputs and outputs.
+    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+    */
+  def spendForgingStake: Route = (post & path("spendForgingStake")) {
+    entity(as[ReqSpendForgingStake]) { body =>
+      withNodeView { sidechainNodeView =>
+        val wallet = sidechainNodeView.getNodeWallet
+        val inputBoxes = wallet.allBoxes().asScala
+          .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
+
+        if (inputBoxes.length < body.transactionInputs.size) {
+          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
+        } else {
+          var inSum: Long = 0
+          var outSum: Long = 0
+
+          val inputs: JList[Pair[ForgerBox, PrivateKey25519]] = new JArrayList()
+          inputBoxes.foreach(box => {
+            var secret = wallet.secretByPublicKey(box.proposition())
+            var privateKey = secret.get().asInstanceOf[PrivateKey25519]
+            inputs.add(new Pair(box.asInstanceOf[ForgerBox], privateKey))
+          })
+
+          val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+          body.regularOutputs.foreach(element =>
+            outputs.add(new RegularBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value))
+            )
+          )
+          body.forgerOutputs.foreach(element =>
+            outputs.add(new ForgerBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value),
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
+              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey)))  // TODO: replace with VRFPublicKeySerializer later
+            )
+          )
+
+          inputs.forEach(pair => inSum += pair.getKey.value())
+          outputs.forEach(boxData => outSum += boxData.value())
+          val fee: Long = inSum - outSum
+
+          try {
+            val transaction = ForgingStakeTransaction.create(
+              inputs,
+              outputs,
+              fee, System.currentTimeMillis())
+
+            if (body.format.getOrElse(false))
+              ApiResponseUtil.toResponse(TransactionDTO(transaction))
+            else
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+          } catch {
+            case t: Throwable =>
+              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+          }
+        }
+      }
+    }
+  }
+
 }
 
 
@@ -490,6 +552,15 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],
+                                                      regularOutputs: List[TransactionOutput],
+                                                      forgerOutputs: List[TransactionForgerOutput],
+                                                      format: Option[Boolean]) {
+    require(transactionInputs.nonEmpty, "Empty inputs list")
+    require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
+  }
 
 }
 
