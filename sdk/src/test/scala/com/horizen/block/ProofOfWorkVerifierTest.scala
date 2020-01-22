@@ -12,6 +12,7 @@ import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
+import scorex.core.block.Block.Timestamp
 import scorex.util.ModifierId
 
 import scala.collection.mutable.ListBuffer
@@ -173,7 +174,10 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val mainchainCreationBlockHeight: Int = 1
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))
+      override val sidechainGenesisBlockTimestamp: Timestamp = 0
       override val withdrawalEpochLength: Int = 100
+      override val consensusSecondsInSlot: Int = 120
+      override val consensusSlotsInEpoch: Int = 720
     }
 
 
