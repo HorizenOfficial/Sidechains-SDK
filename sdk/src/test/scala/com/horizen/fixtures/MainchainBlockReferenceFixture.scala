@@ -35,10 +35,10 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     lastGeneratedHash = ref.hash
   }
 
-  def generateMainchainBlockReference(id: Option[ByteArrayWrapper] = None, blockHash: Option[Array[Byte]] = None): MainchainBlockReference = {
+  def generateMainchainBlockReference(parentOpt: Option[ByteArrayWrapper] = None, blockHash: Option[Array[Byte]] = None): MainchainBlockReference = {
     val mainchainHeaderBytes = generateBytes()
 
-    val parent = id.getOrElse(lastGeneratedHash)
+    val parent = parentOpt.getOrElse(lastGeneratedHash)
     val headerWithNoSerialization = new MainchainHeader(mainchainHeaderBytes, 1, parent, generateBytes(), generateBytes(), Instant.now.getEpochSecond.toInt, util.Random.nextInt(), generateBytes(), generateBytes(1344))
     val header = new MainchainHeader(
       mainchainHeaderToBytes(headerWithNoSerialization),
@@ -72,18 +72,14 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       new MainchainBlockReference(header, null, null)
   }
 
-  def generateMainchainReferences(generated: Seq[MainchainBlockReference] = Seq(), parent: Option[ByteArrayWrapper] = None): Seq[MainchainBlockReference] = {
-    @tailrec
-    def generateMainchainReferencesLoop(currentReferences: Seq[MainchainBlockReference]): Seq[MainchainBlockReference] = {
-      if (util.Random.nextBoolean && currentReferences.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
-        val nextReference = generateMainchainBlockReference(parent)
-          generateMainchainReferencesLoop(currentReferences :+ nextReference)
+  @tailrec
+  final def generateMainchainReferences(generated: Seq[MainchainBlockReference] = Seq(), parentOpt: Option[ByteArrayWrapper] = None): Seq[MainchainBlockReference] = {
+      if (util.Random.nextBoolean && generated.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
+        val nextReference = generateMainchainBlockReference(parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash))))
+        generateMainchainReferences(generated :+ nextReference)
       }
       else {
-        currentReferences
+        generated
       }
-    }
-
-    generateMainchainReferencesLoop(generated)
   }
 }

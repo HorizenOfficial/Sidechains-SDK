@@ -39,7 +39,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       (1L << 32) + 1,
       getRandomModifier(),
       ModifierSemanticValidity.Valid,
-      generateMainchainReferences(Seq(generateMainchainBlockReference()), parent = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
+      generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
       WithdrawalEpochInfo(1, 1)
     )
 
@@ -66,9 +66,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       parentSidechainBlockInfo.score + (refs.size.toLong << 32) + 1,
       parent,
       ModifierSemanticValidity.Valid,
-      (refs ++ generateMainchainReferences(parent = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
+      (refs ++ generateMainchainReferences(parentOpt = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        new SidechainBlock(null, 0L, refs, null, null, null, null),
+        new SidechainBlock(null, 0L, refs, null, null, null, null, null, null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params)
     )

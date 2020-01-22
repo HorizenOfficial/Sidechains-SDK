@@ -1,14 +1,26 @@
 package com.horizen.fixtures
 
-import com.horizen.transaction.RegularTransaction
-import com.horizen.secret.PrivateKey25519
-import com.horizen.box.RegularBox
 import java.util.{ArrayList => JArrayList, List => JList}
+
+import com.horizen.box.RegularBox
 import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{Pair => JPair}
+
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {
+
+  def generateRegularTransaction(rnd: Random, inputTransactionsSize: Int, outputTransactionsSize: Int): RegularTransaction = {
+    val inputTransactionsList: Seq[PrivateKey25519] = (1 to inputTransactionsSize)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes))
+
+    val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to outputTransactionsSize)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes).publicImage())
+
+    getRegularTransaction(inputTransactionsList, outputTransactionsList)
+  }
 
   def getRegularTransaction(inputsSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()

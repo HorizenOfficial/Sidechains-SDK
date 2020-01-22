@@ -26,7 +26,7 @@ import scala.util.Try
 
 class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with SidechainBlockFixture with SidechainBlockInfoFixture {
 
-  val mockedStorage : Storage = mock[IODBStoreAdapter]
+  val mockedStorage: Storage = mock[IODBStoreAdapter]
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   var params: NetworkParams = _
@@ -97,7 +97,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   @Before
   def setUp() : Unit = {
     // add genesis block
-    activeChainBlockList += generateGenesisBlock(sidechainTransactionsCompanion)
+    val genesisBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
+    activeChainBlockList += genesisBlock
     activeChainBlockInfoList += generateGenesisBlockInfo(Some(activeChainBlockList.head.mainchainBlocks.head.hash))
 
     // declare real genesis block id
@@ -108,12 +109,23 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     params = new HistoryTestParams()
 
     // generate (height-1) more blocks
-    generateSidechainBlockSeq(height - 1, sidechainTransactionsCompanion, params).map(block => {
+    generateSidechainBlockSeq(
+        count = height - 1,
+        companion = sidechainTransactionsCompanion,
+        params = params,
+        parentOpt = Some(genesisBlock.id),
+        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlocks.last.hash))).map(block => {
       activeChainBlockList += block
       activeChainBlockInfoList += generateBlockInfo(block, activeChainBlockInfoList.last, params)
     })
     // generate (height/2) fork blocks
-    generateSidechainBlockSeq(height / 2, sidechainTransactionsCompanion, params, basicSeed = 13213111L).map(block => {
+    generateSidechainBlockSeq(
+        count = height / 2,
+        companion = sidechainTransactionsCompanion,
+        params = params,
+        parentOpt = Some(genesisBlock.id),
+        basicSeed = 13213111L,
+        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlocks.last.hash))).map(block => {
       forkChainBlockList += block
       forkChainBlockInfoList += generateBlockInfo(block, forkChainBlockInfoList.lastOption.getOrElse(activeChainBlockInfoList.head), params) // First Fork block parent is genesis block
     })

@@ -12,7 +12,7 @@ public final class ForgerBox
         extends PublicKey25519NoncedBox<PublicKey25519Proposition>
         implements CoinsBox<PublicKey25519Proposition>
 {
-    public static final byte BOX_TYPE_ID = 2;
+    public static final byte BOX_TYPE_ID = 3;
 
     private final PublicKey25519Proposition rewardProposition;
     private final VRFPublicKey vrfPubKey;

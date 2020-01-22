@@ -8,7 +8,7 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
-import com.horizen.validation.{HistoryBlockValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
+import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
@@ -40,7 +40,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
-  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(new WithdrawalEpochValidator(params), new MainchainPoWValidator(params))
+  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(new WithdrawalEpochValidator(params), new MainchainPoWValidator(params), new ConsensusValidator())
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))

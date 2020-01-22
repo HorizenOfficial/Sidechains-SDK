@@ -1,13 +1,13 @@
 package com.horizen.block
 
 import java.io.ByteArrayOutputStream
+import java.math.BigInteger
 import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes, Ints, Longs}
-import com.horizen.{ScorexEncoding, SidechainTypes}
-import com.horizen.box.{Box, NoncedBox}
+import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.box.{Box, ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
@@ -15,10 +15,12 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
-import com.horizen.utils.ListSerializer
-import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
+import com.horizen.utils.{ListSerializer, MerklePath}
+import com.horizen.vrf.VRFProof
+import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.serialization.ScorexSerializer
+import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
@@ -27,15 +29,18 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "forgerBox", "vrfProof", "merklePath", "version", "serializer", "modifierTypeId", "encoder", "companion"))
 class SidechainBlock (
                        @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
                        override val timestamp: Block.Timestamp,
                        val mainchainBlocks : Seq[MainchainBlockReference],
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                       val forgerPublicKey: PublicKey25519Proposition,
+                       val forgerPublicKey: PublicKey25519Proposition, // VRF public key from Forger box shall be used in future
+                       val forgerBox: ForgerBox,
+                       val vrfProof: VRFProof,
+                       val merklePath: MerklePath,
                        val signature: Signature25519,
-                       companion: SidechainTransactionsCompanion)
+                       val companion: SidechainTransactionsCompanion)
 
   extends Block[SidechainTypes#SCBT]
 {
@@ -50,7 +55,7 @@ class SidechainBlock (
 
   @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId =
-    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
+    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes, forgerBox.bytes(), vrfProof.bytes, merklePath.bytes())))
 
   override lazy val transactions: Seq[BoxTransaction[Proposition, Box[Proposition]]] = {
     var txs = Seq[BoxTransaction[Proposition, Box[Proposition]]]()
@@ -81,7 +86,10 @@ class SidechainBlock (
       Longs.toByteArray(timestamp),
       sidechainTransactionsStream.toByteArray,
       mainchainBlocksStream.toByteArray,
-      forgerPublicKey.bytes
+      forgerPublicKey.bytes,
+      forgerBox.bytes(),
+      vrfProof.bytes,
+      merklePath.bytes()
     )
   }
 
@@ -119,13 +127,21 @@ class SidechainBlock (
     true
   }
 
+  lazy val bestMainchainReferencePoW: Option[BigInteger] = {
+    if (mainchainBlocks.isEmpty) {
+      None
+    }
+    else {
+      Option(mainchainBlocks.map(block => new BigInteger(1, block.hash)).min)
+    }
+  }
 }
 
 
 object SidechainBlock extends ScorexEncoding {
-  val MAX_BLOCK_SIZE = 2048 * 1024 //2048K
-  val MAX_MC_BLOCKS_NUMBER = 3
-  val MAX_SIDECHAIN_TXS_NUMBER = 1000
+  val MAX_BLOCK_SIZE: Int = 2048 * 1024 //2048K
+  val MAX_MC_BLOCKS_NUMBER: Int = 3
+  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
 
   def create(parentId: Block.BlockId,
@@ -133,6 +149,9 @@ object SidechainBlock extends ScorexEncoding {
              mainchainBlocks : Seq[MainchainBlockReference],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
              ownerPrivateKey: PrivateKey25519,
+             forgerBox: ForgerBox,
+             vrfProof: VRFProof,
+             merklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
@@ -141,9 +160,12 @@ object SidechainBlock extends ScorexEncoding {
     require(mainchainBlocks != null && mainchainBlocks.size <= SidechainBlock.MAX_MC_BLOCKS_NUMBER)
     require(sidechainTransactions != null)
     require(ownerPrivateKey != null)
+    require(forgerBox != null)
+    require(vrfProof != null)
+    require(merklePath != null)
 
     val signature = signatureOption match {
-      case Some(signature) => signature
+      case Some(sig) => sig
       case None =>
         val unsignedBlock: SidechainBlock = new SidechainBlock(
           parentId,
@@ -151,6 +173,9 @@ object SidechainBlock extends ScorexEncoding {
           mainchainBlocks,
           sidechainTransactions,
           ownerPrivateKey.publicImage(),
+          forgerBox,
+          vrfProof,
+          merklePath,
           new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
           companion
         )
@@ -165,6 +190,9 @@ object SidechainBlock extends ScorexEncoding {
       mainchainBlocks,
       sidechainTransactions,
       ownerPrivateKey.publicImage(),
+      forgerBox,
+      vrfProof,
+      merklePath,
       signature,
       companion
     )
@@ -179,12 +207,12 @@ object SidechainBlock extends ScorexEncoding {
 
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] {
-  private val _mcblocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
+  private val mcBlocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
     MainchainBlockReferenceSerializer,
     SidechainBlock.MAX_MC_BLOCKS_NUMBER
   )
 
-  private val _sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
+  private val sidechainTransactionsSerializer: ListSerializer[Transaction] = new ListSerializer[Transaction](
     companion,
     SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
   )
@@ -194,17 +222,20 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putLong(obj.timestamp)
 
     val bw = w.newWriter()
-    _mcblocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
+    mcBlocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
     w.putInt(bw.length())
     w.append(bw)
 
     val tw = w.newWriter()
-    _sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava, tw)
+    sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.map(t => t.asInstanceOf[Transaction]).toList.asJava, tw)
     w.putInt(tw.length())
     w.append(tw)
 
     w.putBytes(obj.forgerPublicKey.bytes())
+    w.putBytes(obj.forgerBox.bytes())
+    w.putBytes(obj.vrfProof.bytes)
     w.putBytes(obj.signature.bytes())
+    w.putBytes(obj.merklePath.bytes())
   }
 
   override def parse(r: Reader): SidechainBlock = {
@@ -219,7 +250,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     if (r.remaining < mcbSize)
       throw new IllegalArgumentException("Input data corrupted.")
 
-    val mcblocks: Seq[MainchainBlockReference] = _mcblocksSerializer.parse(r.newReader(r.getChunk(mcbSize))).asScala
+    val mcblocks: Seq[MainchainBlockReference] = mcBlocksSerializer.parse(r.newReader(r.getChunk(mcbSize))).asScala
 
     val txSize = r.getInt()
 
@@ -227,13 +258,19 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
       throw new IllegalArgumentException("Input data corrupted.")
 
     val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-      _sidechainTransactionsSerializer.parse(r.newReader(r.getChunk(txSize)))
+      sidechainTransactionsSerializer.parse(r.newReader(r.getChunk(txSize)))
         .asScala
         .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
 
     val owner = new PublicKey25519Proposition(r.getBytes(PublicKey25519Proposition.KEY_LENGTH))
 
+    val forgerBox = ForgerBox.parseBytes(r.getBytes(ForgerBox.length()))
+
+    val vrfProof = VRFProof.parseBytes(r.getBytes(VRFProof.length))
+
     val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
+
+    val merklePath = MerklePath.parseBytes(r.getBytes(r.remaining))
 
     new SidechainBlock(
       parentId,
@@ -241,6 +278,9 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
       mcblocks,
       sidechainTransactions,
       owner,
+      forgerBox,
+      vrfProof,
+      merklePath,
       ownerSignature,
       companion
     )

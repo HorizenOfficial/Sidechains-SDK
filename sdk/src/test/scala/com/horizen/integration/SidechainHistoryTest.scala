@@ -34,7 +34,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
-  val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(Some(genesisBlock.mainchainBlocks.head.hash), ModifierSemanticValidity.Valid)
   var params: NetworkParams = _
 
@@ -46,7 +46,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   @Before
   def setUp(): Unit = {
     // declare real genesis block id
-    params = MainNetParams(new Array[Byte](32), genesisBlock.id)
+    params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
@@ -145,7 +145,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
 
     // Test 3: try to append block that parent is absent
-    val unknownBlock = generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 444L)
+    val unknownBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L)
     history.append(unknownBlock) match {
       case Success((_, _)) =>
         assertFalse("Exception expected during appending a block without parent present in History.", true)
@@ -375,7 +375,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
 
     // Test 5: fork changes for block, which parent doesn't exist
     // wrong situation
-    val unknownBlock = generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 444L)
+    val unknownBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L)
     history.bestForkChanges(unknownBlock) match {
       case Success(progressInfo) =>
         assertTrue("Exception expected during bestForkChanges calculation", false)
@@ -400,7 +400,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
         assertFalse("Block expected to be applicable", true)
     }
 
-    val irrelevantBlock: SidechainBlock = generateNextSidechainBlock(generateGenesisBlock(sidechainTransactionsCompanion, basicSeed = 99L), sidechainTransactionsCompanion, params, basicSeed = 7872832L)
+    val irrelevantBlock: SidechainBlock = generateNextSidechainBlock(SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 99L), sidechainTransactionsCompanion, params, basicSeed = 7872832L)
     history.applicableTry(irrelevantBlock) match {
       case Success(_) =>
         assertTrue("Exception expected on applicableTry for block without parent already stored in history.", false)

@@ -14,7 +14,8 @@ import org.junit.Assert.assertEquals
 import scorex.util.bytesToId
 import java.util.{HashMap => JHashMap}
 
-import com.horizen.fixtures.MainchainBlockReferenceFixture
+import com.horizen.fixtures.{ForgerBoxFixture, MainchainBlockReferenceFixture}
+import com.horizen.vrf.VrfGenerator
 
 
 class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture {
@@ -34,6 +35,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       Seq(), // no mc block refs
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -56,6 +58,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       Seq(generateMainchainBlockReference()),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -83,6 +86,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get

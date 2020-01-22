@@ -19,6 +19,12 @@ trait TimeToEpochSlotConverter {
       intToConsensusSlotNumber(slotIndex.toInt + 1)
   }
 
+  def getTimeStampForEpochAndSlot(epochNumber: ConsensusEpochNumber, slotNumber: ConsensusSlotNumber): Long = {
+    require(slotNumber <= params.consensusSlotsInEpoch)
+    val totalSlots: Int = (epochNumber - 1) * params.consensusSlotsInEpoch + (slotNumber - 1)
+    virtualGenesisBlockTimeStamp + (totalSlots * params.consensusSecondsInSlot)
+  }
+
   private def getEpochIndex(timestamp: Block.Timestamp): Int = {
     require(timestamp >= params.sidechainGenesisBlockTimestamp)
 

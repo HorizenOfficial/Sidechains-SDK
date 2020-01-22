@@ -8,13 +8,14 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.NoncedBox
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{MainchainBlockReferenceFixture, TransactionFixture}
+import com.horizen.fixtures.{ForgerBoxFixture, MainchainBlockReferenceFixture, TransactionFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTreeFixture, WithdrawalEpochInfo}
+import com.horizen.vrf.VrfGenerator
 import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -50,6 +51,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -69,6 +71,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -88,6 +91,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(generateMainchainBlockReference()),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -115,6 +119,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(mcBlockRef), //
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -148,6 +153,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -166,6 +172,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -203,6 +210,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -244,6 +252,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
       Seq(getTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -296,6 +305,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(mcBlockRef),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -314,6 +324,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -329,9 +340,10 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(id = Some(new ByteArrayWrapper(mcBlockRef.hash)))),
+      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.hash)))),
       Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get

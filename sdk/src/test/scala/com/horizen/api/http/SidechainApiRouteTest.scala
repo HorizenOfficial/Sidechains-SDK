@@ -12,16 +12,16 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
-import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.SidechainBlockFixture
+import com.horizen.fixtures.{ForgerBoxFixture, SidechainBlockFixture}
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.params.MainNetParams
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, TransactionSerializer}
+import com.horizen.utils.MerkleTreeFixture
+import com.horizen.vrf.VrfGenerator
+import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -30,9 +30,9 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, bytesToId}
@@ -50,9 +50,18 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   //generateGenesisBlock(sidechainTransactionsCompanion)
-  private val genesisBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
+  private val genesisBlock = SidechainBlock.create(
+    bytesToId(new Array[Byte](32)),
+    Instant.now.getEpochSecond - 10000,
+    Seq(),
+    Seq(),
     PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-    SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+    ForgerBoxFixture.generateForgerBox,
+    VrfGenerator.generateProof(456L),
+    MerkleTreeFixture.generateRandomMerklePath(456L),
+    SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()),
+    null
+  ).get
 
   private val inetAddr1 = new InetSocketAddress("92.92.92.92", 27017)
   private val inetAddr2 = new InetSocketAddress("93.93.93.93", 27017)

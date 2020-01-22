@@ -15,14 +15,13 @@ import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
-import scorex.util.ModifierId
 
 
 class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture with IODBStoreFixture with SidechainBlockInfoFixture {
 
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
-  val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(Some(genesisBlock.mainchainBlocks.head.hash), ModifierSemanticValidity.Valid)
 
   val params: NetworkParams = MainNetParams(new Array[Byte](32), genesisBlock.id)

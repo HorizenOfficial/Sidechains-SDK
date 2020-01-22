@@ -200,6 +200,9 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     key,
+                    null,
+                    null,
+                    null,
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()
@@ -260,11 +263,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, 1, 100);
+                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, 1, 100);
+                return new TestNetParams(scId, null, null, null, 1, 0,100, 120, 720);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1, 100);
+                return new RegTestParams(scId, null, null, null, 1, 0,100, 120, 720);
         }
         return null;
 

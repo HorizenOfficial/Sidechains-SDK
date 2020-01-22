@@ -11,15 +11,15 @@ import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.SidechainTransaction
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.block.Block
 import scorex.util.ScorexLogging
 
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success, Try}
 
 
 case class ForgingInfo(parentId: Block.BlockId,
@@ -83,7 +83,7 @@ class Forger(settings: SidechainSettings,
     case Forger.ReceivableMessages.TryGetBlockTemplate =>
       getNextBlockForgingInfo match {
         case Success(pfi) =>
-          sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params)
+          sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, null, null, null, companion, params)
         case Failure(e) =>
           sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
       }
@@ -108,7 +108,7 @@ class Forger(settings: SidechainSettings,
     case Forger.ReceivableMessages.TryForgeNextBlock =>
       getNextBlockForgingInfo match {
         case Success(pfi) =>
-          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey, companion, params) match {
+          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, pfi.ownerPrivateKey,  null, null, null, companion, params) match {
             case Success(block) =>
               sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
               sender() ! Success(block.id)

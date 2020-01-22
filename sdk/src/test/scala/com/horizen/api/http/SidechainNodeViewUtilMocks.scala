@@ -8,18 +8,17 @@ import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.{Box, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.ForgerBoxFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utils.Pair
+import com.horizen.utils.{BytesUtils, MerkleTreeFixture, Pair}
+import com.horizen.vrf.VrfGenerator
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Curve25519
 import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
@@ -46,7 +45,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
     val history: NodeHistory = mock[NodeHistory]
 
     val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
+      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),  ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
       SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
 
     Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>

@@ -1,5 +1,6 @@
 package com.horizen
 
+import java.math.BigInteger
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
@@ -16,23 +17,26 @@ import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
-import scorex.util.{ModifierId, idToBytes}
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
+import scala.annotation.tailrec
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
 class SidechainHistory private (val storage: SidechainHistoryStorage,
                                 consensusDataStorage: ConsensusDataStorage,
-                                params: NetworkParams,
+                                val params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
   extends scorex.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
       SidechainHistory]
+  with TimeToEpochSlotConverter
   with scorex.core.utils.ScorexEncoding
   with NodeHistory
+  with ScorexLogging
 {
 
   override type NVCT = SidechainHistory
@@ -106,6 +110,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   def isGenesisBlock(blockId: ModifierId): Boolean = {
       blockId.equals(params.sidechainGenesisBlockId)
+  }
+
+  def isNotGenesisBlock(blockId: ModifierId): Boolean = {
+    !isGenesisBlock(blockId)
   }
 
   def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
@@ -387,7 +395,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       case Some(blockId) => JOptional.of[String](blockId)
       case None => JOptional.empty()
     }
-
   }
 
   override def getCurrentHeight: Int = {
@@ -413,7 +420,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     var transaction : JOptional[Transaction] = JOptional.empty()
     var found = false
     while(!found && startingBlock.isPresent){
-      var tx = findTransactionInsideBlock(transactionId, startingBlock.get())
+      val tx = findTransactionInsideBlock(transactionId, startingBlock.get())
       if(tx.isPresent){
         found = true
         transaction = JOptional.ofNullable(tx.get())
@@ -449,35 +456,83 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
   }
 
-  def calculateNonce(lastBlockId: ModifierId, considerBlockIsLastInEpoch: Boolean): NonceConsensusEpochInfo = {
-    //calculating nonce
-    val newNonceEpochInfo: NonceConsensusEpochInfo = ???
-    newNonceEpochInfo
-  }
-
-  def applyNonceConsensusInfo(lastBlockInEpoch: ModifierId, nonceEpochInfo: NonceConsensusEpochInfo): Unit = {
-    consensusDataStorage.addNonceConsensusEpochInfo(lastBlockInEpoch, nonceEpochInfo)
-  }
-
   def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
-    consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
-    this
+    consensusDataStorage.addStakeConsensusEpochInfo(epochIdFromBlockId(lastBlockInEpoch), stakeEpochInfo)
+    new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
-
-  private def getPreviousEpoch(lastBlockInEpoch: ModifierId): ModifierId = ???
-
-  private def getLastBlockInEpochByBlockId(blockId: ModifierId): ModifierId = ???
 
   def getFullConsensusEpochInfoForBlockId(blockId: ModifierId, considerBlockIsLastInEpoch: Boolean): FullConsensusEpochInfo = {
-    val lastBlockInPreviousEpoch: ModifierId = if (considerBlockIsLastInEpoch) blockId else getLastBlockInEpochByBlockId(blockId)
-    val lastBlockForStakeInfo = getPreviousEpoch(lastBlockInPreviousEpoch)
-
-    val stakeEpochInfo: StakeConsensusEpochInfo =
-      consensusDataStorage.getStakeConsensusEpochInfo(lastBlockForStakeInfo).getOrElse(throw new IllegalStateException())
+    log.debug(s"Requested for ${blockId} as last in epoch set to ${considerBlockIsLastInEpoch}")
+    val lastBlockInPreviousEpoch: ModifierId = if (considerBlockIsLastInEpoch) blockId else getLastBlockIdInPreviousConsensusEpoch(blockId)
 
     val nonceEpochInfo: NonceConsensusEpochInfo =
-      consensusDataStorage.getNonceConsensusEpochInfo(lastBlockInPreviousEpoch).getOrElse(calculateNonce(blockId, considerBlockIsLastInEpoch))
+      consensusDataStorage.getNonceConsensusEpochInfoOrElseUpdate(epochIdFromBlockId(lastBlockInPreviousEpoch), () => calculateNonce(lastBlockInPreviousEpoch))
+
+    val lastBlockInPrePreviousEpoch: ModifierId = getLastBlockIdInPreviousConsensusEpoch(lastBlockInPreviousEpoch)
+    val stakeEpochInfo: StakeConsensusEpochInfo =
+      consensusDataStorage.getStakeConsensusEpochInfo(epochIdFromBlockId(lastBlockInPrePreviousEpoch)).getOrElse(throw new IllegalStateException(s"Stake was not defined for epoch ${lastBlockInPrePreviousEpoch}"))
+
     FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)
+  }
+
+  private def calculateNonce(lastEpochBlockId: ModifierId): NonceConsensusEpochInfo = {
+    val nonceSource: Option[BigInteger] = foldEpoch[Option[BigInteger]](None, lastEpochBlockId){
+      (block, accumulator) => (block.bestMainchainReferencePoW, accumulator) match {
+        case (None, _) => accumulator
+        case (_, None) => block.bestMainchainReferencePoW
+        case (Some(a), Some(b)) => Option(a.min(b))
+      }
+    }
+
+    assert(nonceSource.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
+
+    // @TODO check nonce conversion correctness i.e. BigInteger to int conversion
+    NonceConsensusEpochInfo(powToConsensusNonce(nonceSource.get))
+  }
+
+  private def getLastBlockIdInPreviousConsensusEpoch(lastBlockInEpoch: ModifierId): ModifierId = {
+    val firstBlockIdInCurrentConsensusEpoch: ModifierId = foldEpoch(lastBlockInEpoch, lastBlockInEpoch)((block, _) => block.id)
+    if (isGenesisBlock(firstBlockIdInCurrentConsensusEpoch)) {
+      firstBlockIdInCurrentConsensusEpoch
+    }
+    else {
+      getBlockById(firstBlockIdInCurrentConsensusEpoch).asScala.map(block => block.parentId).get
+    }
+  }
+
+  private def blockIdToEpochNumber(blockId: ModifierId): ConsensusEpochNumber = {
+    val block = getBlockById(blockId).orElseThrow(() => new IllegalArgumentException("Requested block is not in History"))
+    timeStampToEpochNumber(block.timestamp)
+  }
+
+  /**
+   * Perform folding on whole epoch, i.e. apply op function on Sidechain block starting from last block in epoch
+   * @param accumulator initial value
+   * @param lastBlockInEpoch start point for folding, not necessary to be real last block in consensus epoch
+   * @param op operation on block in consensus epoch
+   * @tparam A type of accumulator}
+   * @return result of performed op
+   */
+  private def foldEpoch[A](accumulator: A, lastBlockInEpoch: ModifierId)(op: (SidechainBlock, A) => A): A = {
+    @tailrec
+    def foldEpochIteration[B](accumulator: B, blockId: ModifierId, currentEpochNumber: ConsensusEpochNumber)(op: (SidechainBlock, B) => B): B = {
+      val block = getBlockById(blockId).orElseThrow(() => new IllegalArgumentException("Requested block is not in History"))
+
+      val newEpochNumber = timeStampToEpochNumber(block.timestamp)
+      if (newEpochNumber < currentEpochNumber) {
+        accumulator
+      }
+      else {
+        if (isGenesisBlock(blockId)) {
+          op(block, accumulator)
+        }
+        else {
+          foldEpochIteration(op(block, accumulator), block.parentId, newEpochNumber)(op)
+        }
+      }
+    }
+
+    foldEpochIteration(accumulator, lastBlockInEpoch, blockIdToEpochNumber(lastBlockInEpoch))(op)
   }
 }
 
