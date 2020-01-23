@@ -42,12 +42,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
-  case class NodeUpdateInformation(history: HIS,
-                                   state: MS,
-                                   wallet: VL,
-                                   failedMod: Option[SidechainBlock],
-                                   alternativeProgressInfo: Option[ProgressInfo[SidechainBlock]],
-                                   suffix: IndexedSeq[SidechainBlock])
+  case class SidechainNodeUpdateInformation(history: HIS,
+                                            state: MS,
+                                            wallet: VL,
+                                            failedMod: Option[SidechainBlock],
+                                            alternativeProgressInfo: Option[ProgressInfo[SidechainBlock]],
+                                            suffix: IndexedSeq[SidechainBlock])
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
@@ -94,6 +94,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse super.receive
 
+  // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
+  // The difference is that modifiers are applied to the State and Wallet simultaneously.
   override protected def pmodModify(pmod: SidechainBlock): Unit = {
     if (!history().contains(pmod.id)) {
       context.system.eventStream.publish(StartingPersistentModifierApplication(pmod))
@@ -108,7 +110,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
           if (progressInfo.toApply.nonEmpty) {
             val (newHistory, newStateTry, newWallet, blocksApplied) =
-              applyProgressInfo(historyBeforeStUpdate, minimalState(), vault(), progressInfo, IndexedSeq())
+              updateStateAndWallet(historyBeforeStUpdate, minimalState(), vault(), progressInfo, IndexedSeq())
 
             newStateTry match {
               case Success(newState) =>
@@ -136,14 +138,17 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
+  // This method is actually a copy-paste of parent NodeViewHolder.requestDownloads method.
   protected def requestDownloads(pi: ProgressInfo[SidechainBlock]): Unit = {
     pi.toDownload.foreach { case (tid, id) =>
       context.system.eventStream.publish(DownloadRequest(tid, id))
     }
   }
 
+  // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
+  // The difference is that State is updated together with Wallet.
   @tailrec
-  private def applyProgressInfo(history: HIS,
+  private def updateStateAndWallet(history: HIS,
                           state: MS,
                           wallet: VL,
                           progressInfo: ProgressInfo[SidechainBlock],
@@ -163,38 +168,44 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       } else (Success(state), Success(wallet), IndexedSeq())
     } else (Success(state), Success(wallet), suffixApplied)
 
-    stateToApplyTry match {
-      case Success(stateToApply) =>
+    (stateToApplyTry, walletToApplyTry) match {
+      case (Success(stateToApply), Success(walletToApply)) =>
         // we consider that wallet always able to perform a rollback needed if State rollback was successful
-        val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApplyTry.get, suffixTrimmed, progressInfo)
+        val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo)
 
         nodeUpdateInfo.failedMod match {
           case Some(_) =>
             @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
             val alternativeProgressInfo = nodeUpdateInfo.alternativeProgressInfo.get
-            applyProgressInfo(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
+            updateStateAndWallet(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
           case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
         }
-      case Failure(e) =>
-        log.error("Rollback failed: ", e)
+      case (Failure(e), _)=>
+        log.error("State rollback failed: ", e)
+        context.system.eventStream.publish(RollbackFailed)
+        //todo: what to return here? the situation is totally wrong
+        ???
+      case (_, Failure(e))=>
+        log.error("Wallet rollback failed: ", e)
         context.system.eventStream.publish(RollbackFailed)
         //todo: what to return here? the situation is totally wrong
         ???
     }
   }
 
+  // This method is actually a copy-paste of parent NodeViewHolder.trimChainSuffix method.
   protected def trimChainSuffix(suffix: IndexedSeq[SidechainBlock], rollbackPoint: scorex.util.ModifierId): IndexedSeq[SidechainBlock] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
 
-  // apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
+  // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   protected def applyStateAndWallet(history: HIS,
                            stateToApply: MS,
                            walletToApply: VL,
                            suffixTrimmed: IndexedSeq[SidechainBlock],
-                           progressInfo: ProgressInfo[SidechainBlock]): NodeUpdateInformation = {
-    val updateInfoSample = NodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
+                           progressInfo: ProgressInfo[SidechainBlock]): SidechainNodeUpdateInformation = {
+    val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
     progressInfo.toApply.foldLeft(updateInfoSample) { case (updateInfo, modToApply) =>
       if (updateInfo.failedMod.isEmpty) {
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
@@ -212,11 +223,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             val walletAfterApply = newWallet.scanPersistent(modToApply)
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-            NodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+            SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
             context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
-            NodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
         }
       } else updateInfo
     }
