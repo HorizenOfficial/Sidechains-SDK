@@ -11,7 +11,7 @@ case class RegTestParams(
                           override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
                           override val genesisPoWData: Seq[(Int, Int)] = Seq(),
                           override val mainchainCreationBlockHeight: Int = 1,
-                          override val sidechainGenesisBlockTimestamp: Block.Timestamp = 0,
+                          override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
                           override val withdrawalEpochLength: Int = 100,
                           override val consensusSecondsInSlot: Int = 120,
                           override val consensusSlotsInEpoch: Int = 720

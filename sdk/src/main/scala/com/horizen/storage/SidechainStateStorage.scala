@@ -1,22 +1,22 @@
 package com.horizen.storage
 
-import java.util.Optional
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.google.common.primitives.Ints
+import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.SidechainTypes
 import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
 import scala.collection.JavaConverters._
-import com.horizen.box.{Box, WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
+import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.proposition.Proposition
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer}
+import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
+import com.horizen.consensus._
 
-class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
+class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
   with SidechainTypes
 {
@@ -26,12 +26,16 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
-  private[horizen] val epochInformationKey = calculateKey("Epoch information".getBytes)
-
+  private[horizen]val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
-  private[horizen] def getWithdrawalRequestsKey(epoch: Int) : ByteArrayWrapper = {
-    calculateKey(Ints.toByteArray(epoch))
+  private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
+  private[horizen] val forgingStakesAmountKey = calculateKey("forgingStakesAmount".getBytes)
+  private[horizen] val forgingStakesInfoKey = calculateKey("forgingStakes".getBytes)
+  private val forgingStakeInfoSerializer = new ListSerializer[ForgingStakeInfo](ForgingStakeInfoSerializer)
+
+  private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int) : ByteArrayWrapper = {
+    calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -52,7 +56,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
   }
 
   def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = {
-    storage.get(epochInformationKey) match {
+    storage.get(withdrawalEpochInformationKey) match {
       case v if v.isPresent =>
         WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data) match {
           case Success(withdrawalEpochInfo) => Option(withdrawalEpochInfo)
@@ -77,10 +81,56 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  def update(version : ByteArrayWrapper, withdrawalEpochInfo: WithdrawalEpochInfo,
-             boxUpdateList : Set[SidechainTypes#SCB],
-             boxIdsRemoveList : Set[Array[Byte]],
-             withdrawalRequestAppendList : Set[WithdrawalRequestBox]) : Try[SidechainStateStorage] = Try {
+  def getConsensusEpoch: Option[ConsensusEpochNumber] = { // TO DO: do we really need to have a tagged type here?
+    storage.get(consensusEpochKey) match {
+      case v if v.isPresent =>
+        Try {
+          Ints.fromByteArray(v.get().data)
+        } match {
+          case Success(epoch) => Some(intToConsensusEpochNumber(epoch))
+          case Failure(exception) =>
+            log.error("Error while consensus epoch information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
+  def getForgingStakesAmount: Option[Long] = {
+    storage.get(forgingStakesAmountKey) match {
+      case v if v.isPresent =>
+        Try {
+          Longs.fromByteArray(v.get().data)
+        } match {
+          case Success(epoch) => Some(epoch)
+          case Failure(exception) =>
+            log.error("Error while forging stakes amount parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
+  def getForgingStakesInfo: Option[Seq[ForgingStakeInfo]] = {
+    storage.get(forgingStakesInfoKey) match {
+      case v if v.isPresent =>
+        forgingStakeInfoSerializer.parseBytesTry(v.get().data) match {
+          case Success(stakesInfo) => Some(stakesInfo.asScala)
+          case Failure(exception) =>
+            log.error("Error while forging stakes parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
+  def update(version: ByteArrayWrapper,
+             withdrawalEpochInfo: WithdrawalEpochInfo,
+             boxUpdateList: Set[SidechainTypes#SCB],
+             boxIdsRemoveList: Set[Array[Byte]],
+             withdrawalRequestAppendList: Set[WithdrawalRequestBox],
+             forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
+             consensusEpoch: ConsensusEpochNumber): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -88,10 +138,13 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
     require(withdrawalRequestAppendList != null, "List of WithdrawalRequests to append must be NOT NULL. Use empty List instead.")
     require(!withdrawalRequestAppendList.contains(null), "WithdrawalRequest to append must be NOT NULL.")
+    require(forgingStakesToAppendSeq != null, "Seq of ForgerStakes to append must be NOT NULL. Use empty List instead.")
+    require(!forgingStakesToAppendSeq.contains(null), "ForgerStake to append must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
+    // Update boxes data
     for (r <- boxIdsRemoveList)
       removeList.add(calculateKey(r))
 
@@ -99,7 +152,8 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
         new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))))
 
-    updateList.add(new JPair(epochInformationKey,
+    // Update Withdrawal epoch related data
+    updateList.add(new JPair(withdrawalEpochInformationKey,
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     if (withdrawalRequestAppendList.nonEmpty) {
@@ -109,14 +163,45 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
-
     }
 
-    storage.update(version,
-      updateList,
-      removeList)
+    // Update Consensus related data
+    if(getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)
+      updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+
+    val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveList, forgingStakesToAppendSeq)
+    updateList.add(new JPair(
+      forgingStakesInfoKey,
+      new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesInfoSeq.asJava))
+    ))
+    updateList.add(new JPair(
+      forgingStakesAmountKey,
+      new ByteArrayWrapper(Longs.toByteArray(forgingStakesAmount))
+    ))
+
+    storage.update(version, updateList, removeList)
 
     this
+  }
+
+  private def applyForgingStakesChanges(boxIdsToRemove: Set[Array[Byte]], forgingStakesToAppendSeq: Seq[ForgingStakeInfo]): (Seq[ForgingStakeInfo], Long) = {
+    getForgingStakesInfo match {
+      case Some(currentStakesInfoSeq) =>
+        // Separate removedStakes from current stakes
+        val boxIdsToRemoveBAW = boxIdsToRemove.map(new ByteArrayWrapper(_))
+        val (removedStakes, existentStakes) = currentStakesInfoSeq.partition(stakeInfo => boxIdsToRemoveBAW.contains(new ByteArrayWrapper(stakeInfo.boxId)))
+
+        // Update current stakes amount
+        var stakesAmount = getForgingStakesAmount.getOrElse(0L)
+        for(stake <- removedStakes)
+          stakesAmount -= stake.value
+        for(stake <- forgingStakesToAppendSeq)
+          stakesAmount += stake.value
+
+        (existentStakes ++ forgingStakesToAppendSeq, stakesAmount)
+      case None =>
+        (forgingStakesToAppendSeq, forgingStakesToAppendSeq.foldLeft(0L)(_ + _.value))
+    }
   }
 
   def lastVersionId : Option[ByteArrayWrapper] = {

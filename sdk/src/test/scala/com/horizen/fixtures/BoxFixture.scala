@@ -60,7 +60,7 @@ trait BoxFixture
     new CertifierRightBox(new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch), nonce)
   }
 
-  def getCretifierRightBoxList(count: Int): JList[CertifierRightBox] = {
+  def getCertifierRightBoxList(count: Int): JList[CertifierRightBox] = {
     val boxList: JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
 
     for (i <- 1 to count)
@@ -132,6 +132,15 @@ trait BoxFixture
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
                    rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
     new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey), nonce)
+  }
+
+  def getForgerBoxList(count: Int): JList[ForgerBox] = {
+    val boxList: JList[ForgerBox] = new JArrayList()
+
+    for (i <- 1 to count)
+      boxList.add(getForgerBox)
+
+    boxList
   }
 }
 

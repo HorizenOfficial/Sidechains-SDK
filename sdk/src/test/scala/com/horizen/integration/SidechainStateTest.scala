@@ -1,37 +1,35 @@
 package com.horizen.integration
 
 import java.io.{File => JFile}
-import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, RegularBoxData}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.{SidechainSettings, SidechainState, SidechainTypes}
+import com.horizen.box.{RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
+import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
-import com.horizen.secret.{PrivateKey25519, Secret}
+import com.horizen.proposition.Proposition
+import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert._
 import org.junit._
-import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest._
+import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.mockito.Mockito._
 import scorex.core.settings.ScorexSettings
 import scorex.core.{bytesToId, bytesToVersion}
-import scorex.crypto.hash.Blake2b256
+import com.horizen.consensus._
 
-import scala.collection.mutable.{ListBuffer, Map}
-import scala.util.{Random, Try}
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 class SidechainStateTest
   extends JUnitSuite
@@ -61,6 +59,8 @@ class SidechainStateTest
 
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+  val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+  val forgingStakesAmount: Long = 0
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
@@ -91,7 +91,7 @@ class SidechainStateTest
   }
 
   @Before
-  def setUp() : Unit = {
+  def setUp(): Unit = {
 
     secretList.clear()
     secretList ++= getPrivateKey25519List(5).asScala
@@ -102,12 +102,11 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox]())
-
+    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox](), Seq[ForgingStakeInfo](), consensusEpoch)
   }
 
   @Test
-  def test() : Unit = {
+  def test(): Unit = {
 
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
@@ -119,7 +118,7 @@ class SidechainStateTest
         tmpDir
       })
 
-    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
 
     for (b <- boxList) {
       //Test get
@@ -141,6 +140,9 @@ class SidechainStateTest
         bytesToId(newVersion.data)
       })
 
+    Mockito.when(mockedBlock.timestamp)
+      .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
+
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
@@ -151,14 +153,14 @@ class SidechainStateTest
       .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
-
+    applyTry.get
     assertTrue("ApplyChanges for block must be successful.",
       applyTry.isSuccess)
 
     assertEquals(s"State storage version must be updated to $newVersion",
       bytesToVersion(newVersion.data), applyTry.get.version)
 
-    assertEquals("Rollaback deth must be 2.",
+    assertEquals("Rollback depth must be 2.",
       2, sidechainState.maxRollbackDepth)
 
     for (b <- transactionList.head.newBoxes().asScala) {
@@ -193,5 +195,4 @@ class SidechainStateTest
         sidechainState.closedBox(b).isDefined)
     }
   }
-
 }
