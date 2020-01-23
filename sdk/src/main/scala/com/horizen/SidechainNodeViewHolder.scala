@@ -3,7 +3,7 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.consensus.{ConsensusDataStorage, StakeConsensusEpochInfo}
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
@@ -115,7 +115,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             newStateTry match {
               case Success(newState) =>
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
-
+                // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
+                
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
@@ -209,9 +210,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       if (updateInfo.failedMod.isEmpty) {
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
-          val (lastBlockInEpoch, stakeConsensusEpochInfo) = updateInfoSample.state.getCurrentStakeConsensusEpochInfo
-          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(lastBlockInEpoch, stakeConsensusEpochInfo)
-          val walletAfterStakeConsensusApply = updateInfoSample.wallet.applyStakeConsensusEpochInfo(stakeConsensusEpochInfo)
+          val (lastBlockInEpoch, consensusEpochInfo) = updateInfoSample.state.getCurrentConsensusEpochInfo
+          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(
+            lastBlockInEpoch,
+            StakeConsensusEpochInfo(consensusEpochInfo.merkleTree.rootHash(), consensusEpochInfo.totalStake)
+          )
+          val walletAfterStakeConsensusApply = updateInfoSample.wallet.applyConsensusEpochInfo(consensusEpochInfo)
           (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
         } else
           (updateInfo.history, updateInfo.wallet)

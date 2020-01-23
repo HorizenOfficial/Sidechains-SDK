@@ -9,6 +9,7 @@ import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
+import java.util
 
 import org.mockito.{ArgumentMatchers, Mockito}
 import scorex.core.consensus.History.ProgressInfo
@@ -19,11 +20,12 @@ import scala.util.Success
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import akka.testkit.TestProbe
-import com.horizen.consensus.StakeConsensusEpochInfo
+import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.utils.MerkleTree
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.util.ModifierId
-
+import com.horizen.consensus.intToConsensusEpochNumber
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
@@ -70,9 +72,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
 
     var stateNotificationExecuted: Boolean = false
-    Mockito.when(state.getCurrentStakeConsensusEpochInfo).thenReturn({
+    Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
       stateNotificationExecuted = true
-      (genesisBlock.id, mock[StakeConsensusEpochInfo])
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("1".getBytes()))
+      (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 
 
@@ -84,7 +87,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
 
     var walletNotificationExecuted: Boolean = false
-    Mockito.when(wallet.applyStakeConsensusEpochInfo(ArgumentMatchers.any[StakeConsensusEpochInfo])).thenAnswer(_ => {
+    Mockito.when(wallet.applyConsensusEpochInfo(ArgumentMatchers.any[ConsensusEpochInfo])).thenAnswer(_ => {
       walletNotificationExecuted = true
       wallet
     })
@@ -143,7 +146,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
-    Mockito.when(state.getCurrentStakeConsensusEpochInfo).thenAnswer( _ => {
+    Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
       null
     })
@@ -236,7 +239,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
-    Mockito.when(state.getCurrentStakeConsensusEpochInfo).thenAnswer( _ => {
+    Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
       null
     })
