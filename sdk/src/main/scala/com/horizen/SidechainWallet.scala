@@ -7,7 +7,7 @@ import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.Box
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
-import com.horizen.consensus.StakeConsensusEpochInfo
+import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.StorageParams
@@ -194,7 +194,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
 
   override def walletSeed(): Array[Byte] = seed
 
-  def applyStakeConsensusEpochInfo(epochInfo: StakeConsensusEpochInfo): SidechainWallet = this
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = this
 }
 
 object SidechainWallet

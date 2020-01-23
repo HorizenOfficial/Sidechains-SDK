@@ -4,7 +4,7 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
-import com.horizen.consensus.StakeConsensusEpochInfo
+import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
@@ -182,8 +182,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = false
 
   // TODO
-  // Returns lastBlockInEpoch and StakeConsensusEpochInfo for that epoch
-  def getCurrentStakeConsensusEpochInfo: (ModifierId, StakeConsensusEpochInfo) = ???
+  // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
+  def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
 
 }
 
