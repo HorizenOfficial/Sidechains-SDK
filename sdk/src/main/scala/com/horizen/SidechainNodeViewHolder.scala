@@ -170,7 +170,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) =>
-        // we consider that wallet always able to perform a rollback needed if State rollback was successful
         val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo)
 
         nodeUpdateInfo.failedMod match {
@@ -180,12 +179,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             updateStateAndWallet(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
           case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
         }
-      case (Failure(e), _)=>
+      case (Failure(e), _) =>
         log.error("State rollback failed: ", e)
         context.system.eventStream.publish(RollbackFailed)
         //todo: what to return here? the situation is totally wrong
         ???
-      case (_, Failure(e))=>
+      case (_, Failure(e)) =>
         log.error("Wallet rollback failed: ", e)
         context.system.eventStream.publish(RollbackFailed)
         //todo: what to return here? the situation is totally wrong
@@ -211,10 +210,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
           val (lastBlockInEpoch, stakeConsensusEpochInfo) = updateInfoSample.state.getCurrentStakeConsensusEpochInfo
-          (
-            updateInfo.history.applyStakeConsensusEpochInfo(lastBlockInEpoch, stakeConsensusEpochInfo),
-            updateInfoSample.wallet.applyStakeConsensusEpochInfo(stakeConsensusEpochInfo)
-          )
+          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(lastBlockInEpoch, stakeConsensusEpochInfo)
+          val walletAfterStakeConsensusApply = updateInfoSample.wallet.applyStakeConsensusEpochInfo(stakeConsensusEpochInfo)
+          (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
         } else
           (updateInfo.history, updateInfo.wallet)
 
