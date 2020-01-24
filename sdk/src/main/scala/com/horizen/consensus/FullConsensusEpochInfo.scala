@@ -3,7 +3,7 @@ package com.horizen.consensus
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.utils.MerkleTree
 
-case class ConsensusEpochInfo(epoch: ConsensusEpochNumber, merkleTree: MerkleTree, totalStake: Long)
+case class ConsensusEpochInfo(epoch: ConsensusEpochNumber, forgersBoxIds: MerkleTree, forgersStake: Long)
 
 case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) {
   def toBytes: Array[Byte] = {

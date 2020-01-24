@@ -210,21 +210,21 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       if (updateInfo.failedMod.isEmpty) {
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
-          val (lastBlockInEpoch, consensusEpochInfo) = updateInfoSample.state.getCurrentConsensusEpochInfo
+          val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
           val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(
             lastBlockInEpoch,
-            StakeConsensusEpochInfo(consensusEpochInfo.merkleTree.rootHash(), consensusEpochInfo.totalStake)
+            StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
           )
-          val walletAfterStakeConsensusApply = updateInfoSample.wallet.applyConsensusEpochInfo(consensusEpochInfo)
+          val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
           (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
         } else
           (updateInfo.history, updateInfo.wallet)
 
         updateInfo.state.applyModifier(modToApply) match {
           case Success(stateAfterApply) =>
-            val walletAfterApply = newWallet.scanPersistent(modToApply)
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
+            val walletAfterApply = newWallet.scanPersistent(modToApply)
             SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
