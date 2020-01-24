@@ -8,22 +8,20 @@ import com.horizen.proposition.MCPublicKeyHashProposition;
 
 import java.util.Arrays;
 
+import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
+
 public final class WithdrawalRequestBox
     extends AbstractNoncedBox<MCPublicKeyHashProposition, WithdrawalRequestBoxData>
     implements CoinsBox<MCPublicKeyHashProposition>
 {
 
-    public static final byte BOX_TYPE_ID = 2;
-
-    public WithdrawalRequestBox(WithdrawalRequestBoxData boxData,
-                                long nonce)
-    {
+    public WithdrawalRequestBox(WithdrawalRequestBoxData boxData, long nonce) {
         super(boxData, nonce);
     }
 
     @Override
     public byte boxTypeId() {
-        return BOX_TYPE_ID;
+        return WithdrawalRequestBoxId.id();
     }
 
 

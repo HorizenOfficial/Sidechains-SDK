@@ -9,15 +9,14 @@ import com.horizen.proposition.PublicKey25519Proposition;
 
 import java.util.Arrays;
 
+import static com.horizen.box.CoreBoxesIdsEnum.CertifierRightBoxId;
+
 // CertifierLock coins are not transmitted to SC, so CertifierRightBox is not a CoinsBox
 // CertifierRightBox can be opened starting from specified Withdrawal epoch.
 public final class CertifierRightBox
     extends AbstractNoncedBox<PublicKey25519Proposition, CertifierRightBoxData>
 {
-    public static final byte BOX_TYPE_ID = 2;
-
-    public CertifierRightBox(CertifierRightBoxData boxData, long nonce)
-    {
+    public CertifierRightBox(CertifierRightBoxData boxData, long nonce) {
         super(boxData, nonce);
     }
 
@@ -28,7 +27,7 @@ public final class CertifierRightBox
 
     @Override
     public byte boxTypeId() {
-        return BOX_TYPE_ID;
+        return CertifierRightBoxId.id();
     }
 
     @Override

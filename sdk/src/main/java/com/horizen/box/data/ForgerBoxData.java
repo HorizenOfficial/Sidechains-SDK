@@ -10,8 +10,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition> {
-    private PublicKey25519Proposition rewardProposition;
-    private VRFPublicKey vrfPublicKey;
+    private final PublicKey25519Proposition rewardProposition;
+    private final VRFPublicKey vrfPublicKey;
 
     public ForgerBoxData(PublicKey25519Proposition proposition, long value,
                                  PublicKey25519Proposition rewardProposition, VRFPublicKey vrfPublicKey) {

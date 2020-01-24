@@ -8,7 +8,7 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import java.util.Arrays;
 
 public final class CertifierRightBoxData extends AbstractBoxData<PublicKey25519Proposition> {
-    private long activeFromWithdrawalEpoch;
+    private final long activeFromWithdrawalEpoch;
 
     public CertifierRightBoxData(PublicKey25519Proposition proposition, long value, long activeFromWithdrawalEpoch) {
         super(proposition, value);

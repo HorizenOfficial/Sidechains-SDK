@@ -11,20 +11,20 @@ import com.horizen.vrf.VRFPublicKey;
 import java.util.Arrays;
 import java.util.Objects;
 
+import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
+
 public final class ForgerBox
         extends AbstractNoncedBox<PublicKey25519Proposition, ForgerBoxData>
         implements CoinsBox<PublicKey25519Proposition>
 {
-    public static final byte BOX_TYPE_ID = 3;
 
-    public ForgerBox(ForgerBoxData boxData, long nonce)
-    {
+    public ForgerBox(ForgerBoxData boxData, long nonce) {
         super(boxData, nonce);
     }
 
     @Override
     public byte boxTypeId() {
-        return BOX_TYPE_ID;
+        return ForgerBoxId.id();
     }
 
     @JsonProperty("vrfPubKey")

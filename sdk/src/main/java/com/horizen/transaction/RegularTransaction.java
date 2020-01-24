@@ -17,12 +17,14 @@ import com.horizen.utils.Pair;
 
 import java.util.*;
 
+import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
+import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
+import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
+import static com.horizen.transaction.CoreTransactionsIdsEnum.RegularTransactionId;
+
 public final class RegularTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
-
-    public static final byte TRANSACTION_TYPE_ID = 1;
-
     private List<RegularBox> inputs;
     private List<BoxData> outputs;
     private List<Signature25519> signatures;
@@ -39,9 +41,9 @@ public final class RegularTransaction
     private static ListSerializer<BoxData> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
                     new HashMap<Byte, BoxDataSerializer>() {{
-                        put((byte)1, RegularBoxDataSerializer.getSerializer());
-                        put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
-                        put((byte)3, ForgerBoxDataSerializer.getSerializer());
+                        put(RegularBoxId.id(), RegularBoxDataSerializer.getSerializer());
+                        put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
+                        put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
                     }}, new HashMap<>()
             ));
     private static ListSerializer<Signature25519> signaturesSerializer =
@@ -156,7 +158,7 @@ public final class RegularTransaction
 
     @Override
     public byte transactionTypeId() {
-        return TRANSACTION_TYPE_ID;
+        return RegularTransactionId.id();
     }
 
     @Override

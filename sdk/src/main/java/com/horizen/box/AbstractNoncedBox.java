@@ -12,12 +12,13 @@ import java.util.Objects;
 
 public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractBoxData<P>> extends ScorexEncoding implements NoncedBox<P>
 {
-    protected BD boxData;
-    protected long nonce;
+    protected final BD boxData;
+    protected final long nonce;
 
-    public AbstractNoncedBox(BD boxData,
-                             long nonce)
-    {
+    private byte[] id;
+    private Integer hashcode;
+
+    public AbstractNoncedBox(BD boxData, long nonce) {
         Objects.requireNonNull(boxData, "boxData must be defined");
 
         this.boxData = boxData;
@@ -37,7 +38,9 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
 
     @Override
     public byte[] id() {
-        return Blake2b256.hash(Bytes.concat(boxData.proposition().bytes(), Longs.toByteArray(nonce)));
+        if(id == null)
+            id = Blake2b256.hash(Bytes.concat(boxData.proposition().bytes(), Longs.toByteArray(nonce)));
+        return id;
     }
 
     @Override
@@ -45,7 +48,9 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
 
     @Override
     public int hashCode() {
-        return boxData.proposition().hashCode();
+        if(hashcode == null)
+            hashcode = boxData.proposition().hashCode();
+        return hashcode;
     }
 
     @Override
