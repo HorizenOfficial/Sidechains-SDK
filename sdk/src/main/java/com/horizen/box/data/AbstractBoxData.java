@@ -1,9 +1,6 @@
 package com.horizen.box.data;
 
-import com.horizen.box.AbstractNoncedBox;
 import com.horizen.proposition.Proposition;
-
-import java.util.Arrays;
 import java.util.Objects;
 
 public abstract class AbstractBoxData<P extends Proposition> implements BoxData<P> {
@@ -44,7 +41,8 @@ public abstract class AbstractBoxData<P extends Proposition> implements BoxData<
             return false;
         if (obj == this)
             return true;
-        return proposition() == ((AbstractBoxData) obj).proposition()
-                && value() == ((AbstractBoxData) obj).value();
+        AbstractBoxData boxData = (AbstractBoxData) obj;
+        return proposition().equals(boxData.proposition())
+                && value() == boxData.value();
     }
 }

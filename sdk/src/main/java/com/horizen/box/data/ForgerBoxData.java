@@ -61,11 +61,18 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
 
     @Override
     public boolean equals(Object obj) {
-        if (!super.equals(obj))
+        if (obj == null)
             return false;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        if (obj == this)
+            return true;
         ForgerBoxData boxData = (ForgerBoxData) obj;
-        return vrfPublicKey().equals(boxData.vrfPublicKey()) &&
-                rewardProposition().equals(boxData.rewardProposition());
+
+        return proposition().equals(boxData.proposition())
+                && value() == boxData.value()
+                && vrfPublicKey().equals(boxData.vrfPublicKey())
+                && rewardProposition().equals(boxData.rewardProposition());
     }
 
     @Override

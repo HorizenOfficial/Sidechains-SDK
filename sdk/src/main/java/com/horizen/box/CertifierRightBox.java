@@ -32,10 +32,17 @@ public final class CertifierRightBox
 
     @Override
     public boolean equals(Object obj) {
-        if (!super.equals(obj))
+        if (obj == null)
             return false;
-        CertifierRightBox certifierRightBox = (CertifierRightBox)obj;
-        return activeFromWithdrawalEpoch() == certifierRightBox.activeFromWithdrawalEpoch();
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        if (obj == this)
+            return true;
+        CertifierRightBox box = (CertifierRightBox) obj;
+
+        return Arrays.equals(id(), box.id())
+                && value() == box.value()
+                && activeFromWithdrawalEpoch() == box.activeFromWithdrawalEpoch();
     }
 
     @Override
