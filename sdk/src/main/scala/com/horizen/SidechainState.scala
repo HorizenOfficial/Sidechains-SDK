@@ -156,7 +156,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
             changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
             changes.toRemove.map(_.boxId.array).toSet,
             changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-              .map(_.asInstanceOf[WithdrawalRequestBox]).toSet,
+              .map(_.asInstanceOf[WithdrawalRequestBox]),
             changes.toAppend.map(_.box).filter(box => box.isInstanceOf[ForgerBox])
               .map(box => ForgingStakeInfo(box.id(), box.value())),
             consensusEpoch
@@ -197,7 +197,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     (
-      params.sidechainGenesisBlockId, // TODO: replace with real id or even remove ids at all
+      bytesToId(stateStorage.lastVersionId.get.data), // we use block id as version
       ConsensusEpochInfo(
         stateStorage.getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0)),
         MerkleTree.createMerkleTree(stateStorage.getForgingStakesInfo.getOrElse(Seq()).map(info => info.boxId).asJava),

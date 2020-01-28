@@ -68,7 +68,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getWithdrawalRequests(epoch: Int) : JList[WithdrawalRequestBox] = {
+  def getWithdrawalRequests(epoch: Int): JList[WithdrawalRequestBox] = { // Do we need to return JList here?
     storage.get(getWithdrawalRequestsKey(epoch)) match {
       case v if v.isPresent =>
         withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
@@ -81,7 +81,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getConsensusEpoch: Option[ConsensusEpochNumber] = { // TO DO: do we really need to have a tagged type here?
+  def getConsensusEpoch: Option[ConsensusEpochNumber] = {
     storage.get(consensusEpochKey) match {
       case v if v.isPresent =>
         Try {
@@ -128,7 +128,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
              boxIdsRemoveList: Set[Array[Byte]],
-             withdrawalRequestAppendList: Set[WithdrawalRequestBox],
+             withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
              consensusEpoch: ConsensusEpochNumber): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
@@ -136,9 +136,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
     require(!boxUpdateList.contains(null), "Box to add/update must be NOT NULL.")
     require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
-    require(withdrawalRequestAppendList != null, "List of WithdrawalRequests to append must be NOT NULL. Use empty List instead.")
-    require(!withdrawalRequestAppendList.contains(null), "WithdrawalRequest to append must be NOT NULL.")
-    require(forgingStakesToAppendSeq != null, "Seq of ForgerStakes to append must be NOT NULL. Use empty List instead.")
+    require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
+    require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
+    require(forgingStakesToAppendSeq != null, "Seq of ForgerStakes to append must be NOT NULL. Use empty Seq instead.")
     require(!forgingStakesToAppendSeq.contains(null), "ForgerStake to append must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
@@ -156,10 +156,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     updateList.add(new JPair(withdrawalEpochInformationKey,
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
-    if (withdrawalRequestAppendList.nonEmpty) {
+    if (withdrawalRequestAppendSeq.nonEmpty) {
       val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch)
 
-      withdrawalRequestList.addAll(withdrawalRequestAppendList.asJavaCollection)
+      withdrawalRequestList.addAll(withdrawalRequestAppendSeq.asJava)
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))

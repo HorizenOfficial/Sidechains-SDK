@@ -123,6 +123,15 @@ trait BoxFixture
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(key, value), nonce)
   }
 
+  def getWithdrawalRequestsBoxList(count: Int): JList[WithdrawalRequestBox] = {
+    val boxList: JList[WithdrawalRequestBox] = new JArrayList()
+
+    for (i <- 1 to count)
+      boxList.add(getWithdrawalRequestBox)
+
+    boxList
+  }
+
   def getForgerBox: ForgerBox = {
     new ForgerBox(
       new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey),

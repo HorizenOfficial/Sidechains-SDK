@@ -4,12 +4,12 @@ import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{BoxData, RegularBoxData}
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 
 import scala.collection.JavaConverters._
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes}
-import com.horizen.box.{RegularBox, WithdrawalRequestBox}
+import com.horizen.box.{ForgerBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
@@ -18,13 +18,11 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import scorex.core.settings.ScorexSettings
 import scorex.core.{bytesToId, bytesToVersion}
 import com.horizen.consensus._
 
@@ -39,106 +37,132 @@ class SidechainStateTest
     with MockitoSugar
     with SidechainTypes
 {
-  val tmpDir = tempDir()
-  val scorexSettings = mock[ScorexSettings]
-  val sidechainSettings = mock[SidechainSettings]
   val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
 
-  val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
-  stateDir.mkdirs()
-  val store = getStore(stateDir)
+  var stateStorage: SidechainStateStorage = _
+  var initialVersion: ByteArrayWrapper = _
 
-  val stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
-
+  var initialForgerBox: ForgerBox = _
   val boxList = new ListBuffer[SidechainTypes#SCB]()
-  val boxVersion = getVersion
-  val transactionList = new ListBuffer[RegularTransaction]()
-
   val secretList = new ListBuffer[PrivateKey25519]()
-
   val params = MainNetParams()
-  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
-  val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
-  val forgingStakesAmount: Long = 0
 
-  def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
+  val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, 1)
+  val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+
+  def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
+    val outputsCount = regularOutputsCount + forgerOutputsCount
+
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
     var totalFrom = 0L
 
 
     for (b <- boxList) {
-      from.add(new JPair(b.asInstanceOf[RegularBox],
-        secretList.find(_.publicImage().equals(b.proposition())).get.asInstanceOf[PrivateKey25519]))
-      totalFrom += b.value()
+      if(b.isInstanceOf[RegularBox]) {
+        from.add(new JPair(b.asInstanceOf[RegularBox],
+          secretList.find(_.publicImage().equals(b.proposition())).get))
+        totalFrom += b.value()
+      }
     }
 
     val minimumFee = 5L
     val maxTo = totalFrom - minimumFee
     var totalTo = 0L
 
-    for(s <- getPrivateKey25519List(outputsCount).asScala) {
+    for(s <- getPrivateKey25519List(regularOutputsCount).asScala) {
       val value = maxTo / outputsCount
       to.add(new RegularBoxData(s.publicImage(), value))
+      totalTo += value
+    }
+
+    for(s <- getPrivateKey25519List(forgerOutputsCount).asScala) {
+      val value = maxTo / outputsCount
+      to.add(new ForgerBoxData(s.publicImage(), value, s.publicImage(), getVRFPublicKey(totalTo)))
       totalTo += value
     }
 
     val fee = totalFrom - totalTo
 
     RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
-
   }
 
   @Before
   def setUp(): Unit = {
-
     secretList.clear()
-    secretList ++= getPrivateKey25519List(5).asScala
+    secretList ++= getPrivateKey25519List(10).asScala
 
     boxList.clear()
     boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
 
-    transactionList.clear()
-    transactionList += getRegularTransaction(1)
+    initialForgerBox = getForgerBox(secretList.head.publicImage(), 100L, 100L, secretList.head.publicImage(), getVRFPublicKey(1L))
+    val forgingStakesToAppendSeq = Seq[ForgingStakeInfo](ForgingStakeInfo(initialForgerBox.id(), initialForgerBox.value()))
+    boxList += initialForgerBox
 
-    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox](), Seq[ForgingStakeInfo](), consensusEpoch)
+    // Init SidechainStateStorage with boxList
+    val tmpDir = tempDir()
+    val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
+    stateDir.mkdirs()
+    val store = getStore(stateDir)
+
+    initialVersion = getVersion
+
+    stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+    stateStorage.update(
+      initialVersion,
+      initialWithdrawalEpochInfo,
+      boxList.toSet,
+      Set[Array[Byte]](),
+      Seq[WithdrawalRequestBox](),
+      forgingStakesToAppendSeq,
+      initialConsensusEpoch
+    )
+  }
+
+
+  @Test
+  def closedBoxes(): Unit = {
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
+
+    // Test that initial boxes list present in the State
+    for (box <- boxList) {
+      assertEquals("State must return existing box.",
+        box, sidechainState.closedBox(box.id()).get)
+
+      assertEquals("State contains different box for given key.",
+        box, sidechainState.getClosedBox(box.id()).get)
+    }
+
   }
 
   @Test
-  def test(): Unit = {
-
-    Mockito.when(sidechainSettings.scorexSettings)
-      .thenAnswer(answer => {
-        scorexSettings
-      })
-
-    Mockito.when(scorexSettings.dataDir)
-      .thenAnswer(answer => {
-        tmpDir
-      })
-
+  def currentConsensusEpochInfo(): Unit = {
     val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
 
-    for (b <- boxList) {
-      //Test get
-      assertEquals("State must return existing box.",
-        b, sidechainState.closedBox(b.id()).get)
+    // Test that initial currentConsensusEpochInfo is valid
+    val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
+    assertEquals("Consensus epoch info modifier id should be different.", bytesToId(initialVersion.data), modId)
+    assertEquals("Consensus epoch info epoch number should be different.", initialConsensusEpoch, consensusEpochInfo.epoch)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 1, consensusEpochInfo.merkleTree.leaves().size())
+    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value(), consensusEpochInfo.totalStake)
+  }
 
-      //Test getClosedBox
-      assertEquals("",
-        b, sidechainState.getClosedBox(b.id()).get)
-    }
+  @Test
+  def applyModifier(): Unit = {
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
 
-    //Test applyModifier
+    // Test applyModifier with a single RegularTransaction with regular and forger outputs
     val mockedBlock = mock[SidechainBlock]
+
+    val transactionList = new ListBuffer[RegularTransaction]()
+    transactionList.append(getRegularTransaction(2, 1))
+    val forgerOutputsAmount = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).foldLeft(0L)(_ + _.value())
 
     val newVersion = getVersion
 
     Mockito.when(mockedBlock.id)
-      .thenReturn({
-        bytesToId(newVersion.data)
-      })
+      .thenReturn(bytesToId(newVersion.data))
 
     Mockito.when(mockedBlock.timestamp)
       .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
@@ -147,7 +171,7 @@ class SidechainStateTest
       .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
-      .thenAnswer(answer => bytesToId(boxVersion.data))
+      .thenAnswer(answer => bytesToId(initialVersion.data))
 
     Mockito.when(mockedBlock.mainchainBlocks)
       .thenAnswer(answer => Seq[MainchainBlockReference]())
@@ -173,16 +197,25 @@ class SidechainStateTest
         sidechainState.closedBox(b).isEmpty)
     }
 
-    //Test rollback
-    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(boxVersion.data))
+
+    // Test that currentConsensusEpochInfo was changed
+    val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
+    assertEquals("Consensus epoch info modifier id should be different.", bytesToId(newVersion.data), modId)
+    assertEquals("Consensus epoch info epoch number should be different.", 2, consensusEpochInfo.epoch)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 2, consensusEpochInfo.merkleTree.leavesNumber)
+    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value() + forgerOutputsAmount, consensusEpochInfo.totalStake)
+
+
+    // Test rollback
+    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(initialVersion.data))
 
     assertTrue("Rollback must be successful.",
       rollbackTry.isSuccess)
 
-    assertEquals(s"State storage version must be rolled back to $boxVersion",
-      bytesToVersion(boxVersion.data), rollbackTry.get.version)
+    assertEquals(s"State storage version must be rolled back to $initialVersion",
+      bytesToVersion(initialVersion.data), rollbackTry.get.version)
 
-    assertEquals("Rollaback deth must be 1.",
+    assertEquals("Rollback depth must be 1.",
       1, sidechainState.maxRollbackDepth)
 
     for (b <- transactionList.head.newBoxes().asScala) {

@@ -30,7 +30,8 @@ class SidechainStateStorageTest
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
-  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
+  val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   @Test
   def mainFlowTest() : Unit = {
@@ -42,13 +43,8 @@ class SidechainStateStorageTest
     assertTrue("ForgingStakesAmount info expected to be undefined.", sidechainStateStorage.getForgingStakesAmount.isEmpty)
     assertTrue("ForgingStakesInfo info expected to be undefined.", sidechainStateStorage.getForgingStakesInfo.isEmpty)
 
-    val bList1 : List[SidechainTypes#SCB] = getRegularBoxList(5).asScala.toList
-    val bList2 : List[SidechainTypes#SCB] = getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB]).toList
-    val bList3 : List[SidechainTypes#SCB] = getForgerBoxList(5).asScala.toList
-
-    val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
-    val forgingStakesToAppendSeq = bList3.map(box => ForgingStakeInfo(box.id(), box.value()))
-    val forgingStakesAmount: Long = bList3.foldLeft(0L)(_ + _.value())
+    val bList1: List[SidechainTypes#SCB] = getRegularBoxList(5).asScala.toList
+    val bList2: List[SidechainTypes#SCB] = getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB]).toList
 
     val version1 = getVersion
     val version2 = getVersion
@@ -61,49 +57,40 @@ class SidechainStateStorageTest
 
     // Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2 ++ bList3).toSet, Set(), Set(),
-        forgingStakesToAppendSeq, consensusEpoch
-      ).isSuccess
-    )
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(), Seq(), consensusEpoch).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
     assertEquals("Storage must contain 1 version.",
       1, sidechainStateStorage.rollbackVersions.size)
 
-    for (b <- bList1 ++ bList2 ++ bList3) {
+    for (b <- bList1 ++ bList2) {
       assertEquals("Storage must contain specified box - " + b,
         b, sidechainStateStorage.getBox(b.id()).get)
     }
 
     assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
-    assertEquals("Different forging stakes amount expected.", forgingStakesAmount, sidechainStateStorage.getForgingStakesAmount.get)
-    assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq, sidechainStateStorage.getForgingStakesInfo.get)
 
-    // Test delete operation: first RegularBox, first CustomBox and first ForgerBox
+    // Test delete operation: first RegularBox and first CustomBox
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(),
-        bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet ++ bList3.slice(0, 1).map(_.id()).toSet,
-        Set(), Seq(), consensusEpoch).isSuccess)
+        bList1.slice(0, 1).map(_.id()).toSet ++ bList2.slice(0, 1).map(_.id()).toSet,
+        Seq(), Seq(), consensusEpoch).isSuccess)
 
-    assertEquals("Version in storage must be - " + version1,
+    assertEquals("Version in storage must be - " + version2,
       version2, sidechainStateStorage.lastVersionId.get)
     assertEquals("Storage must contain 2 versions.",
       2, sidechainStateStorage.rollbackVersions.size)
 
-    for (b <- bList1.slice(1, bList1.size) ++ bList2.slice(1, bList2.size) ++ bList3.slice(1, bList3.size)) {
+    for (b <- bList1.slice(1, bList1.size) ++ bList2.slice(1, bList2.size)) {
       assertEquals("Storage must contain specified box - " + b,
         b, sidechainStateStorage.getBox(b.id()).get)
     }
 
-    for (b <- bList1.slice(0, 1) ++ bList2.slice(0, 1) ++ bList3.slice(0, 1)) {
+    for (b <- bList1.slice(0, 1) ++ bList2.slice(0, 1)) {
       assertTrue("Storage must not contain specified box - " + b,
         sidechainStateStorage.getBox(b.id()).isEmpty)
     }
-
-    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
-    assertEquals("Different forging stakes amount expected.", forgingStakesAmount - bList3.head.value(), sidechainStateStorage.getForgingStakesAmount.get)
-    assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq.tail, sidechainStateStorage.getForgingStakesInfo.get)
 
     //Test rollback operation
     assertTrue("Rollback operation must be successful.",
@@ -121,6 +108,161 @@ class SidechainStateStorageTest
   }
 
   @Test
+  def forgerStakesFlow() : Unit = {
+    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+
+    // Verify that consensus info is not defined
+    assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpoch.isEmpty)
+    assertTrue("ForgingStakesAmount info expected to be undefined.", sidechainStateStorage.getForgingStakesAmount.isEmpty)
+    assertTrue("ForgingStakesInfo info expected to be undefined.", sidechainStateStorage.getForgingStakesInfo.isEmpty)
+
+    val forgerBoxList: List[SidechainTypes#SCB] = getForgerBoxList(5).asScala.toList
+    val forgingStakesToAppendSeq = forgerBoxList.map(box => ForgingStakeInfo(box.id(), box.value()))
+    val forgingStakesAmount: Long = forgerBoxList.foldLeft(0L)(_ + _.value())
+
+    // Test insert operation (empty storage).
+    val mod1Version = getVersion
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod1Version, withdrawalEpochInfo, forgerBoxList.toSet, Set(), Seq(),
+        forgingStakesToAppendSeq, consensusEpoch
+      ).isSuccess
+    )
+
+    assertEquals("Version in storage must be - " + mod1Version,
+      mod1Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 1 version.",
+      1, sidechainStateStorage.rollbackVersions.size)
+
+    for (box <- forgerBoxList) {
+      assertEquals("Storage must contain specified forger box - " + box,
+        box, sidechainStateStorage.getBox(box.id()).get)
+    }
+
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different forging stakes amount expected.", forgingStakesAmount, sidechainStateStorage.getForgingStakesAmount.get)
+    assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq, sidechainStateStorage.getForgingStakesInfo.get)
+
+    // Test delete operation: first ForgerBox
+    val mod2Version = getVersion
+    assertTrue("Update(delete) operation must be successful.",
+      sidechainStateStorage.update(mod2Version, withdrawalEpochInfo, Set(),
+        forgerBoxList.slice(0, 1).map(_.id()).toSet,
+        Seq(), Seq(), consensusEpoch).isSuccess)
+
+    assertEquals("Version in storage must be - " + mod2Version,
+      mod2Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 2 versions.",
+      2, sidechainStateStorage.rollbackVersions.size)
+
+    for (box <- forgerBoxList.slice(1, forgerBoxList.size)) {
+      assertEquals("Storage must contain specified box - " + box,
+        box, sidechainStateStorage.getBox(box.id()).get)
+    }
+
+    for (box <- forgerBoxList.slice(0, 1)) {
+      assertTrue("Storage must not contain specified box - " + box,
+        sidechainStateStorage.getBox(box.id()).isEmpty)
+    }
+
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different forging stakes amount expected.", forgingStakesAmount - forgerBoxList.head.value(), sidechainStateStorage.getForgingStakesAmount.get)
+    assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq.tail, sidechainStateStorage.getForgingStakesInfo.get)
+
+    // Test rollback operation
+    assertTrue("Rollback operation must be successful.",
+      sidechainStateStorage.rollback(mod1Version).isSuccess)
+
+    assertEquals("Version in storage must be - " + mod1Version,
+      mod1Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 1 version.",
+      1, sidechainStateStorage.rollbackVersions.size)
+
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different forging stakes amount expected.", forgingStakesAmount, sidechainStateStorage.getForgingStakesAmount.get)
+    assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq, sidechainStateStorage.getForgingStakesInfo.get)
+
+    for (box <- forgerBoxList) {
+      assertEquals("Storage must contain specified box - " + box,
+        box, sidechainStateStorage.getBox(box.id()).get)
+    }
+  }
+
+  @Test
+  def withdrawalRequestsFlow() : Unit = {
+    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+
+    // Verify that withdrawal requests info is not defined
+    assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
+    assertTrue("No withdrawal reqeuests expected to be stored.", sidechainStateStorage.getWithdrawalRequests(withdrawalEpochInfo.epoch).isEmpty)
+
+    val withdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(5).asScala.toList
+
+    // Test append withdrawals operation (empty storage).
+    val mod1Version = getVersion
+    val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(0, 1)
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList,
+        Seq(), consensusEpoch
+      ).isSuccess
+    )
+
+    assertEquals("Version in storage must be - " + mod1Version,
+      mod1Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 1 version.",
+      1, sidechainStateStorage.rollbackVersions.size)
+
+    assertEquals("Different WithdrawalEpoch info expected to be stored.",
+      mod1WithdrawalEpochInfo, sidechainStateStorage.getWithdrawalEpochInfo.get)
+
+    for (box <- withdrawalRequestsList) {
+      assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
+    }
+    assertEquals("Storage expected to have different withdrawal requests boxes applied.",
+      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+
+
+    // Test append withdrawals to existing withdrawal epoch
+    val mod2Version = getVersion
+    val newWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(2).asScala.toList
+
+    val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(0, 2)
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), newWithdrawalRequestsList,
+        Seq(), consensusEpoch
+      ).isSuccess
+    )
+
+    assertEquals("Version in storage must be - " + mod2Version,
+      mod2Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 2 version.",
+      2, sidechainStateStorage.rollbackVersions.size)
+
+    assertEquals("Different WithdrawalEpoch info expected to be stored.",
+      mod2WithdrawalEpochInfo, sidechainStateStorage.getWithdrawalEpochInfo.get)
+
+    for (box <- newWithdrawalRequestsList) {
+      assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
+    }
+    assertEquals("Storage expected to have different withdrawal requests boxes applied.",
+      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+
+
+    // Test rollback operation
+    assertTrue("Rollback operation must be successful.",
+      sidechainStateStorage.rollback(mod1Version).isSuccess)
+
+    assertEquals("Version in storage must be - " + mod1Version,
+      mod1Version, sidechainStateStorage.lastVersionId.get)
+    assertEquals("Storage must contain 1 version.",
+      1, sidechainStateStorage.rollbackVersions.size)
+
+    assertEquals("Different WithdrawalEpoch info expected to be stored.",
+      mod1WithdrawalEpochInfo, sidechainStateStorage.getWithdrawalEpochInfo.get)
+    assertEquals("Storage expected to have different withdrawal requests boxes applied.",
+      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+  }
+
+  @Test
   def testExceptions() : Unit = {
     val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
 
@@ -133,6 +275,6 @@ class SidechainStateStorageTest
 
     //Try to remove non-existent item
     assertFalse("Remove operation of non-existent item must not throw exception.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(_.id()), Set(), Seq(), intToConsensusEpochNumber(0)).isFailure)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(_.id()), Seq(), Seq(), intToConsensusEpochNumber(0)).isFailure)
   }
 }

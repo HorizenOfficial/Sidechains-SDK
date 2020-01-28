@@ -7,7 +7,7 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.RegularBox
-import com.horizen.box.data.{BoxData, RegularBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -40,11 +40,11 @@ class SidechainStateTest
     with SidechainTypes
 {
 
-  val mockedBoxStorage : SidechainStateStorage = mock[SidechainStateStorage]
-  val mockedApplicationState : ApplicationState = mock[ApplicationState]
+  val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+  val mockedApplicationState: ApplicationState = mock[ApplicationState]
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
-  val boxVersion = new ListBuffer[ByteArrayWrapper]()
+  val stateVersion = new ListBuffer[ByteArrayWrapper]()
   val transactionList = new ListBuffer[RegularTransaction]()
 
   val secretList = new ListBuffer[PrivateKey25519]()
@@ -52,41 +52,45 @@ class SidechainStateTest
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
 
-  def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
+  def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
+    val outputsCount = regularOutputsCount + forgerOutputsCount
+
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
     var totalFrom = 0L
 
 
     for (b <- boxList) {
-      from.add(new JPair(b.asInstanceOf[RegularBox],
-        secretList.find(_.publicImage().equals(b.proposition())).get))
-      totalFrom += b.value()
+      if(b.isInstanceOf[RegularBox]) {
+        from.add(new JPair(b.asInstanceOf[RegularBox],
+          secretList.find(_.publicImage().equals(b.proposition())).get))
+        totalFrom += b.value()
+      }
     }
 
     val minimumFee = 5L
     val maxTo = totalFrom - minimumFee
     var totalTo = 0L
 
-    for(s <- getPrivateKey25519List(outputsCount).asScala) {
-    val value = maxTo / outputsCount
-    to.add(new RegularBoxData(s.publicImage(), value))
-    totalTo += value
-  }
+    for(s <- getPrivateKey25519List(regularOutputsCount).asScala) {
+      val value = maxTo / outputsCount
+      to.add(new RegularBoxData(s.publicImage(), value))
+      totalTo += value
+    }
+
+    for(s <- getPrivateKey25519List(forgerOutputsCount).asScala) {
+      val value = maxTo / outputsCount
+      to.add(new ForgerBoxData(s.publicImage(), value, s.publicImage(), getVRFPublicKey(totalTo)))
+      totalTo += value
+    }
 
     val fee = totalFrom - totalTo
 
     RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
-
-  }
-
-  @Before
-  def setUp() : Unit = {
-
   }
 
   @Test
-  def testStateless() : Unit = {
+  def testStateless(): Unit = {
     var exceptionThrown = false
 
     // Set base Secrets data
@@ -95,21 +99,21 @@ class SidechainStateTest
     // Set base Box data
     boxList.clear()
     boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
-    boxVersion.clear()
-    boxVersion += getVersion
+    stateVersion.clear()
+    stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1)
+    transactionList += getRegularTransaction(1, 0)
 
-    // Mock get and update methods of BoxStorage
-    Mockito.when(mockedBoxStorage.lastVersionId).thenReturn(Some(boxVersion.last))
+    // Mock get and update methods of StateStorage
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
-    Mockito.when(mockedBoxStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
 
-    val sidechainState : SidechainState = new SidechainState(mockedBoxStorage, params, bytesToVersion(boxVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -143,8 +147,8 @@ class SidechainStateTest
       .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(boxVersion.last.data))
-      .thenReturn(bytesToId(boxVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
@@ -191,26 +195,26 @@ class SidechainStateTest
     // Set base Box data
     boxList.clear()
     boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
-    boxVersion.clear()
-    boxVersion += getVersion
+    stateVersion.clear()
+    stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1)
+    transactionList += getRegularTransaction(1, 0)
 
     // Mock get and update methods of BoxStorage
-    Mockito.when(mockedBoxStorage.lastVersionId)
-        .thenAnswer(answer => {Some(boxVersion.last)})
+    Mockito.when(mockedStateStorage.lastVersionId)
+        .thenAnswer(answer => {Some(stateVersion.last)})
 
-    Mockito.when(mockedBoxStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
       .thenAnswer(answer => {
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
 
-    Mockito.when(mockedBoxStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
+    Mockito.when(mockedStateStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[Array[Byte]]](),
-      ArgumentMatchers.any[Set[WithdrawalRequestBox]](),
+      ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[Seq[ForgingStakeInfo]](),
       ArgumentMatchers.any[ConsensusEpochNumber]()))
       .thenAnswer( answer => {
@@ -218,10 +222,10 @@ class SidechainStateTest
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[Array[Byte]]](3)
-        val withdrawalRequestAppendList = answer.getArgument[Set[WithdrawalRequestBox]](4)
+        val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
         val forgingStakesToAppendSeq = answer.getArgument[Seq[ForgingStakeInfo]](5)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
-        boxVersion += version
+        stateVersion += version
 
         for (b <- boxToRemove ++ boxToUpdate.map(_.id())) {
           val i = boxList.indexWhere(_.id().sameElements(b))
@@ -231,10 +235,10 @@ class SidechainStateTest
 
         boxList ++= boxToUpdate
 
-        Success(mockedBoxStorage)
+        Success(mockedStateStorage)
       })
 
-    Mockito.when(mockedBoxStorage.getWithdrawalEpochInfo)
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo)
       .thenAnswer(answer => None)
 
     val mockedBlock = mock[SidechainBlock]
@@ -251,7 +255,7 @@ class SidechainStateTest
       .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(boxVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
 
     Mockito.when(mockedBlock.mainchainBlocks)
       .thenAnswer(answer => Seq[MainchainBlockReference]())
@@ -268,7 +272,7 @@ class SidechainStateTest
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState: SidechainState = new SidechainState(mockedBoxStorage, params, bytesToVersion(boxVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
