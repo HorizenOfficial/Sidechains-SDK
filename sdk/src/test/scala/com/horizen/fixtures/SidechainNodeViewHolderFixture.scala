@@ -61,8 +61,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
       consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
     )
@@ -72,8 +72,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
       consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
     )
@@ -83,8 +83,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
       consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
     )
