@@ -3,10 +3,9 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.MainchainBlockReference
-import com.horizen.box.WithdrawalRequestBox
+import com.horizen.box.{ForgerBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
-import com.horizen.box.RegularBox
 import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
@@ -50,7 +49,7 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
-  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
 
   def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
@@ -166,10 +165,6 @@ class SidechainStateTest
     assertTrue(s"Block validation must be unsuccessful.",
       validateTry2.isFailure)
 
-    val validateTry3 = sidechainState.validate(mockedBlock)
-    assertTrue(s"Block validation must be unsuccessful.",
-      validateTry2.isFailure)
-
     //Test changes
     val changes = sidechainState.changes(mockedBlock)
 
@@ -183,12 +178,10 @@ class SidechainStateTest
 
     assertTrue("Box to add must be same as in transaction.",
       transactionList.head.newBoxes().asScala.head.equals(changes.get.toAppend.head.box))
-
   }
 
   @Test
   def testApplyModifier(): Unit = {
-
     // Set base Secrets data
     secretList.clear()
     secretList ++= getPrivateKey25519List(5).asScala
@@ -198,7 +191,8 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0)
+    transactionList += getRegularTransaction(2, 2)
+    val forgingStakes = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).map(fb => ForgingStakeInfo(fb.id(), fb.value()))
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedStateStorage.lastVersionId)
@@ -225,6 +219,14 @@ class SidechainStateTest
         val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
         val forgingStakesToAppendSeq = answer.getArgument[Seq[ForgingStakeInfo]](5)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
+
+        // Verify withdrawals
+        assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
+        // Verify Forging stakes data
+        assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
+        assertEquals("Forging stake seq should be different.", forgingStakes, forgingStakesToAppendSeq)
+
+
         stateVersion += version
 
         for (b <- boxToRemove ++ boxToUpdate.map(_.id())) {
@@ -281,7 +283,5 @@ class SidechainStateTest
 
     assertTrue("Box in state must be same as in transaction.",
       sidechainState.closedBox(transactionList.head.newBoxes().asScala.head.id()).isDefined)
-
   }
-
 }
