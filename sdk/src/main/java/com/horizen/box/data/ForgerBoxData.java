@@ -10,8 +10,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition> {
-    private PublicKey25519Proposition rewardProposition;
-    private VRFPublicKey vrfPublicKey;
+    private final PublicKey25519Proposition rewardProposition;
+    private final VRFPublicKey vrfPublicKey;
 
     public ForgerBoxData(PublicKey25519Proposition proposition, long value,
                                  PublicKey25519Proposition rewardProposition, VRFPublicKey vrfPublicKey) {
@@ -61,11 +61,18 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
 
     @Override
     public boolean equals(Object obj) {
-        if (!super.equals(obj))
+        if (obj == null)
             return false;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        if (obj == this)
+            return true;
         ForgerBoxData boxData = (ForgerBoxData) obj;
-        return vrfPublicKey().equals(boxData.vrfPublicKey()) &&
-                rewardProposition().equals(boxData.rewardProposition());
+
+        return proposition().equals(boxData.proposition())
+                && value() == boxData.value()
+                && vrfPublicKey().equals(boxData.vrfPublicKey())
+                && rewardProposition().equals(boxData.rewardProposition());
     }
 
     @Override

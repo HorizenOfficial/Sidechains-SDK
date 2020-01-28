@@ -17,11 +17,13 @@ import com.horizen.utils.Pair;
 
 import java.util.*;
 
+import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
+import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
+import static com.horizen.transaction.CoreTransactionsIdsEnum.ForgingStakeTransactionId;
+
 public final class ForgingStakeTransaction
         extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
-    public static final byte TRANSACTION_TYPE_ID = 3;
-
     private List<ForgerBox> inputs;
     private List<BoxData> outputs;
     private List<Signature25519> signatures;
@@ -38,8 +40,8 @@ public final class ForgingStakeTransaction
     private static ListSerializer<BoxData> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
                     new HashMap<Byte, BoxDataSerializer>() {{
-                        put((byte)1, RegularBoxDataSerializer.getSerializer());
-                        put((byte)2, ForgerBoxDataSerializer.getSerializer());
+                        put(RegularBoxId.id(), RegularBoxDataSerializer.getSerializer());
+                        put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
                     }}, new HashMap<>()
             ));
     private static ListSerializer<Signature25519> signaturesSerializer =
@@ -152,7 +154,7 @@ public final class ForgingStakeTransaction
 
     @Override
     public byte transactionTypeId() {
-        return TRANSACTION_TYPE_ID;
+        return ForgingStakeTransactionId.id();
     }
 
     @Override

@@ -100,7 +100,8 @@ class SidechainApp @Inject()
       genesisBlock.id,
       genesisBlock.mainchainBlocks.head.hash,
       genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight
+      sidechainSettings.genesisData.mcBlockHeight,
+      sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "mainnet" => MainNetParams(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scId),

@@ -388,7 +388,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         try {
             RegularTransactionCreator.create(null, to, pk6.publicImage(), 10, new ArrayList<>());
         }
-        catch (IllegalArgumentException e) {
+        catch (NullPointerException e) {
             exceptionOccurred = true;
         }
         assertTrue("Test1: Exception expected: wallet is null", exceptionOccurred);
@@ -399,7 +399,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         try {
             RegularTransactionCreator.create(defaultWallet, null, pk6.publicImage(), 10, new ArrayList<>());
         }
-        catch (IllegalArgumentException e) {
+        catch (NullPointerException e) {
             exceptionOccurred = true;
         }
         assertTrue("Test2: Exception expected: 'to' is null", exceptionOccurred);
@@ -410,7 +410,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         try {
             RegularTransactionCreator.create(defaultWallet, to, null, 10, new ArrayList<>());
         }
-        catch (IllegalArgumentException e) {
+        catch (NullPointerException e) {
             exceptionOccurred = true;
         }
         assertTrue("Test3: Exception expected: change address is null", exceptionOccurred);
@@ -421,7 +421,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         try {
             RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, null);
         }
-        catch (IllegalArgumentException e) {
+        catch (NullPointerException e) {
             exceptionOccurred = true;
         }
         assertTrue("Test4: Exception expected: boxIdsToExclude is null", exceptionOccurred);

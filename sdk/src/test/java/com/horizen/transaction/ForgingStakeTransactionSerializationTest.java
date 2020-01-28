@@ -14,7 +14,9 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,14 +54,14 @@ public class ForgingStakeTransactionSerializationTest extends BoxFixtureClass {
         // Note: current transaction bytes are also stored in "src/test/resources/forgingstaketransaction_hex"
         transaction = ForgingStakeTransaction.create(from, to, fee, timestamp);
         // Uncomment and run if you want to update regression data.
-        /*
-        try {
+
+        /*try {
             BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgingstaketransaction_hex"));
             out.write(BytesUtils.toHexString(transaction.bytes()));
              out.close();
         } catch (Throwable e) {
-        }
-        */
+        }*/
+
     }
 
     @Test

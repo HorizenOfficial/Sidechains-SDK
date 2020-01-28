@@ -13,6 +13,7 @@ import com.horizen.secret.Secret;
 import com.horizen.utils.Pair;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class RegularTransactionCreator {
@@ -29,8 +30,10 @@ public class RegularTransactionCreator {
         // 4. construct inputs and outputs lists, timestamp
         // 5. try to do RegularTransaction.create(...)
 
-        if(wallet == null || to == null || changeAddress == null || boxIdsToExclude == null)
-            throw new IllegalArgumentException("Parameters can't be null.");
+        Objects.requireNonNull(wallet, "Wallet can't be null");
+        Objects.requireNonNull(to, "Destination box data list can't be null");
+        Objects.requireNonNull(changeAddress, "Change address can't be null");
+        Objects.requireNonNull(boxIdsToExclude, "Box ids to exclude list can't be null");
 
         long toAmount = 0;
         for(BoxData boxData : to) {

@@ -8,21 +8,20 @@ import com.horizen.proposition.PublicKey25519Proposition;
 
 import java.util.Arrays;
 
+import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
+
 public final class RegularBox
     extends AbstractNoncedBox<PublicKey25519Proposition, RegularBoxData>
     implements CoinsBox<PublicKey25519Proposition>
 {
 
-    public static final byte BOX_TYPE_ID = 1;
-
-    public RegularBox(RegularBoxData boxData, long nonce)
-    {
+    public RegularBox(RegularBoxData boxData, long nonce) {
         super(boxData, nonce);
     }
 
     @Override
     public byte boxTypeId() {
-        return BOX_TYPE_ID;
+        return RegularBoxId.id();
     }
 
     @Override
