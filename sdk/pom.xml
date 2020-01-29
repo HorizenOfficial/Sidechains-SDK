@@ -47,7 +47,7 @@
             <artifactId>circe-core_2.12</artifactId>
             <version>0.9.0</version>
         </dependency>
-        
+
         <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
         <dependency>
             <groupId>org.scorexfoundation</groupId>
