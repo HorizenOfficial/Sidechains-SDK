@@ -3,7 +3,7 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.consensus.{ConsensusDataStorage, StakeConsensusEpochInfo}
+import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
@@ -16,7 +16,7 @@ import scorex.core.idToVersion
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -63,14 +63,18 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      history <- SidechainHistory.genesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params), historyBlockValidators(params))
       state <- SidechainState.genesisState(stateStorage, params, applicationState, genesisBlock)
-      wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet, genesisBlock)
+
+      (modId: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
+
+      history <- SidechainHistory.genesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
+        historyBlockValidators(params), modId, StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
+
+      wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+        walletTransactionStorage, applicationWallet, genesisBlock, consensusEpochInfo)
+
       pool <- Success(SidechainMemoryPool.emptyPool)
-    } yield {
-      val (notifiedHistory, notifiedWallet) = notifyHistoryAndWalletWithEpochInfo(state, history, wallet)
-      (notifiedHistory, state, notifiedWallet, pool)
-    }
+    } yield (history, state, wallet, pool)
 
     result.get
   }
@@ -202,17 +206,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
 
-  protected def notifyHistoryAndWalletWithEpochInfo(state: SidechainState, history: SidechainHistory, wallet: SidechainWallet): (SidechainHistory, SidechainWallet) = {
-    val (lastBlockInEpoch, consensusEpochInfo) = state.getCurrentConsensusEpochInfo
-    val historyAfterStakeConsensusApply = history.applyStakeConsensusEpochInfo(
-      lastBlockInEpoch,
-      StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
-    )
-    val walletAfterStakeConsensusApply = wallet.applyConsensusEpochInfo(consensusEpochInfo)
-
-    (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
-  }
-
   // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   protected def applyStateAndWallet(history: HIS,
                            stateToApply: MS,
@@ -223,10 +216,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     progressInfo.toApply.foldLeft(updateInfoSample) { case (updateInfo, modToApply) =>
       if (updateInfo.failedMod.isEmpty) {
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-        val (newHistory, newWallet) =
-          if(updateInfo.state.isSwitchingConsensusEpoch(modToApply))
-            notifyHistoryAndWalletWithEpochInfo(updateInfo.state, updateInfo.history, updateInfo.wallet)
-          else
+        val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
+          val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
+          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(
+            lastBlockInEpoch,
+            StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
+          )
+          val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
+          (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
+        } else
           (updateInfo.history, updateInfo.wallet)
 
         updateInfo.state.applyModifier(modToApply) match {

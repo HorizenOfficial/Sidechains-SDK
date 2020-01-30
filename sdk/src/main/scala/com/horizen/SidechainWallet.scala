@@ -210,11 +210,11 @@ object SidechainWallet
 
   private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                                      walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet,
-                                     genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
+                                     genesisBlock: SidechainBlock, consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
       new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
-        .scanPersistent(genesisBlock)
+        .scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
     else
       throw new RuntimeException("WalletBox storage is not empty!")
   }
