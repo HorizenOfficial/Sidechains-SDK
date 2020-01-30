@@ -190,7 +190,7 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
-    devnull = open("/dev/null", "w+")
+    devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
         print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
     subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +

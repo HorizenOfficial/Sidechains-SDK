@@ -421,30 +421,12 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
     is_mac_block_included = False
 
     for mc_block_json in mc_blocks_json:
-        try:
-            expected_mc_block_version = expected_mc_block["version"]
-            expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
-            expected_mc_block_time = expected_mc_block["time"]
-            expected_mc_block_nonce = expected_mc_block["nonce"]
+        expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
 
-            sc_mc_block_version = mc_block_json["header"]["version"]
-            sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
-            sc_mc_block_time = mc_block_json["header"]["time"]
-            sc_mc_block_nonce = mc_block_json["header"]["nonce"]
+        sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
 
-            assert_equal(expected_mc_block_version, sc_mc_block_version)
-            assert_equal(expected_mc_block_merkleroot, sc_mc_block_merkleroot)
-            assert_equal(expected_mc_block_time, sc_mc_block_time)
-            assert_equal(expected_mc_block_nonce, sc_mc_block_nonce)
-
-            expected_mc_block_previousblockhash = expected_mc_block["previousblockhash"]
-
-            sc_mc_block_previousblockhash = mc_block_json["header"]["hashPrevBlock"]
-            assert_equal(expected_mc_block_previousblockhash, sc_mc_block_previousblockhash)
-
+        if expected_mc_block_merkleroot == sc_mc_block_merkleroot:
             is_mac_block_included = True
-        except Exception:
-            continue
 
     return is_mac_block_included
 
@@ -544,19 +526,20 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info)
+    sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
+                                                            None,
+                                                            sc_nodes_bootstrap_info.genesis_account_balance,
+                                                            sc_nodes_bootstrap_info.mainchain_block_height,
+                                                            sc_nodes_bootstrap_info.sidechain_genesis_block_hex,
+                                                            sc_nodes_bootstrap_info.pow_data,
+                                                            sc_nodes_bootstrap_info.network,
+                                                            sc_nodes_bootstrap_info.withdrawal_epoch_length)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
-        if i>0:
-            bootstrap_sidechain_node(dirname, i, SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
-                                                                 None,
-                                                                 sc_nodes_bootstrap_info.genesis_account_balance,
-                                                                 sc_nodes_bootstrap_info.mainchain_block_height,
-                                                                 sc_nodes_bootstrap_info.sidechain_genesis_block_hex,
-                                                                 sc_nodes_bootstrap_info.pow_data,
-                                                                 sc_nodes_bootstrap_info.network,
-                                                                 sc_nodes_bootstrap_info.withdrawal_epoch_length),
-                                                                 sc_node_conf)
-        bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+        if i == 0:
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+        else:
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf)
 
     return sc_nodes_bootstrap_info
 

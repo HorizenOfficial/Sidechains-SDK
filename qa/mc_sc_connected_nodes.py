@@ -109,6 +109,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
 
         # verify the block is included inside SC node 1
         first_sc_node_best_block = first_sidechain_node.block_best()["result"]
+        second_sc_node_best_block = second_sidechain_node.block_best()["result"]
 
         assert_equal(first_sc_node_best_block["height"], 2, "The best block has not the specified height.")
 
