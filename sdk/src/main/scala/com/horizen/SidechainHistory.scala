@@ -459,7 +459,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   }
 
   def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
-    consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
+    // Note: uncomment in real history implementation
+    //consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
     this
   }
 
