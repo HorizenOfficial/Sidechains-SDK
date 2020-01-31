@@ -196,11 +196,20 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+    // TO DO: should be changed, when we will change the structure of SidechainCreation output in MC Tx
+    val forgingStakes: Seq[ForgingStakeInfo] = stateStorage.getForgingStakesInfo match {
+      case seq if seq.isDefined && seq.get.nonEmpty =>
+        seq.get
+      case _ => // just a mock for now
+        // Note: at least one ForgingStakeInfo must be present. Now NOT, because CreationOutput doesn't return forging box.
+        Seq(ForgingStakeInfo(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"), 0L))
+    }
+
     (
       bytesToId(stateStorage.lastVersionId.get.data), // we use block id as version
       ConsensusEpochInfo(
         stateStorage.getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0)),
-        MerkleTree.createMerkleTree(stateStorage.getForgingStakesInfo.getOrElse(Seq()).map(info => info.boxId).asJava),
+        MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
         stateStorage.getForgingStakesAmount.getOrElse(0L)
       )
     )

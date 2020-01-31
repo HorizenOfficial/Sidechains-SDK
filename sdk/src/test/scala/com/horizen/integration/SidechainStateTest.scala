@@ -144,8 +144,8 @@ class SidechainStateTest
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
     assertEquals("Consensus epoch info modifier id should be different.", bytesToId(initialVersion.data), modId)
     assertEquals("Consensus epoch info epoch number should be different.", initialConsensusEpoch, consensusEpochInfo.epoch)
-    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 1, consensusEpochInfo.merkleTree.leaves().size())
-    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value(), consensusEpochInfo.totalStake)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 1, consensusEpochInfo.forgersBoxIds.leaves().size())
+    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value(), consensusEpochInfo.forgersStake)
   }
 
   @Test
@@ -202,8 +202,8 @@ class SidechainStateTest
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
     assertEquals("Consensus epoch info modifier id should be different.", bytesToId(newVersion.data), modId)
     assertEquals("Consensus epoch info epoch number should be different.", 2, consensusEpochInfo.epoch)
-    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 2, consensusEpochInfo.merkleTree.leavesNumber)
-    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value() + forgerOutputsAmount, consensusEpochInfo.totalStake)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 2, consensusEpochInfo.forgersBoxIds.leavesNumber)
+    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value() + forgerOutputsAmount, consensusEpochInfo.forgersStake)
 
 
     // Test rollback
