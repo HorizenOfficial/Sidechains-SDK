@@ -108,7 +108,7 @@ public final class MerkleTree
             boolean isOdd = levelSize % 2 == 1;
             if(isOdd && idxOnLevel == levelSize - 1) // last element on level with odd number of elements -> concatenate with itself
                 merklePath.add(new Pair<>((byte)1, _merkleTree.get(offset + idxOnLevel)));
-            else if(leafIdx % 2 == 1) // right child
+            else if(idxOnLevel % 2 == 1) // right child
                 merklePath.add(new Pair<>((byte)0, _merkleTree.get(offset + idxOnLevel - 1)));
             else // left child
                 merklePath.add(new Pair<>((byte)1, _merkleTree.get(offset + idxOnLevel + 1)));
