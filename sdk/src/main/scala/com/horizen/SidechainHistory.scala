@@ -459,7 +459,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   }
 
   def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
-    consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
+    // Note: uncomment in real history implementation
+    //consensusDataStorage.addStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
     this
   }
 
@@ -500,11 +501,13 @@ object SidechainHistory
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
                                       semanticBlockValidators: Seq[SemanticBlockValidator],
-                                      historyBlockValidators: Seq[HistoryBlockValidator]) : Try[SidechainHistory] = Try {
+                                      historyBlockValidators: Seq[HistoryBlockValidator],
+                                      lastBlockInEpoch: ModifierId,
+                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyStakeConsensusEpochInfo(lastBlockInEpoch, stakeEpochInfo)
     else
       throw new RuntimeException("History storage is not empty!")
   }

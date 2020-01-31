@@ -134,11 +134,12 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
     this
   }
 
-  // rollback BoxStore only. SecretStore must not changed
+  // rollback BoxStorage and TransactionsStorage only. SecretStorage must not change.
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
+    walletTransactionStorage.rollback(new ByteArrayWrapper(version)).get
     applicationWallet.onRollback(version)
     this
   }
@@ -209,11 +210,11 @@ object SidechainWallet
 
   private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
                                      walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet,
-                                     genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
+                                     genesisBlock: SidechainBlock, consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty)
       new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
-        .scanPersistent(genesisBlock)
+        .scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
     else
       throw new RuntimeException("WalletBox storage is not empty!")
   }

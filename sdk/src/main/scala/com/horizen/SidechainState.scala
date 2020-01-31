@@ -205,7 +205,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       )
     )
   }
-
 }
 
 object SidechainState
