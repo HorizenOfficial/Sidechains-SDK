@@ -65,8 +65,9 @@ public class MerkleTreeTest {
 
 
         // Test merkle path construction:
-        MerklePath path = merkleTree.getMerklePathForLeaf(0);
-
-        assertEquals("Merkle path validation failed.", true, merkleTree.validateMerklePath(merkleTree.leaves().get(0), path));
+        for(int i = 0; i < actualLeaves.size(); i++) {
+            MerklePath path = merkleTree.getMerklePathForLeaf(i);
+            assertEquals("Merkle path validation failed.", true, merkleTree.validateMerklePath(merkleTree.leaves().get(i), path));
+        }
     }
 }
