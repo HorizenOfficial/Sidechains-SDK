@@ -1,5 +1,7 @@
 package com.horizen.utils
 
+import java.util
+
 import scorex.core.NodeViewModifier
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -11,6 +13,16 @@ case class BoxMerklePathInfo(boxId: Array[Byte], merklePath: MerklePath) extends
   override type M = BoxMerklePathInfo
 
   override def serializer: ScorexSerializer[BoxMerklePathInfo] = BoxMerklePathInfoSerializer
+
+  override def hashCode: Int = util.Arrays.hashCode(boxId)
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case info: BoxMerklePathInfo =>
+        boxId.sameElements(info.boxId) && merklePath.bytes().sameElements(info.merklePath.bytes())
+      case _ => false
+    }
+  }
 }
 
 object BoxMerklePathInfoSerializer extends ScorexSerializer[BoxMerklePathInfo] {

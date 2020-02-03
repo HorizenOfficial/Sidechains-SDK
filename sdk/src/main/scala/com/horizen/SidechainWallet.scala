@@ -130,9 +130,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
 
-    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions)
+    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions).get
 
-    forgingBoxesMerklePathStorage.updateVersion(new ByteArrayWrapper(version))
+    forgingBoxesMerklePathStorage.updateVersion(new ByteArrayWrapper(version)).get
 
     applicationWallet.onChangeBoxes(version, newBoxes.map(_.box).toList.asJava,
       boxIdsToRemove.toList.asJava)
@@ -215,13 +215,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  def getForgingBoxMerklePath(forgingBoxId: Array[Byte], epoch: ConsensusEpochNumber): Option[MerklePath] = {
+  def getForgingBoxMerklePath(forgingBoxId: Array[Byte], requestedEpoch: ConsensusEpochNumber): Option[MerklePath] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
-    val storedConsensusEpochNumber = ConsensusEpochNumber @@ {
-      if (epoch < 2) 1
-      else epoch - 2
+    val storedConsensusEpochNumber: ConsensusEpochNumber = requestedEpoch match {
+      case epoch if epoch <= 2 => ConsensusEpochNumber @@ 1
+      case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
     forgingBoxesMerklePathStorage.getMerklePathsForEpoch(storedConsensusEpochNumber) match {

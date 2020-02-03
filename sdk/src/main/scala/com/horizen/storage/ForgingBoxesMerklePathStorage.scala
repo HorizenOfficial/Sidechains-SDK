@@ -1,7 +1,5 @@
 package com.horizen.storage
 
-import java.util.Optional
-
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.{BoxMerklePathInfo, BoxMerklePathInfoSerializer, ByteArrayWrapper, ListSerializer, Pair}
@@ -20,14 +18,14 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
   private[horizen] def epochKey(epoch: ConsensusEpochNumber): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"epoch$epoch"))
   private[horizen] val maxNumberOfStoredEpochs: Int = 3
 
-  private val boxMerklePathInfoSerializer = new ListSerializer[BoxMerklePathInfo](BoxMerklePathInfoSerializer)
+  private[horizen] val boxMerklePathInfoListSerializer = new ListSerializer[BoxMerklePathInfo](BoxMerklePathInfoSerializer)
 
   private def nextVersion: ByteArrayWrapper = {
     val version = new Array[Byte](32)
-    if(lastVersionId.isPresent)
-      new Random(lastVersionId.get().hashCode()).nextBytes(version)
-    else
-      Random.nextBytes(version)
+    lastVersionId match {
+      case Some(lastVersion) => new Random(lastVersion.hashCode()).nextBytes(version)
+      case None => Random.nextBytes(version)
+    }
 
     new ByteArrayWrapper(version)
   }
@@ -40,7 +38,7 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     removeList.add(epochKey(ConsensusEpochNumber @@ (epoch - maxNumberOfStoredEpochs)))
 
     val updateList = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
-    updateList.add(new Pair(epochKey(epoch), new ByteArrayWrapper(boxMerklePathInfoSerializer.toBytes(boxMerklePathInfoSeq.asJava))))
+    updateList.add(new Pair(epochKey(epoch), new ByteArrayWrapper(boxMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava))))
 
     storage.update(nextVersion, updateList, removeList)
 
@@ -55,7 +53,7 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
   def getMerklePathsForEpoch(epoch: ConsensusEpochNumber): Option[Seq[BoxMerklePathInfo]] = {
     storage.get(epochKey(epoch)) match {
       case v if v.isPresent =>
-        boxMerklePathInfoSerializer.parseBytesTry(v.get().data) match {
+        boxMerklePathInfoListSerializer.parseBytesTry(v.get().data) match {
           case Success(boxMerklePathsInfo) => Some(boxMerklePathsInfo.asScala)
           case Failure(exception) =>
             log.error("Error while box merkle paths info parsing.", exception)
@@ -65,11 +63,15 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     }
   }
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  def lastVersionId: Option[ByteArrayWrapper] = {
+    val lastVersion = storage.lastVersionID()
+    if (lastVersion.isPresent)
+      Some(lastVersion.get())
+    else
+      None
   }
 
-  def rollbackVersions : List[ByteArrayWrapper] = {
+  def rollbackVersions: List[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
   }
 
