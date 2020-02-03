@@ -50,6 +50,7 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
+   @Named("WalletMerklePathStorage") val walletMerklePathStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
@@ -138,6 +139,7 @@ class SidechainApp @Inject()
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
+  protected val forgingBoxesMerklePathStorage = new ForgingBoxesMerklePathStorage(registerStorage(walletMerklePathStorage))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -150,8 +152,14 @@ class SidechainApp @Inject()
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
-    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    sidechainWalletBoxStorage,
+    sidechainSecretStorage,
+    sidechainWalletTransactionStorage,
+    forgingBoxesMerklePathStorage,
+    params, timeProvider,
+    applicationWallet,
+    applicationState,
+    genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =

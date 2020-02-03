@@ -108,6 +108,8 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
     getStorage(),
     sidechainTransactionsCompanion)
+  val forgingBoxesMerklePathStorage = new ForgingBoxesMerklePathStorage(
+    getStorage())
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -120,8 +122,15 @@ trait SidechainNodeViewHolderFixture
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
-    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, genesisBlock)
+    sidechainWalletBoxStorage,
+    sidechainSecretStorage,
+    sidechainWalletTransactionStorage,
+    forgingBoxesMerklePathStorage,
+    params,
+    timeProvider,
+    defaultApplicationWallet,
+    defaultApplicationState,
+    genesisBlock)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
