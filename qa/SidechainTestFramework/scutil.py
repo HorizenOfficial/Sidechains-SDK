@@ -427,6 +427,7 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
         if expected_mc_block_merkleroot == sc_mc_block_merkleroot:
             is_mac_block_included = True
+            break
 
     return is_mac_block_included
 
