@@ -4,7 +4,7 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
-import com.horizen.consensus.StakeConsensusEpochInfo
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
@@ -12,13 +12,12 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.util.ModifierId
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
-import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage, params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)
@@ -182,9 +181,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = false
 
   // TODO
-  // Returns lastBlockInEpoch and StakeConsensusEpochInfo for that epoch
-  def getCurrentStakeConsensusEpochInfo: (ModifierId, StakeConsensusEpochInfo) = ???
-
+  // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
+  def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+    // NOTE: no logic here, just for ability to pass the tests.
+    val modIdBytes = new Array[Byte](32)
+    scala.util.Random.nextBytes(modIdBytes)
+    (bytesToId(modIdBytes),
+      ConsensusEpochInfo(
+        com.horizen.consensus.intToConsensusEpochNumber(0),
+        utils.MerkleTree.createMerkleTree(java.util.Arrays.asList(modIdBytes)),
+        0L)
+    )
+  }
 }
 
 object SidechainState

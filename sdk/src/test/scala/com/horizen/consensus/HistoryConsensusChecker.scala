@@ -5,7 +5,7 @@ import java.util.Random
 
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
+import com.horizen.fixtures.{FinishedEpochInfo, _}
 import com.horizen.params.{NetworkParams, TestNetParams}
 import com.horizen.storage.{InMemoryStoreAdapter, SidechainHistoryStorage}
 import com.horizen.transaction.TransactionSerializer
@@ -20,11 +20,21 @@ import scala.util.{Failure, Success, Try}
 
 class HistoryConsensusChecker {
 
-  def createHistory(params: NetworkParams, genesisBlock: SidechainBlock): SidechainHistory = {
+  def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
     val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[java.lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
     val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStoreAdapter(), companion, params)
-    SidechainHistory.genesisHistory(sidechainHistoryStorage, new ConsensusDataStorage(new InMemoryStoreAdapter()), params, genesisBlock, Seq(), Seq(new ConsensusValidator())).get
+    SidechainHistory
+      .genesisHistory(
+        sidechainHistoryStorage,
+        new ConsensusDataStorage(new InMemoryStoreAdapter()),
+        params,
+        genesisBlock,
+        Seq(),
+        Seq(new ConsensusValidator()),
+        genesisBlock.id,
+        finishedEpochInfo.stakeConsensusEpochInfo)
+      .get
   }
 
   def generateBlock(generationRule: GenerationRules, generator: SidechainBlocksGenerator, finishEpochOp: (Block.BlockId, FinishedEpochInfo) => Unit): (Seq[SidechainBlocksGenerator], SidechainBlock) = {
@@ -92,7 +102,7 @@ class HistoryConsensusChecker {
 
     val initialParams = TestNetParams(consensusSlotsInEpoch = 10, sidechainGenesisBlockTimestamp = 1333344452L)
     val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(1000000L, testSeed, initialParams)
-    val history: SidechainHistory = createHistory(params, genesisBlock)
+    val history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)
     history.applyStakeConsensusEpochInfo(genesisBlock.id, genesisEndEpochInfo.stakeConsensusEpochInfo)
     println(s"//////////////// Genesis epoch ${genesisBlock.id} had been ended ////////////////")
 

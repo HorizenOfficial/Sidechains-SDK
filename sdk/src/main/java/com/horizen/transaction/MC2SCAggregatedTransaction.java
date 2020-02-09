@@ -42,7 +42,7 @@ public final class MC2SCAggregatedTransaction
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> _mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
-                new HashMap<Byte, ScorexSerializer<? extends SidechainRelatedMainchainOutput>>() {{
+                new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
                     put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
                     put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
                     put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());

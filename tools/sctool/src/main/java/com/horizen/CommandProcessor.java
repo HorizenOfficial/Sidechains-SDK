@@ -265,9 +265,9 @@ public class CommandProcessor {
             case 0: // mainnet
                 return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, 1, 0,100, 120, 720);
+                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1, 0,100, 120, 720);
+                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720 );
         }
         return null;
 

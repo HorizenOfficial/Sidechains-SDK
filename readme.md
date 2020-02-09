@@ -20,23 +20,7 @@ Sidechains-SDK is available and tested on Linux and Windows (64bit).
 
 **Requirements**
 
-1. Install Java 8 or newer, Scala 2.12.x, SBT 0.13.x
-
-2. Sidechains-SDK based on Scorex framework 2.0.0-RC4 version.
-Scorex-2.0.0-RC4 should be installed into your local maven repository:
-
-    Clone Scorex git repository and checkout to the proper commit:
-    ```
-   git clone https://github.com/ScorexFoundation/Scorex.git
-   cd Scorex
-   git checkout 6ffeafc
-    ```
-    Comment out lines 22-33 and 153-169 in file `build.sbt` using "//" at the beginning of lines to be commented
-
-    Publish Scorex core to local maven repository:
-    ```
-    sbt publishM2
-    ```
+Install Java 8 or newer, Scala 2.12.x, SBT 0.13.x
 
 **Interaction**
 

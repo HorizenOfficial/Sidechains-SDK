@@ -3,6 +3,8 @@ package com.horizen.consensus
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.utils._
 
+case class ConsensusEpochInfo(epoch: ConsensusEpochNumber, forgersBoxIds: MerkleTree, forgersStake: Long)
+
 case class StakeConsensusEpochInfo(rootHash: ByteArrayWrapper, totalStake: Long) {
   def toBytes: Array[Byte] = {
     rootHash.data ++ Longs.toByteArray(totalStake)
