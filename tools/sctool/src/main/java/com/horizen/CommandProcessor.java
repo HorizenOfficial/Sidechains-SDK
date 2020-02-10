@@ -76,7 +76,8 @@ public class CommandProcessor {
 
     private void printUsageMsg() {
         printer.print("Usage:\n" +
-                    "\t<command name> [<json data>]\n" +
+                    "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                    "\tFor interactive mode: <command name> [<json data>]\n" +
                 "Supported commands:\n" +
                     "\thelp\n" +
                     "\tgeneratekey <arguments>\n" +

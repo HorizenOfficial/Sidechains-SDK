@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from util import assert_true
+from test_framework.util import assert_true
 import time
 
 """
@@ -18,9 +18,9 @@ class MCSCNodesAlive(SidechainTestFramework):
             i = i + 1
         i = 0
         for sc_node in self.sc_nodes:
-            res = sc_node.debug_info()
+            res = sc_node.node_connectedPeers()
             assert_true(res is not None, "SC node {0} not alive !".format(i))
-            print("SC node {0} alive !\nResponse to debuginfo API call with input : {1}".format(i, res))
+            print("SC node {0} alive !\nResponse to API call with input : {1}".format(i, res))
             i = i + 1
             
 if __name__ == "__main__":

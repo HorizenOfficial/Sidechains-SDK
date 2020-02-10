@@ -27,6 +27,8 @@ def p2p_port(n):
     return 11000 + n + os.getpid()%999
 def rpc_port(n):
     return 12000 + n + os.getpid()%999
+def websocket_port_by_mc_node_index(n):
+    return 13000 + n + os.getpid()%999
 
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BTC values"""
@@ -71,11 +73,12 @@ def sync_mempools(rpc_connections, wait=1):
 
 bitcoind_processes = {}
 
-def initialize_datadir(dirname, n):
+def initialize_datadir(dirname, n, websocket_port=None):
     datadir = os.path.join(dirname, "node"+str(n))
+
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
-    with open(os.path.join(datadir, "zcash.conf"), 'w') as f:
+    with open(os.path.join(datadir, "zen.conf"), 'w') as f:
         f.write("regtest=1\n")
         f.write("showmetrics=0\n")
         f.write("rpcuser=rt\n")
@@ -83,6 +86,9 @@ def initialize_datadir(dirname, n):
         f.write("port="+str(p2p_port(n))+"\n")
         f.write("rpcport="+str(rpc_port(n))+"\n")
         f.write("listenonion=0\n")
+        f.write("debug=ws\n")
+        if(websocket_port is not None):
+            f.write("wsport={0}\n".format(websocket_port))
     return datadir
 
 def initialize_chain(test_dir):
@@ -96,7 +102,7 @@ def initialize_chain(test_dir):
         devnull = open("/dev/null", "w+")
         # Create cache directories, run bitcoinds:
         for i in range(4):
-            datadir=initialize_datadir("cache", i)
+            datadir=initialize_datadir("cache", i, [])
             args = [ os.getenv("BITCOIND", "bitcoind"), "-keypool=1", "-datadir="+datadir, "-discover=0" ]
             if i > 0:
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
@@ -152,8 +158,7 @@ def initialize_chain_clean(test_dir, num_nodes):
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_datadir(test_dir, i)
-
+        initialize_datadir(test_dir, i, websocket_port_by_mc_node_index(i))
 
 def _rpchost_to_args(rpchost):
     '''Convert optional IP:port spec to rpcconnect/rpcport args'''
@@ -182,10 +187,10 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "bitcoind")
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest" ]
+    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
-    devnull = open("/dev/null", "w+")
+    devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
         print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
     subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
@@ -439,3 +444,31 @@ def get_coinbase_address(node, expected_utxos=None):
     addrs = [a for a in set(addrs) if addrs.count(a) == expected_utxos]
     assert(len(addrs) > 0)
     return addrs[0]
+
+"""
+Perform SC creation, mine mainchain blocks, create genesis info.
+Parameters:
+ - sidechain_id: id of the sidechain to be created
+ - mainchain_node: the mainchain node
+ - public_key: a public key
+ - withdrawal_epoch_length
+ - forward_transfer_amount: the amount of the forward transfer.
+ 
+Output: an array of two information:
+ - the genesis info used for start the sidechain node
+ - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
+
+"""
+def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount):
+    number_of_blocks_to_enable_sc_logic = 219
+    number_of_blocks = mainchain_node.getblockcount()
+    diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
+    if diff > 1:
+        mainchain_node.generate(diff)
+
+    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length,
+                                              [{"address": public_key, "amount": forward_transfer_amount}])
+    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
+
+    mainchain_node.generate(1)
+    return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount()]

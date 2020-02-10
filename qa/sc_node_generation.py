@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
-from SidechainTestFramework.scutil import initialize_sc_chain_clean, start_sc_nodes, connect_sc_nodes, connect_sc_nodes_bi, sync_sc_mempools, sync_sc_blocks, \
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, connect_sc_nodes, connect_sc_nodes_bi, sync_sc_mempools, sync_sc_blocks, \
                                           wait_for_next_sc_blocks
 import time
 import json
@@ -23,7 +23,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         pass
     
     def sc_setup_chain(self):
-        initialize_sc_chain_clean(self.options.tmpdir, 3, None)
+        initialize_default_sc_chain_clean(self.options.tmpdir, 3)
         
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
@@ -131,7 +131,6 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         assert_equal(0, len(self.sc_nodes[1].transaction_allTransactions()["result"]["transactions"]))
         assert_equal(0, len(self.sc_nodes[2].transaction_allTransactions()["result"]["transactions"]))
         print("OK\n")
-        
         #Checking that node0 balance has decreased by amount-fee, node1 balance has increased by amount and node2 balance has increased of blockreward+txfee
         print("Checking balance changed...")
         scblockreward = 1

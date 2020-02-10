@@ -18,13 +18,12 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.utils.Pair
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Curve25519
 import scorex.util.bytesToId
+import scorex.util.idToBytes
 
 import scala.collection.JavaConverters._
 import scala.io.Source
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewUtilMocks extends MockitoSugar {
 
@@ -39,15 +38,16 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
   val box_1 = new RegularBox(secret1.publicImage(), 1, 10)
   val box_2 = new RegularBox(secret2.publicImage(), 1, 20)
   val box_3 = new RegularBox(secret3.publicImage(), 1, 30)
+
+  val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
+    PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
+    SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList()
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
     val history: NodeHistory = mock[NodeHistory]
-
-    val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-      SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
 
     Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockById_return_value()) Optional.of(genesisBlock)
@@ -97,6 +97,22 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
       }
       else Optional.empty())
 
+    Mockito.when(history.searchTransactionInsideBlockchain(ArgumentMatchers.any[String])).thenAnswer(asw => {
+      if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlockchain_return_value()) {
+        val id = asw.getArgument(0).asInstanceOf[String]
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+      } else
+        Optional.empty()
+    })
+
+    Mockito.when(history.searchTransactionInsideSidechainBlock(ArgumentMatchers.any[String], ArgumentMatchers.any[String])).thenAnswer(asw => {
+      if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlock_return_value()) {
+        val id = asw.getArgument(0).asInstanceOf[String]
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+      } else
+        Optional.empty()
+    })
+
     history
   }
 
@@ -140,10 +156,14 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
     Mockito.when(wallet.secretByPublicKey(ArgumentMatchers.any[Proposition])).thenAnswer(asw => {
       val prop: Proposition = asw.getArgument(0).asInstanceOf[Proposition]
-      if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
-      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)
-      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret3.publicImage().bytes))) Optional.of(secret3)
+      if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
+      else if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)
+      else if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret3.publicImage().bytes))) Optional.of(secret3)
       else Optional.empty()
+    })
+
+    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any(), ArgumentMatchers.any())).thenAnswer(asw => {
+      allBoxes
     })
 
     wallet
@@ -157,15 +177,15 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))
 
-    to.add(new Pair(secret3.publicImage(), 10L))
+    to.add(new Pair(secret3.publicImage(), 5L))
 
     RegularTransaction.create(from, to, withdrawalRequests, fee, 1547798549470L)
   }
 
   private def getTransactionList(): util.List[RegularTransaction] = {
     val list: util.List[RegularTransaction] = new util.ArrayList[RegularTransaction]()
-    list.add(getTransaction(3L))
-    list.add(getTransaction(7L))
+    list.add(getTransaction(1L))
+    list.add(getTransaction(1L))
     list
   }
 
@@ -174,14 +194,28 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
 
     Mockito.when(memoryPool.getTransactions).thenAnswer(_ => transactionList)
 
+    Mockito.when(memoryPool.getTransactionsSortedByFee(ArgumentMatchers.any())).thenAnswer(_ => {
+      if (sidechainApiMockConfiguration.getShould_history_getTransactionsSortedByFee_return_value())
+        transactionList.asScala.sortBy(_.fee()).asJava
+      else null
+    })
+
+    Mockito.when(memoryPool.getTransactionById(ArgumentMatchers.any[String])).thenAnswer(asw => {
+      if (sidechainApiMockConfiguration.getShould_memPool_searchTransactionInMemoryPool_return_value()) {
+        val id = asw.getArgument(0).asInstanceOf[String]
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+      } else
+        Optional.empty()
+    })
+
     memoryPool
   }
 
   def getSidechainNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainNodeView =
-    new SidechainNodeView(
-      getNodeHistoryMock(sidechainApiMockConfiguration),
-      getNodeStateMock(sidechainApiMockConfiguration),
-      getNodeWalletMock(sidechainApiMockConfiguration),
-      getNodeMemoryPoolMock(sidechainApiMockConfiguration))
+      new SidechainNodeView(
+        getNodeHistoryMock(sidechainApiMockConfiguration),
+        getNodeStateMock(sidechainApiMockConfiguration),
+        getNodeWalletMock(sidechainApiMockConfiguration),
+        getNodeMemoryPoolMock(sidechainApiMockConfiguration))
 
 }
