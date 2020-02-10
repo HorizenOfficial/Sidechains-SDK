@@ -7,20 +7,18 @@ import java.time.Instant
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.box.{Box, ForgerBox, NoncedBox}
+import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.consensus.hashToBigInteger
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
-import com.horizen.transaction.{BoxTransaction, SidechainTransaction, Transaction}
-import com.horizen.utils.{ListSerializer, MerklePath}
-import com.horizen.vrf.VRFProof
-import com.horizen.{ScorexEncoding, SidechainTypes}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.ListSerializer
-import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
+import com.horizen.utils.{ListSerializer, MerklePath, MerklePathSerializer}
+import com.horizen.vrf.{VRFProof, VRFProofSerializer}
+import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.{ModifierTypeId, NodeViewModifier, bytesToId, idToBytes}
@@ -32,7 +30,7 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "forgerBox", "vrfProof", "merklePath", "version", "serializer", "modifierTypeId", "encoder", "companion"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion"))
 class SidechainBlock (
                        @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) override val parentId: ModifierId,
                        override val timestamp: Block.Timestamp,
@@ -40,8 +38,8 @@ class SidechainBlock (
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                        val forgerPublicKey: PublicKey25519Proposition, // VRF public key from Forger box shall be used in future
                        val forgerBox: ForgerBox,
-                       val vrfProof: VRFProof,
-                       val merklePath: MerklePath,
+                       @JsonSerialize(using = classOf[VRFProofSerializer]) val vrfProof: VRFProof,
+                       @JsonSerialize(using = classOf[MerklePathSerializer]) val merklePath: MerklePath,
                        val signature: Signature25519,
                        val companion: SidechainTransactionsCompanion)
 
@@ -135,7 +133,7 @@ class SidechainBlock (
       None
     }
     else {
-      Option(mainchainBlocks.map(block => new BigInteger(1, block.hash)).min)
+      Option(mainchainBlocks.map(block => hashToBigInteger(block.hash)).min) //shall be discussed
     }
   }
 }

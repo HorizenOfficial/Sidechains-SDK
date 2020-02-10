@@ -73,7 +73,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     var stateNotificationExecuted: Boolean = false
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
       stateNotificationExecuted = true
-      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("1".getBytes()))
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 

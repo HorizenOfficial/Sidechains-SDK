@@ -5,20 +5,21 @@ import java.util.Random
 
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{FinishedEpochInfo, _}
+import com.horizen.fixtures.sidechainblock.generation.{CorruptedGenerationRules, FinishedEpochInfo, GenerationIsNoLongerPossible, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.{NetworkParams, TestNetParams}
 import com.horizen.storage.{InMemoryStoreAdapter, SidechainHistoryStorage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.ConsensusValidator
 import com.horizen.{SidechainHistory, SidechainTypes}
 import org.junit.Test
+import org.scalatest.junit.JUnitSuite
 import scorex.core.block.Block
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 
-class HistoryConsensusChecker {
+class HistoryConsensusCheckerTest extends JUnitSuite {
 
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
     val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[java.lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
@@ -94,8 +95,6 @@ class HistoryConsensusChecker {
     generatorSelectionIteration(rnd, generators.size - 1, generators)
   }
 
-
-  //@Test
   def testWithSeed(testSeed: Int): Unit = {
     //val testSeed = 234
     val rnd: Random = new Random(testSeed)
@@ -111,7 +110,7 @@ class HistoryConsensusChecker {
     val generators = mutable.IndexedSeq(genesisGenerator)
 
 
-    (1 to 3000)
+    (1 to 300)
       .foldLeft[(SidechainHistory, mutable.IndexedSeq[SidechainBlocksGenerator])]((history, generators)) { (acc, index) =>
         val currentHistory: SidechainHistory = acc._1
         val currentGenerators: mutable.IndexedSeq[SidechainBlocksGenerator] =  acc._2
@@ -150,7 +149,7 @@ class HistoryConsensusChecker {
   def testManySeeds(): Unit = {
     val seed = 908
 
-    (50 to 50).map{index =>
+    (50 to 50).foreach{index =>
       println(s"SEED IS ${index}")
       testWithSeed(index + seed)
     }

@@ -6,6 +6,8 @@ import com.horizen.utils._
 case class ConsensusEpochInfo(epoch: ConsensusEpochNumber, forgersBoxIds: MerkleTree, forgersStake: Long)
 
 case class StakeConsensusEpochInfo(rootHash: ByteArrayWrapper, totalStake: Long) {
+  require(rootHash.size == hashLen)
+
   def toBytes: Array[Byte] = {
     rootHash.data ++ Longs.toByteArray(totalStake)
   }
@@ -17,8 +19,8 @@ case class StakeConsensusEpochInfo(rootHash: ByteArrayWrapper, totalStake: Long)
 
 object StakeConsensusEpochInfo {
   def fromBytes(bytes: Array[Byte]): StakeConsensusEpochInfo = {
-    val rootHash = bytes.slice(0, rootHashLen)
-    val totalStake: Long = Longs.fromByteArray(bytes.slice(rootHashLen, bytes.length))
+    val rootHash = bytes.slice(0, hashLen)
+    val totalStake: Long = Longs.fromByteArray(bytes.slice(hashLen, bytes.length))
     StakeConsensusEpochInfo(rootHash, totalStake)
   }
 }

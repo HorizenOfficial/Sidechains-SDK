@@ -1,15 +1,11 @@
 package com.horizen.api.http
 
-import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
-import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.api.http.SidechainBlockRestSchema._
+import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.SidechainBlockErrorResponse._
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.serialization.SerializationUtil
-import com.horizen.utils.BytesUtils
 import org.junit.Assert._
-import scorex.core.idToBytes
 import scorex.core.bytesToId
 import scorex.util.ModifierId
 

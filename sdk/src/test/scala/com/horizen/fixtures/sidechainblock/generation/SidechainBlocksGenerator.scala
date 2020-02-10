@@ -1,108 +1,32 @@
-package com.horizen.fixtures
+package com.horizen.fixtures.sidechainblock.generation
 
 import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.time.Instant
-import java.util.{Random, ArrayList => JArrayList, HashMap => JHashMap, List => JList}
+import java.util.{Random, HashMap => JHashMap, List => JList}
 
-import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
-import com.horizen.fixtures.SidechainBlocksGenerator.companion
+import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.companion
+import com.horizen.fixtures.{MainchainBlockReferenceFixture, TransactionFixture}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.storage.InMemoryStoreAdapter
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
-import com.horizen.vrf.{VRFKeyGenerator, VRFProof, VRFSecretKey, VrfGenerator}
+import com.horizen.vrf._
+import com.horizen.{SidechainTypes, utils}
 import scorex.core.block.Block
 import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.TreeMap
-
-
-object txGenerator extends TransactionFixture
-
-
-case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
-                                    getOtherSidechainForgingData: Boolean = false,
-                                    merklePathFromPreviousEpoch: Boolean = false,
-                                    consensusNonceShift: Int = 0,
-                                    consensusSlotShift: Int = 0,
-                                    stakeCheckCorruptionCheck: Boolean = false,
-                                    stakeCheckCorruption: Boolean => Boolean = {b => b}
-                                   )
-
-object CorruptedGenerationRules {
-  val emptyCorruptedGenerationRules: CorruptedGenerationRules = CorruptedGenerationRules()
-
-  def corruptGenerationRules(rnd: Random, params: NetworkParams, generator: SidechainBlocksGenerator, initialRules: GenerationRules): GenerationRules = {
-    initialRules.copy(corruption = CorruptedGenerationRules.generate(rnd, params))
-  }
-
-  def generate(rnd: Random, params: NetworkParams): CorruptedGenerationRules = {
-    var generated = emptyCorruptedGenerationRules
-    while (generated == emptyCorruptedGenerationRules) generated = generateIteration(rnd, params)
-
-    generated
-  }
-
-  private def generateIteration(rnd: Random, params: NetworkParams): CorruptedGenerationRules = {
-    var rule = CorruptedGenerationRules()
-    if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(timestampShiftInSlots = rnd.nextInt() % params.consensusSlotsInEpoch * 2)
-    }
-
-    if (rnd.nextInt(100) < 3) {
-      rule = rule.copy(getOtherSidechainForgingData = true)
-    }
-
-    if (rnd.nextInt(100) < 4) {
-      rule = rule.copy(merklePathFromPreviousEpoch = true)
-    }
-
-    if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(consensusNonceShift = rnd.nextInt())
-    }
-
-    if (rnd.nextInt(100) < 2) {
-      rule = rule.copy(consensusSlotShift = rule.timestampShiftInSlots + rnd.nextInt())
-    }
-
-    if (rnd.nextInt(100) < 3) {
-      rule = rule.copy(stakeCheckCorruption = {b => !b}, stakeCheckCorruptionCheck = true)
-    }
-
-    rule
-  }
-}
-
-case class GenerationRules(forgingBoxesToAdd: Set[SidechainForgingData] = Set(),
-                           forgingBoxesToSpent: Set[SidechainForgingData] = Set(),
-                           mcReferenceIsPresent: Option[Boolean] = None,
-                           corruption: CorruptedGenerationRules = CorruptedGenerationRules.emptyCorruptedGenerationRules
-                          ) {
-}
-
-object GenerationRules {
-  def generateCorrectGenerationRules(rnd: Random, generator: SidechainBlocksGenerator): GenerationRules = {
-
-    val allNotSpentForgerData: Set[SidechainForgingData] = generator.getNotSpentBoxes
-    val addForgingData: Set[SidechainForgingData] = Set(SidechainForgingData.generate(rnd.nextLong(), Math.abs(rnd.nextInt(1000000))))
-    val removedForgingData: Set[SidechainForgingData] = if (rnd.nextBoolean()) {Set(allNotSpentForgerData.toSeq(rnd.nextInt(allNotSpentForgerData.size)))} else Set()
-    require((removedForgingData -- allNotSpentForgerData).isEmpty)
-
-    GenerationRules(forgingBoxesToAdd = addForgingData, forgingBoxesToSpent = removedForgingData)
-  }
-}
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)
@@ -189,9 +113,9 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     val timestamp = getTimeStampForEpochAndSlot(nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {
-      case Some(true)  => MainchainReferencesGenerator.generateMainchainReferences(Seq(MainchainReferencesGenerator.generateMainchainBlockReference(parentOpt = Some(lastMainchainBlockId))))
+      case Some(true)  => SidechainBlocksGenerator.mcRefGen.generateMainchainReferences(Seq(SidechainBlocksGenerator.mcRefGen.generateMainchainBlockReference(parentOpt = Some(lastMainchainBlockId))))
       case Some(false) => Seq()
-      case None        => MainchainReferencesGenerator.generateMainchainReferences(parentOpt = Some(lastMainchainBlockId))
+      case None        => SidechainBlocksGenerator.mcRefGen.generateMainchainReferences(parentOpt = Some(lastMainchainBlockId))
     }
 
     val forgingData: SidechainForgingData =
@@ -203,7 +127,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       }
 
     val owner: PrivateKey25519 = forgingData.key
-    val forgerBox: ForgerBox = forgingData.forgerBox
+
+    val forgerBox: ForgerBox = generationRules.corruption.forgerBoxCorruptionRules.map(getIncorrectForgerBox(forgingData.forgerBox, _)).getOrElse(forgingData.forgerBox)
 
     val merklePath: MerklePath =
       if (generationRules.corruption.merklePathFromPreviousEpoch) {
@@ -215,7 +140,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val vrfProofInBlock: VRFProof = vrfProof
 
-    val tx: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(txGenerator.generateRegularTransaction(rnd, 1, 1))
+    val tx: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd, 1, 1))
+
 
     val unsignedBlock: SidechainBlock = new SidechainBlock(
       parentId,
@@ -247,6 +173,38 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     println(s"Generate new unique block with id ${generatedBlock.id}")
 
     generatedBlock
+  }
+
+  private def getIncorrectForgerBox(initialForgerBox: ForgerBox, forgerBoxCorruptionRules: ForgerBoxCorruptionRules): ForgerBox = {
+    val proposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.propositionChanged) {
+      val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
+      val newProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
+      newProposition
+    }
+    else {
+      initialForgerBox.proposition()
+    }
+
+    val nonce: Long = initialForgerBox.nonce() + forgerBoxCorruptionRules.nonceShift
+    val value: Long = initialForgerBox.value() + forgerBoxCorruptionRules.valueShift
+
+    val rewardProposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.rewardPropositionChanged) {
+      val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
+      val newRewardProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
+      newRewardProposition
+    }
+    else {
+      initialForgerBox.rewardProposition()
+    }
+
+    val vrfPubKey: VRFPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
+      VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes)._2
+    }
+    else {
+      initialForgerBox.vrfPubKey()
+    }
+
+    new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey)
   }
 
   private def getIncorrectPossibleForger(initialPossibleForger: PossibleForger): PossibleForger = {
@@ -320,167 +278,11 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 }
 
 
-class PossibleForgersSet(forgers: Set[PossibleForger]) {
-  private val ordering: Ordering[SidechainForgingData] = Ordering.by{forgingData: SidechainForgingData =>
-    new BigInteger(forgingData.key.bytes())
-  }
-
-  val forgingDataToPossibleForger: TreeMap[SidechainForgingData, PossibleForger] = TreeMap(forgers.map(pf => (pf.forgingData.copy(), pf.copy())).toArray:_*)(ordering)
-  require(forgingDataToPossibleForger.size == forgers.size)
-
-  def getRandomPossibleForger(rnd: Random): PossibleForger = forgers.toSeq(rnd.nextInt(forgers.size))
-
-  def getAvailableSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.keys.to
-
-  def getNotSpentSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.filter{case (forgingData, possibleForger) => possibleForger.isNotSpent}.keys.to
-
-  def getEligibleForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VRFProof)] = {
-    forgingDataToPossibleForger
-      .values
-      .toStream
-      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map(proof => (forger, proof))} //get eligible forgers
-      .headOption
-  }
-
-  def finishCurrentEpoch(): (PossibleForgersSet, StakeConsensusEpochInfo) = {
-    val possibleForgersForNextEpoch: Seq[PossibleForger] = getPossibleForgersForNextEpoch
-
-    val totalStake = possibleForgersForNextEpoch.map(_.forgingData.forgerBox.value()).sum
-    val merkleTreeForEndOfEpoch: MerkleTree = buildMerkleTree(possibleForgersForNextEpoch.map(_.forgingData.forgerBox.id()))
-    val merkleTreeForEndOfEpochRootHash = merkleTreeForEndOfEpoch.rootHash()
-
-    val forgingDataWithUpdatedMerkleTreePathAndMaturity: Seq[PossibleForger] =
-      possibleForgersForNextEpoch
-        .zipWithIndex.map{case (possibleForger, index) =>
-        possibleForger.createPossibleForgerForTheNextEpoch(Some(merkleTreeForEndOfEpoch.getMerklePathForLeaf(index)))}
-
-    val stakeEpochInfo: StakeConsensusEpochInfo = StakeConsensusEpochInfo(merkleTreeForEndOfEpochRootHash, totalStake)
-    val newForgers = new PossibleForgersSet(Set(forgingDataWithUpdatedMerkleTreePathAndMaturity.toArray:_*))
-
-    (newForgers, stakeEpochInfo)
-  }
-
-  private def getPossibleForgersForNextEpoch: Seq[PossibleForger] = {
-    forgingDataToPossibleForger.values.filter(_.couldBePossibleForgerInNextEpoch).to
-  }
-
-  def createModified(generationRules: GenerationRules): PossibleForgersSet = {
-
-    val forgingBoxToSpent = generationRules.forgingBoxesToSpent
-    val forgingBoxToAdd = generationRules.forgingBoxesToAdd
-
-    val withoutSpentKeys = forgingDataToPossibleForger.keys.toSet -- forgingBoxToSpent
-    require((withoutSpentKeys.size + forgingBoxToSpent.size) == forgingDataToPossibleForger.size)
-
-    val withoutSpentPossibleForgers: Set[PossibleForger] = withoutSpentKeys.collect(forgingDataToPossibleForger)
-    val spentPossibleForgers: Set[PossibleForger] = forgingBoxToSpent.collect(forgingDataToPossibleForger).map(possibleForger => possibleForger.copy(spentInEpochsAgoOpt = Some(0)))
-    val newPossibleForgers: Set[PossibleForger] = forgingBoxToAdd.map(PossibleForger(_, merklePathInPreviousEpochOpt = None, merklePathInPrePreviousEpochOpt = None, spentInEpochsAgoOpt = None))
-
-    new PossibleForgersSet(withoutSpentPossibleForgers ++ spentPossibleForgers ++ newPossibleForgers)
-  }
-
-  private def buildMerkleTree(ids: Iterable[Array[Byte]]): MerkleTree = {
-    val leavesForMerkleTree =
-      ids.foldLeft(new JArrayList[Array[Byte]]()) {(acc, id) =>
-        acc.add(id)
-        acc
-      }
-
-    val filler = leavesForMerkleTree.get(leavesForMerkleTree.size() - 1)
-    val additionalLeaves = SidechainBlocksGenerator.merkleTreeSize - leavesForMerkleTree.size()
-    (1 to additionalLeaves).foreach(_ => leavesForMerkleTree.add(filler))
-
-    val resultTree = MerkleTree.createMerkleTree(leavesForMerkleTree)
-    resultTree
-  }
-}
-
-
-case class PossibleForger(forgingData: SidechainForgingData,
-                          merklePathInPreviousEpochOpt: Option[MerklePath],
-                          merklePathInPrePreviousEpochOpt: Option[MerklePath],
-                          spentInEpochsAgoOpt: Option[Int]) {
-  require(!spentInEpochsAgoOpt.exists(_ > PossibleForger.boxToForgerBoxDelayInEpochs))
-
-  def couldBePossibleForgerInNextEpoch: Boolean = spentInEpochsAgoOpt.filter(_ >= PossibleForger.boxToForgerBoxDelayInEpochs).isEmpty
-
-  def createPossibleForgerForTheNextEpoch(newMerklePathOpt: Option[MerklePath]): PossibleForger = {
-    copy(
-      merklePathInPreviousEpochOpt = newMerklePathOpt,
-      merklePathInPrePreviousEpochOpt = merklePathInPreviousEpochOpt,
-      spentInEpochsAgoOpt = spentInEpochsAgoOpt.map(_ + 1))
-  }
-
-  def isNotSpent: Boolean = spentInEpochsAgoOpt.isEmpty
-
-  def canBeForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[VRFProof] = {
-    merklePathInPrePreviousEpochOpt.flatMap(_ => forgingData.canBeForger(vrfMessage, totalStake, additionalCheck))
-  }
-
-  override def toString: String = {
-    "PossibleForger: " + forgingData.toString
-  }
-}
-
-object PossibleForger{
-  val boxToForgerBoxDelayInEpochs: Int = 2 //0 -- current epoch, 1 -- previous epoch, 2 -- preprevious epoch
-}
-
-
-case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VRFSecretKey) {
-  /**
-   * @return VrfProof in case if can be forger
-   */
-  def canBeForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[VRFProof] = {
-    val checker = (stakeCheck _).tupled.andThen(additionalCheck)
-    Some(vrfSecret.prove(vrfMessage)).filter(checker(_, totalStake))
-  }
-
-  private def stakeCheck(proof: VRFProof, totalStake: Long): Boolean = {
-    val requiredPercentage: Double = hashToStakePercent(proof.proofToVRFHash())
-    val actualPercentage: Double = forgerBox.value().toDouble / totalStake
-
-    //println(s"For ${key.hashCode()} with value ${forgerBox.value()} and Vrf ${forgerBox.vrfPubKey().key.hashCode()}: required % ${requiredPercentage}, actual % ${actualPercentage}")
-
-    requiredPercentage <= actualPercentage
-  }
-
-  val forgerId: Array[Byte] = forgerBox.id()
-
-  override def toString: String = {
-    s"id - ${key.hashCode()}, value - ${forgerBox.value()}"
-  }
-
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case that: SidechainForgingData => {
-        val keyEquals = this.key.equals(that.key)
-        val forgerBoxEquals = this.forgerBox.equals(that.forgerBox)
-        val vrfSecretEquals = this.vrfSecret.equals(that.vrfSecret)
-
-        keyEquals && forgerBoxEquals && vrfSecretEquals
-      }
-      case _ =>
-        false
-    }
-  }
-}
-
-object SidechainForgingData {
-  def generate(seed: Long, value: Long): SidechainForgingData = {
-    val key = PrivateKey25519Creator.getInstance().generateSecret(seed.toString.getBytes)
-    val (vrfSecretKey, vrfPublicKey) = VRFKeyGenerator.generate((seed + 1).toString.getBytes())
-    val forgerBox = ForgerBoxFixture.generateForgerBox(vrfPubKey = vrfPublicKey, value = value, seed = seed)
-
-    SidechainForgingData(key, forgerBox, vrfSecretKey)
-  }
-}
-
-
-
 object SidechainBlocksGenerator {
   private val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
   val merkleTreeSize: Int = 128
+  val txGen: TransactionFixture = new TransactionFixture {}
+  val mcRefGen: MainchainBlockReferenceFixture = new MainchainBlockReferenceFixture {}
 
   def startSidechain(initialValue: Long, seed: Long, params: NetworkParams): (NetworkParams, SidechainBlock, SidechainBlocksGenerator, SidechainForgingData, FinishedEpochInfo) = {
     require(initialValue == SidechainCreation.initialValue) // in future can add any value here, but currently initial forger box is hardcoded
@@ -618,5 +420,3 @@ object SidechainBlocksGenerator {
     mcBlocksSerializer.parse(reader)
   }
 }
-
-object MainchainReferencesGenerator extends MainchainBlockReferenceFixture

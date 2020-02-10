@@ -8,6 +8,10 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters._
 
+/* @TODO Discuss:
+* 1. Move to tests? Any chance to use it in maincode?
+* 2. Storage interface changing is required. That storage is not support rollbacks, but it ok for current usages
+* */
 class InMemoryStoreAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArrayWrapper] = mutable.HashMap()) extends Storage /*in fact it is non-versioned storage*/{
   override def get(key: ByteArrayWrapper): Optional[ByteArrayWrapper] = hashMap.get(key).asJava
 
