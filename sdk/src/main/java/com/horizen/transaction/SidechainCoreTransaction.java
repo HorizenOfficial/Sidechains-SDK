@@ -46,6 +46,8 @@ public class SidechainCoreTransaction
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
+        Objects.requireNonNull(boxesDataCompanion, "BoxesDataCompanion can't be null.");
+        Objects.requireNonNull(proofsCompanion, "ProofsCompanion can't be null.");
         // Do we need to care about inputs ids length here or state/serialization check is enough?
 
         this.inputsIds = inputsIds;
@@ -115,6 +117,9 @@ public class SidechainCoreTransaction
         if(fee < 0 || timestamp < 0)
             return false;
 
+        if(inputsIds.isEmpty() || outputsData.isEmpty())
+            return false;
+
         // check that we have enough proofs and try to open each box only once.
         if(inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
             return false;
@@ -174,11 +179,12 @@ public class SidechainCoreTransaction
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        offset += batchSize;
         ArrayList<byte[]> inputsIds = new ArrayList<>();
         while(batchSize > 0) {
-            inputsIds.add(Arrays.copyOfRange(bytes, offset, offset + NodeViewModifier$.MODULE$.ModifierIdSize()));
-            batchSize -= NodeViewModifier$.MODULE$.ModifierIdSize();
+            int idLength = NodeViewModifier$.MODULE$.ModifierIdSize();
+            inputsIds.add(Arrays.copyOfRange(bytes, offset, offset + idLength));
+            offset += idLength;
+            batchSize -= idLength;
         }
 
         batchSize = BytesUtils.getInt(bytes, offset);

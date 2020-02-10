@@ -4,6 +4,7 @@ import com.horizen.secret._
 import com.horizen.customtypes._
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.vrf.VRFPublicKey
 
@@ -39,6 +40,16 @@ trait SecretFixture {
       keysList.add(pkc.generateSecret(seed))
     }
     keysList
+  }
+
+  def getRandomCustomProof: CustomProof = {
+    new CustomProof(Random.nextInt())
+  }
+
+  def getRandomSignature25519: Signature25519 = {
+    val pk = getPrivateKey25519
+    val message = "12345".getBytes
+    pk.sign(message)
   }
 
   def getCustomPrivateKey: CustomPrivateKey = {

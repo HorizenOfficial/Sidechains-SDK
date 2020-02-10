@@ -151,7 +151,7 @@ object SidechainBlock extends ScorexEncoding {
           mainchainBlocks,
           sidechainTransactions,
           ownerPrivateKey.publicImage(),
-          new Signature25519(new Array[Byte](AbstractSignature25519.SIGNATURE_LENGTH)), // empty signature
+          new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
           companion
         )
 
@@ -233,7 +233,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
     val owner = new PublicKey25519Proposition(r.getBytes(PublicKey25519Proposition.KEY_LENGTH))
 
-    val ownerSignature = new Signature25519(r.getBytes(AbstractSignature25519.SIGNATURE_LENGTH))
+    val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
 
     new SidechainBlock(
       parentId,

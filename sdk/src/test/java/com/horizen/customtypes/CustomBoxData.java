@@ -11,6 +11,8 @@ public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition, C
         super(proposition, value);
     }
 
+    public static final byte DATA_TYPE_ID = 0;
+
     @Override
     public CustomBox getBox(long nonce) {
         return new CustomBox(this, nonce);
@@ -31,7 +33,7 @@ public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition, C
 
     @Override
     public byte boxDataTypeId() {
-        return 0;
+        return DATA_TYPE_ID;
     }
 
     public static CustomBoxData parseBytes(byte[] bytes) {

@@ -2,6 +2,7 @@ package com.horizen.proof;
 
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.utils.Ed25519;
 
 import java.util.Arrays;
 
@@ -10,8 +11,13 @@ import static com.horizen.proof.CoreProofsIdsEnum.Signature25519Id;
 
 public final class Signature25519 extends AbstractSignature25519<PrivateKey25519, PublicKey25519Proposition>
 {
+    public static int SIGNATURE_LENGTH = Ed25519.signatureLength();
+
     public Signature25519(byte[] signatureBytes) {
         super(signatureBytes);
+        if (signatureBytes.length != SIGNATURE_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
+                    signatureBytes.length));
     }
 
     @Override

@@ -14,17 +14,11 @@ import java.util.Objects;
 public abstract class AbstractSignature25519<S extends PrivateKey25519, P extends ProofOfKnowledgeProposition<S>>
         implements ProofOfKnowledge<S, P> {
 
-    public static int SIGNATURE_LENGTH = Ed25519.signatureLength();
-
     @JsonProperty("signature")
     protected final byte[] signatureBytes;
 
     public AbstractSignature25519(byte[] signatureBytes) {
-        if (signatureBytes.length != SIGNATURE_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
-                    signatureBytes.length));
-
-        this.signatureBytes = Arrays.copyOf(signatureBytes, SIGNATURE_LENGTH);
+        this.signatureBytes = Arrays.copyOf(signatureBytes, signatureBytes.length);
     }
 
     @Override
@@ -37,13 +31,12 @@ public abstract class AbstractSignature25519<S extends PrivateKey25519, P extend
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AbstractSignature25519 that = (AbstractSignature25519) o;
-        return SIGNATURE_LENGTH == AbstractSignature25519.SIGNATURE_LENGTH &&
-                Arrays.equals(signatureBytes, that.signatureBytes);
+        return Arrays.equals(signatureBytes, that.signatureBytes);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(SIGNATURE_LENGTH);
+        int result = Objects.hash(signatureBytes.length);
         result = 31 * result + Arrays.hashCode(signatureBytes);
         return result;
     }
