@@ -4,10 +4,10 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
-import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo}
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -106,14 +106,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
             val boxKey = u.boxKey()
             if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
               throw new Exception("Box unlocking proof is invalid.")
-            if (box.isInstanceOf[CoinsBox[_ <: Proposition]])
+            if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
               closedCoinsBoxesAmount += box.value()
           }
           case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
         }
       }
 
-      newCoinsBoxesAmount = tx.newBoxes().asScala.filter(_.isInstanceOf[CoinsBox[_ <: Proposition]]).map(_.value()).sum
+      newCoinsBoxesAmount = tx.newBoxes().asScala
+        .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+        .map(_.value()).sum
 
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
@@ -121,7 +123,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
 
     }
 
-    semanticValidity(tx);
+    semanticValidity(tx).get
+    if(!applicationState.validate(this, tx))
+      throw new Exception(s"ApplicationState transaction ${tx.id} validation failed.")
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {

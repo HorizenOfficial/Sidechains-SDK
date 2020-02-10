@@ -58,4 +58,8 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
                 '}';
     }
 
+    @Override
+    public byte[] pubKeyBytes() {
+        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
+    }
 }

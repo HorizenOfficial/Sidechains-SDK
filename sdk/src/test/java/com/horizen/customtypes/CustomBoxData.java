@@ -6,9 +6,14 @@ import com.horizen.box.data.AbstractBoxData;
 import com.horizen.box.data.BoxDataSerializer;
 import java.util.Arrays;
 
-public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition> {
+public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition, CustomBox, CustomBoxData> {
     public CustomBoxData(CustomPublicKeyProposition proposition, long value) {
         super(proposition, value);
+    }
+
+    @Override
+    public CustomBox getBox(long nonce) {
+        return new CustomBox(this, nonce);
     }
 
     @Override
@@ -22,6 +27,11 @@ public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition> {
     @Override
     public BoxDataSerializer serializer() {
         return CustomBoxDataSerializer.getSerializer();
+    }
+
+    @Override
+    public byte boxDataTypeId() {
+        return 0;
     }
 
     public static CustomBoxData parseBytes(byte[] bytes) {

@@ -31,7 +31,7 @@ class Signature25519ScalaTest
     assertEquals("Json must contain only 1 signature.",
       1, node.findValues("signature").size())
     assertEquals("",
-      ScorexEncoder.default.encode(pr._signatureBytes), node.path("signature").asText())
+      ScorexEncoder.default.encode(pr.signatureBytes), node.path("signature").asText())
   }
 }
 

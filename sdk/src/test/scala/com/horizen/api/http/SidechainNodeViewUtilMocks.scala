@@ -8,9 +8,9 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, RegularBoxData}
-import com.horizen.box.{Box, RegularBox}
+import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.BoxFixture
+import com.horizen.fixtures.{BoxFixture, CompanionsFixture}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
@@ -27,7 +27,9 @@ import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success}
 
-class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
+class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
+
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val mainchainBlockReferenceInfoRef = new MainchainBlockReferenceInfo(
     BytesUtils.fromHexString("0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0"),
@@ -50,7 +52,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
 
     val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
       PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-      SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+      sidechainTransactionsCompanion, null).get
 
     Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockById_return_value()) Optional.of(genesisBlock)
@@ -156,7 +158,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture {
 
   private def getTransaction(fee: Long): RegularTransaction = {
     val from: util.List[Pair[RegularBox, PrivateKey25519]] = new util.ArrayList[Pair[RegularBox, PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))

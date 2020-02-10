@@ -2,14 +2,22 @@ package com.horizen.box.data;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
+import com.horizen.box.RegularBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 
 import java.util.Arrays;
 
-public final class RegularBoxData extends AbstractBoxData<PublicKey25519Proposition> {
+import static com.horizen.box.data.CoreBoxesDataIdsEnum.RegularBoxDataId;
+
+public final class RegularBoxData extends AbstractBoxData<PublicKey25519Proposition, RegularBox, RegularBoxData> {
     public RegularBoxData(PublicKey25519Proposition proposition, long value) {
         super(proposition, value);
+    }
+
+    @Override
+    public RegularBox getBox(long nonce) {
+        return new RegularBox(this, nonce);
     }
 
     @Override
@@ -23,6 +31,11 @@ public final class RegularBoxData extends AbstractBoxData<PublicKey25519Proposit
     @Override
     public BoxDataSerializer serializer() {
         return RegularBoxDataSerializer.getSerializer();
+    }
+
+    @Override
+    public byte boxDataTypeId() {
+        return RegularBoxDataId.id();
     }
 
     public static RegularBoxData parseBytes(byte[] bytes) {

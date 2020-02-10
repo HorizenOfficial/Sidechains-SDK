@@ -10,7 +10,7 @@ import com.horizen.{ScorexEncoding, SidechainTypes}
 import com.horizen.box.{Box, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{AbstractSignature25519, Signature25519}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
@@ -151,7 +151,7 @@ object SidechainBlock extends ScorexEncoding {
           mainchainBlocks,
           sidechainTransactions,
           ownerPrivateKey.publicImage(),
-          new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
+          new Signature25519(new Array[Byte](AbstractSignature25519.SIGNATURE_LENGTH)), // empty signature
           companion
         )
 
@@ -233,7 +233,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
     val owner = new PublicKey25519Proposition(r.getBytes(PublicKey25519Proposition.KEY_LENGTH))
 
-    val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
+    val ownerSignature = new Signature25519(r.getBytes(AbstractSignature25519.SIGNATURE_LENGTH))
 
     new SidechainBlock(
       parentId,

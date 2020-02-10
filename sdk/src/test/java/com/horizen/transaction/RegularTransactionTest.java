@@ -28,7 +28,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
     long fee;
     long timestamp;
     ArrayList<Pair<RegularBox, PrivateKey25519>> from;
-    ArrayList<BoxData> to;
+    ArrayList<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
 
     ArrayList<Long> expectedNonces;
 
@@ -56,9 +56,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new RegularBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                384769921723993316L,
-                -7787981619319975853L,
-                1511446075117796171L)
+                7648839359131563563L,
+                -7396314805884903748L,
+                8657265668648196842L)
         );
     }
 

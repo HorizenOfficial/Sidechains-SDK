@@ -30,6 +30,7 @@ import com.horizen.consensus.intToConsensusEpochNumber
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
+  with CompanionsFixture
   with scorex.core.utils.ScorexEncoding
 {
   var history: SidechainHistory = _
@@ -40,8 +41,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
   val params: NetworkParams = RegTestParams()

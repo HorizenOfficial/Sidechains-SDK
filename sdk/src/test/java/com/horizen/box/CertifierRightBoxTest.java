@@ -69,11 +69,11 @@ public class CertifierRightBoxTest extends BoxFixtureClass
         CertifierRightBox box5 = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch + 1);
         assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box5.hashCode());
         assertNotEquals("Boxes expected to be different", box1, box5);
-        assertTrue("Boxes ids expected to be different", Arrays.equals(box1.id(), box5.id()));
+        assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box5.id()));
 
         CertifierRightBox box6 = getCertifierRightBox(proposition, nonce, value + 1, minimumWithdrawalEpoch);
         assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box6.hashCode());
         assertNotEquals("Boxes expected to be different", box1, box6);
-        assertTrue("Boxes ids expected to be different", Arrays.equals(box1.id(), box6.id()));
+        assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box6.id()));
     }
 }
