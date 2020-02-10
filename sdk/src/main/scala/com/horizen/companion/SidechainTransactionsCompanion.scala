@@ -8,7 +8,7 @@ import com.horizen.SidechainTypes
 import com.horizen.utils.DynamicTypedSerializer
 
 case class SidechainTransactionsCompanion(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]])
-  extends DynamicTypedSerializer[Transaction, TransactionSerializer[SidechainTypes#SCBT]](
+  extends DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]](
     new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]() {{
       put(RegularTransaction.TRANSACTION_TYPE_ID, RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
       put(MC2SCAggregatedTransaction.TRANSACTION_TYPE_ID, MC2SCAggregatedTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])

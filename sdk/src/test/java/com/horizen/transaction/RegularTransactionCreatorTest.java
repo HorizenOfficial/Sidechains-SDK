@@ -1,8 +1,11 @@
 package com.horizen.transaction;
 
 import com.horizen.box.Box;
+import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
+import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.node.NodeWallet;
+import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -133,6 +136,8 @@ public class RegularTransactionCreatorTest {
 
     NodeWallet defaultWallet;
 
+    MCPublicKeyHashProposition mcPublicKeyHashProposition;
+
     @Before
     public void beforeEachTest() {
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
@@ -142,6 +147,9 @@ public class RegularTransactionCreatorTest {
         pk4 = creator.generateSecret("test_seed4".getBytes());
         pk5 = creator.generateSecret("test_seed5".getBytes());
         pk6 = creator.generateSecret("test_seed6".getBytes());
+
+        SecretFixtureClass secretFixture = new SecretFixtureClass();
+        mcPublicKeyHashProposition = secretFixture.getMCPublicKeyHashProposition();
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
         boxesWithCreationTime.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 30), 1000L));
@@ -159,9 +167,13 @@ public class RegularTransactionCreatorTest {
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+
         to.add( new Pair<>(pk4.publicImage(), 20L));
         to.add( new Pair<>(pk5.publicImage(), 30L));
-        RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, new ArrayList<byte[]>());
+
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
+        RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, withdrawalRequests, pk6.publicImage(), 10, new ArrayList<byte[]>());
 
         assertEquals("RegularTransactionCreator: change expected.", 3, transaction.newBoxes().size());
         assertEquals("RegularTransactionCreator: 2 inputs expected.", 2, transaction.unlockers().size());
@@ -184,13 +196,16 @@ public class RegularTransactionCreatorTest {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
+
         // Note: total 'from' value is 60, total 'to' value is 10
 
         // Test 1: fee > total_from - total_to
         long fee = 100L;
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -199,10 +214,10 @@ public class RegularTransactionCreatorTest {
 
 
         // Test 2: fee = total_from - total_to
-        fee = 50L;
+        fee = 40L;
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -211,10 +226,10 @@ public class RegularTransactionCreatorTest {
 
 
         // Test 3: fee < total_from - total_to
-        fee = 50L;
+        fee = 30L;
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, pk5.publicImage(), fee, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -239,17 +254,20 @@ public class RegularTransactionCreatorTest {
         List<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
         to.add( new Pair<>(pk4.publicImage(), 10L));
 
+        List<Pair<MCPublicKeyHashProposition, Long>> withdrawalRequests = new ArrayList<>();
+        withdrawalRequests.add(new Pair<>(mcPublicKeyHashProposition, 10L));
+
         // Note: total 'from' value is 60, total 'to' value is 10
         PublicKey25519Proposition changeAddress = pk5.publicImage();
 
         // Test 1: fee = total_from - total_to -> no change occurrence in newBoxes()
         boolean occurrenceExpected = false;
-        long fee = 50l;
+        long fee = 40L;
 
-        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
+        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, changeAddress, fee, new ArrayList<byte[]>());
 
-        List<RegularBox> boxes = transaction.newBoxes();
-        for(RegularBox box : boxes)
+        List<NoncedBox<Proposition>> boxes = transaction.newBoxes();
+        for(NoncedBox box : boxes)
             if(box.proposition().equals(changeAddress))
                 occurrenceExpected = true;
 
@@ -258,11 +276,11 @@ public class RegularTransactionCreatorTest {
 
         // Test 2: fee < total_from - total_to -> change occurrence expected in newBoxes() and equal to 10
         occurrenceExpected = false;
-        fee = 40l;
-        transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
+        fee = 30L;
+        transaction = RegularTransactionCreator.create(wallet, to, withdrawalRequests, changeAddress, fee, new ArrayList<byte[]>());
 
         boxes = transaction.newBoxes();
-        for(RegularBox box : boxes)
+        for(NoncedBox box : boxes)
             if(box.proposition().equals(changeAddress)) {
                 occurrenceExpected = true;
                 assertEquals("Test2: Box with change has different value", 10, box.value());
@@ -286,11 +304,10 @@ public class RegularTransactionCreatorTest {
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
         PublicKey25519Proposition changeAddress = pk6.publicImage();
 
-
         // Test 1: empty 'to' list
         // total 'from' value is 60, total 'to' value is 0
-        long fee = 60l;
-        RegularTransaction transaction = RegularTransactionCreator.create(wallet, new ArrayList<>(), changeAddress, fee, new ArrayList<byte[]>());
+        long fee = 60L;
+        RegularTransaction transaction = RegularTransactionCreator.create(wallet, new ArrayList<>(), new ArrayList<>(), changeAddress, fee, new ArrayList<byte[]>());
         assertEquals("Test1: Boxes list expected to be empty", 0, transaction.newBoxes().size());
 
 
@@ -300,7 +317,7 @@ public class RegularTransactionCreatorTest {
         to.add( new Pair<>(pk5.publicImage(), 20L));
         fee = 30L;
         // total 'from' value is 60, total 'to' value is 30
-        transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
+        transaction = RegularTransactionCreator.create(wallet, to, new ArrayList<>(), changeAddress, fee, new ArrayList<byte[]>());
         assertEquals("Test2: Boxes list size must be equal to 2", 2, transaction.newBoxes().size());
     }
 
@@ -323,12 +340,12 @@ public class RegularTransactionCreatorTest {
 
         // Test 1: exclude pk1 key -> now suitable keys in wallet
         boolean exceptionOccurred = false;
-        long fee = 10l;
+        long fee = 10L;
 
         ArrayList<byte[]> boxIdsToExclude = new ArrayList<>();
         boxIdsToExclude.add(boxToExclude.id());
         try {
-            RegularTransactionCreator.create(wallet, to, changeAddress, fee, boxIdsToExclude);
+            RegularTransactionCreator.create(wallet, to, new ArrayList<>(), changeAddress, fee, boxIdsToExclude);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -355,7 +372,7 @@ public class RegularTransactionCreatorTest {
         to.add( new Pair<>(pk4.publicImage(), 10L));
         long fee = 0L;
 
-        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<byte[]>());
+        RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, new ArrayList<>(), pk5.publicImage(), fee, new ArrayList<byte[]>());
         assertEquals("Only one box unlocker expected.", 1, transaction.unlockers().size());
         assertArrayEquals("Another box expected.", expectedBox.id(), transaction.unlockers().get(0).closedBoxId());
     }
@@ -370,7 +387,7 @@ public class RegularTransactionCreatorTest {
         // Test 1
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(null, to, pk6.publicImage(), 10, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(null, to, new ArrayList<>(), pk6.publicImage(), 10, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -381,7 +398,7 @@ public class RegularTransactionCreatorTest {
         // Test 2
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, null, pk6.publicImage(), 10, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, null, new ArrayList<>(), pk6.publicImage(), 10, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -392,7 +409,7 @@ public class RegularTransactionCreatorTest {
         // Test 3
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, null, 10, new ArrayList<byte[]>());
+            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, new ArrayList<>(), null, 10, new ArrayList<byte[]>());
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -403,7 +420,7 @@ public class RegularTransactionCreatorTest {
         // Test 4
         exceptionOccurred = false;
         try {
-            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, null);
+            RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, new ArrayList<>(), pk6.publicImage(), 10, null);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;

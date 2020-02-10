@@ -3,8 +3,9 @@ package com.horizen
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
+import com.horizen.utils.WithdrawalEpochInfo
+import scorex.core.{PersistentNodeViewModifier, VersionTag}
 import scorex.core.transaction.state.{BoxStateChanges, MinimalState, ModifierValidation, TransactionValidation}
-import scorex.core.{PersistentNodeViewModifier, VersionTag, idToVersion}
 
 import scala.util.Try
 
@@ -20,13 +21,7 @@ trait BoxMinimalState[P <: Proposition,
 
   def changes(mod: M): Try[BoxStateChanges[P, BX]]
 
-  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag): Try[BMS]
-
-  override def applyModifier(mod: M): Try[BMS] = {
-    validate(mod) flatMap {_ =>
-      changes(mod).flatMap(cs => applyChanges(cs, idToVersion(mod.id)))
-    }
-  }
+  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

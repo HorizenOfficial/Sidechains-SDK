@@ -11,7 +11,7 @@ import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.box.{Box, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import com.horizen.proposition._
 import com.horizen.secret.PrivateKey25519
 import com.horizen.{SidechainTypes, transaction}
 import com.horizen.transaction._
@@ -34,10 +34,11 @@ import com.horizen.serialization.Views
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+  extends SidechainApiRoute with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~ sendCoinsToAddress ~ sendTransaction
+    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins
   }
 
   private var companion: SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
@@ -77,21 +78,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
 
-        def searchTransactionInMemoryPool(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInMemoryPool(id: String): Option[SidechainTypes#SCBT] = {
           var opt = memoryPool.getTransactionById(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlock(id: String, blockHash: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlock(id: String, blockHash: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlockchain(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideBlockchain(id)
           if (opt.isPresent)
             Option(opt.get())
@@ -102,7 +103,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var format = body.format.getOrElse(false)
         var blockHash = body.blockHash.getOrElse("")
         var txIndex = body.transactionIndex.getOrElse(false)
-        var transaction: Option[Transaction] = None
+        var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
 
@@ -199,6 +200,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
               new lang.Long(element.value))
           ).toIndexedSeq
 
+          val withdrawalRequests: IndexedSeq[Pair[MCPublicKeyHashProposition, lang.Long]] = body.withdrawalRequests.map(element =>
+            new Pair(
+              MCPublicKeyHashPropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value))
+          ).toIndexedSeq
+
           inputs.foreach(pair => inSum += pair.getKey.value())
           outputs.foreach(pair => outSum += pair.getValue)
 
@@ -208,6 +215,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             val regularTransaction = RegularTransaction.create(
               JavaConverters.seqAsJavaList(inputs),
               JavaConverters.seqAsJavaList(outputs),
+              JavaConverters.seqAsJavaList(withdrawalRequests),
               fee, System.currentTimeMillis())
 
             if (body.format.getOrElse(false))
@@ -231,11 +239,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     entity(as[ReqCreateRegularTransactionSimplified]) { body =>
       withNodeView { sidechainNodeView =>
         var outputList = body.transactionOutputs
+        var withdrawalRequestList = body.withdrawalRequests
         var fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
+          var regularTransaction = createRegularTransactionSimplified_(outputList, withdrawalRequestList, fee, wallet, sidechainNodeView)
 
           if (body.format.getOrElse(false))
             ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
@@ -250,9 +259,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   }
 
   // Note: method should return Try[RegularTransaction]
-  private def createRegularTransactionSimplified_(
-                                                   outputList: List[TransactionOutput], fee: Long, wallet: NodeWallet,
-                                                   sidechainNodeView: SidechainNodeView): RegularTransaction = {
+  private def createRegularTransactionSimplified_(outputList: List[TransactionOutput],
+                                                  withdrawalRequestList: List[TransactionOutput],
+                                                  fee: Long, wallet: NodeWallet,
+                                                  sidechainNodeView: SidechainNodeView): RegularTransaction = {
 
     val memoryPool = sidechainNodeView.getNodeMemoryPool
     val boxIdsToExclude: ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
@@ -270,9 +280,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     var outputs: java.util.List[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
       new Pair(new PublicKey25519Proposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
 
+    var withdrawalRequests: java.util.List[Pair[MCPublicKeyHashProposition, lang.Long]] = withdrawalRequestList.map(element =>
+      new Pair(new MCPublicKeyHashProposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
+
     var tx: RegularTransaction = null
     try {
-      tx = RegularTransactionCreator.create(wallet, outputs, wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
+      tx = RegularTransactionCreator.create(wallet, outputs, withdrawalRequests,
+        wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
     }
     catch {
       case e: Exception => log.error(s"RegularTransaction creaion error: ${e.getMessage}")
@@ -288,12 +302,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
     entity(as[ReqSendCoinsToAddress]) { body =>
       withNodeView { sidechainNodeView =>
-        var outputList = body.outputs
-        var fee = body.fee
+        val outputList = body.outputs
+        val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         try {
-          var regularTransaction = createRegularTransactionSimplified_(outputList, fee.getOrElse(0L), wallet, sidechainNodeView)
+          val regularTransaction = createRegularTransactionSimplified_(outputList, List(),
+            fee.getOrElse(0L), wallet, sidechainNodeView)
           validateAndSendTransaction(regularTransaction)
         } catch {
           case t: Throwable =>
@@ -303,7 +318,26 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     }
   }
 
-  private def validateAndSendTransaction(transaction: Transaction) = {
+  def withdrawCoins: Route = (post & path("withdrawCoins")) {
+    entity(as[ReqWithdrawCoins]) { body =>
+      withNodeView { sidechainNodeView =>
+        val withdrawalOutputsList = body.outputs
+        val fee = body.fee
+        val wallet = sidechainNodeView.getNodeWallet
+
+        try {
+          val regularTransaction = createRegularTransactionSimplified_(List(), withdrawalOutputsList,
+            fee.getOrElse(0L), wallet, sidechainNodeView)
+          validateAndSendTransaction(regularTransaction)
+        } catch {
+          case t: Throwable =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+        }
+      }
+    }
+  }
+
+  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT) = {
     withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
@@ -346,7 +380,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactions(transactions: List[Transaction]) extends SuccessResponse
+  private[api] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
@@ -355,7 +389,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: Transaction) extends SuccessResponse
+  private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
@@ -364,7 +398,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespDecodeTransactionBytes(transaction: Transaction) extends SuccessResponse
+  private[api] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionInput(boxId: String)
@@ -375,6 +409,7 @@ object SidechainTransactionRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateRegularTransaction(transactionInputs: List[TransactionInput],
                                                       transactionOutputs: List[TransactionOutput],
+                                                      withdrawalRequests: List[TransactionOutput],
                                                       format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(transactionOutputs.nonEmpty, "Empty outputs list")
@@ -382,14 +417,23 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateRegularTransactionSimplified(transactionOutputs: List[TransactionOutput],
-                                                                @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Long,
+                                                                withdrawalRequests: List[TransactionOutput],
+                                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
                                                                 format: Option[Boolean]) {
     require(transactionOutputs.nonEmpty, "Empty outputs list")
     require(fee >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput], @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Option[Long]) {
+  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
+                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqWithdrawCoins(outputs: List[TransactionOutput],
+                                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }

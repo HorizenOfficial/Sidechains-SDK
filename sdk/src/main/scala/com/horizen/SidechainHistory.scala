@@ -8,7 +8,6 @@ import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
@@ -392,23 +391,23 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     height
   }
 
-  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[Transaction] = {
+  override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
     storage.blockById(ModifierId(blockId)) match {
       case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
       case None => JOptional.empty()
     }
   }
 
-  private def findTransactionInsideBlock(transactionId : String, block : SidechainBlock) : JOptional[Transaction] = {
+  private def findTransactionInsideBlock(transactionId : String, block : SidechainBlock) : JOptional[SidechainTypes#SCBT] = {
     block.transactions.find(box => box.id.equals(ModifierId(transactionId))) match {
       case Some(tx) => JOptional.ofNullable(tx)
       case None => JOptional.empty()
     }
   }
 
-  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[Transaction] = {
+  override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCBT] = {
     var startingBlock = JOptional.ofNullable(getBestBlock)
-    var transaction : JOptional[Transaction] = JOptional.empty()
+    var transaction : JOptional[SidechainTypes#SCBT] = JOptional.empty()
     var found = false
     while(!found && startingBlock.isPresent){
       var tx = findTransactionInsideBlock(transactionId, startingBlock.get())

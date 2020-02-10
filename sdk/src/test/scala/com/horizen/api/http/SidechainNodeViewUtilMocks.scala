@@ -11,7 +11,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -172,13 +172,14 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
   private def getTransaction(fee: Long): RegularTransaction = {
     val from: util.List[Pair[RegularBox, PrivateKey25519]] = new util.ArrayList[Pair[RegularBox, PrivateKey25519]]()
     val to: util.List[Pair[PublicKey25519Proposition, java.lang.Long]] = new util.ArrayList[Pair[PublicKey25519Proposition, java.lang.Long]]()
+    val withdrawalRequests: util.List[Pair[MCPublicKeyHashProposition, java.lang.Long]] = new util.ArrayList[Pair[MCPublicKeyHashProposition, java.lang.Long]]()
 
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))
 
     to.add(new Pair(secret3.publicImage(), 5L))
 
-    RegularTransaction.create(from, to, fee, 1547798549470L)
+    RegularTransaction.create(from, to, withdrawalRequests, fee, 1547798549470L)
   }
 
   private def getTransactionList(): util.List[RegularTransaction] = {

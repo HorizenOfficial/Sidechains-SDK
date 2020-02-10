@@ -42,7 +42,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- SidechainState.restoreState(stateStorage, applicationState)
+    state <- SidechainState.restoreState(stateStorage, params, applicationState)
     wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
     pool <- Some(SidechainMemoryPool.emptyPool)
   } yield (history, state, wallet, pool)
@@ -50,7 +50,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
       history <- SidechainHistory.genesisHistory(historyStorage, params, genesisBlock, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- SidechainState.genesisState(stateStorage, applicationState, genesisBlock)
+      state <- SidechainState.genesisState(stateStorage, params, applicationState, genesisBlock)
       wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet, genesisBlock)
       pool <- Success(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)

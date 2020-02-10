@@ -604,6 +604,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /transaction/withdrawCoins:
+    post:
+      tags:
+        - transaction
+      summary: send a transaction
+      description: Create and sign a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      operationId: withdrawCoins
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionOutputs
+              properties:
+                outputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                fee:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /transaction/sendTransaction:
     post:
       tags:

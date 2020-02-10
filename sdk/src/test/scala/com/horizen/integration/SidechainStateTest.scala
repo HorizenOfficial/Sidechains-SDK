@@ -3,20 +3,21 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
+import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.params.MainNetParams
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -57,9 +58,13 @@ class SidechainStateTest
 
   val secretList = new ListBuffer[Secret]()
 
+  val params = MainNetParams()
+  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[JPair[PublicKey25519Proposition, java.lang.Long]] = new JArrayList[JPair[PublicKey25519Proposition, java.lang.Long]]()
+    val withdrawalRequests: JList[JPair[MCPublicKeyHashProposition, java.lang.Long]] = new JArrayList[JPair[MCPublicKeyHashProposition, java.lang.Long]]()
     var totalFrom = 0L
 
 
@@ -81,7 +86,7 @@ class SidechainStateTest
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, withdrawalRequests, fee, System.currentTimeMillis - Random.nextInt(10000))
 
   }
 
@@ -97,7 +102,7 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    stateStorage.update(boxVersion, boxList.toSet, Set[Array[Byte]]())
+    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox]())
 
   }
 
@@ -114,7 +119,7 @@ class SidechainStateTest
         tmpDir
       })
 
-    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, applicationState).get
+    val sidechainState : SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
 
     for (b <- boxList) {
       //Test get
@@ -141,6 +146,9 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.parentId)
       .thenAnswer(answer => bytesToId(boxVersion.data))
+
+    Mockito.when(mockedBlock.mainchainBlocks)
+      .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 

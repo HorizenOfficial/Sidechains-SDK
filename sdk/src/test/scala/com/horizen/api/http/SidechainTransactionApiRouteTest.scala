@@ -320,8 +320,10 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       // parameter 'format' = true
       val transactionInput: List[TransactionInput] = allBoxes.asScala.map(box => TransactionInput(BytesUtils.toHexString(box.id()))).toList
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 30))
+      val withdrawalRequests: List[TransactionOutput] = List()
+
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput, transactionOutput, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -334,7 +336,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       // parameter 'format' = false
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput, transactionOutput, Some(false)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -350,13 +352,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       }
       val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2, transactionOutput, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(transactionInput_2,transactionOutput,withdrawalRequests,Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
       }
       Post(basePath + "createRegularTransaction")
-        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head), transactionOutput, None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(SerializationUtil.serialize(ReqCreateRegularTransaction(List(transactionInput_2.head),transactionOutput,withdrawalRequests,None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
@@ -407,7 +409,10 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       sidechainApiMockConfiguration.setShould_history_getTransactionsSortedByFee_return_value(true)
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(allBoxes.asScala.head.proposition().asInstanceOf[PublicKey25519Proposition].bytes), 2))
       Post(basePath + "sendCoinsToAddress")
-        .withEntity(SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None))) ~> sidechainTransactionApiRoute ~> check {
+        .withEntity(
+          //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
+          SerializationUtil.serialize(ReqSendCoinsToAddress(transactionOutput, None))
+        ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
