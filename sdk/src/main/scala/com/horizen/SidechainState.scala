@@ -129,7 +129,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
         applyChanges(
           cs,
           idToVersion(mod.id),
-          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), this.params),
+          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           timeStampToEpochNumber(mod.timestamp)
         )
       })
@@ -151,17 +151,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       changes.toAppend.map(_.box).asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
+        val boxesToUpdate = changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet
+        val boxIdsToRemove = changes.toRemove.map(_.boxId.array).toSet
+        val withdrawalRequestsToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
+          .map(_.asInstanceOf[WithdrawalRequestBox])
+        val forgingStakesToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[ForgerBox])
+          .map(box => ForgingStakeInfo(box.id(), box.value()))
+
         new SidechainState(
-          stateStorage.update(version, withdrawalEpochInfo,
-            changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
-            changes.toRemove.map(_.boxId.array).toSet,
-            changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-              .map(_.asInstanceOf[WithdrawalRequestBox]),
-            changes.toAppend.map(_.box).filter(box => box.isInstanceOf[ForgerBox])
-              .map(box => ForgingStakeInfo(box.id(), box.value())),
-            consensusEpoch
-          ).get,
-          this.params, newVersion, appState)
+          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemove, withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch).get,
+          params,
+          newVersion,
+          appState
+        )
       case Failure(exception) => throw exception
     }
   }.recoverWith{
@@ -178,7 +180,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, this.params, to, appState)
+      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -188,7 +190,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
-    val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0))
+    val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
   }
@@ -197,6 +199,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     // TO DO: should be changed, when we will change the structure of SidechainCreation output in MC Tx
+    // TO DO: missed forging stake should cause IllegalStateException
     val forgingStakes: Seq[ForgingStakeInfo] = stateStorage.getForgingStakesInfo match {
       case seq if seq.isDefined && seq.get.nonEmpty =>
         seq.get
@@ -205,14 +208,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
         Seq(ForgingStakeInfo(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"), 0L))
     }
 
-    (
-      bytesToId(stateStorage.lastVersionId.get.data), // we use block id as version
-      ConsensusEpochInfo(
-        stateStorage.getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0)),
-        MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
-        stateStorage.getForgingStakesAmount.getOrElse(0L)
-      )
-    )
+    (stateStorage.getConsensusEpochNumber, stateStorage.getForgingStakesAmount) match {
+      case (Some(consensusEpochNumber), Some(forgingStakesAmount)) =>
+        (
+          bytesToId(stateStorage.lastVersionId.get.data), // we use block id as version
+          ConsensusEpochInfo(
+            consensusEpochNumber,
+            MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
+            forgingStakesAmount
+          )
+        )
+      case (_, _) =>
+        throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+    }
   }
 }
 

@@ -8,6 +8,7 @@ import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer}
@@ -26,7 +27,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
-  private[horizen]val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
+  private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
@@ -56,9 +57,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = {
-    storage.get(withdrawalEpochInformationKey) match {
-      case v if v.isPresent =>
-        WithdrawalEpochInfoSerializer.parseBytesTry(v.get().data) match {
+    storage.get(withdrawalEpochInformationKey).asScala match {
+      case Some(baw) =>
+        WithdrawalEpochInfoSerializer.parseBytesTry(baw.data) match {
           case Success(withdrawalEpochInfo) => Option(withdrawalEpochInfo)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch info information parsing.", exception)
@@ -69,9 +70,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getWithdrawalRequests(epoch: Int): JList[WithdrawalRequestBox] = { // Do we need to return JList here?
-    storage.get(getWithdrawalRequestsKey(epoch)) match {
-      case v if v.isPresent =>
-        withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
+    storage.get(getWithdrawalRequestsKey(epoch)).asScala match {
+      case Some(baw) =>
+        withdrawalRequestSerializer.parseBytesTry(baw.data) match {
           case Success(withdrawalRequests) => withdrawalRequests
           case Failure(exception) =>
             log.error("Error while withdrawal requests parsing.", exception)
@@ -81,11 +82,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getConsensusEpoch: Option[ConsensusEpochNumber] = {
-    storage.get(consensusEpochKey) match {
-      case v if v.isPresent =>
+  def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
+    storage.get(consensusEpochKey).asScala match {
+      case Some(baw) =>
         Try {
-          Ints.fromByteArray(v.get().data)
+          Ints.fromByteArray(baw.data)
         } match {
           case Success(epoch) => Some(intToConsensusEpochNumber(epoch))
           case Failure(exception) =>
@@ -97,10 +98,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getForgingStakesAmount: Option[Long] = {
-    storage.get(forgingStakesAmountKey) match {
-      case v if v.isPresent =>
+    storage.get(forgingStakesAmountKey).asScala match {
+      case Some(baw) =>
         Try {
-          Longs.fromByteArray(v.get().data)
+          Longs.fromByteArray(baw.data)
         } match {
           case Success(epoch) => Some(epoch)
           case Failure(exception) =>
@@ -112,9 +113,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getForgingStakesInfo: Option[Seq[ForgingStakeInfo]] = {
-    storage.get(forgingStakesInfoKey) match {
-      case v if v.isPresent =>
-        forgingStakeInfoSerializer.parseBytesTry(v.get().data) match {
+    storage.get(forgingStakesInfoKey).asScala match {
+      case Some(baw) =>
+        forgingStakeInfoSerializer.parseBytesTry(baw.data) match {
           case Success(stakesInfo) => Some(stakesInfo.asScala)
           case Failure(exception) =>
             log.error("Error while forging stakes parsing.", exception)
@@ -166,7 +167,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     // Update Consensus related data
-    if(getConsensusEpoch.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)
+    if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
 
     val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveList, forgingStakesToAppendSeq)
@@ -192,11 +193,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         val (removedStakes, existentStakes) = currentStakesInfoSeq.partition(stakeInfo => boxIdsToRemoveBAW.contains(new ByteArrayWrapper(stakeInfo.boxId)))
 
         // Update current stakes amount
-        var stakesAmount = getForgingStakesAmount.getOrElse(0L)
-        for(stake <- removedStakes)
-          stakesAmount -= stake.value
-        for(stake <- forgingStakesToAppendSeq)
-          stakesAmount += stake.value
+        val stakesAmount = getForgingStakesAmount.getOrElse(0L) - removedStakes.map(_.value).sum + forgingStakesToAppendSeq.map(_.value).sum
 
         (existentStakes ++ forgingStakesToAppendSeq, stakesAmount)
       case None =>

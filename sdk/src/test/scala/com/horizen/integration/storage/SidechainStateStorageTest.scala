@@ -39,7 +39,7 @@ class SidechainStateStorageTest
 
     // Verify that withdrawal epoch info and consensus info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
-    assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpoch.isEmpty)
+    assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpochNumber.isEmpty)
     assertTrue("ForgingStakesAmount info expected to be undefined.", sidechainStateStorage.getForgingStakesAmount.isEmpty)
     assertTrue("ForgingStakesInfo info expected to be undefined.", sidechainStateStorage.getForgingStakesInfo.isEmpty)
 
@@ -69,7 +69,7 @@ class SidechainStateStorageTest
         b, sidechainStateStorage.getBox(b.id()).get)
     }
 
-    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
 
     // Test delete operation: first RegularBox and first CustomBox
     assertTrue("Update(delete) operation must be successful.",
@@ -112,7 +112,7 @@ class SidechainStateStorageTest
     val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
 
     // Verify that consensus info is not defined
-    assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpoch.isEmpty)
+    assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpochNumber.isEmpty)
     assertTrue("ForgingStakesAmount info expected to be undefined.", sidechainStateStorage.getForgingStakesAmount.isEmpty)
     assertTrue("ForgingStakesInfo info expected to be undefined.", sidechainStateStorage.getForgingStakesInfo.isEmpty)
 
@@ -138,7 +138,7 @@ class SidechainStateStorageTest
         box, sidechainStateStorage.getBox(box.id()).get)
     }
 
-    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
     assertEquals("Different forging stakes amount expected.", forgingStakesAmount, sidechainStateStorage.getForgingStakesAmount.get)
     assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq, sidechainStateStorage.getForgingStakesInfo.get)
 
@@ -164,7 +164,7 @@ class SidechainStateStorageTest
         sidechainStateStorage.getBox(box.id()).isEmpty)
     }
 
-    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
     assertEquals("Different forging stakes amount expected.", forgingStakesAmount - forgerBoxList.head.value(), sidechainStateStorage.getForgingStakesAmount.get)
     assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq.tail, sidechainStateStorage.getForgingStakesInfo.get)
 
@@ -177,7 +177,7 @@ class SidechainStateStorageTest
     assertEquals("Storage must contain 1 version.",
       1, sidechainStateStorage.rollbackVersions.size)
 
-    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpoch.get)
+    assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
     assertEquals("Different forging stakes amount expected.", forgingStakesAmount, sidechainStateStorage.getForgingStakesAmount.get)
     assertEquals("Different forging stakes expected.", forgingStakesToAppendSeq, sidechainStateStorage.getForgingStakesInfo.get)
 
