@@ -1,26 +1,21 @@
 package com.horizen
 
-import java.io.{File => JFile}
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, ForgerBox}
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, StakeConsensusEpochInfo}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
-import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
+import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath}
-import io.iohk.iodb.LSMStore
-import scorex.core.{VersionTag, bytesToVersion, idToVersion}
-import scorex.util.ScorexLogging
+import scorex.core.VersionTag
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
 
 
@@ -132,6 +127,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     walletTransactionStorage.update(new ByteArrayWrapper(version), transactions).get
 
+    // Just update storage version to anchor it to block id for possible future rollbacks.
     forgingBoxesMerklePathStorage.updateVersion(new ByteArrayWrapper(version)).get
 
     applicationWallet.onChangeBoxes(version, newBoxes.map(_.box).toList.asJava,
@@ -211,7 +207,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       )
     })
 
-    forgingBoxesMerklePathStorage.update(epochInfo.epoch, boxMerklePathInfoSeq)
+    forgingBoxesMerklePathStorage.update(epochInfo.epoch, boxMerklePathInfoSeq).get
     this
   }
 
@@ -220,14 +216,12 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
     val storedConsensusEpochNumber: ConsensusEpochNumber = requestedEpoch match {
-      case epoch if epoch <= 2 => ConsensusEpochNumber @@ 1
+      case epoch if (epoch <= 2) => ConsensusEpochNumber @@ 1
       case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
-    forgingBoxesMerklePathStorage.getMerklePathsForEpoch(storedConsensusEpochNumber) match {
-      case Some(merklePathSeq) => merklePathSeq.find(_.boxId.sameElements(forgingBoxId)).map(_.merklePath)
-      case None => None
-    }
+    forgingBoxesMerklePathStorage.getMerklePathsForEpoch(storedConsensusEpochNumber)
+      .flatMap(merklePathSeq => merklePathSeq.find(_.boxId.sameElements(forgingBoxId)).map(_.merklePath))
   }
 }
 

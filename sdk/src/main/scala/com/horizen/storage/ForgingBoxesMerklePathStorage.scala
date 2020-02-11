@@ -7,6 +7,7 @@ import scorex.util.ScorexLogging
 import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
 
@@ -30,6 +31,8 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     new ByteArrayWrapper(version)
   }
 
+  // Current storage is updated with consensus epoch info between block modifiers application.
+  // The random version here is not used as a point to rollback.
   def update(epoch: ConsensusEpochNumber, boxMerklePathInfoSeq: Seq[BoxMerklePathInfo]): Try[ForgingBoxesMerklePathStorage] = Try {
     require(boxMerklePathInfoSeq != null, "Seq of boxMerklePathInfoSeq to append must be NOT NULL. Use empty Seq instead.")
 
@@ -45,15 +48,17 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     this
   }
 
+  // When new block applied we anchor the new version to its id.
+  // This version can be used as a rollback point during rollback process.
   def updateVersion(version: ByteArrayWrapper): Try[ForgingBoxesMerklePathStorage] = Try {
     storage.update(version, new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]](), new JArrayList[ByteArrayWrapper]())
     this
   }
 
   def getMerklePathsForEpoch(epoch: ConsensusEpochNumber): Option[Seq[BoxMerklePathInfo]] = {
-    storage.get(epochKey(epoch)) match {
-      case v if v.isPresent =>
-        boxMerklePathInfoListSerializer.parseBytesTry(v.get().data) match {
+    storage.get(epochKey(epoch)).asScala match {
+      case Some(baw) =>
+        boxMerklePathInfoListSerializer.parseBytesTry(baw.data) match {
           case Success(boxMerklePathsInfo) => Some(boxMerklePathsInfo.asScala)
           case Failure(exception) =>
             log.error("Error while box merkle paths info parsing.", exception)
