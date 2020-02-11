@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.NoncedBox;
+import com.horizen.companion.SidechainBoxesDataCompanion;
+import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -192,7 +194,9 @@ public class CommandProcessor {
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+            SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
+            SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),

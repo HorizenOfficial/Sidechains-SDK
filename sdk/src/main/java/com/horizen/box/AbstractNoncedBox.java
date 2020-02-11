@@ -10,7 +10,8 @@ import scorex.crypto.hash.Blake2b256;
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractBoxData<P>> extends ScorexEncoding implements NoncedBox<P>
+public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
+        extends ScorexEncoding implements NoncedBox<P>
 {
     protected final BD boxData;
     protected final long nonce;
@@ -37,9 +38,17 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     public final long nonce() { return nonce; }
 
     @Override
-    public byte[] id() {
-        if(id == null)
-            id = Blake2b256.hash(Bytes.concat(boxData.proposition().bytes(), Longs.toByteArray(nonce)));
+    public final byte[] id() {
+        if(id == null) {
+            byte coinsByteFlag = this instanceof CoinsBox ? (byte)1 : (byte)0;
+            id = Blake2b256.hash(Bytes.concat(
+                    new byte[]{ coinsByteFlag },
+                    Longs.toByteArray(value()),
+                    proposition().bytes(),
+                    Longs.toByteArray(nonce()),
+                    boxData.customFieldsHash()));
+
+        }
         return id;
     }
 

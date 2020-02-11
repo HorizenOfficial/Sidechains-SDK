@@ -36,6 +36,7 @@ class SidechainWalletTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
+    with CompanionsFixture
     with IODBStoreFixture
     with MockitoSugar
 {
@@ -61,7 +62,7 @@ class SidechainWalletTest
   customSecretSerializers.put(CustomPrivateKey.SECRET_TYPE_ID, CustomPrivateKeySerializer.getSerializer.asInstanceOf[SecretSerializer[SidechainTypes#SCS]])
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   @Before
   def setUp() : Unit = {
@@ -347,7 +348,7 @@ class SidechainWalletTest
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
     val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     Random.nextBytes(blockId)
 

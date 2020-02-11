@@ -3,7 +3,7 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.MainchainBlockReference
-import com.horizen.box.{ForgerBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box._
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
@@ -15,7 +15,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
-import com.horizen.transaction.RegularTransaction
+import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import org.junit._
 import org.junit.Assert._
 import org.scalatest.junit.JUnitSuite
@@ -55,7 +55,7 @@ class SidechainStateTest
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 
@@ -133,6 +133,10 @@ class SidechainStateTest
       sidechainState.semanticValidity(mockedTransaction).isSuccess)
     assertTrue("Call of semanticValidity must be unsuccessful.",
       sidechainState.semanticValidity(mockedTransaction).isFailure)
+
+    // Mock ApplicationState always successfully validate
+    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())).thenReturn(true)
 
     //Test validate(Transaction)
     val tryValidate = sidechainState.validate(transactionList.head)
@@ -263,10 +267,10 @@ class SidechainStateTest
       .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
-      ArgumentMatchers.any[SidechainBlock]()))
-      .thenAnswer(answer => {
-        true
-      })
+      ArgumentMatchers.any[SidechainBlock]())).thenReturn(true)
+
+    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())).thenReturn(true)
 
     Mockito.when(mockedApplicationState.onApplyChanges(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[Array[Byte]](),

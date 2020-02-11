@@ -11,10 +11,8 @@ import java.util.Arrays;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
 
 public final class WithdrawalRequestBox
-    extends AbstractNoncedBox<MCPublicKeyHashProposition, WithdrawalRequestBoxData>
-    implements CoinsBox<MCPublicKeyHashProposition>
+    extends AbstractNoncedBox<MCPublicKeyHashProposition, WithdrawalRequestBoxData, WithdrawalRequestBox>
 {
-
     public WithdrawalRequestBox(WithdrawalRequestBoxData boxData, long nonce) {
         super(boxData, nonce);
     }
@@ -23,8 +21,7 @@ public final class WithdrawalRequestBox
     public byte boxTypeId() {
         return WithdrawalRequestBoxId.id();
     }
-
-
+    
     @Override
     public BoxSerializer serializer() {
         return WithdrawalRequestBoxSerializer.getSerializer();

@@ -4,7 +4,7 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.box.RegularBox
+import com.horizen.box.{NoncedBox, RegularBox}
 import com.horizen.box.data.{BoxData, RegularBoxData}
 import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.Proposition
@@ -24,7 +24,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val timestamp = 1547798549470L
 
     val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     val creator = PrivateKey25519Creator.getInstance
     val pk1 = creator.generateSecret("test_seed1".getBytes)

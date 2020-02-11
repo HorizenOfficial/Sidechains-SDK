@@ -11,7 +11,7 @@ import java.util.Arrays;
 import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
 
 public final class RegularBox
-    extends AbstractNoncedBox<PublicKey25519Proposition, RegularBoxData>
+    extends AbstractNoncedBox<PublicKey25519Proposition, RegularBoxData, RegularBox>
     implements CoinsBox<PublicKey25519Proposition>
 {
 

@@ -170,7 +170,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
 
         to.add(new RegularBoxData(pk4.publicImage(), 20L));
         to.add(new RegularBoxData(pk5.publicImage(), 30L));
@@ -196,7 +196,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
@@ -252,7 +252,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
@@ -311,7 +311,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
 
         // Test 2: NOT empty 'to' list
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
         to.add(new RegularBoxData(pk5.publicImage(), 20L));
         fee = 30L;
@@ -331,7 +331,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk2.publicImage(), 50L));
 
         // Note: total 'from' value is 100, total 'to' value is 10
@@ -367,7 +367,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
         long fee = 0L;
 
@@ -378,7 +378,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_NullArgumentTest() {
-        List<BoxData> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 20L));
         to.add(new RegularBoxData(pk5.publicImage(), 30L));
 

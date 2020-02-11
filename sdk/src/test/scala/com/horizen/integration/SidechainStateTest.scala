@@ -8,8 +8,8 @@ import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainSettings, SidechainState, SidechainTypes}
-import com.horizen.box.{ForgerBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
@@ -55,7 +55,7 @@ class SidechainStateTest
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

@@ -1,6 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.Box;
+import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
 import com.horizen.box.data.BoxData;
 import com.horizen.box.data.RegularBoxData;
@@ -19,7 +20,7 @@ import java.util.Objects;
 public class RegularTransactionCreator {
 
     public static RegularTransaction create(NodeWallet wallet,
-                                            List<BoxData> to,
+                                            List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to,
                                             PublicKey25519Proposition changeAddress,
                                             long fee,
                                             List<byte[]> boxIdsToExclude) {
@@ -67,7 +68,7 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
-        List<BoxData> sendTo = new ArrayList<>(to);
+        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> sendTo = new ArrayList<>(to);
         if(currentAmount > toAmount) {
             sendTo.add(new RegularBoxData(changeAddress, currentAmount - toAmount));
         }
