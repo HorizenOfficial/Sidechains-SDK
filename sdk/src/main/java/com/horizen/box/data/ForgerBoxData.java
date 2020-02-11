@@ -2,14 +2,18 @@ package com.horizen.box.data;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
+import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.vrf.VRFPublicKey;
+import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition> {
+import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
+
+public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition rewardProposition;
     private final VRFPublicKey vrfPublicKey;
 
@@ -32,6 +36,11 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
     }
 
     @Override
+    public ForgerBox getBox(long nonce) {
+        return new ForgerBox(this, nonce);
+    }
+
+    @Override
     public byte[] bytes() {
         return Bytes.concat(
                 proposition().bytes(),
@@ -46,6 +55,11 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
         return ForgerBoxDataSerializer.getSerializer();
     }
 
+    @Override
+    public byte boxDataTypeId() {
+        return ForgerBoxDataId.id();
+    }
+
     public static ForgerBoxData parseBytes(byte[] bytes) {
         int valueOffset = PublicKey25519Proposition.getLength();
         int rewardPropositionOffset = valueOffset + Longs.BYTES;
@@ -57,6 +71,11 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
         VRFPublicKey vrfPublicKey = VRFPublicKey.parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
 
         return new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey);
+    }
+
+    @Override
+    public byte[] customFieldsHash() {
+        return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().key()));
     }
 
     @Override

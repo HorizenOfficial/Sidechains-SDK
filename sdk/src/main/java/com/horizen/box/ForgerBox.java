@@ -14,7 +14,7 @@ import java.util.Objects;
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
 
 public final class ForgerBox
-        extends AbstractNoncedBox<PublicKey25519Proposition, ForgerBoxData>
+        extends AbstractNoncedBox<PublicKey25519Proposition, ForgerBoxData, ForgerBox>
         implements CoinsBox<PublicKey25519Proposition>
 {
 

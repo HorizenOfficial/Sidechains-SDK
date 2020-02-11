@@ -13,7 +13,11 @@ import com.google.inject.name.Names;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.BoxDataSerializer;
 import com.horizen.params.MainNetParams;
+import com.horizen.proof.Proof;
+import com.horizen.proof.ProofSerializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
@@ -41,7 +45,9 @@ public class SimpleAppModule
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
+        HashMap<Byte, BoxDataSerializer<BoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
+        HashMap<Byte, ProofSerializer<Proof<Proposition>>> customProofSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
         ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
@@ -61,7 +67,7 @@ public class SimpleAppModule
         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
 
         // Here I can reject some of existing API routes
-        // Each pair consisto of "group name" -> "route name"
+        // Each pair consists of "group name" -> "route name"
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
@@ -74,9 +80,15 @@ public class SimpleAppModule
         bind(new TypeLiteral<HashMap<Byte, BoxSerializer<Box<Proposition>>>>() {})
                 .annotatedWith(Names.named("CustomBoxSerializers"))
                 .toInstance(customBoxSerializers);
+        bind(new TypeLiteral<HashMap<Byte, BoxDataSerializer<BoxData<Proposition, NoncedBox<Proposition>>>>>() {})
+                .annotatedWith(Names.named("CustomBoxDataSerializers"))
+                .toInstance(customBoxDataSerializers);
         bind(new TypeLiteral<HashMap<Byte, SecretSerializer<Secret>>>() {})
                 .annotatedWith(Names.named("CustomSecretSerializers"))
                 .toInstance(customSecretSerializers);
+        bind(new TypeLiteral<HashMap<Byte, ProofSerializer<Proof<Proposition>>>>() {})
+                .annotatedWith(Names.named("CustomProofSerializers"))
+                .toInstance(customProofSerializers);
         bind(new TypeLiteral<HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>>>() {})
                 .annotatedWith(Names.named("CustomTransactionSerializers"))
                 .toInstance(customTransactionSerializers);

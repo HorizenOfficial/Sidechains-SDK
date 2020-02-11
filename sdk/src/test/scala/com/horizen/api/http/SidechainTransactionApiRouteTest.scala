@@ -258,38 +258,40 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 //      }
 //    }
 
+    /*
     "reply at /spendForgingStake" in {
-      // parameter 'format' = true
-      // Spend 1 forger box to create 1 regular box and 1 forger box
-      val transactionInput: List[TransactionInput] = List(utilMocks.box_4.id()).map(id => TransactionInput(BytesUtils.toHexString(id)))
-      val regularOutputs: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 10))
-      val forgerOutputs: List[TransactionForgerOutput] = List(TransactionForgerOutput(
-        BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
-        None,
-        BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
-        10))
+        // parameter 'format' = true
+        // Spend 1 forger box to create 1 regular box and 1 forger box
+        val transactionInput: List[TransactionInput] = List(utilMocks.box_4.id()).map(id => TransactionInput(BytesUtils.toHexString(id)))
+        val regularOutputs: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 10))
+        val forgerOutputs: List[TransactionForgerOutput] = List(TransactionForgerOutput(
+          BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
+          None,
+          BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
+          10))
 
-      Post(basePath + "spendForgingStake")
-        .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      // parameter 'format' = false
-      Post(basePath + "spendForgingStake")
-        .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
-      val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
-      Post(basePath + "spendForgingStake")
-        .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput_2, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
-        println(response)
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
-      }
+        Post(basePath + "spendForgingStake")
+          .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+          println(response)
+          status.intValue() shouldBe StatusCodes.OK.intValue
+          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        }
+        // parameter 'format' = false
+        Post(basePath + "spendForgingStake")
+          .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+          println(response)
+          status.intValue() shouldBe StatusCodes.OK.intValue
+          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        }
+        val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
+        Post(basePath + "spendForgingStake")
+          .withEntity(SerializationUtil.serialize(ReqSpendForgingStake(transactionInput_2, regularOutputs, forgerOutputs, Some(true)))) ~> sidechainTransactionApiRoute ~> check {
+          println(response)
+          status.intValue() shouldBe StatusCodes.OK.intValue
+          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+          assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
+        }
     }
+    */
   }
 }

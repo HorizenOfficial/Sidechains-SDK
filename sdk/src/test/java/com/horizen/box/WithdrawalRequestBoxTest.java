@@ -62,6 +62,6 @@ public class WithdrawalRequestBoxTest extends BoxFixtureClass
         WithdrawalRequestBox box5 = getWithdrawalRequestBox(proposition, nonce, value + 1);
         assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box5.hashCode());
         assertNotEquals("Boxes expected to be different", box1, box5);
-        assertTrue("Boxes ids expected to be equal", Arrays.equals(box1.id(), box5.id()));
+        assertFalse("Boxes ids expected to be equal", Arrays.equals(box1.id(), box5.id()));
     }
 }

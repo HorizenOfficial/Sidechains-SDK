@@ -7,7 +7,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.{ForgerBox, RegularBox}
+import com.horizen.box.{ForgerBox, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proposition._
@@ -33,15 +33,14 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.vrf.VRFPublicKey
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                        sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+                                        sidechainTransactionActorRef: ActorRef, companion: SidechainTransactionsCompanion)
+                                       (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~
     sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
   }
-
-  private var companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   /**
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
@@ -191,7 +190,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             inputs.add(new Pair(box.asInstanceOf[RegularBox], privateKey))
           })
 
-          val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+          val outputs: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
@@ -278,7 +277,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
       for(id <- transaction.boxIdsToOpen().asScala)
         boxIdsToExclude.add(id.data)
 
-    val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val outputs: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     outputList.foreach(element =>
       outputs.add(new RegularBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
@@ -412,7 +411,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   def spendForgingStake: Route = (post & path("spendForgingStake")) {
     entity(as[ReqSpendForgingStake]) { body =>
       withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
+        /*val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
@@ -429,7 +428,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             inputs.add(new Pair(box.asInstanceOf[ForgerBox], privateKey))
           })
 
-          val outputs: JList[BoxData[_ <: Proposition]] = new JArrayList()
+          val outputs: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
@@ -463,7 +462,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
           }
-        }
+        }*/
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", None))
       }
     }
   }

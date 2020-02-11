@@ -9,7 +9,7 @@ import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box._
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer, DefaultApplicationState}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
@@ -64,7 +64,7 @@ class SidechainStateTest
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

@@ -21,6 +21,10 @@ trait BoxFixture
   with SidechainTypes
 {
 
+  def getRegularBoxData: RegularBoxData = {
+    new RegularBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100))
+  }
+
   def getRegularBox: RegularBox = {
     new RegularBox(new RegularBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100)), 1)
   }
@@ -52,6 +56,10 @@ trait BoxFixture
     boxList
   }
 
+  def getCertifierRightBoxData: CertifierRightBoxData = {
+    new CertifierRightBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), Random.nextInt(100))
+  }
+
   def getCertifierRightBox: CertifierRightBox = {
     new CertifierRightBox(new CertifierRightBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), Random.nextInt(100)), 1)
   }
@@ -67,6 +75,10 @@ trait BoxFixture
       boxList.add(getCertifierRightBox)
 
     boxList
+  }
+
+  def getCustomBoxData: CustomBoxData = {
+    new CustomBoxData(getCustomPrivateKey.publicImage(), Random.nextInt(100))
   }
 
   def getCustomBox: CustomBox = {
@@ -115,12 +127,20 @@ trait BoxFixture
     wboxList
   }
 
+  def getWithdrawalRequestBoxData: WithdrawalRequestBoxData = {
+    new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100))
+  }
+
   def getWithdrawalRequestBox: WithdrawalRequestBox = {
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100)), Random.nextInt(100))
   }
 
   def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long): WithdrawalRequestBox = {
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(key, value), nonce)
+  }
+
+  def getForgerBoxData: ForgerBoxData = {
+    new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey)
   }
 
   def getForgerBox: ForgerBox = {
@@ -132,6 +152,18 @@ trait BoxFixture
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
                    rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
     new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey), nonce)
+  }
+
+  def getRandomBoxId: Array[Byte] = {
+    val id: Array[Byte] = new Array[Byte](32)
+    Random.nextBytes(id)
+    id
+  }
+
+  def getRandomBoxId(seed: Long): Array[Byte] = {
+    val id: Array[Byte] = new Array[Byte](32)
+    new Random(seed).nextBytes(id)
+    id
   }
 }
 

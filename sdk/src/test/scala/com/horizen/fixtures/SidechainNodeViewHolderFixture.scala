@@ -27,6 +27,7 @@ import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
+    with CompanionsFixture
 {
 
   val classLoader: ClassLoader = getClass.getClassLoader
@@ -44,7 +45,7 @@ trait SidechainNodeViewHolderFixture
 
   val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
-  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
@@ -139,7 +140,7 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef)
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion)
   }
 
 }

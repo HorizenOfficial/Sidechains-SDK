@@ -1,9 +1,11 @@
 package com.horizen.box.data;
 
+import com.horizen.box.AbstractNoncedBox;
 import com.horizen.proposition.Proposition;
 import java.util.Objects;
 
-public abstract class AbstractBoxData<P extends Proposition> implements BoxData<P> {
+public abstract class AbstractBoxData<P extends Proposition, B extends AbstractNoncedBox<P, BD, B>, BD extends AbstractBoxData<P, B, BD>>
+        implements BoxData<P, B> {
 
     private final P proposition;
     private final long value;
@@ -28,6 +30,11 @@ public abstract class AbstractBoxData<P extends Proposition> implements BoxData<
     @Override
     public abstract byte[] bytes();
 
+    @Override
+    public byte[] customFieldsHash() {
+        // By default no custom fields present, so return all zeros hash.
+        return new byte[32];
+    }
     @Override
     public int hashCode() {
         return proposition().hashCode();

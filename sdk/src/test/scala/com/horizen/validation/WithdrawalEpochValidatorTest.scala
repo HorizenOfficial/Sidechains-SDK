@@ -8,7 +8,7 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.NoncedBox
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{MainchainBlockReferenceFixture, TransactionFixture}
+import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, TransactionFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
@@ -25,9 +25,9 @@ import scorex.core.consensus.ModifierSemanticValidity
 
 import scala.io.Source
 
-class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture {
+class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture with CompanionsFixture{
 
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val params: NetworkParams = mock[NetworkParams]
   val historyStorage: SidechainHistoryStorage = mock[SidechainHistoryStorage]
