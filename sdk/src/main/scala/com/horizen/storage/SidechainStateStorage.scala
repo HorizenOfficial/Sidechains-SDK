@@ -128,15 +128,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
-             boxIdsRemoveList: Set[Array[Byte]],
+             boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
              consensusEpoch: ConsensusEpochNumber): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
-    require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
+    require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
     require(!boxUpdateList.contains(null), "Box to add/update must be NOT NULL.")
-    require(!boxIdsRemoveList.contains(null), "BoxId to remove must be NOT NULL.")
+    require(!boxIdsRemoveSet.contains(null), "BoxId to remove must be NOT NULL.")
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
     require(forgingStakesToAppendSeq != null, "Seq of ForgerStakes to append must be NOT NULL. Use empty Seq instead.")
@@ -146,8 +146,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     // Update boxes data
-    for (r <- boxIdsRemoveList)
-      removeList.add(calculateKey(r))
+    for (r <- boxIdsRemoveSet)
+      removeList.add(calculateKey(r.data))
 
     for (b <- boxUpdateList)
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
@@ -170,7 +170,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
 
-    val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveList, forgingStakesToAppendSeq)
+    val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveSet, forgingStakesToAppendSeq)
     updateList.add(new JPair(
       forgingStakesInfoKey,
       new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesInfoSeq.asJava))
@@ -185,28 +185,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     this
   }
 
-  private def applyForgingStakesChanges(boxIdsToRemove: Set[Array[Byte]], forgingStakesToAppendSeq: Seq[ForgingStakeInfo]): (Seq[ForgingStakeInfo], Long) = {
+  private def applyForgingStakesChanges(boxIdsToRemove: Set[ByteArrayWrapper], forgingStakesToAppendSeq: Seq[ForgingStakeInfo]): (Seq[ForgingStakeInfo], Long) = {
     getForgingStakesInfo match {
       case Some(currentStakesInfoSeq) =>
         // Separate removedStakes from current stakes
-        val boxIdsToRemoveBAW = boxIdsToRemove.map(new ByteArrayWrapper(_))
-        val (removedStakes, existentStakes) = currentStakesInfoSeq.partition(stakeInfo => boxIdsToRemoveBAW.contains(new ByteArrayWrapper(stakeInfo.boxId)))
+        val (removedStakes, existentStakes) = currentStakesInfoSeq.partition(stakeInfo => boxIdsToRemove.contains(new ByteArrayWrapper(stakeInfo.boxId)))
 
         // Update current stakes amount
         val stakesAmount = getForgingStakesAmount.getOrElse(0L) - removedStakes.map(_.value).sum + forgingStakesToAppendSeq.map(_.value).sum
 
         (existentStakes ++ forgingStakesToAppendSeq, stakesAmount)
       case None =>
-        (forgingStakesToAppendSeq, forgingStakesToAppendSeq.foldLeft(0L)(_ + _.value))
+        (forgingStakesToAppendSeq, forgingStakesToAppendSeq.map(_.value).sum)
     }
   }
 
   def lastVersionId : Option[ByteArrayWrapper] = {
-    val lastVersion = storage.lastVersionID()
-    if (lastVersion.isPresent)
-      Some(lastVersion.get())
-    else
-      None
+    storage.lastVersionID().asScala
   }
 
   def rollbackVersions : Seq[ByteArrayWrapper] = {

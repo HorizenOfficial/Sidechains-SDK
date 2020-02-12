@@ -151,19 +151,20 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                             withdrawalEpochInfo: WithdrawalEpochInfo,
                             consensusEpoch: ConsensusEpochNumber): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
-    applicationState.onApplyChanges(this, version.data,
+    applicationState.onApplyChanges(this,
+      version.data,
       changes.toAppend.map(_.box).asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxesToUpdate = changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet
-        val boxIdsToRemove = changes.toRemove.map(_.boxId.array).toSet
+        val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
         val withdrawalRequestsToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
           .map(_.asInstanceOf[WithdrawalRequestBox])
         val forgingStakesToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[ForgerBox])
           .map(box => ForgingStakeInfo(box.id(), box.value()))
 
         new SidechainState(
-          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemove, withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch).get,
+          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet, withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch).get,
           params,
           newVersion,
           appState
@@ -214,14 +215,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
     (stateStorage.getConsensusEpochNumber, stateStorage.getForgingStakesAmount) match {
       case (Some(consensusEpochNumber), Some(forgingStakesAmount)) =>
-        (
-          bytesToId(stateStorage.lastVersionId.get.data), // we use block id as version
-          ConsensusEpochInfo(
-            consensusEpochNumber,
-            MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
-            forgingStakesAmount
-          )
+        val lastBlockInEpoch = bytesToId(stateStorage.lastVersionId.get.data) // we use block id as version
+        val consensusEpochInfo = ConsensusEpochInfo(
+          consensusEpochNumber,
+          MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
+          forgingStakesAmount
         )
+
+        (lastBlockInEpoch, consensusEpochInfo)
       case (_, _) =>
         throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
     }

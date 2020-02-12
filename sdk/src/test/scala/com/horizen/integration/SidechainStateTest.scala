@@ -113,7 +113,7 @@ class SidechainStateTest
       initialVersion,
       initialWithdrawalEpochInfo,
       boxList.toSet,
-      Set[Array[Byte]](),
+      Set(),
       Seq[WithdrawalRequestBox](),
       forgingStakesToAppendSeq,
       initialConsensusEpoch

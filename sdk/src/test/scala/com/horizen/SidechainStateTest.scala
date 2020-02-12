@@ -211,7 +211,7 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.update(ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
-      ArgumentMatchers.any[Set[Array[Byte]]](),
+      ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[Seq[ForgingStakeInfo]](),
       ArgumentMatchers.any[ConsensusEpochNumber]()))
@@ -219,7 +219,7 @@ class SidechainStateTest
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
-        val boxToRemove = answer.getArgument[Set[Array[Byte]]](3)
+        val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
         val forgingStakesToAppendSeq = answer.getArgument[Seq[ForgingStakeInfo]](5)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
@@ -233,7 +233,7 @@ class SidechainStateTest
 
         stateVersion += version
 
-        for (b <- boxToRemove ++ boxToUpdate.map(_.id())) {
+        for (b <- boxToRemove.map(_.data) ++ boxToUpdate.map(_.id())) {
           val i = boxList.indexWhere(_.id().sameElements(b))
           if (i != -1)
             boxList.remove(i)
