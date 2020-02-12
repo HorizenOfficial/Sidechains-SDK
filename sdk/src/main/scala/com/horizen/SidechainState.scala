@@ -223,7 +223,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
         )
 
         (lastBlockInEpoch, consensusEpochInfo)
-      case (_, _) =>
+      case _ =>
         throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
     }
   }
