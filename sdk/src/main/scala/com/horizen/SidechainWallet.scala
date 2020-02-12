@@ -12,7 +12,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{BoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath}
+import com.horizen.utils.{ForgerBoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath}
 import scorex.core.VersionTag
 
 import scala.util.Try
@@ -200,18 +200,18 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
     val merkleTreeLeaves = epochInfo.forgersBoxIds.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
-    val boxMerklePathInfoSeq = walletBoxStorage.getByType(classOf[ForgerBox]).map(walletBox => {
-      BoxMerklePathInfo(
-        walletBox.box.id(),
+    val forgerBoxMerklePathInfoSeq = walletBoxStorage.getByType(classOf[ForgerBox]).map(walletBox => {
+      ForgerBoxMerklePathInfo(
+        walletBox.box.asInstanceOf[ForgerBox],
         epochInfo.forgersBoxIds.getMerklePathForLeaf(merkleTreeLeaves.indexOf(new ByteArrayWrapper(walletBox.box.id())))
       )
     })
 
-    forgingBoxesMerklePathStorage.update(epochInfo.epoch, boxMerklePathInfoSeq).get
+    forgingBoxesMerklePathStorage.update(epochInfo.epoch, forgerBoxMerklePathInfoSeq).get
     this
   }
 
-  def getForgingBoxMerklePath(forgingBoxId: Array[Byte], requestedEpoch: ConsensusEpochNumber): Option[MerklePath] = {
+  def getForgingBoxMerklePathInfoSeq(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
@@ -220,8 +220,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
-    forgingBoxesMerklePathStorage.getMerklePathsForEpoch(storedConsensusEpochNumber)
-      .flatMap(merklePathSeq => merklePathSeq.find(_.boxId.sameElements(forgingBoxId)).map(_.merklePath))
+    forgingBoxesMerklePathStorage.getInfoForEpoch(storedConsensusEpochNumber)
   }
 }
 

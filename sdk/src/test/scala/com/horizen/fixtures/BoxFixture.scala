@@ -94,6 +94,11 @@ trait BoxFixture
     boxList
   }
 
+  def getWalletBox(box: SidechainTypes#SCB): WalletBox = {
+    val txId = new Array[Byte](32)
+    Random.nextBytes(txId)
+    new WalletBox(box, bytesToId(txId), Random.nextInt(100000))
+  }
 
   def getWalletBox(boxClass: Class[_ <: Box[_ <: Proposition]]): WalletBox = {
     val txId = new Array[Byte](32)
@@ -147,6 +152,10 @@ trait BoxFixture
     new ForgerBox(
       new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey),
       Random.nextInt(100))
+  }
+
+  def getForgerBox(proposition: PublicKey25519Proposition): ForgerBox = {
+    new ForgerBox(new ForgerBoxData(proposition, Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey), Random.nextInt(100))
   }
 
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,

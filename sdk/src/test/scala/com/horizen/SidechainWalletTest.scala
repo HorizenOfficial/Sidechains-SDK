@@ -8,7 +8,7 @@ import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
-import com.horizen.utils.{BoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath, MerkleTree, Pair}
+import com.horizen.utils.{ForgerBoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath, MerkleTree, Pair}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 
@@ -116,6 +116,8 @@ class SidechainWalletTest
 
     // Set base WalletBox data
     boxList ++= getWalletBoxList(getRegularBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
+    boxList += getWalletBox(getForgerBox(secretList.head.asInstanceOf[PrivateKey25519].publicImage()))
+
     boxVersions += getVersion
 
     for (b <- boxList) {
@@ -541,55 +543,6 @@ class SidechainWalletTest
     assertFalse("ApplicationWallet onRemoveSecret() event should NOT be emitted.", onRemoveSecretEvent)
   }
 
-  @Deprecated
-  @Test
-  def testSecretsDeprecated() : Unit = {
-
-    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
-      new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
-      new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
-      new ForgingBoxesMerklePathStorage(mockedForgingBoxesMerklePathStorage),
-      new CustomApplicationWallet())
-
-    //TEST for - Wallet.secrets
-    val sl = sidechainWallet.secrets()
-
-    assertEquals("Wallet must contain specified count of Secrets.", secretList.size, sl.size)
-    assertTrue("Wallet must contain all specified Secrets", sl.asJavaCollection.containsAll(secretList.asJavaCollection))
-
-    //TEST for - Wallet.publicKeys
-    val pkl = sidechainWallet.publicKeys()
-
-    assertEquals("Wallet must contain specified count of public keys.", secretList.size, pkl.size)
-    assertTrue("Wallet must contain public keys for all specified Secrets.",
-      pkl.asJavaCollection.containsAll(secretList.map(_.publicImage()).asJavaCollection))
-
-    //TEST for - Wallet.secret(publicImage)
-    assertEquals("Wallet must contain specified Secret.", secretList(0), sidechainWallet.secret(secretList(0).publicImage()).get)
-
-    //TEST for - Wallet.removeSecret
-    var res = sidechainWallet.removeSecret(secretList(0).publicImage())
-    assertTrue("Wallet successful Secret remove expected, instead exception occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
-    assertTrue("Wallet must not contain specified Secret.", sidechainWallet.secret(secretList(0).publicImage()).isEmpty)
-
-    //TEST for - Wallet.addSecret
-    val s = getCustomPrivateKey
-
-    res = sidechainWallet.addSecret(s)
-    assertTrue("Wallet successful Secret add expected, instead exception occurred:\n %s".format(if(res.isFailure) res.failed.get.getMessage else ""), res.isSuccess)
-    assertEquals("Wallet must contain specified Secret.", s, sidechainWallet.secret(s.publicImage()).get)
-
-    //TEST for - NodeWallet.secretsOfType
-    assertTrue("Wallet must contain all Secrets of specified type.",
-      sidechainWallet.secretsOfType(classOf[PrivateKey25519]).containsAll(secretList.slice(1, 5).asJavaCollection))
-    assertTrue("Wallet must contain all Secrets of specified type.",
-      sidechainWallet.secretsOfType(classOf[CustomPrivateKey]).contains(s))
-
-    //TEST for - NodeWallet.allSecrets
-    val sl1 = sidechainWallet.allSecrets()
-    assertTrue("Wallet must contain all Secrets.", secretList.slice(1,5).+=(s).asJavaCollection.containsAll(sl1))
-  }
-
   @Test
   def testWalletBoxes(): Unit = {
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
@@ -640,51 +593,6 @@ class SidechainWalletTest
     assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
   }
 
-  @Deprecated
-  @Test
-  def testWalletBoxesDeprecated() : Unit = {
-
-    val sidechainWallet = new SidechainWallet("seed".getBytes(), new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
-      new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
-      new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
-      new ForgingBoxesMerklePathStorage(mockedForgingBoxesMerklePathStorage),
-      new CustomApplicationWallet())
-
-    //TEST for - Wallet.boxes
-    val wbl = sidechainWallet.boxes()
-
-    assertEquals("Wallet must contain specified count of WallectBoxes.", boxList.size, wbl.size)
-    assertTrue("Wallet must contain all specified WalletBoxes.", wbl.asJavaCollection.containsAll(boxList.asJavaCollection))
-
-    //TEST for - NodeWallet.allboxes
-    var bl = sidechainWallet.allBoxes
-
-    assertEquals("Wallet must contain specified count of Boxes.", boxList.size, bl.size)
-    assertTrue("Wallet must contain all specified Boxes.", boxList.map(_.box).asJavaCollection.containsAll(bl))
-
-    //TEST for - NodeWallet.allboxes(boxIdsToExclude)
-    bl = sidechainWallet.allBoxes(boxList.slice(0, 1).map(_.box.id()).asJava)
-
-    assertEquals("Wallet must contain specified count of Boxes.", boxList.size - 1, bl.size)
-    assertTrue("Wallet must contain all specified Boxes.", boxList.slice(1, 5).map(_.box).asJavaCollection.containsAll(bl))
-
-    //TEST for - NodeWallet.boxesOfType
-    bl = sidechainWallet.boxesOfType(classOf[RegularBox])
-
-    assertEquals("Wallet must contain specified count of Boxes.", boxList.size, bl.size)
-    assertTrue("Wallet must contain all specified Boxes.", boxList.map(_.box).asJavaCollection.containsAll(bl))
-
-    //TEST for - NodeWallet.boxesOfType(boxIdsToExclude)
-    bl = sidechainWallet.boxesOfType(classOf[RegularBox], boxList.slice(0, 1).map(_.box.id()).asJava)
-
-    assertEquals("Wallet must contain specified count of Boxes.", boxList.size - 1, bl.size)
-    assertTrue("Wallet must contain all specified Boxes.", boxList.slice(1, 5).map(_.box).asJavaCollection.containsAll(bl))
-
-    //TEST for - NodeWallet.boxesBalance
-    assertEquals("", boxList.map(_.box.value()).sum, sidechainWallet.boxesBalance(classOf[RegularBox]))
-  }
-
-
   @Test
   def testGetForgingBoxMerklePath(): Unit = {
     val mockedWalletBoxStorage: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
@@ -702,10 +610,8 @@ class SidechainWalletTest
       mockedApplicationWallet)
 
 
-    val boxId: Array[Byte] = boxList.head.box.id()
-
-    val storedBoxId: Array[Byte] = boxList(1).box.id()
-    val storedMerklePathSeq: Seq[BoxMerklePathInfo] = Seq(BoxMerklePathInfo(storedBoxId, new MerklePath(new JArrayList())))
+    val storedForgerBox: ForgerBox = boxList.last.box.asInstanceOf[ForgerBox]
+    val storedMerklePathSeq: Seq[ForgerBoxMerklePathInfo] = Seq(ForgerBoxMerklePathInfo(storedForgerBox, new MerklePath(new JArrayList())))
 
 
     // Note: consensus epoch calculation starts from 1 and contain only genesis block as the end of it.
@@ -714,7 +620,7 @@ class SidechainWalletTest
     var expectedEpochInfo: ConsensusEpochNumber = ConsensusEpochNumber @@ 1
 
     // Verify epoch number and return predefined merklePathSeq
-    Mockito.when(mockedForgingBoxesMerklePathStorage.getMerklePathsForEpoch(
+    Mockito.when(mockedForgingBoxesMerklePathStorage.getInfoForEpoch(
       ArgumentMatchers.any[ConsensusEpochNumber]()))
       .thenAnswer(answer => {
         val epoch = answer.getArgument(0).asInstanceOf[ConsensusEpochNumber]
@@ -723,23 +629,22 @@ class SidechainWalletTest
         Some(storedMerklePathSeq)
       })
 
-    assertTrue("No merkle path expected for unknown id.", sidechainWallet.getForgingBoxMerklePath(boxId, secondEpoch).isEmpty)
+    var forgingBoxMerklePathInfoSeq: Seq[ForgerBoxMerklePathInfo] = sidechainWallet.getForgingBoxMerklePathInfoSeq(secondEpoch).get
+    assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
 
 
     // Test 2: third epoch info - should request for the first epoch from storage
     val thirdEpoch = ConsensusEpochNumber @@ 3
     expectedEpochInfo = ConsensusEpochNumber @@ 1
-    assertTrue("No merkle path expected for unknown id.", sidechainWallet.getForgingBoxMerklePath(boxId, thirdEpoch).isEmpty)
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingBoxMerklePathInfoSeq(thirdEpoch).get
+    assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
 
 
     // Test 3: fifth epoch info - should request for the third epoch from storage
     val fifthEpoch = ConsensusEpochNumber @@ 5
     expectedEpochInfo = ConsensusEpochNumber @@ 3
-    assertTrue("No merkle path expected for unknown id.", sidechainWallet.getForgingBoxMerklePath(boxId, fifthEpoch).isEmpty)
-
-
-    // Test 4: get existent merkle path
-    assertTrue("Merkle path expected to be found.", sidechainWallet.getForgingBoxMerklePath(storedBoxId, fifthEpoch).isDefined)
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingBoxMerklePathInfoSeq(fifthEpoch).get
+    assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
   }
 
   @Test
@@ -778,14 +683,14 @@ class SidechainWalletTest
     // Verify epoch number and return predefined merklePathSeq
     Mockito.when(mockedForgingBoxesMerklePathStorage.update(
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Seq[BoxMerklePathInfo]]()))
+      ArgumentMatchers.any[Seq[ForgerBoxMerklePathInfo]]()))
       .thenAnswer(answer => {
         val epoch = answer.getArgument(0).asInstanceOf[ConsensusEpochNumber]
-        val boxMerklePathInfoSeq = answer.getArgument(1).asInstanceOf[Seq[BoxMerklePathInfo]]
+        val boxMerklePathInfoSeq = answer.getArgument(1).asInstanceOf[Seq[ForgerBoxMerklePathInfo]]
 
         assertEquals("Different epoch number request expected.", epochNumber, epoch)
         assertEquals("Different merkle path seq size expected.", 1, boxMerklePathInfoSeq.size)
-        assertArrayEquals("Different box id applied.", forgerBox1.id(), boxMerklePathInfoSeq.head.boxId)
+        assertEquals("Different box id applied.", forgerBox1, boxMerklePathInfoSeq.head.forgerBox)
         assertArrayEquals("Wrong merkle path applied.", merkleTree.rootHash(), boxMerklePathInfoSeq.head.merklePath.apply(forgerBox1.id()))
 
         Success(mockedForgingBoxesMerklePathStorage)

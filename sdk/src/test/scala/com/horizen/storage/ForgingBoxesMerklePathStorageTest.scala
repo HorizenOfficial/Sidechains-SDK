@@ -2,21 +2,23 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.fixtures.IODBStoreFixture
-import com.horizen.utils.{BoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath, Pair}
+import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath, Pair}
 import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.mockito.{ArgumentMatchers, Mockito}
 import java.util.{ArrayList => JArrayList, Optional => JOptional}
+
 import scala.collection.JavaConverters._
 
 
 class ForgingBoxesMerklePathStorageTest extends JUnitSuite
   with IODBStoreFixture
   with MockitoSugar
-  with SidechainTypes {
+  with SidechainTypes
+  with BoxFixture {
 
   @Test
   def updateVersion(): Unit = {
@@ -61,8 +63,8 @@ class ForgingBoxesMerklePathStorageTest extends JUnitSuite
     // Prepare data to update.
     val epochNumber = ConsensusEpochNumber @@ 100
     val boxMerklePathInfoSeq = Seq(
-      BoxMerklePathInfo(
-        BytesUtils.fromHexString("abc0000000000000000000000000000000000000000000000000000000000123"),
+      ForgerBoxMerklePathInfo(
+        getForgerBox,
         new MerklePath(new JArrayList())
       )
     )
@@ -82,7 +84,7 @@ class ForgingBoxesMerklePathStorageTest extends JUnitSuite
       assertEquals("Store update(...) actual list to update size expected to be different.", 1, actualToUpdate.size())
       assertEquals("Different toUpdate epoch key expected.", forgingBoxesMerklePathStorage.epochKey(epochNumber), actualToUpdate.get(0).getKey)
       assertEquals("Different toUpdate value expected.",
-        new ByteArrayWrapper(forgingBoxesMerklePathStorage.boxMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava)),
+        new ByteArrayWrapper(forgingBoxesMerklePathStorage.forgerBoxMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava)),
         actualToUpdate.get(0).getValue)
 
       assertEquals("Store update(...) actual list to remove size expected to be different.", 1, actualToRemove.size())
