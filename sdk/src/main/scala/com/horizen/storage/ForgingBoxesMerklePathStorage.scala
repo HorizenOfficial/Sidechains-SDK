@@ -55,7 +55,7 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     this
   }
 
-  def getInfoForEpoch(epoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
+  def getForgerBoxMerklePathInfoForEpoch(epoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
     storage.get(epochKey(epoch)).asScala match {
       case Some(baw) =>
         forgerBoxMerklePathInfoListSerializer.parseBytesTry(baw.data) match {

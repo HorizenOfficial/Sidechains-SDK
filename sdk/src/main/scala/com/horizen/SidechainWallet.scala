@@ -220,7 +220,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
-    forgingBoxesMerklePathStorage.getInfoForEpoch(storedConsensusEpochNumber)
+    forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
 }
 

@@ -39,6 +39,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     val boxWithEmptyPath = ForgerBoxMerklePathInfo(forgerBox, emptyMerklePath)
     var boxBytes = boxWithEmptyPath.bytes
     var deserializedBox = ForgerBoxMerklePathInfoSerializer.parseBytes(boxBytes)
+    assertEquals("Deserialized box merkle path info hashCode expected to be equal to the original one.", boxWithEmptyPath.hashCode(), deserializedBox.hashCode())
     assertEquals("Deserialized box merkle path info expected to be equal to the original one.", boxWithEmptyPath, deserializedBox)
 
 
@@ -46,6 +47,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     val boxWithNonEmptyPath = ForgerBoxMerklePathInfo(forgerBox, nonEmptyMerklePath)
     boxBytes = boxWithNonEmptyPath.bytes
     deserializedBox = ForgerBoxMerklePathInfoSerializer.parseBytes(boxBytes)
+    assertEquals("Deserialized box merkle path info hashCode expected to be equal to the original one.", boxWithNonEmptyPath.hashCode(), deserializedBox.hashCode())
     assertEquals("Deserialized box merkle path info expected to be equal to the original one.", boxWithNonEmptyPath, deserializedBox)
 
     // Uncomment and run if you want to update regression data.

@@ -10,16 +10,6 @@ case class ForgerBoxMerklePathInfo(forgerBox: ForgerBox, merklePath: MerklePath)
   override type M = ForgerBoxMerklePathInfo
 
   override def serializer: ScorexSerializer[ForgerBoxMerklePathInfo] = ForgerBoxMerklePathInfoSerializer
-
-  override def hashCode: Int = forgerBox.hashCode()
-
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case info: ForgerBoxMerklePathInfo =>
-        forgerBox.equals(info.forgerBox) && merklePath.bytes().sameElements(info.merklePath.bytes())
-      case _ => false
-    }
-  }
 }
 
 object ForgerBoxMerklePathInfoSerializer extends ScorexSerializer[ForgerBoxMerklePathInfo] {

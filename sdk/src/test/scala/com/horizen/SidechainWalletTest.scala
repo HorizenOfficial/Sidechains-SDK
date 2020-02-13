@@ -620,7 +620,7 @@ class SidechainWalletTest
     var expectedEpochInfo: ConsensusEpochNumber = ConsensusEpochNumber @@ 1
 
     // Verify epoch number and return predefined merklePathSeq
-    Mockito.when(mockedForgingBoxesMerklePathStorage.getInfoForEpoch(
+    Mockito.when(mockedForgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(
       ArgumentMatchers.any[ConsensusEpochNumber]()))
       .thenAnswer(answer => {
         val epoch = answer.getArgument(0).asInstanceOf[ConsensusEpochNumber]
