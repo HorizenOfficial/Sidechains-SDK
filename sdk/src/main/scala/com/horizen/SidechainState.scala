@@ -102,12 +102,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
       for (u <- tx.unlockers().asScala) {
         closedBox(u.closedBoxId()) match {
-          case Some(box) =>
+          case Some(box) => {
             val boxKey = u.boxKey()
             if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
               throw new Exception("Box unlocking proof is invalid.")
             if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
               closedCoinsBoxesAmount += box.value()
+          }
           case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
         }
       }
