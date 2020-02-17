@@ -9,10 +9,9 @@ import scala.collection.mutable
 import scala.compat.java8.OptionConverters._
 
 /* @TODO Discuss:
-* 1. Move to tests? Any chance to use it in maincode?
-* 2. Storage interface changing is required. That storage is not support rollbacks, but it ok for current usages
+* 1. Storage interface changing is required. That storage is not support rollbacks, but it ok for current usages
 * */
-class InMemoryStoreAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArrayWrapper] = mutable.HashMap()) extends Storage /*in fact it is non-versioned storage*/{
+class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArrayWrapper] = mutable.HashMap()) extends Storage /*in fact it is non-versioned storage*/{
   override def get(key: ByteArrayWrapper): Optional[ByteArrayWrapper] = hashMap.get(key).asJava
 
   override def getOrElse(key: ByteArrayWrapper, defaultValue: ByteArrayWrapper): ByteArrayWrapper = hashMap.getOrElse(key, defaultValue)
@@ -23,7 +22,10 @@ class InMemoryStoreAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArrayW
 
   override def lastVersionID(): Optional[ByteArrayWrapper] = ???
 
-  override def update(version: ByteArrayWrapper, toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]], toRemove: JList[ByteArrayWrapper]): Unit = toUpdate.asScala.map(pair => hashMap.put(pair.getKey, pair.getValue))
+  override def update(version: ByteArrayWrapper, toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]], toRemove: JList[ByteArrayWrapper]): Unit = {
+    toRemove.asScala.map(keyToRemove => hashMap.remove(keyToRemove))
+    toUpdate.asScala.map(pair => hashMap.put(pair.getKey, pair.getValue))
+  }
 
   override def rollback(versionID: ByteArrayWrapper): Unit = ???
 
@@ -33,5 +35,5 @@ class InMemoryStoreAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArrayW
 
   override def close(): Unit = {}
 
-  def copy(): InMemoryStoreAdapter = new InMemoryStoreAdapter(hashMap.clone())
+  def copy(): InMemoryStorageAdapter = new InMemoryStorageAdapter(hashMap.clone())
 }

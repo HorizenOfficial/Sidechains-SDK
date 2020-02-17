@@ -1,5 +1,9 @@
-package com.horizen.vrf;
+package com.horizen.fixtures;
 
+import com.horizen.vrf.VRFKeyGenerator;
+import com.horizen.vrf.VRFProof;
+import com.horizen.vrf.VRFPublicKey;
+import com.horizen.vrf.VRFSecretKey;
 import scala.Tuple2;
 
 import java.util.Random;

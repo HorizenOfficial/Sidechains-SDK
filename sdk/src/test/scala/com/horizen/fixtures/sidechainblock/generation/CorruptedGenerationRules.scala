@@ -1,5 +1,6 @@
 package com.horizen.fixtures.sidechainblock.generation
 
+import java.math.BigInteger
 import java.util.Random
 
 import com.horizen.params.NetworkParams
@@ -7,12 +8,23 @@ import com.horizen.params.NetworkParams
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,
                                     merklePathFromPreviousEpoch: Boolean = false,
-                                    consensusNonceShift: Int = 0,
+                                    consensusNonceShift: BigInteger = BigInteger.valueOf(0),
                                     consensusSlotShift: Int = 0,
                                     stakeCheckCorruptionCheck: Boolean = false,
                                     stakeCheckCorruption: Boolean => Boolean = {b => b},
                                     forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None
-                                   )
+                                   ) {
+  override def toString: String = {
+    "CorruptedGenerationRules(" +
+    s"timestampShiftInSlots = ${timestampShiftInSlots}, " +
+    s"getOtherSidechainForgingData = ${getOtherSidechainForgingData}, " +
+    s"merklePathFromPreviousEpoch = ${merklePathFromPreviousEpoch}, " +
+    s"consensusNonceShift = ${consensusNonceShift}, " +
+    s"consensusSlotShift = ${consensusSlotShift}, " +
+    s"stakeCheckCorruptionCheck = ${stakeCheckCorruptionCheck}, " +
+    s"forgerBoxCorruptionRules = ${forgerBoxCorruptionRules})"
+  }
+}
 
 object CorruptedGenerationRules {
   val emptyCorruptedGenerationRules: CorruptedGenerationRules = CorruptedGenerationRules()
@@ -43,7 +55,7 @@ object CorruptedGenerationRules {
     }
 
     if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(consensusNonceShift = rnd.nextInt())
+      rule = rule.copy(consensusNonceShift = BigInteger.valueOf(rnd.nextLong()))
     }
 
     if (rnd.nextInt(100) < 2) {
@@ -67,7 +79,17 @@ case class ForgerBoxCorruptionRules(propositionChanged: Boolean = false,
                                     nonceShift: Long = 0,
                                     valueShift: Long = 0,
                                     rewardPropositionChanged: Boolean = false,
-                                    vrfPubKeyChanged: Boolean = false)
+                                    vrfPubKeyChanged: Boolean = false) {
+  override def toString: String = {
+    "ForgerBoxCorruptionRules(" +
+    s"propositionChanged = ${propositionChanged}, " +
+    s"nonceShift = ${nonceShift}, " +
+    s"valueShift = ${valueShift}, " +
+    s"rewardPropositionChanged = ${rewardPropositionChanged}, " +
+    s"vrfPubKeyChanged = ${vrfPubKeyChanged}"
+  }
+}
+
 object ForgerBoxCorruptionRules {
   val emptyCorruptedForgerBoxGenerationRules: ForgerBoxCorruptionRules = ForgerBoxCorruptionRules()
 

@@ -38,9 +38,9 @@ public class ForgerBoxTest {
 
     @Test
     public void equalsAndHashTest() {
-        ForgerBox left = ForgerBoxFixture.generateForgerBox(1L);
+        ForgerBox left = ForgerBoxFixture.generateForgerBox(1L)._1;
         ForgerBox sameAsLeft = new ForgerBox(left.proposition(), left.nonce(), left.value(), left.rewardProposition(), left.vrfPubKey());
-        ForgerBox right = ForgerBoxFixture.generateForgerBox(2L);
+        ForgerBox right = ForgerBoxFixture.generateForgerBox(2L)._1;
 
         assertEquals("Forger boxes with same data shall be equals", left, sameAsLeft);
         assertNotEquals("Forger boxes with same data shall be the same", left, right);
@@ -48,7 +48,7 @@ public class ForgerBoxTest {
     }
 
     private void checkSerialization(long seed) {
-        ForgerBox initial = ForgerBoxFixture.generateForgerBox(seed);
+        ForgerBox initial = ForgerBoxFixture.generateForgerBox(seed)._1;
 
         byte[] serialized = initial.bytes();
         ForgerBox parsed = ForgerBox.parseBytes(serialized);

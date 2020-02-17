@@ -9,18 +9,16 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{ForgerBoxFixture, SidechainBlockFixture}
+import com.horizen.fixtures.{ForgerBoxFixture, SidechainBlockFixture, VrfGenerator}
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
-import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, TransactionSerializer}
 import com.horizen.utils.MerkleTreeFixture
-import com.horizen.vrf.VrfGenerator
 import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
@@ -50,13 +48,14 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   //generateGenesisBlock(sidechainTransactionsCompanion)
+  val (forgerBox, ownerKey) = ForgerBoxFixture.generateForgerBox(354)
   private val genesisBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
     Instant.now.getEpochSecond - 10000,
     Seq(),
     Seq(),
-    PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-    ForgerBoxFixture.generateForgerBox,
+    ownerKey,
+    forgerBox,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
     SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()),
@@ -207,7 +206,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   protected def assertsOnSidechainErrorResponseSchema(msg: String, errorCode: String): Unit = {
     mapper.readTree(msg).get("error") match {
-      case error =>
+      case error: JsonNode =>
         assertEquals(1, error.findValues("code").size())
         assertEquals(1, error.findValues("description").size())
         assertEquals(1, error.findValues("detail").size())

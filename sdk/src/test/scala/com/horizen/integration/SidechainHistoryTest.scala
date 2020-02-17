@@ -12,7 +12,7 @@ import com.horizen.fixtures.{IODBStoreFixture, SidechainBlockFixture, SidechainB
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.WithdrawalEpochInfo
+import com.horizen.utils._
 import com.horizen.validation.SidechainBlockSemanticValidator
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
@@ -35,8 +35,12 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
 
-  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
-  val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(Some(genesisBlock.mainchainBlocks.head.hash), ModifierSemanticValidity.Valid)
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestamp = Some(100000))
+  val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(
+    genesisMainchainBlockHash = Some(genesisBlock.mainchainBlocks.head.hash),
+    validity = ModifierSemanticValidity.Valid,
+    timestamp = Some(genesisBlock.timestamp)
+  )
   var params: NetworkParams = _
 
   val sidechainSettings = mock[SidechainSettings]
@@ -112,7 +116,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB2.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1)), history.bestBlockInfo)
+      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(), WithdrawalEpochInfo(1, 1)), history.bestBlockInfo)
 
 
     // Test 2: append block after current tip (not after genesis)
@@ -136,7 +140,7 @@ class SidechainHistoryTest extends JUnitSuite with MockitoSugar
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB3.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1)), history.bestBlockInfo)
+      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1)), history.bestBlockInfo)
 
 
     // At the moment we have an active chain G1 -> B2 -> B3,

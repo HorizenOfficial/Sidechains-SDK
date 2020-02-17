@@ -7,7 +7,7 @@ import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.sidechainblock.generation.{CorruptedGenerationRules, FinishedEpochInfo, GenerationIsNoLongerPossible, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.{NetworkParams, TestNetParams}
-import com.horizen.storage.{InMemoryStoreAdapter, SidechainHistoryStorage}
+import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.ConsensusValidator
 import com.horizen.{SidechainHistory, SidechainTypes}
@@ -24,11 +24,11 @@ class HistoryConsensusCheckerTest extends JUnitSuite {
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
     val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[java.lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
-    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStoreAdapter(), companion, params)
+    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), companion, params)
     SidechainHistory
       .genesisHistory(
         sidechainHistoryStorage,
-        new ConsensusDataStorage(new InMemoryStoreAdapter()),
+        new ConsensusDataStorage(new InMemoryStorageAdapter()),
         params,
         genesisBlock,
         Seq(),

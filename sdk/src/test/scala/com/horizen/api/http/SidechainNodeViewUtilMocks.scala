@@ -8,7 +8,7 @@ import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.{Box, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.ForgerBoxFixture
+import com.horizen.fixtures.{ForgerBoxFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
@@ -16,7 +16,6 @@ import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicK
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
 import com.horizen.utils.{BytesUtils, MerkleTreeFixture, Pair}
-import com.horizen.vrf.VrfGenerator
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.bytesToId
@@ -44,9 +43,18 @@ class SidechainNodeViewUtilMocks extends MockitoSugar {
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
     val history: NodeHistory = mock[NodeHistory]
 
-    val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),  ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
-      SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+    val (forgingBox, ownerKey) = ForgerBoxFixture.generateForgerBox(234)
+    val genesisBlock: SidechainBlock = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(),
+      Seq(),
+      ownerKey,
+      forgingBox,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
+      SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()),
+      null).get
 
     Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockById_return_value()) Optional.of(genesisBlock)

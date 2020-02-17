@@ -1,8 +1,9 @@
 package com.horizen.fixtures.sidechainblock.generation
 
+import java.util.Random
+
 import com.horizen.box.ForgerBox
 import com.horizen.consensus.hashToStakePercent
-import com.horizen.fixtures.ForgerBoxFixture
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.vrf.{VRFKeyGenerator, VRFProof, VRFSecretKey}
 
@@ -47,10 +48,10 @@ case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfS
 }
 
 object SidechainForgingData {
-  def generate(seed: Long, value: Long): SidechainForgingData = {
-    val key = PrivateKey25519Creator.getInstance().generateSecret(seed.toString.getBytes)
-    val (vrfSecretKey, vrfPublicKey) = VRFKeyGenerator.generate((seed + 1).toString.getBytes())
-    val forgerBox = ForgerBoxFixture.generateForgerBox(vrfPubKey = vrfPublicKey, value = value, seed = seed)
+  def generate(rnd: Random, value: Long): SidechainForgingData = {
+    val key: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(rnd.nextLong().toString.getBytes)
+    val (vrfSecretKey, vrfPublicKey) = VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes())
+    val forgerBox = new ForgerBox(key.publicImage(), rnd.nextLong(), value, key.publicImage(), vrfPublicKey)
 
     SidechainForgingData(key, forgerBox, vrfSecretKey)
   }

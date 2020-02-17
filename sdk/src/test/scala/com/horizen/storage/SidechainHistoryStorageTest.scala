@@ -99,7 +99,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // add genesis block
     val genesisBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
     activeChainBlockList += genesisBlock
-    activeChainBlockInfoList += generateGenesisBlockInfo(Some(activeChainBlockList.head.mainchainBlocks.head.hash))
+    activeChainBlockInfoList += generateGenesisBlockInfo(
+      genesisMainchainBlockHash = Some(activeChainBlockList.head.mainchainBlocks.head.hash),
+      timestamp = Some(genesisBlock.timestamp))
 
     // declare real genesis block id
     class HistoryTestParams extends MainNetParams {
@@ -116,7 +118,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
         parentOpt = Some(genesisBlock.id),
         mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlocks.last.hash))).map(block => {
       activeChainBlockList += block
-      activeChainBlockInfoList += generateBlockInfo(block, activeChainBlockInfoList.last, params)
+      activeChainBlockInfoList += generateBlockInfo(
+        block = block,
+        parentBlockInfo = activeChainBlockInfoList.last,
+        params = params)
     })
     // generate (height/2) fork blocks
     generateSidechainBlockSeq(
@@ -127,7 +132,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
         basicSeed = 13213111L,
         mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlocks.last.hash))).map(block => {
       forkChainBlockList += block
-      forkChainBlockInfoList += generateBlockInfo(block, forkChainBlockInfoList.lastOption.getOrElse(activeChainBlockInfoList.head), params) // First Fork block parent is genesis block
+      forkChainBlockInfoList += generateBlockInfo(
+        block = block,
+        parentBlockInfo = forkChainBlockInfoList.lastOption.getOrElse(activeChainBlockInfoList.head),
+        params = params) // First Fork block parent is genesis block
     })
 
 
@@ -363,6 +371,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           activeChainBlockInfoList.last.height,
           activeChainBlockInfoList.last.score,
           activeChainBlockList.last.parentId,
+          activeChainBlockInfoList.last.timestamp,
           tipNewValidity,
           activeChainBlockInfoList.last.mainchainBlockReferenceHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo
@@ -378,6 +387,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkChainBlockInfoList.last.height,
           forkChainBlockInfoList.last.score,
           forkChainBlockList.last.parentId,
+          forkChainBlockList.last.timestamp,
           forkTipNewValidity,
           forkChainBlockInfoList.last.mainchainBlockReferenceHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo
@@ -431,7 +441,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update best block exception")
 
     val newBestBlock = forkChainBlockList.head
-    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2))
+    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2))
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(
       new ByteArrayWrapper(Array.fill(32)(-1: Byte)),

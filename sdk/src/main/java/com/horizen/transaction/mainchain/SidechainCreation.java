@@ -5,6 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Utils;
@@ -79,15 +80,15 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
 
 
-    public static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
-    public static Pair<byte[], byte[]> genesisRewardKeyPair = Ed25519.createKeyPair("RewardKeyPair".getBytes());
-    public static Tuple2<VRFSecretKey, VRFPublicKey> genesisVrfPair = VRFKeyGenerator.generate(genesisRewardKeyPair.getKey());
+    private static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
+    public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
+    public static Tuple2<VRFSecretKey, VRFPublicKey> genesisVrfPair = VRFKeyGenerator.generate(genesisStakeKeys.getKey());
 
     public static long initialValue = 1000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {
-        PublicKey25519Proposition proposition  = new PublicKey25519Proposition(genesisStakeKeys.getValue());
+        PublicKey25519Proposition proposition = genesisSecret.publicImage();
         long nonce = 42L;
-        PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(genesisRewardKeyPair.getValue());
+        PublicKey25519Proposition rewardProposition = genesisSecret.publicImage();
         VRFPublicKey vrfPubKey = genesisVrfPair._2;
         new ForgerBox(proposition, nonce, initialValue, rewardProposition, vrfPubKey);
 

@@ -5,7 +5,7 @@ import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.consensus._
+import com.horizen.consensus.{ConsensusEpochId, _}
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -111,10 +111,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       blockId.equals(params.sidechainGenesisBlockId)
   }
 
-  def isNotGenesisBlock(blockId: ModifierId): Boolean = {
-    !isGenesisBlock(blockId)
-  }
-
   def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
     val newScore = calculateChainScore(block, parentScore)
@@ -134,6 +130,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       1,
       (block.mainchainBlocks.size.toLong << 32) + 1,
       block.parentId,
+      block.timestamp,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
@@ -146,6 +143,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       parentBlockInfo.height + 1,
       calculateChainScore(block, parentBlockInfo.score),
       block.parentId,
+      block.timestamp,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
@@ -456,82 +454,107 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   }
 
   def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
-    consensusDataStorage.addStakeConsensusEpochInfo(epochIdFromBlockId(lastBlockInEpoch), stakeEpochInfo)
+    consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), stakeEpochInfo)
     new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
 
-  def getFullConsensusEpochInfoForBlockId(blockId: ModifierId, considerBlockIsLastInEpoch: Boolean): FullConsensusEpochInfo = {
-    log.debug(s"Requested for ${blockId} as last in epoch set to ${considerBlockIsLastInEpoch}")
-    val lastBlockInPreviousEpoch: ModifierId = if (considerBlockIsLastInEpoch) blockId else getLastBlockIdInPreviousConsensusEpoch(blockId)
+  def getFullConsensusEpochInfoForBlock(actualBlock: SidechainBlock): FullConsensusEpochInfo = {
+    log.debug(s"Requested FullConsensusEpochInfo for ${actualBlock.id} block id")
+
+    val parentBlockId = actualBlock.parentId
+    val previousEpochId: ConsensusEpochId = if (blockIsFirstInEpoch(actualBlock)) {
+      blockIdToEpochId(parentBlockId) //if block is first in epoch then parent blockId is previous consensus epochId
+    } else {
+      getPreviousConsensusEpochIdForBlock(parentBlockId)
+    }
 
     val nonceEpochInfo: NonceConsensusEpochInfo =
-      consensusDataStorage.getNonceConsensusEpochInfoOrElseUpdate(epochIdFromBlockId(lastBlockInPreviousEpoch), () => calculateNonce(lastBlockInPreviousEpoch))
+      consensusDataStorage.getNonceConsensusEpochInfoOrElseUpdate(previousEpochId, calculateNonceForEpoch(previousEpochId))
 
-    val lastBlockInPrePreviousEpoch: ModifierId = getLastBlockIdInPreviousConsensusEpoch(lastBlockInPreviousEpoch)
+    val prePreviousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockInEpochId(previousEpochId))
     val stakeEpochInfo: StakeConsensusEpochInfo =
-      consensusDataStorage.getStakeConsensusEpochInfo(epochIdFromBlockId(lastBlockInPrePreviousEpoch)).getOrElse(throw new IllegalStateException(s"Stake was not defined for epoch ${lastBlockInPrePreviousEpoch}"))
+      consensusDataStorage
+        .getStakeConsensusEpochInfo(prePreviousEpochId)
+        .getOrElse(throw new IllegalStateException(s"Stake was not defined for epoch ${prePreviousEpochId}"))
 
     FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)
   }
 
-  private def calculateNonce(lastEpochBlockId: ModifierId): NonceConsensusEpochInfo = {
+  private def blockIsFirstInEpoch(block: SidechainBlock): Boolean = {
+    val epochNumberForBlock = timeStampToEpochNumber(block.timestamp)
+
+    val parentBlockId = block.parentId
+    val parentBlockInfo: SidechainBlockInfo = storage.blockInfoByIdFromStorage(parentBlockId)
+    val epochNumberForParentBlock = timeStampToEpochNumber(parentBlockInfo.timestamp)
+
+    (epochNumberForBlock - epochNumberForParentBlock) match {
+      case delta if delta < 0 => throw new IllegalStateException(s"Parent block ${parentBlockId} had been generated after child block ${block.id} ")
+      case 0 => false
+      case 1 => true
+      case delta if delta > 1 => throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
+    }
+  }
+
+  private def calculateNonceForEpoch(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
+    val lastEpochBlockId: ModifierId = lastBlockInEpochId(epochId)
+
     val nonceSource: Option[BigInteger] = foldEpoch[Option[BigInteger]](None, lastEpochBlockId){
-      (block, accumulator) => (block.bestMainchainReferencePoW, accumulator) match {
+      (blockInfo, accumulator) => (getMinimalHash(blockInfo.mainchainBlockReferenceHashes.map(_.data)), accumulator) match {
         case (None, _) => accumulator
-        case (_, None) => block.bestMainchainReferencePoW
+        case (minimalHashOpt, None) => minimalHashOpt
         case (Some(a), Some(b)) => Option(a.min(b))
       }
     }
 
     assert(nonceSource.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
 
-    // @TODO check nonce conversion correctness i.e. BigInteger to int conversion
-    NonceConsensusEpochInfo(powToConsensusNonce(nonceSource.get))
-  }
-
-  private def getLastBlockIdInPreviousConsensusEpoch(lastBlockInEpoch: ModifierId): ModifierId = {
-    val firstBlockIdInCurrentConsensusEpoch: ModifierId = foldEpoch(lastBlockInEpoch, lastBlockInEpoch)((block, _) => block.id)
-    if (isGenesisBlock(firstBlockIdInCurrentConsensusEpoch)) {
-      firstBlockIdInCurrentConsensusEpoch
-    }
-    else {
-      getBlockById(firstBlockIdInCurrentConsensusEpoch).asScala.map(block => block.parentId).get
-    }
-  }
-
-  private def blockIdToEpochNumber(blockId: ModifierId): ConsensusEpochNumber = {
-    val block = getBlockById(blockId).orElseThrow(() => new IllegalArgumentException("Requested block is not in History"))
-    timeStampToEpochNumber(block.timestamp)
+    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceSource.get))
   }
 
   /**
-   * Perform folding on whole epoch, i.e. apply op function on Sidechain block starting from last block in epoch
+   * @return Return last block in previous epoch, for genesis block last block of previous epoch is genesis block itself
+   */
+  private def getPreviousConsensusEpochIdForBlock(blockId: ModifierId): ConsensusEpochId = {
+    if (isGenesisBlock(blockId)) {
+      blockIdToEpochId(blockId)
+    }
+    else {
+      val parentId: ModifierId = storage.blockInfoByIdFromStorage(blockId).parentId
+      val lastBlockId = foldEpoch(parentId, blockId)((blockInfo, _) => blockInfo.parentId)
+      blockIdToEpochId(lastBlockId)
+    }
+  }
+
+  /**
+   * Perform folding on whole epoch, i.e. apply op function on every Sidechain block starting from given block in epoch to a start of the epoch
    * @param accumulator initial value
-   * @param lastBlockInEpoch start point for folding, not necessary to be real last block in consensus epoch
+   * @param block start point for folding, not necessary to be a real last block in consensus epoch
    * @param op operation on block in consensus epoch
    * @tparam A type of accumulator}
-   * @return result of performed op
+   * @return result of performed operations on blocks in epochs
    */
-  private def foldEpoch[A](accumulator: A, lastBlockInEpoch: ModifierId)(op: (SidechainBlock, A) => A): A = {
+  private def foldEpoch[A](accumulator: A, block: ModifierId)(op: (SidechainBlockInfo, A) => A): A = {
     @tailrec
-    def foldEpochIteration[B](accumulator: B, blockId: ModifierId, currentEpochNumber: ConsensusEpochNumber)(op: (SidechainBlock, B) => B): B = {
-      val block = getBlockById(blockId).orElseThrow(() => new IllegalArgumentException("Requested block is not in History"))
+    def foldEpochIteration[B](accumulator: B, blockId: ModifierId, currentEpochNumber: ConsensusEpochNumber)(op: (SidechainBlockInfo, B) => B): B = {
+      val blockInfo: SidechainBlockInfo = storage.blockInfoByIdFromStorage(blockId)
 
-      val newEpochNumber = timeStampToEpochNumber(block.timestamp)
-      if (newEpochNumber < currentEpochNumber) {
+      val blockEpochNumber = timeStampToEpochNumber(blockInfo.timestamp)
+      if (blockEpochNumber < currentEpochNumber) {
         accumulator
       }
       else {
         if (isGenesisBlock(blockId)) {
-          op(block, accumulator)
+          op(blockInfo, accumulator)
         }
         else {
-          foldEpochIteration(op(block, accumulator), block.parentId, newEpochNumber)(op)
+          require(currentEpochNumber == blockEpochNumber)
+          foldEpochIteration(op(blockInfo, accumulator), blockInfo.parentId, currentEpochNumber)(op)
         }
       }
     }
 
-    foldEpochIteration(accumulator, lastBlockInEpoch, blockIdToEpochNumber(lastBlockInEpoch))(op)
+    val epochNumber = timeStampToEpochNumber(storage.blockInfoByIdFromStorage(block).timestamp)
+    foldEpochIteration(accumulator, block, epochNumber)(op)
   }
 }
 
@@ -550,6 +573,7 @@ object SidechainHistory
       None
   }
 
+  //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,

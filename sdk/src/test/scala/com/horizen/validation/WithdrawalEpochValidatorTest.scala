@@ -8,21 +8,19 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.NoncedBox
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{ForgerBoxFixture, MainchainBlockReferenceFixture, TransactionFixture}
+import com.horizen.fixtures.{ForgerBoxFixture, MainchainBlockReferenceFixture, TransactionFixture, VrfGenerator}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
-import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTreeFixture, WithdrawalEpochInfo}
-import com.horizen.vrf.VrfGenerator
-import org.junit.{Before, Test}
-import org.scalatest.junit.JUnitSuite
-import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.mockito.MockitoSugar
-import scorex.util.{ModifierId, bytesToId}
 import org.junit.Assert.assertTrue
+import org.junit.{Before, Test}
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatest.junit.JUnitSuite
+import org.scalatest.mockito.MockitoSugar
 import scorex.core.consensus.ModifierSemanticValidity
+import scorex.util.{ModifierId, bytesToId}
 
 import scala.io.Source
 
@@ -45,13 +43,16 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val validator = new WithdrawalEpochValidator(params)
 
     // Test 1: invalid genesis block - no MCBlockReferences
+    val (forgerBox1, ownerKey1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey1,
+      forgerBox1,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -65,13 +66,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 2: invalid genesis block - multiple MCBlockReferences
+    val (forgerBox2, ownerKey2) = ForgerBoxFixture.generateForgerBox(322)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey2,
+      forgerBox2,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -85,13 +90,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 3: invalid genesis block - 1 MCBlockRef without sc creation tx
+    val (forgerBox3, ownerKey3) = ForgerBoxFixture.generateForgerBox(32)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference()),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey3,
+      forgerBox3,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -113,13 +122,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+
+    val (forgerBox4, ownerKey4) = ForgerBoxFixture.generateForgerBox(324)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(mcBlockRef), //
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey4,
+      forgerBox4,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -147,13 +160,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 1: invalid block - no MC block references, parent is missed
+    val (forgerBox1, ownerKey1) = ForgerBoxFixture.generateForgerBox(1)
+
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey1,
+      forgerBox1,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -166,19 +183,23 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     }
 
     // Test 2: valid block - no MC block references, parent is the last block of previous epoch
+    val (forgerBox2, ownerKey2) = ForgerBoxFixture.generateForgerBox(22)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey2,
+      forgerBox2,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
 
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength)
       ))
     })
@@ -187,7 +208,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 3: valid block - no MC block references, parent is in the middle of the epoch
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength / 2)
       ))
     })
@@ -196,7 +217,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 4: valid block - no MC block references, parent is at the beginning of the epoch
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, 0)
       ))
     })
@@ -204,19 +225,23 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 5: valid block - with MC block references, that are in the middle of the epoch
+    val (forgerBox5, ownerKey5) = ForgerBoxFixture.generateForgerBox(3524)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey5,
+      forgerBox5,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
 
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
     })
@@ -225,7 +250,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 6: valid block - without SC transactions and with MC block references, that lead to the end of the epoch
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
     })
@@ -234,7 +259,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 7: invalid block - without SC transactions and with MC block references, that lead to switching the epoch
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))
     })
@@ -246,19 +271,23 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 8: valid block - with SC transactions and MC block references, that are in the middle of the epoch
+    val (forgerBox8, ownerKey8) = ForgerBoxFixture.generateForgerBox(324)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
       Seq(getTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey8,
+      forgerBox8,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
 
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
     })
@@ -267,7 +296,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 9: invalid block - with SC transactions and MC block references, that lead to the end of the epoch (no sc tx allowed)
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
     })
@@ -280,7 +309,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 10: invalid block - with SC transactions and MC block references, that lead to switching the epoch (no sc tx and no switch allowed)
     Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))
     })
@@ -299,13 +328,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+
+    val (forgerBox11, ownerKey11) = ForgerBoxFixture.generateForgerBox(32114)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(mcBlockRef),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey11,
+      forgerBox11,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -318,13 +351,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 12: invalid block - with 2 MCBlockRef, the second one is with sc creation tx
+    val (forgerBox12, ownerKey12) = ForgerBoxFixture.generateForgerBox(31224)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey12,
+      forgerBox12,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get
@@ -337,13 +374,17 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 13: invalid block - with 3 MCBlockRef, the second one is with sc creation tx
+    val (forgerBox13, ownerKey13) = ForgerBoxFixture.generateForgerBox(32413)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.hash)))),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
-      ForgerBoxFixture.generateForgerBox, VrfGenerator.generateProof(456L), MerkleTreeFixture.generateRandomMerklePath(456L),
+      ownerKey13,
+      forgerBox13,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
     ).get

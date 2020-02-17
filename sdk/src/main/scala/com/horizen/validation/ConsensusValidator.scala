@@ -3,35 +3,47 @@ import java.time.Instant
 
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{NonceConsensusEpochInfo, _}
+import scorex.core.block.Block
 import scorex.util.ScorexLogging
 
 import scala.util.Try
 
 class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
-    if (history.isNotGenesisBlock(block.id)) {
-      validateNonGenesisBlock(block, history.getBlockById(block.parentId).get, history)
+    if (history.isGenesisBlock(block.id)) {
+      validateGenesisBlock(block, history)
     }
-    // shall we somehow verify genesis block?
+    else {
+      validateNonGenesisBlock(block, history)
+    }
   }
 
-  private def validateNonGenesisBlock(block: SidechainBlock, parentBlock: SidechainBlock, history: SidechainHistory): Unit = {
-    verifyTimestamp(block, parentBlock)
+  private def validateGenesisBlock(block: SidechainBlock, history: SidechainHistory): Unit = {
+    if (block.timestamp != history.params.sidechainGenesisBlockTimestamp) {
+      throw new IllegalArgumentException(s"Genesis block timestamp ${block.timestamp} is differ than expected timestamp from configuration ${history.params.sidechainGenesisBlockTimestamp}")
+    }
 
-    val epochDelta = history.timeStampToEpochNumber(block.timestamp) - history.timeStampToEpochNumber(parentBlock.timestamp)
-    if (epochDelta > 1) throw new IllegalArgumentException("Whole epoch had been skipped") //any additional actions here?
-
-    val parentBlockIsLastInEpoch: Boolean = (epochDelta == 1)
-    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlockId(parentBlock.id, parentBlockIsLastInEpoch)
-
-    verifyVrf(history, block, fullConsensusEpochInfo.nonceConsensusEpochInfo)
-    verifyForgerBox(block, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    val vrfSignIsNotCorrect = false //shall be implemented as VRF key will be used for block signing
+    if (vrfSignIsNotCorrect) {
+      throw new IllegalArgumentException(s"Genesis block timestamp is not signed his own forger box")
+    }
   }
 
-  private def verifyTimestamp(block: SidechainBlock, parentBlock: SidechainBlock): Unit = {
-    if (block.timestamp > Instant.now.getEpochSecond) throw new IllegalArgumentException("Block had been generated in the future")
-    if (block.timestamp < parentBlock.timestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
+  private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoByIdFromStorage(verifiedBlock.parentId)
+    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp)
+
+    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock)
+
+    verifyVrf(history, verifiedBlock, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+    verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+  }
+
+  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp): Unit = {
+    if (verifiedBlockTimestamp > Instant.now.getEpochSecond) throw new IllegalArgumentException("Block had been generated in the future")
+    if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
   }
 
   private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {
@@ -47,10 +59,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${block.merklePath.bytes().deep.mkString}")
 
-    val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.data.sameElements(block.merklePath.apply(block.forgerBox.id()))
+    val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(block.merklePath.apply(block.forgerBox.id()))
     if (!forgerBoxIsCorrect) {
-      log.debug(s"actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is not correct")
+      log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
+      throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
     }
 
     val relativeStake = (block.forgerBox.value().toDouble / stakeConsensusEpochInfo.totalStake.toDouble)

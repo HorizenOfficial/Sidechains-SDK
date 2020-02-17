@@ -94,6 +94,11 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     }
   }
 
+  //Block info shall be in history storage, otherwise something going totally wrong
+  def blockInfoByIdFromStorage(blockId: ModifierId): SidechainBlockInfo = {
+    blockInfoById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block ${blockId}"))
+  }
+
   def blockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = {
     if (activeChain != null && activeChain.contains(blockId))
       return activeChain.blockInfoById(blockId)

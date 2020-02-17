@@ -1,14 +1,12 @@
 package com.horizen.block
 
 import java.lang.{Byte => JByte}
-import java.math.BigInteger
 import java.util.{HashMap => JHashMap}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture
-import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
@@ -57,15 +55,5 @@ class SidechainBlockTest
       case _ => fail("Block timestamp doesn't not found in json.")
     }
 
-  }
-
-  @Test
-  def checkBestMainchainPoW(): Unit = {
-    val sb = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
-    val mcReferences: Seq[MainchainBlockReference] = generateMainchainReferences(Seq(generateMainchainBlockReference(), generateMainchainBlockReference()))
-    val expected = mcReferences.map(block => new BigInteger(1, block.hash)).min
-
-    val sb2 = SidechainBlockFixture.copy(sb, companion = sidechainTransactionsCompanion, params = MainNetParams(), mainchainBlocks = mcReferences)
-    assertEquals("BesMcPow shall be equal", expected, sb2.bestMainchainReferencePoW.get)
   }
 }

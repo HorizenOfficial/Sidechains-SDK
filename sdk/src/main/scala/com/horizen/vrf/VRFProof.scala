@@ -13,6 +13,6 @@ class VRFProof(proof: Array[Byte]) {
 }
 
 object VRFProof {
-  val length: Int = 32 //just dummy number
+  val length: Int = 32 //sha256HashLen
   def parseBytes(bytes: Array[Byte]): VRFProof = new VRFProof(bytes)
 }

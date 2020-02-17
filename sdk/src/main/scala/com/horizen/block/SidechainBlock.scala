@@ -1,7 +1,6 @@
 package com.horizen.block
 
 import java.io.ByteArrayOutputStream
-import java.math.BigInteger
 import java.time.Instant
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
@@ -9,7 +8,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.hashToBigInteger
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -36,15 +34,14 @@ class SidechainBlock (
                        override val timestamp: Block.Timestamp,
                        val mainchainBlocks : Seq[MainchainBlockReference],
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                       val forgerPublicKey: PublicKey25519Proposition, // VRF public key from Forger box shall be used in future
                        val forgerBox: ForgerBox,
                        @JsonSerialize(using = classOf[VRFProofSerializer]) val vrfProof: VRFProof,
                        @JsonSerialize(using = classOf[MerklePathSerializer]) val merklePath: MerklePath,
                        val signature: Signature25519,
                        val companion: SidechainTransactionsCompanion)
-
   extends Block[SidechainTypes#SCBT]
 {
+  def forgerPublicKey: PublicKey25519Proposition = forgerBox.rewardProposition()
 
   override type M = SidechainBlock
 
@@ -56,7 +53,7 @@ class SidechainBlock (
 
   @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId =
-    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes, forgerBox.bytes(), vrfProof.bytes, merklePath.bytes())))
+    bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
 
   override lazy val transactions: Seq[SidechainTypes#SCBT] = {
     var txs = Seq[SidechainTypes#SCBT]()
@@ -87,7 +84,6 @@ class SidechainBlock (
       Longs.toByteArray(timestamp),
       sidechainTransactionsStream.toByteArray,
       mainchainBlocksStream.toByteArray,
-      forgerPublicKey.bytes,
       forgerBox.bytes(),
       vrfProof.bytes,
       merklePath.bytes()
@@ -127,15 +123,6 @@ class SidechainBlock (
 
     true
   }
-
-  lazy val bestMainchainReferencePoW: Option[BigInteger] = {
-    if (mainchainBlocks.isEmpty) {
-      None
-    }
-    else {
-      Option(mainchainBlocks.map(block => hashToBigInteger(block.hash)).min) //shall be discussed
-    }
-  }
 }
 
 
@@ -164,6 +151,8 @@ object SidechainBlock extends ScorexEncoding {
     require(forgerBox != null)
     require(vrfProof != null)
     require(merklePath != null)
+    require(merklePath.bytes().length > 0)
+    require(ownerPrivateKey.publicImage() == forgerBox.rewardProposition())
 
     val signature = signatureOption match {
       case Some(sig) => sig
@@ -173,7 +162,6 @@ object SidechainBlock extends ScorexEncoding {
           timestamp,
           mainchainBlocks,
           sidechainTransactions,
-          ownerPrivateKey.publicImage(),
           forgerBox,
           vrfProof,
           merklePath,
@@ -190,7 +178,6 @@ object SidechainBlock extends ScorexEncoding {
       timestamp,
       mainchainBlocks,
       sidechainTransactions,
-      ownerPrivateKey.publicImage(),
       forgerBox,
       vrfProof,
       merklePath,
@@ -227,16 +214,18 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putInt(bw.length())
     w.append(bw)
 
+    w.putBytes(obj.forgerBox.bytes())
+    w.putBytes(obj.vrfProof.bytes)
+    w.putBytes(obj.signature.bytes())
+
+    val merklePathLength = obj.merklePath.bytes().length
+    w.putInt(merklePathLength)
+    w.putBytes(obj.merklePath.bytes())
+
     val tw = w.newWriter()
     sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.asJava, tw)
     w.putInt(tw.length())
     w.append(tw)
-
-    w.putBytes(obj.forgerPublicKey.bytes())
-    w.putBytes(obj.forgerBox.bytes())
-    w.putBytes(obj.vrfProof.bytes)
-    w.putBytes(obj.signature.bytes())
-    w.putBytes(obj.merklePath.bytes())
   }
 
   override def parse(r: Reader): SidechainBlock = {
@@ -253,6 +242,15 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
     val mcblocks: Seq[MainchainBlockReference] = mcBlocksSerializer.parse(r.newReader(r.getChunk(mcbSize))).asScala
 
+    val forgerBox = ForgerBox.parseBytes(r.getBytes(ForgerBox.length()))
+
+    val vrfProof = VRFProof.parseBytes(r.getBytes(VRFProof.length))
+
+    val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
+
+    val merklePathLength = r.getInt()
+    val merklePath = MerklePath.parseBytes(r.getBytes(merklePathLength))
+
     val txSize = r.getInt()
 
     if (r.remaining < txSize)
@@ -263,22 +261,11 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
         .asScala
         .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
 
-    val owner = new PublicKey25519Proposition(r.getBytes(PublicKey25519Proposition.KEY_LENGTH))
-
-    val forgerBox = ForgerBox.parseBytes(r.getBytes(ForgerBox.length()))
-
-    val vrfProof = VRFProof.parseBytes(r.getBytes(VRFProof.length))
-
-    val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
-
-    val merklePath = MerklePath.parseBytes(r.getBytes(r.remaining))
-
     new SidechainBlock(
       parentId,
       timestamp,
       mcblocks,
       sidechainTransactions,
-      owner,
       forgerBox,
       vrfProof,
       merklePath,
