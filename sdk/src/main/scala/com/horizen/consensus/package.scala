@@ -21,12 +21,12 @@ package object consensus {
    * Consensus epoch id is defined by last block in consensus epoch.
    * For example for chain A -> B -> C -> D -> E -> (end of consensus epoch), consensus epoch id is E.
    * It is possible to for that chain have consensus epoch with id D, in case if block E wasn't received but
-   * consensuss epoch shall be finished due time passing. In that case two different consensus epochs E and D are exist
+   * consensus epoch shall be finished due time passing. In that case two different consensus epochs E and D are exist
    */
   object ConsensusEpochId extends TaggedType[String]
   type ConsensusEpochId = ConsensusEpochId.Type
   def blockIdToEpochId(blockId: ModifierId): ConsensusEpochId = ConsensusEpochId @@ blockId
-  def lastBlockInEpochId(epochId: ConsensusEpochId): ModifierId = ModifierId @@ epochId.untag(ConsensusEpochId)
+  def lastBlockIdInEpochId(epochId: ConsensusEpochId): ModifierId = ModifierId @@ epochId.untag(ConsensusEpochId)
 
   object ConsensusSlotNumber extends TaggedType[Int]
   type ConsensusSlotNumber = ConsensusSlotNumber.Type

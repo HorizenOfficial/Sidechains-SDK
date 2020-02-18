@@ -32,18 +32,24 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoByIdFromStorage(verifiedBlock.parentId)
-    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp)
+    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(verifiedBlock.parentId)
+    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
 
-    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock)
+    val blockInfo = history.blockToBlockInfo(verifiedBlock)
+      .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
+    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, blockInfo)
 
     verifyVrf(history, verifiedBlock, fullConsensusEpochInfo.nonceConsensusEpochInfo)
     verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo)
   }
 
-  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp): Unit = {
+  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
     if (verifiedBlockTimestamp > Instant.now.getEpochSecond) throw new IllegalArgumentException("Block had been generated in the future")
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
+
+    val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
+    val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
+    if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
   private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {

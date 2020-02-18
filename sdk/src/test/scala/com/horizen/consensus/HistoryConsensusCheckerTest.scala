@@ -33,7 +33,6 @@ class HistoryConsensusCheckerTest extends JUnitSuite {
         genesisBlock,
         Seq(),
         Seq(new ConsensusValidator()),
-        genesisBlock.id,
         finishedEpochInfo.stakeConsensusEpochInfo)
       .get
   }

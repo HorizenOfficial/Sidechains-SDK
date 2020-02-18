@@ -7,10 +7,9 @@ import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, StakeCon
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
-import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
+import com.horizen.storage._
+import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.utils._
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.idToVersion
@@ -69,7 +68,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (modId: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
       history <- SidechainHistory.genesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
-        historyBlockValidators(params), modId, StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
+        historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
 
       wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
         walletTransactionStorage, applicationWallet, genesisBlock, consensusEpochInfo)

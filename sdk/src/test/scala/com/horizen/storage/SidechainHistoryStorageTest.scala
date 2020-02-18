@@ -211,15 +211,15 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     // Test 6: get blockInfoById
     // active chain genesis block id
-    assertEquals("Storage returned wrong block", activeChainBlockInfoList.head, historyStorage.blockInfoById(activeChainBlockList.head.id).get)
+    assertEquals("Storage returned wrong block", activeChainBlockInfoList.head, historyStorage.blockInfoOptionById(activeChainBlockList.head.id).get)
     // active chain 5th block id
-    assertEquals("Storage returned wrong block", activeChainBlockInfoList(4), historyStorage.blockInfoById(activeChainBlockList(4).id).get)
+    assertEquals("Storage returned wrong block", activeChainBlockInfoList(4), historyStorage.blockInfoOptionById(activeChainBlockList(4).id).get)
     // active chain last block id
-    assertEquals("Storage returned wrong block", activeChainBlockInfoList.last, historyStorage.blockInfoById(activeChainBlockList.last.id).get)
+    assertEquals("Storage returned wrong block", activeChainBlockInfoList.last, historyStorage.blockInfoOptionById(activeChainBlockList.last.id).get)
     // fork chain last block id
-    assertEquals("Storage returned wrong block", forkChainBlockInfoList.last, historyStorage.blockInfoById(forkChainBlockList.last.id).get)
+    assertEquals("Storage returned wrong block", forkChainBlockInfoList.last, historyStorage.blockInfoOptionById(forkChainBlockList.last.id).get)
     // unknown block id
-    assertTrue("Storage expected not to find block for unknown id", historyStorage.blockInfoById(getRandomModifier()).isEmpty)
+    assertTrue("Storage expected not to find block for unknown id", historyStorage.blockInfoOptionById(getRandomModifier()).isEmpty)
 
 
     // Test 7: get parentBlockId

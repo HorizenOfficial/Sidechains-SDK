@@ -175,7 +175,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       null
     ).get
 
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn(None)
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn(None)
     assertTrue("Sidechain block with missed parent expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
@@ -198,7 +198,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       null
     ).get
 
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength)
       ))
@@ -207,7 +207,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 3: valid block - no MC block references, parent is in the middle of the epoch
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength / 2)
       ))
@@ -216,7 +216,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 4: valid block - no MC block references, parent is at the beginning of the epoch
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, 0)
       ))
@@ -240,7 +240,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       null
     ).get
 
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
@@ -249,7 +249,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 6: valid block - without SC transactions and with MC block references, that lead to the end of the epoch
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
@@ -258,7 +258,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 7: invalid block - without SC transactions and with MC block references, that lead to switching the epoch
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))
@@ -286,7 +286,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       null
     ).get
 
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
@@ -295,7 +295,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 9: invalid block - with SC transactions and MC block references, that lead to the end of the epoch (no sc tx allowed)
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
@@ -308,7 +308,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 10: invalid block - with SC transactions and MC block references, that lead to switching the epoch (no sc tx and no switch allowed)
-    Mockito.when(historyStorage.blockInfoById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))

@@ -1,7 +1,10 @@
 package com.horizen.fixtures
 
+import java.lang.{Byte => JByte}
 import java.time.Instant
+import java.util.{HashMap => JHashMap}
 
+import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.chain.SidechainBlockInfo
@@ -11,7 +14,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.transaction.SidechainTransaction
+import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
 import com.horizen.vrf.{VRFKeyGenerator, VRFProof}
 import scorex.core.block.Block
@@ -27,6 +30,9 @@ class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: Sidech
 }
 
 object SidechainBlockFixture extends MainchainBlockReferenceFixture {
+  val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
+  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+
   private def firstOrSecond[T](first: T, second: T): T = {
     if (first != null) first else second
   }
@@ -57,7 +63,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture {
       forgingBox,
       firstOrSecond(vrfProof, initialBlock.vrfProof),
       firstOrSecond(merklePath, initialBlock.merklePath),
-      firstOrSecond(companion, initialBlock.companion),
+      firstOrSecond(companion, sidechainTransactionsCompanion),
       params,
       signatureOption
     ).get

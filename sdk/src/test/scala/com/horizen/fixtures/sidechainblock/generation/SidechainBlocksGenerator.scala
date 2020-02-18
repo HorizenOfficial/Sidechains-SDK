@@ -197,7 +197,13 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     }
 
     val vrfPubKey: VRFPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
-      VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes)._2
+      var corrupted: VRFPublicKey = null
+
+      do {
+        corrupted = VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes)._2
+        println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
+      } while (corrupted.bytes.deep == initialForgerBox.bytes().deep)
+      corrupted
     }
     else {
       initialForgerBox.vrfPubKey()

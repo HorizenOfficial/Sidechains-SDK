@@ -38,7 +38,7 @@ class SidechainBlock (
                        @JsonSerialize(using = classOf[VRFProofSerializer]) val vrfProof: VRFProof,
                        @JsonSerialize(using = classOf[MerklePathSerializer]) val merklePath: MerklePath,
                        val signature: Signature25519,
-                       val companion: SidechainTransactionsCompanion)
+                       companion: SidechainTransactionsCompanion)
   extends Block[SidechainTypes#SCBT]
 {
   def forgerPublicKey: PublicKey25519Proposition = forgerBox.rewardProposition()

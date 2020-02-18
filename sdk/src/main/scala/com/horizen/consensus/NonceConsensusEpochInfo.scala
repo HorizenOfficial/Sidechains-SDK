@@ -7,8 +7,6 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends BytesSerializable {
-  def toBytes: Array[Byte] = consensusNonce
-
   override def toString: String = s"NonceConsensusEpochInfo(consensusNonce=${BytesUtils.toHexString(consensusNonce)}"
 
   override def hashCode(): Int =  java.util.Arrays.hashCode(consensusNonce)
@@ -33,7 +31,7 @@ object NonceConsensusEpochInfoSerializer extends ScorexSerializer[NonceConsensus
     NonceConsensusEpochInfo(bigIntToConsensusNonce(new BigInteger(bytes)))
   }
 
-  override def serialize(obj: NonceConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.toBytes)
+  override def serialize(obj: NonceConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.consensusNonce)
 
-  override def parse(r: Reader): NonceConsensusEpochInfo = fromBytes(r.getBytes(r.remaining))
+  override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ r.getBytes(r.remaining))
 }

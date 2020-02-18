@@ -1,6 +1,5 @@
 package com.horizen.consensus
 
-import com.google.common.primitives.Longs
 import com.horizen.utils._
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -20,10 +19,6 @@ case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) exte
     }
   }
 
-  def toBytes: Array[Byte] = {
-    rootHash.data ++ Longs.toByteArray(totalStake)
-  }
-
   override def toString: String = {
     s"StakeConsensusEpochInfo(rootHash=${BytesUtils.toHexString(rootHash)}, totalStake=${totalStake})"
   }
@@ -34,13 +29,14 @@ case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) exte
 }
 
 object StakeConsensusEpochInfoSerializer extends ScorexSerializer[StakeConsensusEpochInfo]{
-  private def fromBytes(bytes: Array[Byte]): StakeConsensusEpochInfo = {
-    val rootHash = bytes.slice(0, merkleTreeHashLen)
-    val totalStake: Long = Longs.fromByteArray(bytes.slice(merkleTreeHashLen, bytes.length))
-    StakeConsensusEpochInfo(rootHash, totalStake)
+  override def serialize(obj: StakeConsensusEpochInfo, w: Writer): Unit = {
+    w.putBytes(obj.rootHash.data)
+    w.putLong(obj.totalStake)
   }
 
-  override def serialize(obj: StakeConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.toBytes)
-
-  override def parse(r: Reader): StakeConsensusEpochInfo = fromBytes(r.getBytes(r.remaining))
+  override def parse(r: Reader): StakeConsensusEpochInfo = {
+    val rootHash = r.getBytes(merkleTreeHashLen)
+    val totalStake: Long = r.getLong()
+    StakeConsensusEpochInfo(rootHash, totalStake)
+  }
 }
