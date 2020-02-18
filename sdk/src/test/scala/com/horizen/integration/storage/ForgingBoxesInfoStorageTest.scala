@@ -3,21 +3,25 @@ package com.horizen.integration.storage
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
-import com.horizen.storage.{ForgingBoxesMerklePathStorage, IODBStoreAdapter}
+import com.horizen.storage.{ForgingBoxesInfoStorage, IODBStoreAdapter}
 import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import java.util.{ArrayList => JArrayList}
 
+import com.horizen.box.ForgerBox
 
-class ForgingBoxesMerklePathStorageTest extends JUnitSuite with IODBStoreFixture with SidechainTypes with BoxFixture {
+
+class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with SidechainTypes with BoxFixture {
 
   @Test
   def mainWorkflow(): Unit = {
-    val forgingBoxesMerklePathStorage = new ForgingBoxesMerklePathStorage(new IODBStoreAdapter(getStore()))
+    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(new IODBStoreAdapter(getStore()))
 
     val updateVersion = getVersion
+    val forgerBox = getForgerBox
+    val forgerBoxesToAppend: Seq[ForgerBox] = Seq(forgerBox)
 
     // Test rollback versions of empty storage
     assertTrue("lastVersionId must be empty for empty storage.",
@@ -25,18 +29,20 @@ class ForgingBoxesMerklePathStorageTest extends JUnitSuite with IODBStoreFixture
     assertEquals("Storage must not contain versions.",
       0, forgingBoxesMerklePathStorage.rollbackVersions.size)
 
-    // Test updateVersion operation (empty storage).
-    assertTrue("UpdateVersion must be successful.", forgingBoxesMerklePathStorage.updateVersion(updateVersion).isSuccess)
+    // Test updateForgerBoxes operation (empty storage).
+    assertTrue("updateForgerBoxes must be successful.",
+      forgingBoxesMerklePathStorage.updateForgerBoxes(updateVersion, forgerBoxesToAppend, Seq()).isSuccess)
+    assertEquals("Different ForgerBox seq expected.", forgerBoxesToAppend, forgingBoxesMerklePathStorage.getForgerBoxes.get)
 
-    // Test update operation.
+    // Test updateForgerBoxMerklePathInfo operation.
     val epochNumber = ConsensusEpochNumber @@ 2
     val boxMerklePathInfoSeq = Seq(
       ForgerBoxMerklePathInfo(
-        getForgerBox,
+        forgerBox,
         new MerklePath(new JArrayList())
       )
     )
-    assertTrue("Update must be successful.", forgingBoxesMerklePathStorage.update(epochNumber, boxMerklePathInfoSeq).isSuccess)
+    assertTrue("updateForgerBoxMerklePathInfo must be successful.", forgingBoxesMerklePathStorage.updateForgerBoxMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isSuccess)
 
     // Test retrieving of merkle path info seq for EXISTING epoch
     forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(epochNumber) match {
