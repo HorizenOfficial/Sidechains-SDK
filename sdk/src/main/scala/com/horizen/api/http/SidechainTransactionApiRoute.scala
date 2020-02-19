@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
 import com.horizen.serialization.Views
 import java.util.{ArrayList => JArrayList, List => JList}
 import java.util.Collections
@@ -187,17 +187,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         if (inputBoxes.length < body.transactionInputs.size) {
           ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
         } else {
-          val outputs: JList[BoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]])
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
               MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]])
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
           body.forgerOutputs.foreach(element =>
@@ -205,7 +205,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
             )
           )
 
@@ -356,11 +356,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         if (inputBoxes.length < body.transactionInputs.size) {
           ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
         } else {
-          val outputs: JList[BoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]]
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
           )
           body.forgerOutputs.foreach(element =>
@@ -368,7 +368,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
             )
           )
 
@@ -462,17 +462,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       for(id <- transaction.boxIdsToOpen().asScala)
         boxIdsToExclude.add(id.data)
 
-    val outputs: JList[BoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+    val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
     regularBoxDataList.foreach(element =>
       outputs.add(new RegularBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-        new lang.Long(element.value)).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]])
+        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
     withdrawalRequestBoxDataList.foreach(element =>
       outputs.add(new WithdrawalRequestBoxData(
         MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-        new lang.Long(element.value)).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]])
+        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
     forgerBoxDataList.foreach(element =>
@@ -480,7 +480,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value),
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
       )
     )
 
@@ -505,7 +505,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     // Add change if need.
     if(inputsTotalAmount > inputsMinimumExpectedAmount)
-      outputs.add(new RegularBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[BoxData[Proposition, NoncedBox[Proposition]]])
+      outputs.add(new RegularBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
 
     // Create unsigned tx
     val boxIds = boxes.map(_.id()).asJava

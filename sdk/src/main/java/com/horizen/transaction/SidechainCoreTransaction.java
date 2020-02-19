@@ -23,7 +23,7 @@ public class SidechainCoreTransaction
         extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
     private List<byte[]> inputsIds;
-    private List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData;
+    private List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
     private List<Proof<Proposition>> proofs;
 
     private SidechainBoxesDataCompanion boxesDataCompanion;
@@ -37,7 +37,7 @@ public class SidechainCoreTransaction
 
 
     public SidechainCoreTransaction(List<byte[]> inputsIds,
-                                    List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData,
+                                    List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
                                     List<Proof<Proposition>> proofs,
                                     long fee,
                                     long timestamp,
@@ -93,7 +93,7 @@ public class SidechainCoreTransaction
         if(newBoxes == null) {
             newBoxes = new ArrayList<>();
             for (int i = 0; i < outputsData.size(); i++) {
-                BoxData boxData = outputsData.get(i);
+                NoncedBoxData boxData = outputsData.get(i);
                 long nonce = getNewBoxNonce(boxData.proposition(), i);
                 newBoxes.add(boxData.getBox(nonce));
             }
@@ -140,7 +140,7 @@ public class SidechainCoreTransaction
 
         byte[] inputIdsBytes = inputsIdsStream.toByteArray();
 
-        ListSerializer<BoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
+        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
         byte[] outputBoxDataBytes = boxesDataSerializer.toBytes(outputsData);
 
         ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(proofsCompanion, MAX_TRANSACTION_UNLOCKERS);
@@ -190,8 +190,8 @@ public class SidechainCoreTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        ListSerializer<BoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);

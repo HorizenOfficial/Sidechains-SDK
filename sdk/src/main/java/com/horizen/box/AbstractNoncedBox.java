@@ -3,14 +3,14 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
-import com.horizen.box.data.AbstractBoxData;
+import com.horizen.box.data.AbstractNoncedBoxData;
 import com.horizen.proposition.Proposition;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
+public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractNoncedBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
         extends ScorexEncoding implements NoncedBox<P>
 {
     protected final BD boxData;

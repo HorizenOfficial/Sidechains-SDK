@@ -4,7 +4,7 @@ import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import scorex.core.serialization.BytesSerializable;
 
-public interface BoxData<P extends Proposition, B extends NoncedBox<P>> extends BytesSerializable {
+public interface NoncedBoxData<P extends Proposition, B extends NoncedBox<P>> extends BytesSerializable {
 
     long value();
 
@@ -18,7 +18,7 @@ public interface BoxData<P extends Proposition, B extends NoncedBox<P>> extends 
     byte[] bytes();
 
     @Override
-    BoxDataSerializer serializer();
+    NoncedBoxDataSerializer serializer();
 
     byte boxDataTypeId();
 }

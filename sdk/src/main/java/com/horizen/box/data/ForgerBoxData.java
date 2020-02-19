@@ -13,7 +13,7 @@ import java.util.Objects;
 
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
 
-public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
+public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition rewardProposition;
     private final VRFPublicKey vrfPublicKey;
 
@@ -51,7 +51,7 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return ForgerBoxDataSerializer.getSerializer();
     }
 

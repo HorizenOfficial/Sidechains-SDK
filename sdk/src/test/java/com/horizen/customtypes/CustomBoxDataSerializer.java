@@ -1,10 +1,10 @@
 package com.horizen.customtypes;
 
-import com.horizen.box.data.BoxDataSerializer;
+import com.horizen.box.data.NoncedBoxDataSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class CustomBoxDataSerializer implements BoxDataSerializer<CustomBoxData> {
+public class CustomBoxDataSerializer implements NoncedBoxDataSerializer<CustomBoxData> {
 
     private static CustomBoxDataSerializer serializer;
 

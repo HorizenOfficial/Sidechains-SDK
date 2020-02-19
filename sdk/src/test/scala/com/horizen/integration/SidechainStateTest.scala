@@ -4,7 +4,7 @@ import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{BoxData, RegularBoxData}
+import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
@@ -64,7 +64,7 @@ class SidechainStateTest
 
   def getRegularTransaction (outputsCount: Int) : RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

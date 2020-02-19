@@ -35,7 +35,7 @@ import scala.collection.immutable.Map
 import scala.io.Source
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.horizen.box.data.BoxDataSerializer
+import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.proof.ProofSerializer
 import com.horizen.utils.BytesUtils
@@ -43,7 +43,7 @@ import com.horizen.utils.BytesUtils
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
-   @Named("CustomBoxDataSerializers") val customBoxDataSerializers: JHashMap[JByte, BoxDataSerializer[SidechainTypes#SCBD]],
+   @Named("CustomBoxDataSerializers") val customBoxDataSerializers: JHashMap[JByte, NoncedBoxDataSerializer[SidechainTypes#SCBD]],
    @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomProofSerializers") val customProofSerializers: JHashMap[JByte, ProofSerializer[SidechainTypes#SCPR]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
