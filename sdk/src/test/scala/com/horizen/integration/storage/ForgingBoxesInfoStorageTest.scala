@@ -63,4 +63,30 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with 
     assertTrue(s"MerklePathInfoSeq expected to be NOT present in storage for epoch $epochNumber.",
       forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(epochNumber).isEmpty)
   }
+
+  @Test
+  def updateForgerBoxes(): Unit = {
+    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(new IODBStoreAdapter(getStore()))
+
+    // Test 1: Update empty storage with 3 new forger boxes
+    val version1 = getVersion
+    val forgerBox1 = getForgerBox
+    val forgerBox2 = getForgerBox
+    val forgerBox3 = getForgerBox
+    val forgerBoxesToAppend: Seq[ForgerBox] = Seq(forgerBox1, forgerBox2, forgerBox3)
+
+    assertTrue("updateForgerBoxes must be successful.",
+      forgingBoxesMerklePathStorage.updateForgerBoxes(version1, forgerBoxesToAppend, Seq()).isSuccess)
+    assertEquals("Different ForgerBox seq expected.", forgerBoxesToAppend, forgingBoxesMerklePathStorage.getForgerBoxes.get)
+
+
+    // Test 2: Update non empty storage with 2 new forger boxes and 2 boxes to remove
+    val version2 = getVersion
+    val forgerBox4 = getForgerBox
+    val forgerBox5 = getForgerBox
+
+    assertTrue("updateForgerBoxes must be successful.",
+      forgingBoxesMerklePathStorage.updateForgerBoxes(version2, Seq(forgerBox4, forgerBox5), Seq(forgerBox1.id(), forgerBox3.id())).isSuccess)
+    assertEquals("Different ForgerBox seq expected.", Seq(forgerBox2, forgerBox4, forgerBox5), forgingBoxesMerklePathStorage.getForgerBoxes.get)
+  }
 }

@@ -63,7 +63,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
 
     val currentForgerBoxSeq: Seq[ForgerBox] = getForgerBoxes.getOrElse(Seq())
     val newForgerBoxSeq: Seq[ForgerBox] =
-      currentForgerBoxSeq.filter(box => boxIdsRemoveSeq.exists(removedId => box.id().sameElements(removedId))) ++ forgerBoxesToAppendSeq
+      currentForgerBoxSeq.filterNot(box => boxIdsRemoveSeq.exists(removedId => box.id().sameElements(removedId))) ++ forgerBoxesToAppendSeq
     if(!newForgerBoxSeq.equals(currentForgerBoxSeq))
       toUpdate.add(new Pair(forgerBoxesKey, new ByteArrayWrapper(forgerBoxListSerializer.toBytes(newForgerBoxSeq.asJava))))
 

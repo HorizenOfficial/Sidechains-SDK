@@ -14,6 +14,7 @@ import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{ForgerBoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath}
 import scorex.core.VersionTag
+import com.horizen.utils._
 
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -112,17 +113,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     val newBoxes = changes.toAppend.map(_.box)
 
-    val newWalletBoxes = newBoxes.filter(box => pubKeys.contains(box.proposition())).map( box => {
-      val boxTransaction = txBoxes(new ByteArrayWrapper(box.id()))
+    val newWalletBoxes = newBoxes.withFilter(box => pubKeys.contains(box.proposition())).map( box => {
+      val boxTransaction = txBoxes(box.id())
       new WalletBox(box, boxTransaction.id, boxTransaction.timestamp())
     })
 
-    val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.filter(box => {
-      if(box.isInstanceOf[ForgerBox])
-        pubKeys.contains(box.asInstanceOf[ForgerBox].rewardProposition())
-      else
-        false
-    }).map(_.asInstanceOf[ForgerBox])
+    val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
+      .filter(forgerBox => pubKeys.contains(forgerBox.rewardProposition()))
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
       .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
