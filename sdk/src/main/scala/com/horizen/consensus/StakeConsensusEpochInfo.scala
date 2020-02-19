@@ -30,7 +30,7 @@ case class StakeConsensusEpochInfo(rootHash: Array[Byte], totalStake: Long) exte
 
 object StakeConsensusEpochInfoSerializer extends ScorexSerializer[StakeConsensusEpochInfo]{
   override def serialize(obj: StakeConsensusEpochInfo, w: Writer): Unit = {
-    w.putBytes(obj.rootHash.data)
+    w.putBytes(obj.rootHash)
     w.putLong(obj.totalStake)
   }
 

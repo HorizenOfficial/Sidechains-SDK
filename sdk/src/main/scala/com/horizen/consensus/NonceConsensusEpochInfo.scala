@@ -1,7 +1,5 @@
 package com.horizen.consensus
 
-import java.math.BigInteger
-
 import com.horizen.utils._
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -27,10 +25,6 @@ case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends Bytes
 
 
 object NonceConsensusEpochInfoSerializer extends ScorexSerializer[NonceConsensusEpochInfo]{
-  private def fromBytes(bytes: Array[Byte]): NonceConsensusEpochInfo = {
-    NonceConsensusEpochInfo(bigIntToConsensusNonce(new BigInteger(bytes)))
-  }
-
   override def serialize(obj: NonceConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.consensusNonce)
 
   override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ r.getBytes(r.remaining))

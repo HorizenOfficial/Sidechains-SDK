@@ -195,7 +195,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
     // if it's not a part of active chain, retrieve previous info from disk storage
-    val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoOptionById(block.id).get)
+    val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id))
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(

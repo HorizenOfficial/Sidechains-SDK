@@ -79,8 +79,6 @@ trait ConsensusDataProvider {
     @tailrec
     def foldEpochIteration[B](accumulator: B, blockId: ModifierId, blockInfo: SidechainBlockInfo, currentEpochNumber: ConsensusEpochNumber)
                              (op: (ModifierId, SidechainBlockInfo, B) => B): B = {
-      //val blockInfo: SidechainBlockInfo = storage.blockInfoByIdFromStorage(blockInfo)
-
       val blockEpochNumber = timeStampToEpochNumber(blockInfo.timestamp)
       if (blockEpochNumber < currentEpochNumber) {
         accumulator
