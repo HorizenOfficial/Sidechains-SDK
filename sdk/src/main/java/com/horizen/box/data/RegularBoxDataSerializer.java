@@ -5,11 +5,7 @@ import scorex.util.serialization.Writer;
 
 public final class RegularBoxDataSerializer implements NoncedBoxDataSerializer<RegularBoxData> {
 
-    private static RegularBoxDataSerializer serializer;
-
-    static {
-        serializer = new RegularBoxDataSerializer();
-    }
+    private final static RegularBoxDataSerializer serializer = new RegularBoxDataSerializer();
 
     private RegularBoxDataSerializer() {
         super();

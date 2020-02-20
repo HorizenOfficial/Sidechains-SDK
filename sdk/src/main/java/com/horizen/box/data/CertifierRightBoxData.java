@@ -67,10 +67,10 @@ public final class CertifierRightBoxData extends AbstractNoncedBoxData<PublicKey
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
         if (obj == this)
             return true;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
         CertifierRightBoxData boxData = (CertifierRightBoxData) obj;
 
         return proposition().equals(boxData.proposition())

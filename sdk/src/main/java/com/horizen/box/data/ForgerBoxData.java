@@ -17,8 +17,10 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
     private final PublicKey25519Proposition rewardProposition;
     private final VRFPublicKey vrfPublicKey;
 
-    public ForgerBoxData(PublicKey25519Proposition proposition, long value,
-                                 PublicKey25519Proposition rewardProposition, VRFPublicKey vrfPublicKey) {
+    public ForgerBoxData(PublicKey25519Proposition proposition,
+                         long value,
+                         PublicKey25519Proposition rewardProposition,
+                         VRFPublicKey vrfPublicKey) {
         super(proposition, value);
         Objects.requireNonNull(rewardProposition, "rewardProposition must be defined");
         Objects.requireNonNull(vrfPublicKey, "vrfPublicKey must be defined");
@@ -82,10 +84,10 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
         if (obj == this)
             return true;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
         ForgerBoxData boxData = (ForgerBoxData) obj;
 
         return proposition().equals(boxData.proposition())

@@ -66,12 +66,11 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
         if (obj == this)
             return true;
-        return Arrays.equals(id(), ((AbstractNoncedBox) obj).id())
-                && value() == ((AbstractNoncedBox) obj).value();
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        return Arrays.equals(id(), ((AbstractNoncedBox) obj).id());
     }
 
     @Override

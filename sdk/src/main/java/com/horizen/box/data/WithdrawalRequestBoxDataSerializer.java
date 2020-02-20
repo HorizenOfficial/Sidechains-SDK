@@ -5,11 +5,7 @@ import scorex.util.serialization.Writer;
 
 public final class WithdrawalRequestBoxDataSerializer implements NoncedBoxDataSerializer<WithdrawalRequestBoxData> {
 
-    private static WithdrawalRequestBoxDataSerializer serializer;
-
-    static {
-        serializer = new WithdrawalRequestBoxDataSerializer();
-    }
+    private final static WithdrawalRequestBoxDataSerializer serializer = new WithdrawalRequestBoxDataSerializer();
 
     private WithdrawalRequestBoxDataSerializer() {
         super();

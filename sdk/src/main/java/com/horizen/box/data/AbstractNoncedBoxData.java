@@ -35,6 +35,7 @@ public abstract class AbstractNoncedBoxData<P extends Proposition, B extends Abs
         // By default no custom fields present, so return all zeros hash.
         return new byte[32];
     }
+
     @Override
     public int hashCode() {
         return proposition().hashCode();
@@ -44,10 +45,10 @@ public abstract class AbstractNoncedBoxData<P extends Proposition, B extends Abs
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
         if (obj == this)
             return true;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
         AbstractNoncedBoxData boxData = (AbstractNoncedBoxData) obj;
         return proposition().equals(boxData.proposition())
                 && value() == boxData.value();

@@ -48,22 +48,6 @@ public final class ForgerBox
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        if (obj == this)
-            return true;
-        ForgerBox forgerBox = (ForgerBox) obj;
-
-        return Arrays.equals(id(), forgerBox.id())
-                && value() == forgerBox.value()
-                && vrfPubKey().equals(forgerBox.vrfPubKey())
-                && rewardProposition().equals(forgerBox.rewardProposition());
-    }
-
-    @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), vrfPubKey(), rewardProposition());
     }
