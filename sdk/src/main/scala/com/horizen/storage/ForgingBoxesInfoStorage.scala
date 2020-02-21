@@ -57,14 +57,14 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
   def updateForgerBoxes(version: ByteArrayWrapper,
                         forgerBoxesToAppendSeq: Seq[ForgerBox],
                         boxIdsRemoveSeq: Seq[Array[Byte]]): Try[ForgingBoxesInfoStorage] = Try {
-
-
     val toUpdate: JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList()
 
     val currentForgerBoxSeq: Seq[ForgerBox] = getForgerBoxes.getOrElse(Seq())
-    val newForgerBoxSeq: Seq[ForgerBox] =
-      currentForgerBoxSeq.filterNot(box => boxIdsRemoveSeq.exists(removedId => box.id().sameElements(removedId))) ++ forgerBoxesToAppendSeq
-    if(!newForgerBoxSeq.equals(currentForgerBoxSeq))
+    val existentForgerBoxSeq: Seq[ForgerBox] = currentForgerBoxSeq.filterNot(box => boxIdsRemoveSeq.exists(removedId => box.id().sameElements(removedId)))
+    val newForgerBoxSeq = existentForgerBoxSeq ++ forgerBoxesToAppendSeq
+
+    // Update only if current ForgerBox sequence was changed: some boxes were removed and/or some boxes were added.
+    if(existentForgerBoxSeq.size != currentForgerBoxSeq.size || forgerBoxesToAppendSeq.nonEmpty)
       toUpdate.add(new Pair(forgerBoxesKey, new ByteArrayWrapper(forgerBoxListSerializer.toBytes(newForgerBoxSeq.asJava))))
 
     storage.update(version, toUpdate, new JArrayList())

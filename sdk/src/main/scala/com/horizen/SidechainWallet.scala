@@ -134,8 +134,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     // We keep forger boxes separate to manage forging stake delegation
     forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
 
-    // TODO: Do we need to return only related to SidechainWallet boxes or the full list of boxes?
-    applicationWallet.onChangeBoxes(version, newWalletBoxes.map(_.box).toList.asJava,
+    applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava,
       boxIdsToRemove.toList.asJava)
 
     this

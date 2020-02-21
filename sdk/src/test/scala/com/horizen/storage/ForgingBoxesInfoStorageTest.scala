@@ -28,6 +28,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
     val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(mockedStorage)
 
     val version = getVersion
+    val version2 = getVersion
     val forgerBox = getForgerBox
     val forgerBoxesToAppend: Seq[ForgerBox] = Seq(forgerBox)
     val boxIdsToRemove: Seq[Array[Byte]] = Seq(getRandomBoxId(444L))
@@ -47,15 +48,25 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
       ArgumentMatchers.anyList[ByteArrayWrapper]()))
       // For Test 1:
       .thenAnswer(answer => {
-      val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-      val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
-      val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
+        val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
+        val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
 
-      assertEquals("Store update(...) actual Version is wrong.", version, actualVersion)
-      assertEquals("Store update(...) actual list to update expected to have different size.", 1, actualToUpdate.size())
-      assertTrue("Store update(...) actual list to remove expected to be empty.", actualToRemove.isEmpty)
+        assertEquals("Store update(...) actual Version is wrong.", version, actualVersion)
+        assertEquals("Store update(...) actual list to update expected to have different size.", 1, actualToUpdate.size())
+        assertTrue("Store update(...) actual list to remove expected to be empty.", actualToRemove.isEmpty)
       })
-      // For Test 2:
+      // For Test 2: verify that nothing changed
+      .thenAnswer(answer => {
+        val actualVersion = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
+        val actualToUpdate = answer.getArgument(1).asInstanceOf[java.util.List[Pair[ByteArrayWrapper, ByteArrayWrapper]]]
+        val actualToRemove = answer.getArgument(2).asInstanceOf[java.util.List[ByteArrayWrapper]]
+
+        assertEquals("Store update(...) actual Version is wrong.", version2, actualVersion)
+        assertTrue("Store update(...) actual list to update expected to be empty.",actualToUpdate.isEmpty)
+        assertTrue("Store update(...) actual list to remove expected to be empty.", actualToRemove.isEmpty)
+      })
+      // For Test 3:
       .thenAnswer(answer => {
         throw new IllegalArgumentException("exception")
       })
@@ -66,7 +77,12 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
       forgingBoxesMerklePathStorage.updateForgerBoxes(version, forgerBoxesToAppend, boxIdsToRemove).isSuccess)
 
 
-    // Test 2: failed to update of physical Store
+    // Test 2: successful update of physical Store, nothing changed in toUpdate list
+    assertTrue("updateForgerBoxes expected to be successful.",
+      forgingBoxesMerklePathStorage.updateForgerBoxes(version2, Seq(), boxIdsToRemove).isSuccess)
+
+
+    // Test 3: failed to update of physical Store
     assertTrue("updateForgerBoxes expected to fail.",
       forgingBoxesMerklePathStorage.updateForgerBoxes(version, forgerBoxesToAppend, boxIdsToRemove).isFailure)
   }
