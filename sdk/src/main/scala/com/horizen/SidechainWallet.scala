@@ -134,8 +134,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     // We keep forger boxes separate to manage forging stake delegation
     forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
 
-    applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava,
-      boxIdsToRemove.toList.asJava)
+    applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
     this
   }
