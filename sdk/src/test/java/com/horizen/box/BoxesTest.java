@@ -25,7 +25,7 @@ public class BoxesTest extends BoxFixtureClass {
         CertifierRightBox certifierRightBox = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch);
 
         assertNotEquals("Boxes expected to have different type ids", regularBox.boxTypeId(), certifierRightBox.boxTypeId());
-        assertEquals("Boxes expected to have the same hash", regularBox.hashCode(), certifierRightBox.hashCode());
+        assertNotEquals("Boxes expected to have different hash", regularBox.hashCode(), certifierRightBox.hashCode());
         assertNotEquals("Boxes expected not to be equal", regularBox, certifierRightBox);
     }
 }

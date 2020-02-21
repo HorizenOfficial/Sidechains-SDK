@@ -48,11 +48,6 @@ public final class ForgerBox
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), vrfPubKey(), rewardProposition());
-    }
-
-    @Override
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, rewardProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), rewardProposition(), nonce());
     }

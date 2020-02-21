@@ -62,19 +62,4 @@ public final class CertifierRightBoxData extends AbstractNoncedBoxData<PublicKey
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Longs.toByteArray(activeFromWithdrawalEpoch()));
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (obj == this)
-            return true;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        CertifierRightBoxData boxData = (CertifierRightBoxData) obj;
-
-        return proposition().equals(boxData.proposition())
-                && value() == boxData.value()
-                && activeFromWithdrawalEpoch() == boxData.activeFromWithdrawalEpoch();
-    }
 }

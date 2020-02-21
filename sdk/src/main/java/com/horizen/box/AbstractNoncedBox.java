@@ -19,6 +19,9 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     private byte[] id;
     private Integer hashcode;
 
+    private final static byte[] coinsBoxFlag = { (byte)1 };
+    private final static byte[] nonCoinsBoxFlag = { (byte)0 };
+
     public AbstractNoncedBox(BD boxData, long nonce) {
         Objects.requireNonNull(boxData, "boxData must be defined");
 
@@ -40,14 +43,12 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     @Override
     public final byte[] id() {
         if(id == null) {
-            byte coinsByteFlag = this instanceof CoinsBox ? (byte)1 : (byte)0;
             id = Blake2b256.hash(Bytes.concat(
-                    new byte[]{ coinsByteFlag },
+                    this instanceof CoinsBox ? coinsBoxFlag : nonCoinsBoxFlag,
                     Longs.toByteArray(value()),
                     proposition().bytes(),
                     Longs.toByteArray(nonce()),
                     boxData.customFieldsHash()));
-
         }
         return id;
     }
@@ -58,7 +59,7 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     @Override
     public int hashCode() {
         if(hashcode == null)
-            hashcode = boxData.proposition().hashCode();
+            hashcode = Objects.hash(boxData, nonce);
         return hashcode;
     }
 

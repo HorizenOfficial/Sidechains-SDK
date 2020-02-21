@@ -2,6 +2,9 @@ package com.horizen.box.data;
 
 import com.horizen.box.AbstractNoncedBox;
 import com.horizen.proposition.Proposition;
+import com.horizen.utils.Utils;
+
+import java.util.Arrays;
 import java.util.Objects;
 
 public abstract class AbstractNoncedBoxData<P extends Proposition, B extends AbstractNoncedBox<P, BD, B>, BD extends AbstractNoncedBoxData<P, B, BD>>
@@ -33,12 +36,12 @@ public abstract class AbstractNoncedBoxData<P extends Proposition, B extends Abs
     @Override
     public byte[] customFieldsHash() {
         // By default no custom fields present, so return all zeros hash.
-        return new byte[32];
+        return Utils.ZEROS_HASH;
     }
 
     @Override
     public int hashCode() {
-        return proposition().hashCode();
+        return Objects.hash(proposition(), value(), Arrays.hashCode(customFieldsHash()));
     }
 
     @Override
@@ -51,6 +54,7 @@ public abstract class AbstractNoncedBoxData<P extends Proposition, B extends Abs
             return false;
         AbstractNoncedBoxData boxData = (AbstractNoncedBoxData) obj;
         return proposition().equals(boxData.proposition())
-                && value() == boxData.value();
+                && value() == boxData.value()
+                && Arrays.equals(customFieldsHash(), boxData.customFieldsHash());
     }
 }

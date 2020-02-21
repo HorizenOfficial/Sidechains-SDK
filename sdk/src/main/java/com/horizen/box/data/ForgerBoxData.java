@@ -79,25 +79,4 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().key()));
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (obj == this)
-            return true;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        ForgerBoxData boxData = (ForgerBoxData) obj;
-
-        return proposition().equals(boxData.proposition())
-                && value() == boxData.value()
-                && vrfPublicKey().equals(boxData.vrfPublicKey())
-                && rewardProposition().equals(boxData.rewardProposition());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), vrfPublicKey(), rewardProposition());
-    }
 }

@@ -322,7 +322,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def makeForgerStake: Route = (post & path("makeForgerStake")) {
-    entity(as[ReqCreateForgerCoins]) { body =>
+    entity(as[ReqCreateForgerStake]) { body =>
       withNodeView { sidechainNodeView =>
         val forgerOutputsList = body.outputs
         val fee = body.fee
@@ -595,8 +595,8 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateForgerCoins(outputs: List[TransactionForgerOutput],
-                                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+  private[api] case class ReqCreateForgerStake(outputs: List[TransactionForgerOutput],
+                                               @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }
