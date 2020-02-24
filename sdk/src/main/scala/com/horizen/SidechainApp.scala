@@ -13,7 +13,7 @@ import com.horizen.params._
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction._
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.network.message.MessageSpec
@@ -21,6 +21,7 @@ import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject.assistedinject.FactoryModuleBuilder
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
@@ -33,7 +34,7 @@ import scala.collection.mutable
 import scala.util.Try
 import scala.collection.immutable.Map
 import scala.io.Source
-import com.google.inject.Inject
+import com.google.inject._
 import com.google.inject.name.Named
 import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.consensus.ConsensusDataStorage
@@ -58,7 +59,7 @@ class SidechainApp @Inject()
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
-  extends Application with ScorexLogging
+  extends Application with ScorexLogging with Module
 {
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
@@ -212,11 +213,14 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute))
 
+  val injector: Injector = Guice.createInjector(this)
+  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
@@ -238,5 +242,16 @@ class SidechainApp @Inject()
   private def registerStorage(storage: Storage) : Storage = {
     storageList += storage
     storage
+  }
+
+  override def configure(binder: Binder): Unit = {
+    binder.bind(classOf[SidechainBoxesDataCompanion])
+      .toInstance(sidechainBoxesDataCompanion)
+
+    binder.bind(classOf[SidechainProofsCompanion])
+      .toInstance(sidechainProofsCompanion)
+
+    binder.install(new FactoryModuleBuilder()
+      .build(classOf[SidechainCoreTransactionFactory]))
   }
 }

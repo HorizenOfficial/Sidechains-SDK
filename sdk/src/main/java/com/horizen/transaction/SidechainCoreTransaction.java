@@ -3,6 +3,8 @@ package com.horizen.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
 import com.horizen.companion.SidechainBoxesDataCompanion;
@@ -36,13 +38,14 @@ public class SidechainCoreTransaction
     private List<BoxUnlocker<Proposition>> unlockers;
 
 
-    public SidechainCoreTransaction(List<byte[]> inputsIds,
-                                    List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
-                                    List<Proof<Proposition>> proofs,
-                                    long fee,
-                                    long timestamp,
-                                    SidechainBoxesDataCompanion boxesDataCompanion,
-                                    SidechainProofsCompanion proofsCompanion) {
+    @Inject
+    SidechainCoreTransaction(@Assisted("inputIds") List<byte[]> inputsIds,
+                             @Assisted("outputsData") List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
+                             @Assisted("proofs") List<Proof<Proposition>> proofs,
+                             @Assisted("fee") long fee,
+                             @Assisted("timestamp") long timestamp,
+                             SidechainBoxesDataCompanion boxesDataCompanion,
+                             SidechainProofsCompanion proofsCompanion) {
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
