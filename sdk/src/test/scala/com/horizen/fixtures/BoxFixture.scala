@@ -68,7 +68,7 @@ trait BoxFixture
     new CertifierRightBox(new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch), nonce)
   }
 
-  def getCretifierRightBoxList(count: Int): JList[CertifierRightBox] = {
+  def getCertifierRightBoxList(count: Int): JList[CertifierRightBox] = {
     val boxList: JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
 
     for (i <- 1 to count)
@@ -139,6 +139,15 @@ trait BoxFixture
     new WithdrawalRequestBox(new WithdrawalRequestBoxData(key, value), nonce)
   }
 
+  def getWithdrawalRequestsBoxList(count: Int): JList[WithdrawalRequestBox] = {
+    val boxList: JList[WithdrawalRequestBox] = new JArrayList()
+
+    for (i <- 1 to count)
+      boxList.add(getWithdrawalRequestBox)
+
+    boxList
+  }
+
   def getForgerBoxData: ForgerBoxData = {
     new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey)
   }
@@ -152,6 +161,16 @@ trait BoxFixture
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
                    rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
     new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey), nonce)
+  }
+
+
+  def getForgerBoxList(count: Int): JList[ForgerBox] = {
+    val boxList: JList[ForgerBox] = new JArrayList()
+
+    for (i <- 1 to count)
+      boxList.add(getForgerBox)
+
+    boxList
   }
 
   def getRandomBoxId: Array[Byte] = {

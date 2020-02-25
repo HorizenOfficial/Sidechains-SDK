@@ -39,6 +39,8 @@ trait SidechainTypes {
 
   implicit def regularBoxListToScbtList(bl: List[RegularBox]): List[SCB] = bl.asInstanceOf[List[SCB]]
 
+  implicit def forgerBoxListToScbtList(bl: List[ForgerBox]): List[SCB] = bl.asInstanceOf[List[SCB]]
+
   implicit def certifierRightBoxJavaListToScbtJavaList(bl: JList[CertifierRightBox]): JList[SCB] = bl.asInstanceOf[JList[SCB]]
 
   implicit def certifierRightBoxListToScbtList(bl: List[CertifierRightBox]): List[SCB] = bl.asInstanceOf[List[SCB]]

@@ -1,27 +1,26 @@
 package com.horizen.storage
 
 import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap, Optional => JOptional, ArrayList => JArrayList}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
+
+import com.google.common.primitives.{Ints, Longs}
 
 import scala.collection.JavaConverters._
-import com.horizen.{SidechainTypes, WalletBoxSerializer}
-import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox}
+import com.horizen.SidechainTypes
+import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.proposition.Proposition
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import com.horizen.utils.Pair
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.mockito.Mockito._
 import scorex.crypto.hash.Blake2b256
 
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class SidechainStateStorageTest
@@ -32,23 +31,29 @@ class SidechainStateStorageTest
     with MockitoSugar
     with SidechainTypes
 {
-  val mockedBoxStorage : Storage = mock[IODBStoreAdapter]
+  val mockedPhysicalStorage: Storage = mock[IODBStoreAdapter]
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-  val sidechainBoxesCompanion = new SidechainBoxesCompanion(customBoxesSerializers)
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
 
-  val withdrawalEpochInfo = WithdrawalEpochInfo(0,0)
+  val withdrawalEpochInfo = WithdrawalEpochInfo(1, 2)
+
+  val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+  val forgingStakeInfoSerializer = new ListSerializer[ForgingStakeInfo](ForgingStakeInfoSerializer)
+  val forgingStakesToAppendSeq: Seq[ForgingStakeInfo] = getForgerBoxList(2).asScala.map(box => ForgingStakeInfo(box.id(), box.value()))
+  val forgingStakesAmount: Long = forgingStakesToAppendSeq.foldLeft(0L)(_ + _.value)
 
   @Before
-  def setUp() : Unit = {
+  def setUp(): Unit = {
 
     boxList ++= getRegularBoxList(5).asScala.toList
-    boxList ++= getCretifierRightBoxList(5).asScala.toList
-    boxList ++= getCustomBoxList( 5).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+    boxList ++= getCertifierRightBoxList(5).asScala.toList
+    boxList ++= getCustomBoxList(5).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+
 
     for (b <- boxList) {
       storedBoxList.append({
@@ -58,7 +63,7 @@ class SidechainStateStorageTest
       })
     }
 
-    Mockito.when(mockedBoxStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
+    Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
       .thenAnswer(answer => {
         storedBoxList.find(_.getKey.equals(answer.getArgument(0))) match {
           case Some(pair) => JOptional.of(pair.getValue)
@@ -68,8 +73,8 @@ class SidechainStateStorageTest
   }
 
   @Test
-  def testUpdate: Unit = {
-    val stateStorage = new SidechainStateStorage(mockedBoxStorage, sidechainBoxesCompanion)
+  def testUpdate(): Unit = {
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
     var tryRes: Try[SidechainStateStorage] = null
     val expectedException = new IllegalArgumentException("on update exception")
 
@@ -77,16 +82,24 @@ class SidechainStateStorageTest
     assertEquals("Storage must return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
 
     // Test 2: try get non-existing item
-    assertEquals("Storage must NOT contain requested WalletBox.", None, stateStorage.getBox("non-existing id".getBytes()))
+    assertEquals("Storage must NOT contain requested Box.", None, stateStorage.getBox("non-existing id".getBytes()))
 
+    // Data for Test 1:
     val version = getVersion
     val toUpdate = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     toUpdate.add(storedBoxList.head)
-    toUpdate.add(new Pair(new ByteArrayWrapper(Blake2b256.hash("Epoch information".getBytes)),
-                 new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+    // wothdrawals info
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.withdrawalEpochInformationKey),
+      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+    // consensus epoch
+    toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.forgingStakesInfoKey),
+      new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesToAppendSeq.asJava))))
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.forgingStakesAmountKey),
+      new ByteArrayWrapper(Longs.toByteArray(forgingStakesAmount))))
     val toRemove = java.util.Arrays.asList(storedBoxList(2).getKey)
 
-    Mockito.when(mockedBoxStorage.update(
+    Mockito.when(mockedPhysicalStorage.update(
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.anyList[Pair[ByteArrayWrapper, ByteArrayWrapper]](),
       ArgumentMatchers.anyList[ByteArrayWrapper]()))
@@ -104,14 +117,14 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(boxList(2).id()), Set())
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(boxList(2).id()), Seq(), forgingStakesToAppendSeq, consensusEpoch)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getRegularBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(boxList(3).id()), Set())
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(boxList(3).id()), Seq(), Seq(), consensusEpoch)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -134,7 +147,7 @@ class SidechainStateStorageTest
 
     exceptionTrown = false
     try {
-      val stateStorage = new SidechainStateStorage(mockedBoxStorage, null)
+      val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null)
     } catch {
       case e : IllegalArgumentException => exceptionTrown = true
     }
@@ -142,7 +155,7 @@ class SidechainStateStorageTest
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if boxesCompation is not specified.",
       exceptionTrown)
 
-    val stateStorage = new SidechainStateStorage(mockedBoxStorage, sidechainBoxesCompanion)
+    val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
 
     assertTrue("SidechainStorage.rollback. Method must return Failure if NULL version specified.",
       stateStorage.rollback(null).isFailure)
