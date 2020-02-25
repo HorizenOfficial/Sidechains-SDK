@@ -1,10 +1,14 @@
 package com.horizen.storage
 
-import java.util.Optional
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util
+
+import com.google.common.primitives.Bytes
+import com.google.common.primitives.Longs
+import java.util.{Arrays, ArrayList => JArrayList, List => JList}
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
+import com.horizen.block.MainchainBackwardTransferCertificate
 import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
@@ -32,6 +36,10 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
   private[horizen] def getWithdrawalRequestsKey(epoch: Int) : ByteArrayWrapper = {
     calculateKey(Ints.toByteArray(epoch))
+  }
+
+  private[horizen] def getWithdrawalBlockKey(epoch: Int) : ByteArrayWrapper = {
+    calculateKey(("Withdrawal block - " + epoch).getBytes)
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -64,23 +72,32 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
   }
 
-  def getWithdrawalRequests(epoch: Int) : JList[WithdrawalRequestBox] = {
+  def getWithdrawalRequests(epoch: Int) : Seq[WithdrawalRequestBox] = {
     storage.get(getWithdrawalRequestsKey(epoch)) match {
       case v if v.isPresent =>
         withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
-          case Success(withdrawalRequests) => withdrawalRequests
+          case Success(withdrawalRequests) => withdrawalRequests.asScala
           case Failure(exception) =>
             log.error("Error while withdrawal requests parsing.", exception)
-            new JArrayList[WithdrawalRequestBox]()
+            Seq[WithdrawalRequestBox]()
         }
-      case _ => new JArrayList[WithdrawalRequestBox]()
+      case _ => Seq[WithdrawalRequestBox]()
     }
+  }
+
+  def getUnprocessedWithdrawalRequests(epoch: Int) : Option[Seq[WithdrawalRequestBox]] = {
+    storage.get(getWithdrawalBlockKey(epoch)) match {
+      case v if v.isPresent => None
+      case _ => Some(getWithdrawalRequests(epoch))
+    }
+
   }
 
   def update(version : ByteArrayWrapper, withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList : Set[SidechainTypes#SCB],
              boxIdsRemoveList : Set[Array[Byte]],
-             withdrawalRequestAppendList : Set[WithdrawalRequestBox]) : Try[SidechainStateStorage] = Try {
+             withdrawalRequestAppendList : Set[WithdrawalRequestBox],
+             mainchainBTCList: Seq[MainchainBackwardTransferCertificate]) : Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -103,13 +120,30 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     if (withdrawalRequestAppendList.nonEmpty) {
-      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch)
-
-      withdrawalRequestList.addAll(withdrawalRequestAppendList.asJavaCollection)
+      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch) ++ withdrawalRequestAppendList
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
-        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
+        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList.asJava))))
 
+    }
+
+    for (btc <- mainchainBTCList.filter(_.epochNumber == withdrawalEpochInfo.epoch - 1)) {
+
+      getUnprocessedWithdrawalRequests(withdrawalEpochInfo.epoch - 1) match {
+        case Some(prevWithdrawalRequestList) =>
+          if (prevWithdrawalRequestList.size == btc.outputs.size) {
+            var isEqual = true
+            for (o <- btc.outputs)
+              isEqual &= prevWithdrawalRequestList.exists (r => {
+                util.Arrays.equals (r.proposition ().bytes (), o.pubKeyHash) &&
+                  r.value().equals (o.originalAmount)
+              })
+
+            if (isEqual)
+              updateList.add(new JPair(getWithdrawalBlockKey(btc.epochNumber),
+                version))
+          }
+      }
     }
 
     storage.update(version,

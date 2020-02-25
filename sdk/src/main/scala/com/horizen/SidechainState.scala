@@ -1,8 +1,8 @@
 package com.horizen
 
-import java.util.{Optional => JOptional, List => JList}
+import java.util.{List => JList, Optional => JOptional}
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, WithdrawalRequestBox}
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
@@ -60,11 +60,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   }
 
   def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch).asScala.toList
+    stateStorage.getWithdrawalRequests(epoch).toList
   }
 
   override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch)
+    stateStorage.getWithdrawalRequests(epoch).asJava
   }
 
   // Note: aggregate New boxes and spent boxes for Block
@@ -127,7 +127,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)),
-            this.params)) // check applyChanges implementation
+            this.params), mod.mainchainBlocks.map(_.backwardTransferCertificate.get)) // check applyChanges implementation
       })
     }
   }
@@ -138,7 +138,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   //    if ok -> return updated SDKState -> update SDKState store
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo): Try[SidechainState] = Try {
+  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag,
+                            withdrawalEpochInfo: WithdrawalEpochInfo, mainchainBTCList: Seq[MainchainBackwardTransferCertificate]): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this, version.data,
       changes.toAppend.map(_.box).asJava,
@@ -150,7 +151,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
                   changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
                   changes.toRemove.map(_.boxId.array).toSet,
                   changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet)
+                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet, mainchainBTCList)
           .get,
           this.params, newVersion, appState)
       case Failure(exception) => throw exception

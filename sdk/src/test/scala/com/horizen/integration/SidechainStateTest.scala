@@ -3,7 +3,7 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBackwardTransferCertificate, MainchainBlockReference, SidechainBlock}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
@@ -102,7 +102,7 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox]())
+    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox](), Seq[MainchainBackwardTransferCertificate]())
 
   }
 

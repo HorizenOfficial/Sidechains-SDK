@@ -24,7 +24,8 @@ object SidechainSettingsReader
     val scorexSettings = config.as[ScorexSettings]("scorex")
     val genesisSetting = config.as[GenesisDataSettings]("scorex.genesis")
     val walletSetting = config.as[WalletSettings]("scorex.wallet")
-    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration, walletSetting)
+    val mainchainSettings = config.as[MainchainSettings]("scorex.mainchain")
+    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration, walletSetting, mainchainSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

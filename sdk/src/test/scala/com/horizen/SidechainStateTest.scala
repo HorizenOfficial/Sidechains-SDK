@@ -2,10 +2,9 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBackwardTransferCertificate, MainchainBlockReference, SidechainBlock}
 import com.horizen.box.{RegularBox, WithdrawalRequestBox}
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.block.SidechainBlock
 import com.horizen.box.RegularBox
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -211,7 +210,8 @@ class SidechainStateTest
       ArgumentMatchers.any[WithdrawalEpochInfo](),
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[Array[Byte]]](),
-      ArgumentMatchers.any[Set[WithdrawalRequestBox]]()))
+      ArgumentMatchers.any[Set[WithdrawalRequestBox]](),
+      ArgumentMatchers.any[Seq[MainchainBackwardTransferCertificate]]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)

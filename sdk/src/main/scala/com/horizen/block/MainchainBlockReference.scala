@@ -36,7 +36,8 @@ class MainchainBlockReference(
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
                     @JsonProperty("merkleRoots")
                     @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
-                    val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]]
+                    val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]],
+                    val backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
                     )
   extends BytesSerializable
 {
@@ -112,7 +113,7 @@ object MainchainBlockReference {
           scIds = scIds ++ tx.getRelatedSidechains
 
         if (scIds.isEmpty)
-          Success(new MainchainBlockReference(header, None, None))
+          Success(new MainchainBlockReference(header, None, None, None))
         else {
           var aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
           for (id <- scIds) {
@@ -130,7 +131,7 @@ object MainchainBlockReference {
 
           val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
 
-          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap)))
+          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap), None))
         }
       case Failure(e) =>
         Failure(e)
@@ -250,6 +251,6 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
         None
     }
 
-    new MainchainBlockReference(header, mc2scTx, SCMap)
+    new MainchainBlockReference(header, mc2scTx, SCMap, None)
   }
 }

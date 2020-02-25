@@ -1,5 +1,6 @@
 package com.horizen
 
+import com.horizen.block.MainchainBackwardTransferCertificate
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
@@ -21,7 +22,9 @@ trait BoxMinimalState[P <: Proposition,
 
   def changes(mod: M): Try[BoxStateChanges[P, BX]]
 
-  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo): Try[BMS]
+  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag,
+                   withdrawalEpochInfo: WithdrawalEpochInfo,
+                   mainchainBTCList: Seq[MainchainBackwardTransferCertificate]): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

@@ -222,6 +222,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
         res = res :+ new MainchainBlockReference(
           MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time),
           null,
+          null,
           null)
         tmpPrevMCBlockHash = powRelatedData.mcblockhash
       }
