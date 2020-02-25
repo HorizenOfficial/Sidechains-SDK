@@ -26,7 +26,7 @@ public final class RegularTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
     private List<RegularBox> inputs;
-    private List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs;
+    private List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs;
     private List<Signature25519> signatures;
 
     private long fee;
@@ -38,9 +38,9 @@ public final class RegularTransaction
     // Serializers definition
     private static ListSerializer<RegularBox> boxListSerializer =
             new ListSerializer<>(RegularBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-    private static ListSerializer<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataListSerializer =
+    private static ListSerializer<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
-                    new HashMap<Byte, BoxDataSerializer>() {{
+                    new HashMap<Byte, NoncedBoxDataSerializer>() {{
                         put(RegularBoxId.id(), RegularBoxDataSerializer.getSerializer());
                         put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
                         put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
@@ -50,7 +50,7 @@ public final class RegularTransaction
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
     private RegularTransaction(List<RegularBox> inputs,
-                               List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
+                               List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
                                long fee,
                                long timestamp) {
@@ -98,7 +98,7 @@ public final class RegularTransaction
             newBoxes = new ArrayList<>();
             for (int i = 0; i < outputs.size(); i++) {
                 long nonce = getNewBoxNonce(outputs.get(i).proposition(), i);
-                BoxData boxData = outputs.get(i);
+                NoncedBoxData boxData = outputs.get(i);
                 if(boxData instanceof RegularBoxData) {
                     newBoxes.add((NoncedBox)new RegularBox((RegularBoxData) boxData, nonce));
                 } else if(boxData instanceof WithdrawalRequestBoxData) {
@@ -137,7 +137,7 @@ public final class RegularTransaction
             return false;
 
         Long outputsAmount = 0L;
-        for(BoxData output: outputs) {
+        for(NoncedBoxData output: outputs) {
             if (output.value() <= 0)
                 return false;
             outputsAmount += output.value();
@@ -204,7 +204,7 @@ public final class RegularTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs = boxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs = boxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
@@ -217,8 +217,8 @@ public final class RegularTransaction
         return new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
     }
 
-    private static Boolean checkSupportedBoxDataTypes(List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
-        for(BoxData boxData: boxDataList) {
+    private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
+        for(NoncedBoxData boxData: boxDataList) {
             if (!(boxData instanceof RegularBoxData)
                     && !(boxData instanceof WithdrawalRequestBoxData)
                     && !(boxData instanceof ForgerBoxData)
@@ -229,7 +229,7 @@ public final class RegularTransaction
     }
 
     public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
-                                            List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
+                                            List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                             long fee,
                                             long timestamp) {
         if(from == null || outputs == null)

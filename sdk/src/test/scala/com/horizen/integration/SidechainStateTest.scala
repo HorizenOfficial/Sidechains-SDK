@@ -4,9 +4,8 @@ import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
-
 import scala.collection.JavaConverters._
 import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
@@ -55,7 +54,7 @@ class SidechainStateTest
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

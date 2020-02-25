@@ -6,7 +6,7 @@ import com.horizen.block.MainchainBlockReference
 import com.horizen.box._
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
-import com.horizen.box.data.{BoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -55,7 +55,7 @@ class SidechainStateTest
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

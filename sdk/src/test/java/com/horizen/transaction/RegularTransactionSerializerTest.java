@@ -2,7 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
-import com.horizen.box.data.BoxData;
+import com.horizen.box.data.NoncedBoxData;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.RegularBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
@@ -46,7 +46,7 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
 
-        List<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
+        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new RegularBoxData(pk4.publicImage(), 10L));
         to.add(new RegularBoxData(pk5.publicImage(), 20L));
         to.add(new RegularBoxData(pk6.publicImage(), 30L));

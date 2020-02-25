@@ -4,7 +4,7 @@ import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public interface BoxDataSerializer<D extends BoxData>
+public interface NoncedBoxDataSerializer<D extends NoncedBoxData>
         extends ScorexSerializer<D>
 {
     @Override

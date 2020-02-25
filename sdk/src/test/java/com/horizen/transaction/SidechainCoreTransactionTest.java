@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
-import com.horizen.box.data.BoxData;
+import com.horizen.box.data.NoncedBoxData;
 import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.fixtures.BoxFixtureClass;
@@ -22,10 +22,10 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
     public void creation() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)getRegularBoxData());
-        outputsData.add((BoxData)getForgerBoxData());
-        outputsData.add((BoxData)getWithdrawalRequestBoxData());
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData)getForgerBoxData());
+        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -109,10 +109,10 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
     public void semanticValidity() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)getRegularBoxData());
-        outputsData.add((BoxData)getForgerBoxData());
-        outputsData.add((BoxData)getWithdrawalRequestBoxData());
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData)getForgerBoxData());
+        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());

@@ -1,8 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.box.CertifierRightBox;
 import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
 import com.horizen.box.data.*;
 import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
@@ -21,9 +19,7 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,11 +33,11 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void serializeCoreData() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)getRegularBoxData());
-        outputsData.add((BoxData)getForgerBoxData());
-        outputsData.add((BoxData)getCertifierRightBoxData());
-        outputsData.add((BoxData)getWithdrawalRequestBoxData());
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData)getForgerBoxData());
+        outputsData.add((NoncedBoxData)getCertifierRightBoxData());
+        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -72,10 +68,10 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void serializeCustomBoxData() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)getRegularBoxData());
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)getRegularBoxData());
         // Add custom box data
-        outputsData.add((BoxData)getCustomBoxData());
+        outputsData.add((NoncedBoxData)getCustomBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -103,8 +99,8 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
 
 
         // Test 2: create transaction with CustomBoxData and WITH support of CustomBox serializer. Serialization expected to be successful.
-        HashMap<Byte, BoxDataSerializer<BoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
-        customBoxDataSerializers.put(CustomBoxData.DATA_TYPE_ID, (BoxDataSerializer)CustomBoxDataSerializer.getSerializer());
+        HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
+        customBoxDataSerializers.put(CustomBoxData.DATA_TYPE_ID, (NoncedBoxDataSerializer)CustomBoxDataSerializer.getSerializer());
         SidechainBoxesDataCompanion boxesDataCompanionWithCustomSerializer = new SidechainBoxesDataCompanion(customBoxDataSerializers);
 
         transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanionWithCustomSerializer, proofsCompanion);
@@ -129,8 +125,8 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void serializeCustomProofs() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)getRegularBoxData());
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)getRegularBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -186,10 +182,10 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void regressionTest() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));
 
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((BoxData)new RegularBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
-        outputsData.add((BoxData)new CertifierRightBoxData(getPrivateKey25519("2".getBytes()).publicImage(), 200L, 10L));
-        outputsData.add((BoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((NoncedBoxData)new RegularBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
+        outputsData.add((NoncedBoxData)new CertifierRightBoxData(getPrivateKey25519("2".getBytes()).publicImage(), 200L, 10L));
+        outputsData.add((NoncedBoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)new Signature25519(BytesUtils.fromHexString("34098ab081a042cb9a4da5faf05c9d1b970cf365a776acd356e980313335ac55eb41d80a6aa816e311cd1ed488b18ef8a10f278b4de19a5b5865a16f6e5bb001")));

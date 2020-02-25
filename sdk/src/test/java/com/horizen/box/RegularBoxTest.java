@@ -57,14 +57,14 @@ public class RegularBoxTest extends BoxFixtureClass
 
 
         RegularBox box4 = getRegularBox(proposition, nonce + 1, value);
-        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box4.hashCode());
+        assertNotEquals("Boxes hash codes expected to be different", box1.hashCode(), box4.hashCode());
         assertNotEquals("Boxes expected to be different", box1, box4);
         assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box4.id()));
 
 
         RegularBox box5 = getRegularBox(proposition, nonce, value + 1);
-        assertEquals("Boxes hash codes expected to be equal", box1.hashCode(), box5.hashCode());
+        assertNotEquals("Boxes hash codes expected to be different", box1.hashCode(), box5.hashCode());
         assertNotEquals("Boxes expected to be different", box1, box5);
-        assertFalse("Boxes ids expected to be equal", Arrays.equals(box1.id(), box5.id()));
+        assertFalse("Boxes ids expected to be different", Arrays.equals(box1.id(), box5.id()));
     }
 }

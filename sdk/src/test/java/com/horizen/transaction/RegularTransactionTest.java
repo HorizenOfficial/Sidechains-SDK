@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.*;
-import com.horizen.box.data.BoxData;
+import com.horizen.box.data.NoncedBoxData;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.RegularBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
@@ -28,7 +28,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
     long fee;
     long timestamp;
     ArrayList<Pair<RegularBox, PrivateKey25519>> from;
-    ArrayList<BoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
+    ArrayList<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
 
     ArrayList<Long> expectedNonces;
 
@@ -71,7 +71,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
         assertEquals("Exception during RegularTransaction creation: new boxes count is different!", to.size(), newBoxes.size());
         for(int i = 0; i < to.size(); i++) {
-            BoxData expected = to.get(i);
+            NoncedBoxData expected = to.get(i);
             NoncedBox actual = newBoxes.get(i);
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d proposition is different!", i), expected.proposition(), actual.proposition());
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d value is different!", i), expected.value(), actual.value());

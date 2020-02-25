@@ -8,6 +8,8 @@ public final class Utils
 {
     private Utils() {}
 
+    public static final byte[] ZEROS_HASH = new byte[32];
+
     public static final int SHA256_LENGTH = 32;
 
     public static byte[] doubleSHA256Hash(byte[] bytes) {

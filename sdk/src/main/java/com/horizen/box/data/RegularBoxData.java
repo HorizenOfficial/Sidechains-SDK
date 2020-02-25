@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.RegularBoxDataId;
 
-public final class RegularBoxData extends AbstractBoxData<PublicKey25519Proposition, RegularBox, RegularBoxData> {
+public final class RegularBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, RegularBox, RegularBoxData> {
     public RegularBoxData(PublicKey25519Proposition proposition, long value) {
         super(proposition, value);
     }
@@ -29,7 +29,7 @@ public final class RegularBoxData extends AbstractBoxData<PublicKey25519Proposit
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return RegularBoxDataSerializer.getSerializer();
     }
 
