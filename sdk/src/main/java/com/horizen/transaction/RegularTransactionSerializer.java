@@ -4,7 +4,7 @@ import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 
-public class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
+public final class RegularTransactionSerializer implements TransactionSerializer<RegularTransaction>
 {
     private static RegularTransactionSerializer serializer;
 

@@ -10,18 +10,19 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.SidechainBlockFixture
+import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.MainNetParams
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer, TransactionSerializer}
+import com.horizen.transaction._
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -42,17 +43,17 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture {
+abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
-  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   //generateGenesisBlock(sidechainTransactionsCompanion)
   private val genesisBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
     PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-    SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]()), null).get
+    sidechainTransactionsCompanion, null).get
 
   private val inetAddr1 = new InetSocketAddress("92.92.92.92", 27017)
   private val inetAddr2 = new InetSocketAddress("93.93.93.93", 27017)
@@ -188,7 +189,11 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   implicit def default() = RouteTestTimeout(3.second)
 
-  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef).route
+  val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
+  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
+  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef,
+    sidechainTransactionsCompanion, sidechainCoreTransactionFactory).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route

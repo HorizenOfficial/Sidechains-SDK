@@ -8,12 +8,12 @@ import akka.actor.ActorRef
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion._
 import com.horizen.params._
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction._
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.network.message.MessageSpec
@@ -21,6 +21,7 @@ import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject.assistedinject.FactoryModuleBuilder
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
@@ -33,15 +34,19 @@ import scala.collection.mutable
 import scala.util.Try
 import scala.collection.immutable.Map
 import scala.io.Source
-import com.google.inject.Inject
+import com.google.inject._
 import com.google.inject.name.Named
+import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.proof.ProofSerializer
 import com.horizen.utils.BytesUtils
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
+   @Named("CustomBoxDataSerializers") val customBoxDataSerializers: JHashMap[JByte, NoncedBoxDataSerializer[SidechainTypes#SCBD]],
    @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomProofSerializers") val customProofSerializers: JHashMap[JByte, ProofSerializer[SidechainTypes#SCPR]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
@@ -50,11 +55,12 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
+   @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
-  extends Application with ScorexLogging
+  extends Application with ScorexLogging with Module
 {
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
@@ -77,7 +83,10 @@ class SidechainApp @Inject()
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  protected val sidechainBoxesDataCompanion: SidechainBoxesDataCompanion = SidechainBoxesDataCompanion(customBoxDataSerializers)
+  protected val sidechainProofsCompanion: SidechainProofsCompanion = SidechainProofsCompanion(customProofSerializers)
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion =
+    SidechainTransactionsCompanion(customTransactionSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
 
   // Deserialize genesis block bytes
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -138,6 +147,7 @@ class SidechainApp @Inject()
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
+  protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -150,8 +160,14 @@ class SidechainApp @Inject()
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
-    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    sidechainWalletBoxStorage,
+    sidechainSecretStorage,
+    sidechainWalletTransactionStorage,
+    forgingBoxesMerklePathStorage,
+    params, timeProvider,
+    applicationWallet,
+    applicationState,
+    genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
@@ -205,11 +221,14 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute))
 
+  val injector: Injector = Guice.createInjector(this)
+  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
@@ -231,5 +250,16 @@ class SidechainApp @Inject()
   private def registerStorage(storage: Storage) : Storage = {
     storageList += storage
     storage
+  }
+
+  override def configure(binder: Binder): Unit = {
+    binder.bind(classOf[SidechainBoxesDataCompanion])
+      .toInstance(sidechainBoxesDataCompanion)
+
+    binder.bind(classOf[SidechainProofsCompanion])
+      .toInstance(sidechainProofsCompanion)
+
+    binder.install(new FactoryModuleBuilder()
+      .build(classOf[SidechainCoreTransactionFactory]))
   }
 }

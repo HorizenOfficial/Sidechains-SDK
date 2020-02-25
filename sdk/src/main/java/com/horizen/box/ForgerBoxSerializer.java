@@ -3,7 +3,7 @@ package com.horizen.box;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class ForgerBoxSerializer implements BoxSerializer<ForgerBox> {
+public final class ForgerBoxSerializer implements BoxSerializer<ForgerBox> {
 
     private static ForgerBoxSerializer serializer;
 

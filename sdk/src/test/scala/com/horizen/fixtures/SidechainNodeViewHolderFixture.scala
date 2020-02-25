@@ -6,6 +6,7 @@ import java.util.{HashMap => JHashMap}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
+import com.google.inject.{Guice, Injector}
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -16,7 +17,7 @@ import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetP
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSerializer}
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
@@ -27,6 +28,7 @@ import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
   extends IODBStoreFixture
+    with CompanionsFixture
 {
 
   val classLoader: ClassLoader = getClass.getClassLoader
@@ -44,7 +46,7 @@ trait SidechainNodeViewHolderFixture
 
   val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
-  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
@@ -108,6 +110,8 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
     getStorage(),
     sidechainTransactionsCompanion)
+  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(
+    getStorage())
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -120,8 +124,15 @@ trait SidechainNodeViewHolderFixture
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
-    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, genesisBlock)
+    sidechainWalletBoxStorage,
+    sidechainSecretStorage,
+    sidechainWalletTransactionStorage,
+    forgingBoxesMerklePathStorage,
+    params,
+    timeProvider,
+    defaultApplicationWallet,
+    defaultApplicationState,
+    genesisBlock)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
@@ -130,7 +141,10 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef)
+    val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
+    val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory)
   }
 
 }

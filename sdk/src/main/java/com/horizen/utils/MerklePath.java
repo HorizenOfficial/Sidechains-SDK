@@ -1,11 +1,6 @@
 package com.horizen.utils;
 
-import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.utils.Pair;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -14,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class MerklePath {
-    List<Pair<Byte, byte[]>> _merklePath;
+    List<Pair<Byte, byte[]>> merklePath;
 
     // Merkle Tree:
     //
@@ -40,17 +35,17 @@ public class MerklePath {
                 throw new IllegalArgumentException("Some of merkle path nodes contains broken bytes. Bytes expected to be SHA256 hash of length 32.");
         }
 
-        _merklePath = merklePath;
+        this.merklePath = merklePath;
     }
 
     public List<Pair<Byte, byte[]>> merklePathList() {
-        return Collections.unmodifiableList(_merklePath);
+        return Collections.unmodifiableList(merklePath);
     }
 
     // apply merkle path to element and return resulting hash, which must be a Merkle Root hash of corresponding MerkleTree.
     public byte[] apply(byte[] leaf) {
         byte[] tmp = leaf;
-        for(Pair<Byte, byte[]> node : _merklePath) {
+        for(Pair<Byte, byte[]> node : merklePath) {
             if(node.getKey() == (byte)0) // concatenate current node value LEFT to tmp
                 tmp = BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(node.getValue()), BytesUtils.reverseBytes(tmp)));
             else // concatenate current node value RIGHT to tmp
@@ -60,10 +55,10 @@ public class MerklePath {
     }
 
     public byte[] bytes() {
-        int size = _merklePath.size();
+        int size = merklePath.size();
         ByteArrayOutputStream resStream = new ByteArrayOutputStream();
         resStream.write(Ints.toByteArray(size), 0, 4);
-        for(Pair<Byte, byte[]> pair : _merklePath) {
+        for(Pair<Byte, byte[]> pair : merklePath) {
             resStream.write(pair.getKey());
             resStream.write(pair.getValue(), 0, Utils.SHA256_LENGTH);
         }
@@ -95,5 +90,35 @@ public class MerklePath {
         }
 
         return new MerklePath(merklePath);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        for(Pair<Byte, byte[]> pair : merklePath) {
+            result += 31 * result + pair.getKey().intValue() + Arrays.hashCode(pair.getValue());
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        if (obj == this)
+            return true;
+        MerklePath merklePath = (MerklePath) obj;
+
+        if(this.merklePath.size() != merklePath.merklePath.size())
+            return false;
+        for(int i = 0; i < this.merklePath.size(); i++) {
+            Pair<Byte, byte[]> pair = this.merklePath.get(i);
+            Pair<Byte, byte[]> otherPair = merklePath.merklePath.get(i);
+            if(!pair.getKey().equals(otherPair.getKey()) || !Arrays.equals(pair.getValue(), otherPair.getValue()))
+                return false;
+        }
+        return true;
     }
 }

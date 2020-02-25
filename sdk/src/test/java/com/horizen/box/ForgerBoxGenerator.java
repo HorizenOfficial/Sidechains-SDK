@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
@@ -22,7 +23,7 @@ public class ForgerBoxGenerator {
         PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
 
         VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey())._2();
-        return new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
+        return new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPubKey), nonce);
     }
 
     public static ForgerBox generateForgerBox() {
