@@ -27,7 +27,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               walletBoxStorage: SidechainWalletBoxStorage,
                               secretStorage: SidechainSecretStorage,
                               walletTransactionStorage: SidechainWalletTransactionStorage,
-                              forgingBoxesMerklePathStorage: ForgingBoxesMerklePathStorage,
+                              forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
                               params: NetworkParams,
                               timeProvider: NetworkTimeProvider,
                               applicationWallet: ApplicationWallet,
@@ -59,7 +59,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- SidechainState.restoreState(stateStorage, params, applicationState)
     wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes,
-      walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesMerklePathStorage, applicationWallet)
+      walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
     pool <- Some(SidechainMemoryPool.emptyPool)
   } yield (history, state, wallet, pool)
 
@@ -73,7 +73,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         historyBlockValidators(params), modId, StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
 
       wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesMerklePathStorage, applicationWallet, genesisBlock, consensusEpochInfo)
+        walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet, genesisBlock, consensusEpochInfo)
 
       pool <- Success(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)
@@ -260,14 +260,14 @@ object SidechainNodeViewHolderRef {
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
-            forgingBoxesMerklePathStorage: ForgingBoxesMerklePathStorage,
+            forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesMerklePathStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -276,7 +276,7 @@ object SidechainNodeViewHolderRef {
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
-            forgingBoxesMerklePathStorage: ForgingBoxesMerklePathStorage,
+            forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
@@ -284,7 +284,7 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesMerklePathStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -294,7 +294,7 @@ object SidechainNodeViewHolderRef {
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
-            forgingBoxesMerklePathStorage: ForgingBoxesMerklePathStorage,
+            forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
@@ -302,5 +302,5 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesMerklePathStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }

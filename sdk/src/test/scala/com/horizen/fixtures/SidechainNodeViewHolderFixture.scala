@@ -109,7 +109,7 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
     getStorage(),
     sidechainTransactionsCompanion)
-  val forgingBoxesMerklePathStorage = new ForgingBoxesMerklePathStorage(
+  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(
     getStorage())
 
   // Append genesis secrets if we start the node first time

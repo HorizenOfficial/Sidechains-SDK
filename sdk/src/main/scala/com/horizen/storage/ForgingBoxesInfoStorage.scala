@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.utils.{ForgerBoxMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ByteArrayWrapper, ListSerializer, Pair}
+import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ListSerializer, Pair}
 import scorex.util.ScorexLogging
 import scorex.crypto.hash.Blake2b256
 
@@ -11,15 +11,19 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
 
+import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
-class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes with ScorexLogging
+
+class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with ScorexLogging
 {
   require(storage != null, "Storage must be NOT NULL.")
 
   private[horizen] def epochKey(epoch: ConsensusEpochNumber): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"epoch$epoch"))
+  private[horizen] val forgerBoxesKey: ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash("forgerBoxesKey".getBytes()))
   private[horizen] val maxNumberOfStoredEpochs: Int = 3
 
   private[horizen] val forgerBoxMerklePathInfoListSerializer = new ListSerializer[ForgerBoxMerklePathInfo](ForgerBoxMerklePathInfoSerializer)
+  private[horizen] val forgerBoxListSerializer = new ListSerializer[ForgerBox](ForgerBoxSerializer.getSerializer)
 
   private def nextVersion: ByteArrayWrapper = {
     val version = new Array[Byte](32)
@@ -33,7 +37,7 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
 
   // Current storage is updated with consensus epoch info between block modifiers application.
   // The random version here is not used as a point to rollback.
-  def update(epoch: ConsensusEpochNumber, boxMerklePathInfoSeq: Seq[ForgerBoxMerklePathInfo]): Try[ForgingBoxesMerklePathStorage] = Try {
+  def updateForgerBoxMerklePathInfo(epoch: ConsensusEpochNumber, boxMerklePathInfoSeq: Seq[ForgerBoxMerklePathInfo]): Try[ForgingBoxesInfoStorage] = Try {
     require(boxMerklePathInfoSeq != null, "Seq of boxMerklePathInfoSeq to append must be NOT NULL. Use empty Seq instead.")
 
     // remove data of the epoch with number (epoch - maxNumberOfStoredEpochs) if exists.
@@ -50,9 +54,34 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
 
   // When new block applied we anchor the new version to its id.
   // This version can be used as a rollback point during rollback process.
-  def updateVersion(version: ByteArrayWrapper): Try[ForgingBoxesMerklePathStorage] = Try {
-    storage.update(version, new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]](), new JArrayList[ByteArrayWrapper]())
+  def updateForgerBoxes(version: ByteArrayWrapper,
+                        forgerBoxesToAppendSeq: Seq[ForgerBox],
+                        boxIdsRemoveSeq: Seq[Array[Byte]]): Try[ForgingBoxesInfoStorage] = Try {
+    val toUpdate: JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList()
+
+    val currentForgerBoxSeq: Seq[ForgerBox] = getForgerBoxes.getOrElse(Seq())
+    val existentForgerBoxSeq: Seq[ForgerBox] = currentForgerBoxSeq.filterNot(box => boxIdsRemoveSeq.exists(removedId => box.id().sameElements(removedId)))
+    val newForgerBoxSeq = existentForgerBoxSeq ++ forgerBoxesToAppendSeq
+
+    // Update only if current ForgerBox sequence was changed: some boxes were removed and/or some boxes were added.
+    if(existentForgerBoxSeq.size != currentForgerBoxSeq.size || forgerBoxesToAppendSeq.nonEmpty)
+      toUpdate.add(new Pair(forgerBoxesKey, new ByteArrayWrapper(forgerBoxListSerializer.toBytes(newForgerBoxSeq.asJava))))
+
+    storage.update(version, toUpdate, new JArrayList())
     this
+  }
+
+  def getForgerBoxes: Option[Seq[ForgerBox]] = {
+    storage.get(forgerBoxesKey).asScala match {
+      case Some(baw) =>
+        forgerBoxListSerializer.parseBytesTry(baw.data) match {
+          case Success(forgerBoxes) => Some(forgerBoxes.asScala)
+          case Failure(exception) =>
+            log.error("Error while forger boxes list parsing.", exception)
+            None
+        }
+      case _ => None
+    }
   }
 
   def getForgerBoxMerklePathInfoForEpoch(epoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
@@ -76,7 +105,7 @@ class ForgingBoxesMerklePathStorage(storage: Storage) extends SidechainTypes wit
     storage.rollbackVersions().asScala.toList
   }
 
-  def rollback(version: ByteArrayWrapper): Try[ForgingBoxesMerklePathStorage] = Try {
+  def rollback(version: ByteArrayWrapper): Try[ForgingBoxesInfoStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     this
