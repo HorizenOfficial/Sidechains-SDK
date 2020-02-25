@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainComparisonTestFramework
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
-from util import assert_true, assert_raises
+from test_framework.util import assert_true, assert_raises
 
 """
     Show correctness of Comparison Test Framework. Setup different MC & SC nodes with different zends/jars respectively and check that all nodes are alive.
