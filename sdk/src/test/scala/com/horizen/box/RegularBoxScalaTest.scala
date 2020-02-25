@@ -1,6 +1,7 @@
 package com.horizen.box
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, Ed25519}
@@ -10,7 +11,7 @@ import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 class RegularBoxScalaTest
-  extends JUnitSuite
+  extends JUnitSuite with BoxFixture
 {
 
   @Test
@@ -23,7 +24,7 @@ class RegularBoxScalaTest
     val proposition = new PublicKey25519Proposition(publicKey)
     val nonce = 12345
     val value = 10
-    val box = new RegularBox(proposition, nonce, value)
+    val box = getRegularBox(proposition, nonce, value)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()

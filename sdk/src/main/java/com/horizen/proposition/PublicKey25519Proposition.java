@@ -35,6 +35,7 @@ public final class PublicKey25519Proposition
         _pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
     }
 
+    @Override
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
     }

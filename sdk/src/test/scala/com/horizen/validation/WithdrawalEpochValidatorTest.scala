@@ -9,6 +9,7 @@ import com.horizen.box.NoncedBox
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{ForgerBoxFixture, MainchainBlockReferenceFixture, TransactionFixture, VrfGenerator}
+import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, TransactionFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainHistoryStorage
@@ -21,12 +22,14 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
+import org.junit.Assert.assertTrue
+import scorex.core.consensus.ModifierSemanticValidity
 
 import scala.io.Source
 
-class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture {
+class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture with CompanionsFixture{
 
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val params: NetworkParams = mock[NetworkParams]
   val historyStorage: SidechainHistoryStorage = mock[SidechainHistoryStorage]
@@ -277,7 +280,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
-      Seq(getTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
+      Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
       ownerKey8,
       forgerBox8,
       VrfGenerator.generateProof(456L),

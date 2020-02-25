@@ -95,7 +95,15 @@
 			<version>4.2.2</version>
 		</dependency>
 
-		<dependency>
+        <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-assistedinject</artifactId>
+            <version>4.2.2</version>
+        </dependency>
+
+
+        <dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
@@ -257,6 +265,7 @@
 					<include>privatekey25519_hex</include>
 					<include>regulartransaction_hex</include>
 					<include>regularbox_hex</include>
+                    <include>forgerrbox_hex</include>
 					<include>certifierrightbox_hex</include>
 					<include>sidechainblockinfo_hex</include>
 					<include>sidechainsyncinfo_hex</include>
@@ -264,6 +273,8 @@
 					<include>mcblock473173</include>
 					<include>withdrawalrequestbox_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>
+                    <include>boxmerklepathinfo_hex</include>
+                    <include>sidechaincoretransaction_hex</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->

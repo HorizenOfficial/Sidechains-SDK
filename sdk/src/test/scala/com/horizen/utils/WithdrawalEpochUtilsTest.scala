@@ -13,11 +13,14 @@ import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.bytesToId
+import java.util.{HashMap => JHashMap}
+
+import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture}
 
 
-class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture {
+class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with CompanionsFixture {
 
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val params: NetworkParams = mock[NetworkParams]
   val withdrawalEpochLength: Int = 100
 

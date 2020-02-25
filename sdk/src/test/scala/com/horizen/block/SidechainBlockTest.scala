@@ -6,7 +6,7 @@ import java.util.{HashMap => JHashMap}
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.SidechainBlockFixture
+import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.BytesUtils
@@ -17,10 +17,11 @@ import scorex.util.idToBytes
 
 class SidechainBlockTest
   extends JUnitSuite
+  with CompanionsFixture
   with SidechainBlockFixture
 {
 
-  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   @Test
   def testToJson(): Unit = {

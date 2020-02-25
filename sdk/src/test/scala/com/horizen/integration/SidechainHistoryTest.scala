@@ -8,7 +8,7 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
-import com.horizen.fixtures.{IODBStoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
+import com.horizen.fixtures.{CompanionsFixture, IODBStoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -27,13 +27,17 @@ import scorex.util.idToBytes
 
 import scala.util.{Failure, Success}
 
-class SidechainHistoryTest extends JUnitSuite with MockitoSugar
-    with SidechainBlockFixture with SidechainBlockInfoFixture
-    with IODBStoreFixture with scorex.core.utils.ScorexEncoding {
+class SidechainHistoryTest extends JUnitSuite
+  with MockitoSugar
+  with SidechainBlockFixture
+  with SidechainBlockInfoFixture
+  with IODBStoreFixture
+  with CompanionsFixture
+  with scorex.core.utils.ScorexEncoding {
 
   var customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getTransactionsCompanionWithCustomTransactions(customTransactionSerializers)
 
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestamp = Some(100000))
   val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(

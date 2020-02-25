@@ -1,6 +1,9 @@
 package com.horizen.proof;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.Proposition;
+import com.horizen.serialization.Views;
 
 /*
 trait Proof[P <: Proposition] extends BytesSerializable {
@@ -10,6 +13,7 @@ trait Proof[P <: Proposition] extends BytesSerializable {
 trait ProofOfKnowledge[S <: Secret, P <: ProofOfKnowledgeProposition[S]] extends Proof[P]
  */
 
+@JsonView(Views.Default.class)
 public interface Proof<P extends Proposition>
     extends scorex.core.transaction.proof.Proof<P>
 {
@@ -19,5 +23,8 @@ public interface Proof<P extends Proposition>
 
     @Override
     ProofSerializer serializer();
+
+    @JsonProperty("typeId")
+    byte proofTypeId();
 }
 

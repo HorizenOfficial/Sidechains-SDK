@@ -24,27 +24,38 @@ class SidechainBoxesCompanionTest
   val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
   val sidechainBoxesCompanionCore = SidechainBoxesCompanion(new JHashMap())
 
-  @Test def testCore(): Unit = {
+  @Test
+  def testCore(): Unit = {
     // Test 1: RegularBox serialization/deserialization
-    val regulerBox = getRegularBox()
+    val regularBox = getRegularBox
 
-    val regularBoxBytes = sidechainBoxesCompanion.toBytes(regulerBox)
+    val regularBoxBytes = sidechainBoxesCompanion.toBytes(regularBox)
 
-    assertEquals("Type of serialized box must be RegularBox.", regulerBox.boxTypeId(), regularBoxBytes(0))
-    assertEquals("Deserialization must restore same box.", regulerBox, sidechainBoxesCompanion.parseBytesTry(regularBoxBytes).get)
+    assertEquals("Type of serialized box must be RegularBox.", regularBox.boxTypeId(), regularBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", regularBox, sidechainBoxesCompanion.parseBytesTry(regularBoxBytes).get)
 
 
     // Test 2: CertifierRightBox serialization/deserialization
-    val certifiedRightBox = getCertifierRightBox()
+    val certifiedRightBox = getCertifierRightBox
 
     val certifiedRightBoxBytes = sidechainBoxesCompanion.toBytes(certifiedRightBox)
 
     assertEquals("Type of serialized box must be CertifierRightBox.", certifiedRightBox.boxTypeId(), certifiedRightBoxBytes(0))
     assertEquals("Deserialization must restore same box.", certifiedRightBox, sidechainBoxesCompanion.parseBytesTry(certifiedRightBoxBytes).get)
+
+
+    // Test 3: ForgerBox serialization/deserialization
+    val forgerBox = getForgerBox
+
+    val forgerBoxBytes = sidechainBoxesCompanion.toBytes(forgerBox)
+
+    assertEquals("Type of serialized box must be ForgerBox.", forgerBox.boxTypeId(), forgerBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", forgerBox, sidechainBoxesCompanion.parseBytesTry(forgerBoxBytes).get)
   }
 
-  @Test def testRegisteredCustom(): Unit = {
-    val customBox = getCustomBox().asInstanceOf[SidechainTypes#SCB]
+  @Test
+  def testRegisteredCustom(): Unit = {
+    val customBox = getCustomBox.asInstanceOf[SidechainTypes#SCB]
 
     val customBoxBytes = sidechainBoxesCompanion.toBytes(customBox)
     assertEquals("Box type must be custom.", Byte.MaxValue, customBoxBytes(0))
@@ -52,8 +63,9 @@ class SidechainBoxesCompanionTest
     assertEquals("Deserialization must restore same box.", customBox, sidechainBoxesCompanion.parseBytesTry(customBoxBytes).get)
   }
 
-  @Test def testUnregisteredCustom(): Unit = {
-    val customBox = getCustomBox().asInstanceOf[SidechainTypes#SCB]
+  @Test
+  def testUnregisteredCustom(): Unit = {
+    val customBox = getCustomBox.asInstanceOf[SidechainTypes#SCB]
     var exceptionThrown = false
 
 

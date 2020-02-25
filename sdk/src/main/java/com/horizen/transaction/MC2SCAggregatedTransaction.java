@@ -20,11 +20,11 @@ import scorex.util.encode.Base16;
 
 import java.util.*;
 
+import static com.horizen.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
+
 @JsonView(Views.Default.class)
 public final class MC2SCAggregatedTransaction
         extends BoxTransaction<Proposition, Box<Proposition>> {
-    public static final byte TRANSACTION_TYPE_ID = 2;
-
     @JsonProperty("mc2scTransactionsMerkleRootHash")
     private byte[] _mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> _mc2scTransactionsOutputs;
@@ -100,7 +100,7 @@ public final class MC2SCAggregatedTransaction
 
     @Override
     public byte transactionTypeId() {
-        return TRANSACTION_TYPE_ID;
+        return MC2SCAggregatedTransactionId.id();
     }
 
     @JsonProperty("id")

@@ -39,7 +39,7 @@ public class CustomPrivateKey implements Secret
     }
 
     @Override
-    public ProofOfKnowledgeProposition publicImage() {
+    public CustomPublicKeyProposition publicImage() {
         return new CustomPublicKeyProposition(_publicKeyBytes);
     }
 

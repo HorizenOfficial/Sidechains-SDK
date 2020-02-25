@@ -1,10 +1,11 @@
 package com.horizen.api.http
 
-import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
-import com.horizen.api.http.SidechainBlockErrorResponse._
+import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import com.horizen.api.http.SidechainBlockRestSchema._
+import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.serialization.SerializationUtil
+import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import scorex.core.bytesToId
 import scorex.util.ModifierId
@@ -93,6 +94,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
             assertEquals(2, result.elements().asScala.length)
             assertTrue(result.get("blockHex").isTextual)
             assertTrue(result.get("block").isObject)
+            jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
@@ -210,6 +212,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
             assertTrue(result.get("height").isInt)
             assertEquals(230, result.get("height").asInt())
             assertTrue(result.get("block").isObject)
+            jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
@@ -230,6 +233,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
             assertEquals(2, result.elements().asScala.length)
             assertTrue(result.get("blockHex").isTextual)
             assertTrue(result.get("block").isObject)
+            jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
@@ -250,6 +254,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
           case result =>
             assertEquals(1, result.elements().asScala.length)
             assertTrue(result.get("blockId").isTextual)
+            assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(genesisBlock.id)), result.get("blockId").asText())
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
@@ -266,7 +271,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotAccepted("", None).code)
       }
-      Post(basePath + "submit")~> sidechainBlockApiRoute ~> check {
+      Post(basePath + "submit") ~> sidechainBlockApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
       Post(basePath + "submit")

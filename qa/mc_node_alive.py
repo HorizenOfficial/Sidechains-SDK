@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from util import assert_true
+from test_framework.util import assert_true
 
 """
     Setup a single MC node and verify that it's fully on by checking that it sends a valid response to a RPC call

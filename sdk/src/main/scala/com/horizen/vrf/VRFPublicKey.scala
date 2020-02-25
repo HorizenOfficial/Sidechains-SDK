@@ -6,6 +6,8 @@ import com.horizen.utils.Utils
 
 // See https://tools.ietf.org/id/draft-goldbe-vrf-01.html#rfc.section.2 as functions description
 
+// TO DO: add json representation to all VRF related classes
+
 class VRFPublicKey(val key: Array[Byte]) {
   require(key.length == VRFPublicKey.length)
 

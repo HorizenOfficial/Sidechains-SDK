@@ -24,7 +24,7 @@ class SidechainSecretsCompanionTest
   val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
 
   @Test def testCore(): Unit = {
-    val secret = getSecret()
+    val secret = getPrivateKey25519
 
     val secretBytes = sidechainSecretsCompanion.toBytes(secret)
 
@@ -34,7 +34,7 @@ class SidechainSecretsCompanionTest
   }
 
   @Test def testRegisteredCustom(): Unit = {
-    val customSecret = getCustomSecret()
+    val customSecret = getCustomPrivateKey
 
     val customSecretBytes = sidechainSecretsCompanion.toBytes(customSecret)
 
@@ -44,7 +44,7 @@ class SidechainSecretsCompanionTest
   }
 
   @Test def testUnregisteredCustom(): Unit = {
-    val customSecret = getCustomSecret()
+    val customSecret = getCustomPrivateKey
     var exceptionThrown = false
 
 

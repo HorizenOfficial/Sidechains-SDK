@@ -20,6 +20,19 @@ from util import assert_equal, check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds
 
 
+'''
+The workflow is the following:
+1- add_options
+3- setup_chain
+4- setup_network
+
+Override the proper methods if you want to change default behavior.
+
+Default behavior: the framework starts 4 MC nodes, all connected as a chain.
+            **********          **********          **********          **********
+            * Node 1 *  <---->  * Node 2 *  <---->  * Node 3 *  <---->  * Node 4 *
+            **********          **********          **********          **********
+'''
 class BitcoinTestFramework(object):
 
     # These may be over-ridden by subclasses:
