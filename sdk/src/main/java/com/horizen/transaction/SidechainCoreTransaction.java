@@ -3,6 +3,8 @@ package com.horizen.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
 import com.horizen.companion.SidechainBoxesDataCompanion;
@@ -23,7 +25,7 @@ public class SidechainCoreTransaction
         extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
     private List<byte[]> inputsIds;
-    private List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData;
+    private List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
     private List<Proof<Proposition>> proofs;
 
     private SidechainBoxesDataCompanion boxesDataCompanion;
@@ -36,13 +38,14 @@ public class SidechainCoreTransaction
     private List<BoxUnlocker<Proposition>> unlockers;
 
 
-    public SidechainCoreTransaction(List<byte[]> inputsIds,
-                                    List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData,
-                                    List<Proof<Proposition>> proofs,
-                                    long fee,
-                                    long timestamp,
-                                    SidechainBoxesDataCompanion boxesDataCompanion,
-                                    SidechainProofsCompanion proofsCompanion) {
+    @Inject
+    SidechainCoreTransaction(@Assisted("inputIds") List<byte[]> inputsIds,
+                             @Assisted("outputsData") List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
+                             @Assisted("proofs") List<Proof<Proposition>> proofs,
+                             @Assisted("fee") long fee,
+                             @Assisted("timestamp") long timestamp,
+                             SidechainBoxesDataCompanion boxesDataCompanion,
+                             SidechainProofsCompanion proofsCompanion) {
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
@@ -93,7 +96,7 @@ public class SidechainCoreTransaction
         if(newBoxes == null) {
             newBoxes = new ArrayList<>();
             for (int i = 0; i < outputsData.size(); i++) {
-                BoxData boxData = outputsData.get(i);
+                NoncedBoxData boxData = outputsData.get(i);
                 long nonce = getNewBoxNonce(boxData.proposition(), i);
                 newBoxes.add(boxData.getBox(nonce));
             }
@@ -140,7 +143,7 @@ public class SidechainCoreTransaction
 
         byte[] inputIdsBytes = inputsIdsStream.toByteArray();
 
-        ListSerializer<BoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
+        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
         byte[] outputBoxDataBytes = boxesDataSerializer.toBytes(outputsData);
 
         ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(proofsCompanion, MAX_TRANSACTION_UNLOCKERS);
@@ -190,8 +193,8 @@ public class SidechainCoreTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        ListSerializer<BoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
-        List<BoxData<Proposition, NoncedBox<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
+        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);

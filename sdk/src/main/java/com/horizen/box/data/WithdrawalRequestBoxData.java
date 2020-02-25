@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.WithdrawalRequestBoxDataId;
 
-public final class WithdrawalRequestBoxData extends AbstractBoxData<MCPublicKeyHashProposition, WithdrawalRequestBox, WithdrawalRequestBoxData> {
+public final class WithdrawalRequestBoxData extends AbstractNoncedBoxData<MCPublicKeyHashProposition, WithdrawalRequestBox, WithdrawalRequestBoxData> {
     public WithdrawalRequestBoxData(MCPublicKeyHashProposition proposition, long value) {
         super(proposition, value);
     }
@@ -29,7 +29,7 @@ public final class WithdrawalRequestBoxData extends AbstractBoxData<MCPublicKeyH
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return WithdrawalRequestBoxDataSerializer.getSerializer();
     }
 

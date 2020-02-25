@@ -31,21 +31,6 @@ public final class CertifierRightBox
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        if (obj == this)
-            return true;
-        CertifierRightBox box = (CertifierRightBox) obj;
-
-        return Arrays.equals(id(), box.id())
-                && value() == box.value()
-                && activeFromWithdrawalEpoch() == box.activeFromWithdrawalEpoch();
-    }
-
-    @Override
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, nonce: %d, epoch: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), nonce(), activeFromWithdrawalEpoch());
     }

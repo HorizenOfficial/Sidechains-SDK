@@ -13,12 +13,14 @@ import java.util.Objects;
 
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
 
-public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
+public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition rewardProposition;
     private final VRFPublicKey vrfPublicKey;
 
-    public ForgerBoxData(PublicKey25519Proposition proposition, long value,
-                                 PublicKey25519Proposition rewardProposition, VRFPublicKey vrfPublicKey) {
+    public ForgerBoxData(PublicKey25519Proposition proposition,
+                         long value,
+                         PublicKey25519Proposition rewardProposition,
+                         VRFPublicKey vrfPublicKey) {
         super(proposition, value);
         Objects.requireNonNull(rewardProposition, "rewardProposition must be defined");
         Objects.requireNonNull(vrfPublicKey, "vrfPublicKey must be defined");
@@ -51,7 +53,7 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return ForgerBoxDataSerializer.getSerializer();
     }
 
@@ -76,26 +78,5 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
     @Override
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().key()));
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        if (obj == this)
-            return true;
-        ForgerBoxData boxData = (ForgerBoxData) obj;
-
-        return proposition().equals(boxData.proposition())
-                && value() == boxData.value()
-                && vrfPublicKey().equals(boxData.vrfPublicKey())
-                && rewardProposition().equals(boxData.rewardProposition());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), vrfPublicKey(), rewardProposition());
     }
 }

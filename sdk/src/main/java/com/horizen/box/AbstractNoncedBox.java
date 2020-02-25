@@ -3,14 +3,14 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
-import com.horizen.box.data.AbstractBoxData;
+import com.horizen.box.data.AbstractNoncedBoxData;
 import com.horizen.proposition.Proposition;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
+public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractNoncedBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
         extends ScorexEncoding implements NoncedBox<P>
 {
     protected final BD boxData;
@@ -18,6 +18,9 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
 
     private byte[] id;
     private Integer hashcode;
+
+    private final static byte[] coinsBoxFlag = { (byte)1 };
+    private final static byte[] nonCoinsBoxFlag = { (byte)0 };
 
     public AbstractNoncedBox(BD boxData, long nonce) {
         Objects.requireNonNull(boxData, "boxData must be defined");
@@ -40,14 +43,12 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     @Override
     public final byte[] id() {
         if(id == null) {
-            byte coinsByteFlag = this instanceof CoinsBox ? (byte)1 : (byte)0;
             id = Blake2b256.hash(Bytes.concat(
-                    new byte[]{ coinsByteFlag },
+                    this instanceof CoinsBox ? coinsBoxFlag : nonCoinsBoxFlag,
                     Longs.toByteArray(value()),
                     proposition().bytes(),
                     Longs.toByteArray(nonce()),
                     boxData.customFieldsHash()));
-
         }
         return id;
     }
@@ -58,7 +59,7 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     @Override
     public int hashCode() {
         if(hashcode == null)
-            hashcode = boxData.proposition().hashCode();
+            hashcode = Objects.hash(boxData, nonce);
         return hashcode;
     }
 
@@ -66,12 +67,11 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
         if (obj == this)
             return true;
-        return Arrays.equals(id(), ((AbstractNoncedBox) obj).id())
-                && value() == ((AbstractNoncedBox) obj).value();
+        if (!(this.getClass().equals(obj.getClass())))
+            return false;
+        return Arrays.equals(id(), ((AbstractNoncedBox) obj).id());
     }
 
     @Override

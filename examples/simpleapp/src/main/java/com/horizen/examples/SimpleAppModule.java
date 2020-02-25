@@ -13,9 +13,8 @@ import com.google.inject.name.Names;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
-import com.horizen.box.data.BoxData;
-import com.horizen.box.data.BoxDataSerializer;
-import com.horizen.params.MainNetParams;
+import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.NoncedBoxDataSerializer;
 import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proposition.Proposition;
@@ -45,7 +44,7 @@ public class SimpleAppModule
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
-        HashMap<Byte, BoxDataSerializer<BoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
+        HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, ProofSerializer<Proof<Proposition>>> customProofSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
@@ -80,7 +79,7 @@ public class SimpleAppModule
         bind(new TypeLiteral<HashMap<Byte, BoxSerializer<Box<Proposition>>>>() {})
                 .annotatedWith(Names.named("CustomBoxSerializers"))
                 .toInstance(customBoxSerializers);
-        bind(new TypeLiteral<HashMap<Byte, BoxDataSerializer<BoxData<Proposition, NoncedBox<Proposition>>>>>() {})
+        bind(new TypeLiteral<HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>>>() {})
                 .annotatedWith(Names.named("CustomBoxDataSerializers"))
                 .toInstance(customBoxDataSerializers);
         bind(new TypeLiteral<HashMap<Byte, SecretSerializer<Secret>>>() {})

@@ -6,6 +6,7 @@ import java.util.{HashMap => JHashMap}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
+import com.google.inject.{Guice, Injector}
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -16,7 +17,7 @@ import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetP
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSerializer}
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
@@ -140,7 +141,10 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion)
+    val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
+    val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory)
   }
 
 }

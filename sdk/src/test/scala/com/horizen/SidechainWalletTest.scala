@@ -13,7 +13,7 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.box.data.{BoxData, RegularBoxData}
+import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret, SecretSerializer}
 import com.horizen.storage._
@@ -404,7 +404,7 @@ class SidechainWalletTest
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
     val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
-    val to: JList[BoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     Random.nextBytes(blockId)
 

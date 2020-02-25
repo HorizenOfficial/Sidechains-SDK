@@ -2,11 +2,11 @@ package com.horizen.customtypes;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.box.data.AbstractBoxData;
-import com.horizen.box.data.BoxDataSerializer;
+import com.horizen.box.data.AbstractNoncedBoxData;
+import com.horizen.box.data.NoncedBoxDataSerializer;
 import java.util.Arrays;
 
-public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition, CustomBox, CustomBoxData> {
+public class CustomBoxData extends AbstractNoncedBoxData<CustomPublicKeyProposition, CustomBox, CustomBoxData> {
     public CustomBoxData(CustomPublicKeyProposition proposition, long value) {
         super(proposition, value);
     }
@@ -27,7 +27,7 @@ public class CustomBoxData extends AbstractBoxData<CustomPublicKeyProposition, C
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return CustomBoxDataSerializer.getSerializer();
     }
 

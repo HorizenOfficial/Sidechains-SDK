@@ -11,7 +11,7 @@ import java.util.Arrays;
 
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.CertifierRightBoxDataId;
 
-public final class CertifierRightBoxData extends AbstractBoxData<PublicKey25519Proposition, CertifierRightBox, CertifierRightBoxData> {
+public final class CertifierRightBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, CertifierRightBox, CertifierRightBoxData> {
     private final long activeFromWithdrawalEpoch;
 
     public CertifierRightBoxData(PublicKey25519Proposition proposition, long value, long activeFromWithdrawalEpoch) {
@@ -38,7 +38,7 @@ public final class CertifierRightBoxData extends AbstractBoxData<PublicKey25519P
     }
 
     @Override
-    public BoxDataSerializer serializer() {
+    public NoncedBoxDataSerializer serializer() {
         return CertifierRightBoxDataSerializer.getSerializer();
     }
 
@@ -61,20 +61,5 @@ public final class CertifierRightBoxData extends AbstractBoxData<PublicKey25519P
     @Override
     public byte[] customFieldsHash() {
         return Blake2b256.hash(Longs.toByteArray(activeFromWithdrawalEpoch()));
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (!(this.getClass().equals(obj.getClass())))
-            return false;
-        if (obj == this)
-            return true;
-        CertifierRightBoxData boxData = (CertifierRightBoxData) obj;
-
-        return proposition().equals(boxData.proposition())
-                && value() == boxData.value()
-                && activeFromWithdrawalEpoch() == boxData.activeFromWithdrawalEpoch();
     }
 }
