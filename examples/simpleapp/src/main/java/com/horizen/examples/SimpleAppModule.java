@@ -55,6 +55,7 @@ public class SimpleAppModule
         File secretStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/secret");
         File walletBoxStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/wallet");
         File walletTransactionStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletTransaction");
+        File walletForgingBoxesInfoStorage = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletForgingStake");
         File stateStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/state");
         File historyStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/history");
         File consensusStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/consensusData");
@@ -108,6 +109,9 @@ public class SimpleAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
                 .toInstance(IODBStorageUtil.getStorage(walletTransactionStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
+                .toInstance(IODBStorageUtil.getStorage(walletForgingBoxesInfoStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
                 .toInstance(IODBStorageUtil.getStorage(stateStore));
