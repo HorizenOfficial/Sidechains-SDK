@@ -52,6 +52,13 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
         );
     }
 
+    public static int length() {
+        return PublicKey25519Proposition.getLength() +
+                Longs.BYTES +
+                PublicKey25519Proposition.getLength() +
+                VRFPublicKey.length();
+    }
+
     @Override
     public NoncedBoxDataSerializer serializer() {
         return ForgerBoxDataSerializer.getSerializer();

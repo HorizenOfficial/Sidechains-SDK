@@ -1,16 +1,15 @@
 package com.horizen.consensus
 
-import java.util
 import java.util.Random
 
+import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.sidechainblock.generation.{CorruptedGenerationRules, FinishedEpochInfo, GenerationIsNoLongerPossible, GenerationRules, SidechainBlocksGenerator}
+import com.horizen.fixtures.CompanionsFixture
+import com.horizen.fixtures.sidechainblock.generation._
 import com.horizen.params.{NetworkParams, TestNetParams}
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
-import com.horizen.transaction.TransactionSerializer
 import com.horizen.validation.ConsensusValidator
-import com.horizen.{SidechainHistory, SidechainTypes}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.block.Block
@@ -19,10 +18,10 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 
-class HistoryConsensusCheckerTest extends JUnitSuite {
+class HistoryConsensusCheckerTest extends JUnitSuite with CompanionsFixture {
 
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
-    val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new util.HashMap[java.lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+    val companion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
     val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), companion, params)
     SidechainHistory

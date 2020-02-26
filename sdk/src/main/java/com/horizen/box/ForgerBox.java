@@ -52,6 +52,10 @@ public final class ForgerBox
         return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, rewardProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), rewardProposition(), nonce());
     }
 
+    public static int length() {
+        return Longs.BYTES + ForgerBoxData.length();
+    }
+
     public static ForgerBox parseBytes(byte[] bytes) {
         long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
         ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, Longs.BYTES, bytes.length));

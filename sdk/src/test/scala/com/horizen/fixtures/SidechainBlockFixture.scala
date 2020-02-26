@@ -13,7 +13,6 @@ import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.Proposition
-import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
 import com.horizen.vrf.{VRFKeyGenerator, VRFProof}
@@ -29,9 +28,9 @@ class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: Sidech
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
-object SidechainBlockFixture extends MainchainBlockReferenceFixture {
+object SidechainBlockFixture extends MainchainBlockReferenceFixture with CompanionsFixture {
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  val sidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   private def firstOrSecond[T](first: T, second: T): T = {
     if (first != null) first else second
@@ -42,7 +41,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture {
            timestamp: Block.Timestamp = -1,
            mainchainBlocks: Seq[MainchainBlockReference] = null,
            sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
-           forgerBoxData: (ForgerBox, PrivateKey25519) = null,
+           forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VRFProof = null,
            merklePath: MerklePath = null,
            companion: SidechainTransactionsCompanion,
@@ -52,14 +51,14 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture {
           ): SidechainBlock = {
 
 
-    val (forgingBox, ownerKey) = firstOrSecond(forgerBoxData, ForgerBoxFixture.generateForgerBox(basicSeed))
+    val (forgingBox, forgerMetadata) = firstOrSecond(forgerBoxData, ForgerBoxFixture.generateForgerBox(basicSeed))
 
     SidechainBlock.create(
       firstOrSecond(parentId, initialBlock.parentId),
       Math.max(timestamp, initialBlock.timestamp),
       firstOrSecond(mainchainBlocks, initialBlock.mainchainBlocks),
       firstOrSecond(sidechainTransactions, initialBlock.sidechainTransactions),
-      ownerKey,
+      forgerMetadata.rewardSecret,
       forgingBox,
       firstOrSecond(vrfProof, initialBlock.vrfProof),
       firstOrSecond(merklePath, initialBlock.merklePath),
@@ -78,7 +77,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture {
                              mcParent: Option[ByteArrayWrapper] = None,
                              timestamp: Option[Block.Timestamp] = None
                             ): SidechainBlock = {
-    val (forgerBox, secretKey) = ForgerBoxFixture.generateForgerBox(basicSeed)
+    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
     val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(basicSeed.toByte))._1.prove(Array.fill(32)((basicSeed + 1).toByte))
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
@@ -87,7 +86,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture {
       timestamp.getOrElse(Instant.now.getEpochSecond - 10000),
       Seq(generateMainchainBlockReference(parentOpt = mcParent, blockHash = genGenesisMainchainBlockHash)),
       Seq(),
-      secretKey,
+      forgerMetadata.rewardSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),

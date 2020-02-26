@@ -158,18 +158,16 @@ trait BoxFixture
   }
 
   def getForgerBox: ForgerBox = {
-    new ForgerBox(
-      new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey),
-      Random.nextInt(100))
+      new ForgerBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey).getBox(Random.nextInt(100))
   }
 
-  def getForgerBox(proposition: PublicKey25519Proposition): ForgerBox = {
-    new ForgerBox(new ForgerBoxData(proposition, Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey), Random.nextInt(100))
-  }
+  def getForgerBox(proposition: PublicKey25519Proposition): ForgerBox =
+    new ForgerBoxData(proposition, Random.nextInt(100), getPrivateKey25519.publicImage(), getVRFPublicKey).getBox(Random.nextInt(100))
+
 
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
                    rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
-    new ForgerBox(new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey), nonce)
+    new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey).getBox(nonce)
   }
 
 

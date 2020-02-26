@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.box.ForgerBox;
+import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.BytesUtils;
@@ -87,12 +88,12 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public static long initialValue = 1000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {
         PublicKey25519Proposition proposition = genesisSecret.publicImage();
-        long nonce = 42L;
         PublicKey25519Proposition rewardProposition = genesisSecret.publicImage();
         VRFPublicKey vrfPubKey = genesisVrfPair._2;
-        new ForgerBox(proposition, nonce, initialValue, rewardProposition, vrfPubKey);
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, rewardProposition, vrfPubKey);
+        long nonce = 42L;
 
-        return new ForgerBox(proposition, nonce, initialValue, rewardProposition, vrfPubKey);
+        return forgerBoxData.getBox(nonce);
     }
 
 }

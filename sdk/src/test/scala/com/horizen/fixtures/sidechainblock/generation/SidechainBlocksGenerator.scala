@@ -1,27 +1,27 @@
 package com.horizen.fixtures.sidechainblock.generation
 
-import java.lang.{Byte => JByte}
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.time.Instant
-import java.util.{Random, HashMap => JHashMap, List => JList}
+import java.util.{Random, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock}
+import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.companion
-import com.horizen.fixtures.{MainchainBlockReferenceFixture, TransactionFixture, VrfGenerator}
+import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, TransactionFixture, VrfGenerator}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.InMemoryStorageAdapter
+import com.horizen.transaction.SidechainTransaction
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
+import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.{SidechainTypes, utils}
 import scorex.core.block.Block
 import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
@@ -209,7 +209,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       initialForgerBox.vrfPubKey()
     }
 
-    new ForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey)
+    new ForgerBoxData(proposition, value, rewardProposition, vrfPubKey).getBox(nonce)
   }
 
   private def getIncorrectPossibleForger(initialPossibleForger: PossibleForger): PossibleForger = {
@@ -285,8 +285,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 }
 
 
-object SidechainBlocksGenerator {
-  private val companion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]())
+object SidechainBlocksGenerator extends CompanionsFixture {
+  private val companion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val merkleTreeSize: Int = 128
   val txGen: TransactionFixture = new TransactionFixture {}
   val mcRefGen: MainchainBlockReferenceFixture = new MainchainBlockReferenceFixture {}

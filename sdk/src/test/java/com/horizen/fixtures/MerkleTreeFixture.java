@@ -1,4 +1,7 @@
-package com.horizen.utils;
+package com.horizen.fixtures;
+
+import com.horizen.utils.MerklePath;
+import com.horizen.utils.MerkleTree;
 
 import java.util.ArrayList;
 import java.util.List;

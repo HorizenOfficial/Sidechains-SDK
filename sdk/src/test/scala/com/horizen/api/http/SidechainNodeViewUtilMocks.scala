@@ -1,37 +1,28 @@
 package com.horizen.api.http
 
 import java.time.Instant
-import java.util.Optional
-import java.{lang, util}
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util
+import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
-import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
 import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{BoxFixture, CompanionsFixture}
+import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import com.horizen.utils.Pair
+import com.horizen.transaction.RegularTransaction
+import com.horizen.utils.{BytesUtils, Pair}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.util.bytesToId
-import scorex.util.idToBytes
+import scorex.util.{bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
-import com.horizen.fixtures.{ForgerBoxFixture, VrfGenerator}
-import com.horizen.fixtures.{BoxFixture, CompanionsFixture}
-import com.horizen.utils.{BytesUtils, MerkleTreeFixture, Pair}
-import com.horizen.utils.BytesUtils
-import com.horizen.utils.Pair
 
 class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
 
@@ -42,21 +33,30 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     BytesUtils.fromHexString("00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582"),
     230, BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"))
 
-  val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
-  val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
-  val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
-  val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
-  val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
-  val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
+  private val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
+  private val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
+  private val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
+  private val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
+  private val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
+  private val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
+  private val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
+  private val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList
 
-  val genesisBlock: SidechainBlock = SidechainBlock.create(bytesToId(new Array[Byte](32)), Instant.now.getEpochSecond - 10000, Seq(), Seq(),
-    PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(6543211L).getBytes),
-    sidechainTransactionsCompanion, null).get
+  val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
+  val genesisBlock: SidechainBlock = SidechainBlock.create(
+    bytesToId(new Array[Byte](32)),
+    Instant.now.getEpochSecond - 10000,
+    Seq(),
+    Seq(),
+    forgerBoxMetadata.rewardSecret,
+    forgingBox,
+    VrfGenerator.generateProof(456L),
+    MerkleTreeFixture.generateRandomMerklePath(456L),
+    sidechainTransactionsCompanion,
+    null).get
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
     val history: NodeHistory = mock[NodeHistory]
