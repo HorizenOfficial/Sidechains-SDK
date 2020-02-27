@@ -67,6 +67,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     stateStorage.getWithdrawalRequests(epoch).asJava
   }
 
+  def unprocessedWithdrawalRequests(epoch: Int): Option[Seq[WithdrawalRequestBox]] = {
+    stateStorage.getUnprocessedWithdrawalRequests(epoch)
+  }
+
+  def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
+    stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
+  }
+
   // Note: aggregate New boxes and spent boxes for Block
   override def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = {
     SidechainState.changes(mod)
@@ -127,7 +135,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)),
-            this.params), mod.mainchainBlocks.map(_.backwardTransferCertificate.get)) // check applyChanges implementation
+            this.params), mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) // check applyChanges implementation
       })
     }
   }

@@ -10,7 +10,7 @@ trait MainchainApi {
 
   def getSidechainInfo : SidechainInfoResponce
 
-  def sidechainBackwardTransfer (certificateRequest: CertificateRequest): CertificateRequestResponce
+  def sendCertificate (certificateRequest: CertificateRequest): CertificateRequestResponce
 
   def getRawCertificate(rawCertificate: RawCertificate): RawCertificateResponce
 

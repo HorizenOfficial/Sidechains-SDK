@@ -1,7 +1,8 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
-import java.util.{List => JList, HashMap => JHashMap}
+import java.util.{HashMap => JHashMap, List => JList}
+
 import com.horizen.utils.Pair
 import akka.actor.ActorRef
 import com.horizen.api.http._
@@ -34,6 +35,7 @@ import scala.collection.immutable.Map
 import scala.io.Source
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.horizen.certifier.CertifierRef
 import com.horizen.utils.BytesUtils
 
 class SidechainApp @Inject()
@@ -139,10 +141,12 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
+  val certifier : ActorRef = CertifierRef(sidechainSettings, params)
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    applicationWallet, applicationState, genesisBlock, Some(certifier)) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
@@ -180,7 +184,6 @@ class SidechainApp @Inject()
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
-
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)

@@ -9,7 +9,19 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
   extends MainchainApi
 {
 
-  private val clientPath = sidechainSettings.mainchainSettings.path + "src/zen-cli -regtest"
+  private lazy val os = {
+    val osname = System.getProperty("os.name", "generic").toLowerCase()
+    if (osname.contains("win"))
+      0
+    else
+      1
+  }
+
+  private val clientPath = sidechainSettings.mainchainSettings.path + "zen-cli " +
+    sidechainSettings.genesisData.mcNetwork match {
+    case "regtest" => "-regtest "
+    case "testnet" => "-testnet "
+  }
 
   private def callRpc(params: String) : String = {
     val process = Runtime.getRuntime.exec(clientPath + " " + params)
@@ -19,6 +31,17 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
     output.toString
   }
 
+  private def encloseJsonParameter(parameter: String): String = {
+    if (os == 0)
+      "\"" + parameter.replace("\"", "\\\"") + "\""
+    else
+      "'" + parameter + "'"
+  }
+
+  private def enclosStringParameter(parameter: String): String ={
+    "\"" + parameter + "\""
+  }
+
   override def getSidechainInfo: SidechainInfoResponce = {
     val objectMapper = new ObjectMapper()
     val responce = callRpc("getscinfo")
@@ -26,10 +49,13 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
     objectMapper.readValue(responce, classOf[SidechainInfoResponce])
   }
 
-  override def sidechainBackwardTransfer(certificateRequest: CertificateRequest): CertificateRequestResponce = {
+  override def sendCertificate(certificateRequest: CertificateRequest): CertificateRequestResponce = {
     val objectMapper = new ObjectMapper()
-    val responce = callRpc("sc_bwdtr " + BytesUtils.toHexString(certificateRequest.sidechainId)
-      + objectMapper.writeValueAsString(certificateRequest.withdrawalRequests))
+    val responce = callRpc("send_certificate "
+      + enclosStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
+      + certificateRequest.epochNumber + " "
+      + enclosStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
+      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.withdrawalRequests)))
 
     CertificateRequestResponce(BytesUtils.fromHexString(responce))
   }

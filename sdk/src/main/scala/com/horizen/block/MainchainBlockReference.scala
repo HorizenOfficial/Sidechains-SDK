@@ -37,7 +37,7 @@ class MainchainBlockReference(
                     @JsonProperty("merkleRoots")
                     @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
                     val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]],
-                    val backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
+                    val backwardTransferCertificate: Seq[MainchainBackwardTransferCertificate]
                     )
   extends BytesSerializable
 {
@@ -106,14 +106,14 @@ object MainchainBlockReference {
     require(params.sidechainId.length == 32)
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
-      case Success((header, mainchainTxs)) =>
+      case Success((header, mainchainTxs, certificates)) =>
         // Calculate SCMap and verify it
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
         for (tx <- mainchainTxs)
           scIds = scIds ++ tx.getRelatedSidechains
 
         if (scIds.isEmpty)
-          Success(new MainchainBlockReference(header, None, None, None))
+          Success(new MainchainBlockReference(header, None, None, certificates))
         else {
           var aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
           for (id <- scIds) {
@@ -131,7 +131,7 @@ object MainchainBlockReference {
 
           val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
 
-          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap), None))
+          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap), certificates))
         }
       case Failure(e) =>
         Failure(e)
@@ -163,7 +163,8 @@ object MainchainBlockReference {
   }
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
-  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]): Try[(MainchainHeader, Seq[MainchainTransaction])] = Try {
+  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[MainchainBackwardTransferCertificate])] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -181,10 +182,31 @@ object MainchainBlockReference {
           transactions = transactions :+ tx
           offset += tx.size
         }
+
         if(transactions.size != transactionsCount.value())
           throw new IllegalArgumentException("Input data corrupted. Actual Tx number parsed %d, expected %d".format(transactions.size, transactionsCount.value()))
 
-        (header, transactions)
+        if (offset < mainchainBlockBytes.length) {
+          val certificatesCount: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
+          offset += certificatesCount.size()
+
+          var certificates: Seq[MainchainBackwardTransferCertificate] = Seq[MainchainBackwardTransferCertificate]()
+
+          while(offset < mainchainBlockBytes.length) {
+            val c: MainchainBackwardTransferCertificate = MainchainBackwardTransferCertificate.parse(mainchainBlockBytes, offset)
+            certificates = certificates :+ c
+            offset += c.size
+          }
+
+          if(certificates.size != certificatesCount.value())
+            throw new IllegalArgumentException("Input data corrupted. Actual certificates number parsed %d, expected %d".format(certificates.size, transactionsCount.value()))
+
+          (header, transactions, certificates)
+        } else {
+          (header, transactions, Seq())
+        }
+
+
       case Failure(e) =>
         throw e
     }
@@ -251,6 +273,6 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
         None
     }
 
-    new MainchainBlockReference(header, mc2scTx, SCMap, None)
+    new MainchainBlockReference(header, mc2scTx, SCMap, Seq())
   }
 }

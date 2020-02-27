@@ -28,10 +28,13 @@ case class WithdrawalRequest
 @JsonView(Array(classOf[Views.Default]))
 case class CertificateRequest
   (sidechainId: Array[Byte],
+   epochNumber: Int,
+   endEpochBlockHash: Array[Byte],
    withdrawalRequests: Seq[WithdrawalRequest])
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
-  require(withdrawalRequests != null, "List of WithdrawalRequests MUST ne NOT NULL.")
+  require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
+  require(withdrawalRequests != null, "List of WithdrawalRequests MUST be NOT NULL.")
   require(withdrawalRequests.nonEmpty, "List of WithdrawalRequests MUST be not empty.")
 }
 
@@ -46,8 +49,11 @@ case class RawCertificateResponce
   (hex: Array[Byte])
 
 object CertificateRequestCreator {
-  def create(withdrawalRequestBoxes: Seq[WithdrawalRequestBox], params: NetworkParams) : CertificateRequest = {
-    CertificateRequest(params.sidechainId,
-      for (wrb <- withdrawalRequestBoxes) yield WithdrawalRequest(wrb.proposition().bytes(), wrb.value()))
+  def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
+             withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
+             params: NetworkParams) : CertificateRequest = {
+    CertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
+      for (wrb <- withdrawalRequestBoxes)
+        yield WithdrawalRequest(wrb.proposition().bytes(), wrb.value()))
   }
 }

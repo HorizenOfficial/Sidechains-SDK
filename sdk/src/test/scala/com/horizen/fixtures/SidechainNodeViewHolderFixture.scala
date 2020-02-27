@@ -106,7 +106,7 @@ trait SidechainNodeViewHolderFixture
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    defaultApplicationWallet, defaultApplicationState, genesisBlock)
+    defaultApplicationWallet, defaultApplicationState, genesisBlock, None)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 
