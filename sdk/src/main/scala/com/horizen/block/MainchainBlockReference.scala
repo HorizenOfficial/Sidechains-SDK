@@ -12,7 +12,7 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, MerkleTree, Utils, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.google.common.primitives.Bytes
@@ -216,6 +216,8 @@ object MainchainBlockReference {
 object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlockReference] {
   val HASH_BYTES_LENGTH: Int = 32
 
+  private val certificatesSerializer = new ListSerializer[MainchainBackwardTransferCertificate](MainchainBackwardTransferCertificateSerializer)
+
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
     w.putInt(obj.header.bytes.length)
     w.putBytes(obj.header.bytes)
@@ -238,6 +240,8 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
       case _ =>
         w.putInt(0)
     }
+
+    certificatesSerializer.serialize(obj.backwardTransferCertificate.asJava, w)
   }
 
   override def parse(r: Reader): MainchainBlockReference = {
@@ -273,6 +277,8 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
         None
     }
 
-    new MainchainBlockReference(header, mc2scTx, SCMap, Seq())
+    val certificates = certificatesSerializer.parseBytes(r.getBytes(r.remaining))
+
+    new MainchainBlockReference(header, mc2scTx, SCMap, certificates.asScala)
   }
 }
