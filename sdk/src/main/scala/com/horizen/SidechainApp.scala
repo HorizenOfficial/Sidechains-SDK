@@ -35,7 +35,7 @@ import scala.collection.immutable.Map
 import scala.io.Source
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.horizen.certifier.CertifierRef
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.utils.BytesUtils
 
 class SidechainApp @Inject()
@@ -141,13 +141,12 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
-  val certifier : ActorRef = CertifierRef(sidechainSettings, params)
-
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
     sidechainStateStorage,
     sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock, Some(certifier)) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
+  val certificateSubmitter : ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),

@@ -9,7 +9,6 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainHistoryStorage, SidechainSecretStorage, SidechainStateStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage}
 import com.horizen.validation.{HistoryBlockValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.certifier.{Certifier, CertifierRef}
 import scorex.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
@@ -26,8 +25,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
-                              genesisBlock: SidechainBlock,
-                              certifier: Option[ActorRef])
+                              genesisBlock: SidechainBlock)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
@@ -71,39 +69,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       secretModify(ls.secret)
   }
 
-  import Certifier.ReceivableMessages._
-
-  protected def sendBakwardTransferCertificate: Unit = {
-    certifier match {
-      case Some(c) => {
-        val withdrawalEpochInfo = minimalState.getWithdrawalEpochInfo
-        val startEpochHeight = (withdrawalEpochInfo.lastEpochIndex -
-          sidechainSettings.genesisData.mcBlockHeight) %
-          sidechainSettings.genesisData.withdrawalEpochLength + 1
-        if (withdrawalEpochInfo.epoch > 1 &&
-          withdrawalEpochInfo.lastEpochIndex - startEpochHeight < sidechainSettings.genesisData.withdrawalEpochLength / 5) {
-          val h = history()
-          val mcBlockHash = h.getMainchainBlockReferenceInfoByMainchainBlockHeight(startEpochHeight - 1)
-          minimalState().unprocessedWithdrawalRequests(withdrawalEpochInfo.epoch - 1) match {
-            case Some(wr) => c ! TrySubmitCertificate(withdrawalEpochInfo.epoch - 1,
-              mcBlockHash.get().getMainchainBlockReferenceHash, wr)
-          }
-        }
-      }
-    }
-  }
-  protected def processReceive: Receive = {
-    case ModifiersFromRemote => {
-      super.receive
-      sendBakwardTransferCertificate
-    }
-    case LocallyGeneratedModifier => {
-      super.receive
-      sendBakwardTransferCertificate
-    }
-    case _ => super.receive
-  }
-
   protected def secretModify(secret: SidechainTypes#SCS): Unit = {
     vault().addSecret(secret) match {
       case Success(newVault) =>
@@ -114,7 +79,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
-  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse processReceive
+  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse super.receive
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
@@ -135,10 +100,9 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            certifier: Option[ActorRef]): Props =
+            genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, certifier))
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -150,11 +114,10 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            certifier: Option[ActorRef])
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, certifier))
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -167,9 +130,8 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock,
-            certifier: Option[ActorRef])
+            genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, stateStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, certifier), name)
+      walletTransactionStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }

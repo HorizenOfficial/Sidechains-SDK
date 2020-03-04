@@ -1,5 +1,6 @@
 package com.horizen
 
+import java.util
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
@@ -59,19 +60,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     }
   }
 
-  def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch).toList
-  }
-
-  override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch).asJava
-  }
-
-  def unprocessedWithdrawalRequests(epoch: Int): Option[Seq[WithdrawalRequestBox]] = {
+  def withdrawalRequests(epoch: Int): Option[Seq[WithdrawalRequestBox]] = {
     stateStorage.getUnprocessedWithdrawalRequests(epoch)
   }
 
-  def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
+  override def getWithdrawalRequests(epoch: Integer): JOptional[JList[WithdrawalRequestBox]] = {
+    stateStorage.getUnprocessedWithdrawalRequests(epoch) match {
+      case Some(requests) => JOptional.of(requests.asJava)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
 
@@ -85,6 +85,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
       s"${version} expected")
     mod.transactions.foreach(tx => validate(tx).get)
+
+    for (certificate <- mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) {
+      withdrawalRequests(certificate.epochNumber) match {
+        case Some(withdrawalRequests) =>
+          var isEqual = true
+          if (withdrawalRequests.size == certificate.outputs.size) {
+            isEqual = true
+            for (o <- certificate.outputs)
+              isEqual &= withdrawalRequests.exists(r => {
+                util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
+                  r.value().equals(o.originalAmount)
+              })
+          }
+          if (!isEqual)
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+        case None =>
+          throw new Exception("Block contains backward transfer certificate for epoch %d, but list of unprocessed withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
+      }
+    }
+
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
@@ -135,7 +155,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       changes(mod).flatMap(cs => {
         applyChanges(cs, idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)),
-            this.params), mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) // check applyChanges implementation
+            this.params), mod.mainchainBlocks.flatMap(_.backwardTransferCertificate).nonEmpty) // check applyChanges implementation
       })
     }
   }
@@ -147,7 +167,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
   override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag,
-                            withdrawalEpochInfo: WithdrawalEpochInfo, mainchainBTCList: Seq[MainchainBackwardTransferCertificate]): Try[SidechainState] = Try {
+                            withdrawalEpochInfo: WithdrawalEpochInfo, backwardTransferCertificate: Boolean): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this, version.data,
       changes.toAppend.map(_.box).asJava,
@@ -159,7 +179,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
                   changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
                   changes.toRemove.map(_.boxId.array).toSet,
                   changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet, mainchainBTCList)
+                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet, backwardTransferCertificate)
           .get,
           this.params, newVersion, appState)
       case Failure(exception) => throw exception

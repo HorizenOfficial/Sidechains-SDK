@@ -274,6 +274,8 @@
 					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
 					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
 					<include>sc_node_holder_fixter_settings.conf</include>
+					<include>mc_block_cert_hex</include>
+					<include>mc_block_two_cert_hex</include>
 				</includes>
 			</testResource>
 		</testResources>

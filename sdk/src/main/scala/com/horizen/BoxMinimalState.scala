@@ -24,7 +24,7 @@ trait BoxMinimalState[P <: Proposition,
 
   def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
-                   mainchainBTCList: Seq[MainchainBackwardTransferCertificate]): Try[BMS]
+                   backwardTransferCertificate: Boolean): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

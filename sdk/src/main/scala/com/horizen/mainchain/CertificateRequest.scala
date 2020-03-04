@@ -38,10 +38,10 @@ case class CertificateRequest
   require(withdrawalRequests.nonEmpty, "List of WithdrawalRequests MUST be not empty.")
 }
 
-case class CertificateRequestResponce
+case class CertificateResponce
   (certificateId: Array[Byte])
 
-case class RawCertificate
+case class RawCertificateRequest
   (certificateId: Array[Byte])
 
 @JsonView(Array(classOf[Views.Default]))

@@ -97,7 +97,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
              boxUpdateList : Set[SidechainTypes#SCB],
              boxIdsRemoveList : Set[Array[Byte]],
              withdrawalRequestAppendList : Set[WithdrawalRequestBox],
-             mainchainBTCList: Seq[MainchainBackwardTransferCertificate]) : Try[SidechainStateStorage] = Try {
+             backwardTransferCertificate: Boolean) : Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -127,24 +127,9 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
     }
 
-    for (btc <- mainchainBTCList.filter(_.epochNumber == withdrawalEpochInfo.epoch - 1)) {
-
-      getUnprocessedWithdrawalRequests(withdrawalEpochInfo.epoch - 1) match {
-        case Some(prevWithdrawalRequestList) =>
-          if (prevWithdrawalRequestList.size == btc.outputs.size) {
-            var isEqual = true
-            for (o <- btc.outputs)
-              isEqual &= prevWithdrawalRequestList.exists (r => {
-                util.Arrays.equals (r.proposition ().bytes (), o.pubKeyHash) &&
-                  r.value().equals (o.originalAmount)
-              })
-
-            if (isEqual)
-              updateList.add(new JPair(getWithdrawalBlockKey(btc.epochNumber),
-                version))
-          }
-      }
-    }
+    if (backwardTransferCertificate)
+      updateList.add(new JPair(getWithdrawalBlockKey(getWithdrawalEpochInfo.get.epoch - 1),
+        version))
 
     storage.update(version,
       updateList,

@@ -102,7 +102,7 @@ class SidechainStateTest
     transactionList.clear()
     transactionList += getRegularTransaction(1)
 
-    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox](), Seq[MainchainBackwardTransferCertificate]())
+    stateStorage.update(boxVersion, withdrawalEpochInfo, boxList.toSet, Set[Array[Byte]](), Set[WithdrawalRequestBox](), false)
 
   }
 

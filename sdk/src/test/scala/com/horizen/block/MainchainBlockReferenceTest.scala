@@ -248,4 +248,36 @@ class MainchainBlockReferenceTest extends JUnitSuite {
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add3")),
       box.proposition())
   }
+
+  @Test
+  def blockWithOneBackwardTransferCertificate(): Unit = {
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+
+    val params = RegTestParams(scId.data)
+
+    // Test: parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
+    val mcBlockHex = Source.fromResource("mc_block_cert_hex").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params)
+
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
+  }
+
+  @Test
+  def blockWithTwoBackwardTransferCertificate(): Unit = {
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+
+    val params = RegTestParams(scId.data)
+
+    // Test: parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
+    val mcBlockHex = Source.fromResource("mc_block_two_cert_hex").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params)
+
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
+  }
 }

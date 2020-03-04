@@ -1,61 +1,8 @@
 package com.horizen.block
 
-import com.horizen.utils.{BytesUtils, ListSerializer, VarInt}
+import com.horizen.utils.{BytesUtils, ListSerializer, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-
-class MainchainBTCertificateOutput
-  (val pubKeyHash: Array[Byte],
-   val amount: Long)
-  extends BytesSerializable
-{
-  override type M = MainchainBTCertificateOutput
-
-  override def serializer: ScorexSerializer[MainchainBTCertificateOutput] = MainchainBTCertificateOutputSerializer
-
-  var fee: Long = 0
-
-  def originalAmount: Long = {
-    amount + fee
-  }
-}
-
-object MainchainBTCertificateOutput {
-  def parse(outputBytes: Array[Byte], offset: Int): MainchainBTCertificateOutput = {
-
-    var currentOffset: Int = offset
-
-    val amount: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
-    currentOffset += 8
-
-    currentOffset += 4
-
-    val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + 32))
-
-    new MainchainBTCertificateOutput(pubKeyHash, amount)
-  }
-}
-
-object MainchainBTCertificateOutputSerializer
-  extends ScorexSerializer[MainchainBTCertificateOutput]
-{
-  override def serialize(output: MainchainBTCertificateOutput, w: Writer): Unit = {
-    w.putLong(output.amount)
-    w.putLong(output.fee)
-    w.putInt(output.pubKeyHash.length)
-    w.putBytes(output.pubKeyHash)
-  }
-
-  override def parse(r: Reader): MainchainBTCertificateOutput = {
-    val amount = r.getLong()
-    val fee = r.getLong()
-    val keySize = r.getInt()
-    val pubKeyHash = r.getBytes(keySize)
-    val output = new MainchainBTCertificateOutput(pubKeyHash, amount)
-    output.fee = fee
-    output
-  }
-}
 
 class MainchainBackwardTransferCertificate
   (val certificateBytes: Array[Byte],
@@ -64,7 +11,7 @@ class MainchainBackwardTransferCertificate
    val epochNumber: Int,
    val endEpochBlockHash: Array[Byte],
    val totalAmount: Long,
-   val outputs: Seq[MainchainBTCertificateOutput])
+   val outputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
   override type M = MainchainBackwardTransferCertificate
@@ -72,6 +19,8 @@ class MainchainBackwardTransferCertificate
   override def serializer: ScorexSerializer[MainchainBackwardTransferCertificate] = MainchainBackwardTransferCertificateSerializer
 
   def size: Int = certificateBytes.length
+
+  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
 
 }
 
@@ -95,24 +44,30 @@ object MainchainBackwardTransferCertificate {
     val totalAmount: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
-    val outputCount: VarInt = BytesUtils.getVarInt(certificateBytes, offset)
+    val outputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += outputCount.size()
 
-    var outputs: Seq[MainchainBTCertificateOutput] = Seq[MainchainBTCertificateOutput]()
+    var outputs: Seq[MainchainBackwardTransferCertificateOutput] = Seq[MainchainBackwardTransferCertificateOutput]()
 
-    while(offset < certificateBytes.length) {
-      val o: MainchainBTCertificateOutput = MainchainBTCertificateOutput.parse(certificateBytes, offset)
+    while(outputs.size < outputCount.value()) {
+      val o: MainchainBackwardTransferCertificateOutput = MainchainBackwardTransferCertificateOutput.parse(certificateBytes, currentOffset)
       outputs = outputs :+ o
-      currentOffset += 60
+      currentOffset += o.size
     }
+
+    val ccoutCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    currentOffset += ccoutCount.size()
+
+    val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
+    currentOffset += 32
 
     val totalFee: Long = totalAmount - outputs.map(_.amount).sum
     val fee = totalFee / outputs.size
 
-    for(o <- outputs)
-      o.fee = fee
+    val outputsWithFee = outputs.map(o => MainchainBackwardTransferCertificateOutput(o.outputBytes, o.pubKeyHash, o.amount, fee))
 
-    new MainchainBackwardTransferCertificate(certificateBytes, version, sidechainId, epochNumber, endEpochBlockHash, totalAmount, outputs)
+    new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
+      sidechainId, epochNumber, endEpochBlockHash, totalAmount, outputsWithFee)
 
   }
 }
@@ -120,8 +75,6 @@ object MainchainBackwardTransferCertificate {
 object MainchainBackwardTransferCertificateSerializer
   extends ScorexSerializer[MainchainBackwardTransferCertificate]
 {
-
-  private val outputsSerializer = new ListSerializer[MainchainBTCertificateOutput](MainchainBTCertificateOutputSerializer)
 
   override def serialize(certificate: MainchainBackwardTransferCertificate, w: Writer): Unit = {
     w.putInt(certificate.certificateBytes.length)

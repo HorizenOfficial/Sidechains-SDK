@@ -211,7 +211,7 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[Array[Byte]]](),
       ArgumentMatchers.any[Set[WithdrawalRequestBox]](),
-      ArgumentMatchers.any[Seq[MainchainBackwardTransferCertificate]]()))
+      ArgumentMatchers.any[Boolean]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)

@@ -2,7 +2,7 @@ package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.SidechainSettings
-import com.horizen.mainchain.{CertificateRequest, CertificateRequestResponce, RawCertificate, RawCertificateResponce, SidechainInfoResponce}
+import com.horizen.mainchain.{CertificateRequest, CertificateResponce, SidechainInfoResponce}
 import com.horizen.utils.BytesUtils
 
 class RpcMainchainApi(val sidechainSettings: SidechainSettings)
@@ -49,7 +49,7 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
     objectMapper.readValue(responce, classOf[SidechainInfoResponce])
   }
 
-  override def sendCertificate(certificateRequest: CertificateRequest): CertificateRequestResponce = {
+  override def sendCertificate(certificateRequest: CertificateRequest): CertificateResponce = {
     val objectMapper = new ObjectMapper()
     val responce = callRpc("send_certificate "
       + enclosStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
@@ -57,8 +57,6 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
       + enclosStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
       + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.withdrawalRequests)))
 
-    CertificateRequestResponce(BytesUtils.fromHexString(responce))
+    CertificateResponce(BytesUtils.fromHexString(responce))
   }
-
-  override def getRawCertificate(rawCertificate: RawCertificate): RawCertificateResponce = ???
 }
