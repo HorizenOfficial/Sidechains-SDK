@@ -178,13 +178,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/template:
+  /block/startForging:
     post:
       tags:
         - block
-      summary: find block candidate for being next tip
-      description: Return Sidechain block candidate for being next tip, already signed by Forger
-      operationId: getBlockTemplate
+      summary: Start forging
+      description: Start forging
+      operationId: startForging
       responses:
         '200':
           description: successful operation
@@ -196,10 +196,8 @@ paths:
                   result:
                     type: object
                     properties:
-                      block:
+                      result:
                         type: string
-                      blockInfo:
-                        $ref: '#/components/schemas/SidechainBlock'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -209,24 +207,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/submit:
+  /block/stopForging:
     post:
       tags:
         - block
-      summary: submitBlock
-      description: submitBlock
-      operationId: submitBlock
-      requestBody:
-        description: The sidechain block as array of bytes
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - blockHex
-              properties:
-                blockHex:
-                  type: string
+      summary: Stop forging
+      description: Stop forging
+      operationId: stopForging
       responses:
         '200':
           description: successful operation
@@ -238,7 +225,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockId:
+                      result:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -253,9 +240,9 @@ paths:
     post:
       tags:
         - block
-      summary: generate new blocks
-      description: Returns ids of generated sidechain blocks
-      operationId: generateBlocks
+      summary: try to generate new block by epoch and slot number
+      description: Returns id of generated sidechain block
+      operationId: generateBlockForEpochNumberAndSlot
       requestBody:
         content:
           application/json:
@@ -264,8 +251,12 @@ paths:
               required:
                 - number
               properties:
-                number:
-                  description: The number of blocks to generate
+                epochNumber:
+                  description: Epoch number
+                  type: integer
+                  format: int32
+                slotNumber:
+                  description: Slot number
                   type: integer
                   format: int32
       responses:
@@ -279,10 +270,8 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockIds:
-                        type: array
-                        items:
-                          type: string
+                      blockId:
+                        type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -991,13 +980,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /wallet/createSecret:
+  /wallet/create25519Secret:
     post:
       tags:
         - wallet
-      summary: new secret
+      summary: new 25519 secret
       description: Create new secret and return corresponding address (public key)
-      operationId: createSecret
+      operationId: create25519Secret
       responses:
         '200':
           description: successful operation

@@ -123,9 +123,9 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "reply at /createSecret" in {
+    "reply at /create25519Secret" in {
       // secret is added
-      Post(basePath + "createSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "create25519Secret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -141,7 +141,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "create25519Secret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)

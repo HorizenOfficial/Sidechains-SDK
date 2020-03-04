@@ -6,7 +6,7 @@ import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
-import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.box.{Box, ForgerBox, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -37,10 +37,10 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   private val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
   private val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
   private val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  private val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
-  private val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
-  private val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
-  private val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
+  val box_1: RegularBox = getRegularBox(secret1.publicImage(), 1, 10)
+  val box_2: RegularBox = getRegularBox(secret2.publicImage(), 1, 20)
+  val box_3: RegularBox = getRegularBox(secret3.publicImage(), 1, 30)
+  val box_4: ForgerBox = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList

@@ -1,21 +1,18 @@
 package com.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
-import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
+import akka.util.Timeout
 import com.horizen.block.SidechainBlock
-import com.horizen.forge.Forger.ReceivableMessages.{TryForgeNextBlock, TrySubmitBlock}
+import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import scorex.core.PersistentNodeViewModifier
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
-import akka.pattern.ask
-import akka.util.Timeout
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
@@ -88,47 +85,8 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 
   }
 
-  // Note: It should be used only in regtest
-  protected def generateSidechainBlocks: Receive = {
-    case GenerateSidechainBlocks(blockCount) =>
-      // Try to forge blockCount blocks, collect their ids and wait for
-      var generatedIds: Seq[ModifierId] = Seq()
-      for (i <- 1 to blockCount) {
-        val future = forgerRef ? TryForgeNextBlock
-        Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
-          case Success(id) =>
-            generatedIds = id +: generatedIds
-            if (i == blockCount) {
-              // Create a promise, that will wait for blocks applying result from Node
-              val prom = Promise[Try[Seq[ModifierId]]]()
-              generatedBlockGroups += (id -> generatedIds)
-              generatedBlocksPromises += (id -> prom)
-              sender() ! prom.future
-            }
-
-          case Failure(ex) =>
-            sender() ! Future[Try[Seq[ModifierId]]](Failure(ex))
-        }
-      }
-  }
-
-  protected def tryToSubmitBlock: Receive = {
-    case SubmitSidechainBlock(blockBytes: Array[Byte]) =>
-      val future = forgerRef ? TrySubmitBlock(blockBytes)
-      Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]] match {
-        case Success(id) =>
-          // Create a promise, that will wait for block applying result from Node
-          val prom = Promise[Try[ModifierId]]()
-          submitBlockPromises += (id -> prom)
-          sender() ! prom.future
-
-        case Failure(ex) =>
-          sender() ! Future[Try[ModifierId]](Failure(ex))
-      }
-  }
-
   override def receive: Receive = {
-    sidechainNodeViewHolderEvents orElse generateSidechainBlocks orElse tryToSubmitBlock orElse {
+    sidechainNodeViewHolderEvents orElse {
       case message: Any => log.error("SidechainBlockActor received strange message: " + message)
     }
   }

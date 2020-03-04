@@ -60,6 +60,6 @@ public final class ForgerBox
         long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
         ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, Longs.BYTES, bytes.length));
 
-        return new ForgerBox(boxData, nonce);
+        return boxData.getBox(nonce);
     }
 }

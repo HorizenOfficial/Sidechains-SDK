@@ -2,6 +2,7 @@ package com.horizen
 
 import java.math.BigInteger
 
+import com.horizen.vrf.VRFProof
 import scorex.util.ModifierId
 import supertagged.TaggedType
 
@@ -47,6 +48,13 @@ package object consensus {
   def sha256HashToBigInteger(bytes: Array[Byte]): BigInteger = {
     require(bytes.length == sha256HashLen)
     new BigInteger(1, bytes)
+  }
+
+  def vrfProofCheckAgainstStake(actualStake: Long, vrfProof: VRFProof, totalStake: Long): Boolean = {
+    val requiredPercentage: BigDecimal = BigDecimal(hashToStakePercent(vrfProof.proofToVRFHash()))
+    val actualPercentage: BigDecimal = BigDecimal(actualStake) / totalStake
+
+    requiredPercentage <= actualPercentage
   }
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)

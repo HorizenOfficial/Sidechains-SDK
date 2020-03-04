@@ -22,6 +22,24 @@ trait ConsensusDataProvider {
 
     val previousEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
 
+    getFullConsensusEpochInfoByPreviousEpochId(previousEpochId)
+  }
+
+  def getFullConsensusEpochInfoForNextBlock(currentBlockId: ModifierId, nextBlockConsensusEpochNumber: ConsensusEpochNumber): FullConsensusEpochInfo = {
+    val currentBlockInfo = storage.blockInfoById(currentBlockId)
+    val currentBlockEpochNumber: ConsensusEpochNumber = timeStampToEpochNumber(currentBlockInfo.timestamp)
+    val currentBlockIsLastInEpoch = nextBlockConsensusEpochNumber > currentBlockEpochNumber
+
+    if (currentBlockIsLastInEpoch) {
+      //if block is last in epoch then consensus epochId is equals to blockId
+      getFullConsensusEpochInfoByPreviousEpochId(blockIdToEpochId(currentBlockId))
+    }
+    else {
+      getFullConsensusEpochInfoForBlock(currentBlockId, currentBlockInfo)
+    }
+  }
+
+  def getFullConsensusEpochInfoByPreviousEpochId(previousEpochId: ConsensusEpochId): FullConsensusEpochInfo = {
     val nonceEpochInfo: NonceConsensusEpochInfo =
       consensusDataStorage.getNonceConsensusEpochInfoOrElseUpdate(previousEpochId, calculateNonceForEpoch(previousEpochId))
 
@@ -41,7 +59,8 @@ trait ConsensusDataProvider {
     val lastBlockInfoInEpoch = storage.blockInfoById(lastBlockIdInEpoch)
 
     val nonceSource: Option[BigInteger] = foldEpoch[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
-      (_, blockInfo, accumulator) => (getMinimalHash(blockInfo.mainchainBlockReferenceHashes.map(_.data)), accumulator) match {
+      (_: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
+        (getMinimalHash(blockInfo.mainchainBlockReferenceHashes.map(_.data)), accumulator) match {
         case (None, _) => accumulator
         case (minimalHashOpt, None) => minimalHashOpt
         case (Some(a), Some(b)) => Option(a.min(b))
