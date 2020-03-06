@@ -2,7 +2,7 @@ package com.horizen
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 
-import com.google.common.primitives.Bytes
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.vrf.VRFProof
 import scorex.util.ModifierId
 import supertagged.TaggedType
@@ -34,13 +34,19 @@ package object consensus {
   type ConsensusSlotNumber = ConsensusSlotNumber.Type
   def intToConsensusSlotNumber(consensusSlotNumber: Int): ConsensusSlotNumber = ConsensusSlotNumber @@ consensusSlotNumber
 
+  //Slot number starting from genesis block
+  object ConsensusAbsoluteSlotNumber extends TaggedType[Int]
+  type ConsensusAbsoluteSlotNumber = ConsensusAbsoluteSlotNumber.Type
+  def intToConsensusAbsoluteSlotNumber(consensusSlotNumber: Int): ConsensusAbsoluteSlotNumber = ConsensusAbsoluteSlotNumber @@ consensusSlotNumber
+
+
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
   def bigIntToConsensusNonce(consensusNonce: BigInteger): ConsensusNonce = ConsensusNonce @@ consensusNonce.toByteArray
 
   def buildVrfMessage(slotNumber: ConsensusSlotNumber, nonce: NonceConsensusEpochInfo): Array[Byte] = {
-    val slotNumberBytes = slotNumber.toString.getBytes()
-    val nonceBytes = nonce.bytes
+    val slotNumberBytes = Ints.toByteArray(slotNumber)
+    val nonceBytes = nonce.consensusNonce
 
     Bytes.concat(slotNumberBytes, nonceBytes, consensusHardcodedSaltString)
   }
@@ -70,5 +76,5 @@ package object consensus {
       .divide(forgerStakePercentPrecision, stakeConsensusDivideMathContext) //got random number from 0 to 0.(9)
   }
 
-  def getMinimalHash(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
+  def getMinimalHashOpt(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
 }

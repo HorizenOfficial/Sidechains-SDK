@@ -1,6 +1,6 @@
 package com.horizen.validation
 
-import java.io.{BufferedReader, FileReader}
+import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.lang.{Byte => JByte}
 import java.util
 import java.util.{ArrayList => JArrayList}
@@ -49,11 +49,12 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     assertEquals("Deserialized box merkle path info hashCode expected to be equal to the original one.", boxWithNonEmptyPath.hashCode(), deserializedBox.hashCode())
     assertEquals("Deserialized box merkle path info expected to be equal to the original one.", boxWithNonEmptyPath, deserializedBox)
 
-    // Uncomment and run if you want to update regression data.
-    /* val out = new BufferedWriter(new FileWriter("src/test/resources/boxmerklepathinfo_hex"))
-     out.write(BytesUtils.toHexString(boxBytes))
-     out.close()*/
-
+    // Set to true and run if you want to update regression data.
+    if (false) {
+      val out = new BufferedWriter(new FileWriter("src/test/resources/boxmerklepathinfo_hex"))
+      out.write(BytesUtils.toHexString(boxBytes))
+      out.close()
+    }
 
     // Test 3: try to deserialize broken bytes.
     assertTrue("ForgerBoxMerklePathInfo expected to be not parsed due to broken data.", ForgerBoxMerklePathInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)

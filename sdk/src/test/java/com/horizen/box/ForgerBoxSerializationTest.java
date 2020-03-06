@@ -34,13 +34,16 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
                 new PublicKey25519Proposition(keyPair.getValue()),
                 getVRFPublicKey(123));
 
-     //Uncomment and run if you want to update regression data.
-     /*   try {
-            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerrbox_hex"));
-            out.write(BytesUtils.toHexString(box.bytes()));
-            out.close();
-        } catch (Throwable e) {
-        }*/
+     //Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerrbox_hex"));
+                out.write(BytesUtils.toHexString(box.bytes()));
+                out.close();
+            }
+            catch (Throwable e) {
+            }
+        }
     }
 
     @Test
@@ -52,7 +55,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         assertEquals("Boxes expected to be equal", box, box2);
 
 
-        boolean failureExpected = serializer.parseBytesTry("".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
     }
 

@@ -40,10 +40,7 @@ public final class ForgerBox
 
     @Override
     public byte[] bytes() {
-        byte[] forgerBoxDataBytes = ForgerBoxDataSerializer.getSerializer().toBytes(boxData);
-        int forgerBoxDataBytesLength = forgerBoxDataBytes.length;
-
-        return Bytes.concat(Longs.toByteArray(nonce), Ints.toByteArray(forgerBoxDataBytesLength), forgerBoxDataBytes);
+        return Bytes.concat(Longs.toByteArray(nonce), ForgerBoxDataSerializer.getSerializer().toBytes(boxData));
     }
 
     @Override
@@ -59,11 +56,8 @@ public final class ForgerBox
     public static ForgerBox parseBytes(byte[] bytes) {
         long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
 
-        int forgerBoxDataLengthOffset = Longs.BYTES;
-        int forgerBoxDataLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, forgerBoxDataLengthOffset, forgerBoxDataLengthOffset + Ints.BYTES));
-
-        int forgerBoxDataOffset = forgerBoxDataLengthOffset + Ints.BYTES;
-        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, forgerBoxDataOffset + forgerBoxDataLength));
+        int forgerBoxDataOffset = Longs.BYTES;
+        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, bytes.length));
 
         return new ForgerBox(boxData, nonce);
     }

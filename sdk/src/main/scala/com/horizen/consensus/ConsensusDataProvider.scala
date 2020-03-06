@@ -46,11 +46,11 @@ trait ConsensusDataProvider {
     val lastBlockIdInEpoch: ModifierId = lastBlockIdInEpochId(epochId)
     val lastBlockInfoInEpoch: SidechainBlockInfo = storage.blockInfoById(lastBlockIdInEpoch)
 
-    val nonceSource: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
+    val nonceOpt: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
       (blockId: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
         {
-          val minimalHashForCurrentBlock = getMinimalHash(blockInfo.mainchainBlockReferenceHashes.map(_.data))
-          (minimalHashForCurrentBlock, accumulator) match {
+          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainBlockReferenceHashes.map(_.data))
+          (minimalHashForCurrentBlockOpt, accumulator) match {
             case (None, _) => accumulator
             case (minimalHashOpt, None) => minimalHashOpt
             case (Some(a), Some(b)) => Option(a.min(b))
@@ -58,9 +58,9 @@ trait ConsensusDataProvider {
       }
     }
 
-    assert(nonceSource.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
+    assert(nonceOpt.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
 
-    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceSource.get))
+    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceOpt.get))
   }
 
   /**
