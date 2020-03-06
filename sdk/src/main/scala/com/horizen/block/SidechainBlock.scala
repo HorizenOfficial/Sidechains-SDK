@@ -6,10 +6,10 @@ import java.time.Instant
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{ForgerBox, ForgerBoxSerializer, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{AbstractSignature25519, Signature25519}
+import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
@@ -209,12 +209,17 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putBytes(idToBytes(obj.parentId))
     w.putLong(obj.timestamp)
 
-    val bw = w.newWriter()
-    mcBlocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, bw)
-    w.putInt(bw.length())
-    w.append(bw)
+    val mainchainBlocksWriter = w.newWriter()
+    mcBlocksSerializer.serialize(obj.mainchainBlocks.toList.asJava, mainchainBlocksWriter)
+    w.putInt(mainchainBlocksWriter.length())
+    w.append(mainchainBlocksWriter)
 
-    w.putBytes(obj.forgerBox.bytes())
+    val forgerBoxWriter = w.newWriter()
+    ForgerBoxSerializer.getSerializer.serialize(obj.forgerBox, forgerBoxWriter)
+    w.putInt(forgerBoxWriter.length())
+    w.append(forgerBoxWriter)
+
+
     w.putBytes(obj.vrfProof.bytes)
     w.putBytes(obj.signature.bytes())
 
@@ -236,13 +241,12 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val timestamp = r.getLong()
 
     val mcbSize = r.getInt()
-
-    if (r.remaining < mcbSize)
-      throw new IllegalArgumentException("Input data corrupted.")
-
+    if (r.remaining < mcbSize) throw new IllegalArgumentException("Input data corrupted: Mainchain blocks can't be parsed")
     val mcblocks: Seq[MainchainBlockReference] = mcBlocksSerializer.parse(r.newReader(r.getChunk(mcbSize))).asScala
 
-    val forgerBox = ForgerBox.parseBytes(r.getBytes(ForgerBox.length()))
+    val forgerBoxLength = r.getInt()
+    if (r.remaining < forgerBoxLength) throw new IllegalArgumentException("Input data corrupted: Forger box can't be parsed")
+    val forgerBox = ForgerBoxSerializer.getSerializer.parse(r.newReader(r.getChunk(forgerBoxLength)))
 
     val vrfProof = VRFProof.parseBytes(r.getBytes(VRFProof.length))
 
@@ -252,10 +256,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val merklePath = MerklePath.parseBytes(r.getBytes(merklePathLength))
 
     val txSize = r.getInt()
-
-    if (r.remaining < txSize)
-      throw new IllegalArgumentException("Input data corrupted.")
-
+    if (r.remaining < txSize) throw new IllegalArgumentException("Input data corrupted: Transactions can't be parsed")
     val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
       sidechainTransactionsSerializer.parse(r.newReader(r.getChunk(txSize)))
         .asScala

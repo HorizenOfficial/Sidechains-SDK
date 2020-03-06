@@ -16,8 +16,6 @@ case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends Bytes
     }
   }
 
-  def getAsStringForVrfBuilding: String = BytesUtils.toHexString(consensusNonce)
-
   override type M = NonceConsensusEpochInfo
 
   override def serializer: ScorexSerializer[NonceConsensusEpochInfo] = NonceConsensusEpochInfoSerializer

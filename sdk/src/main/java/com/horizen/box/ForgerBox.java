@@ -2,6 +2,7 @@ package com.horizen.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
@@ -39,7 +40,10 @@ public final class ForgerBox
 
     @Override
     public byte[] bytes() {
-        return Bytes.concat(Longs.toByteArray(nonce), ForgerBoxDataSerializer.getSerializer().toBytes(boxData));
+        byte[] forgerBoxDataBytes = ForgerBoxDataSerializer.getSerializer().toBytes(boxData);
+        int forgerBoxDataBytesLength = forgerBoxDataBytes.length;
+
+        return Bytes.concat(Longs.toByteArray(nonce), Ints.toByteArray(forgerBoxDataBytesLength), forgerBoxDataBytes);
     }
 
     @Override
@@ -52,13 +56,14 @@ public final class ForgerBox
         return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, rewardProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), rewardProposition(), nonce());
     }
 
-    public static int length() {
-        return Longs.BYTES + ForgerBoxData.length();
-    }
-
     public static ForgerBox parseBytes(byte[] bytes) {
         long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
-        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, Longs.BYTES, bytes.length));
+
+        int forgerBoxDataLengthOffset = Longs.BYTES;
+        int forgerBoxDataLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, forgerBoxDataLengthOffset, forgerBoxDataLengthOffset + Ints.BYTES));
+
+        int forgerBoxDataOffset = forgerBoxDataLengthOffset + Ints.BYTES;
+        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, forgerBoxDataOffset + forgerBoxDataLength));
 
         return new ForgerBox(boxData, nonce);
     }

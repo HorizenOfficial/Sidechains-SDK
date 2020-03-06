@@ -34,6 +34,7 @@ case class FinishedEpochInfo(stakeConsensusEpochInfo: StakeConsensusEpochInfo, n
 
 //will be thrown if block generation no longer is possible, for example: nonce no longer can be calculated due no mainchain references in whole epoch
 class GenerationIsNoLongerPossible extends IllegalStateException
+class GenerationOfIncorrectBlockNotPossible extends IllegalStateException
 
 // @TODO consensusDataStorage is shared between generator instances, so data could be already added. Shall be fixed.
 class SidechainBlocksGenerator private (val params: NetworkParams,
@@ -202,7 +203,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       do {
         corrupted = VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes)._2
         println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
-      } while (corrupted.bytes.deep == initialForgerBox.bytes().deep)
+      } while (corrupted.bytes.deep == initialForgerBox.vrfPubKey().bytes.deep)
       corrupted
     }
     else {

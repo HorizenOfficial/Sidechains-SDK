@@ -10,7 +10,9 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
@@ -32,13 +34,13 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
                 new PublicKey25519Proposition(keyPair.getValue()),
                 getVRFPublicKey(123));
 
-//     Uncomment and run if you want to update regression data.
-//        try {
-//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerrbox_hex"));
-//            out.write(BytesUtils.toHexString(box.bytes()));
-//            out.close();
-//        } catch (Throwable e) {
-//        }
+     //Uncomment and run if you want to update regression data.
+     /*   try {
+            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerrbox_hex"));
+            out.write(BytesUtils.toHexString(box.bytes()));
+            out.close();
+        } catch (Throwable e) {
+        }*/
     }
 
     @Test
@@ -50,9 +52,8 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         assertEquals("Boxes expected to be equal", box, box2);
 
 
-        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        boolean failureExpected = serializer.parseBytesTry("".getBytes()).isFailure();
         assertTrue("Failure during parsing expected", failureExpected);
-
     }
 
     @Test
