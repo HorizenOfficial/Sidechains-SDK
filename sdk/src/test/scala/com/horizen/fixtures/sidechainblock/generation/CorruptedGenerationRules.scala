@@ -42,6 +42,7 @@ object CorruptedGenerationRules {
 
   private def generateIteration(rnd: Random, params: NetworkParams): CorruptedGenerationRules = {
     var rule = CorruptedGenerationRules()
+    /* @TODO add those checks. Implementation more complex logic is required: false positive test can occurs due forger is eligible for current and shifted slot
     if (rnd.nextInt(100) < 2) {
       rule = rule.copy(timestampShiftInSlots = rnd.nextInt() % (params.consensusSlotsInEpoch * 2))
     }
@@ -50,7 +51,7 @@ object CorruptedGenerationRules {
       rule = rule.copy(consensusSlotShift = rnd.nextInt() % (params.consensusSlotsInEpoch * 2))
     }
 
-    /*if (rnd.nextInt(100) < 5) {
+    if (rnd.nextInt(100) < 5) {
       val consensusSlotShift = 0 - Math.abs(rnd.nextInt() % params.consensusSlotsInEpoch * 2)
       val timestampShift = consensusSlotShift
       rule = rule.copy(consensusSlotShift = consensusSlotShift, timestampShiftInSlots = timestampShift)
