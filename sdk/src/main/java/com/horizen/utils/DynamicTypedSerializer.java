@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DynamicTypedSerializer<T extends BytesSerializable, S extends ScorexSerializer<? extends T>> implements ScorexSerializer<T> {
+public class DynamicTypedSerializer<T extends BytesSerializable, S extends ScorexSerializer<T>> implements ScorexSerializer<T> {
     protected HashMap<Byte, S> _coreSerializers; // unique core key : core serializer
     protected HashMap<Class, Byte> _coreSerializersClasses; // core serializer class : unique core key
 
