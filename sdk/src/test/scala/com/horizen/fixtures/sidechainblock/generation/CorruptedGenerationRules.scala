@@ -42,9 +42,20 @@ object CorruptedGenerationRules {
 
   private def generateIteration(rnd: Random, params: NetworkParams): CorruptedGenerationRules = {
     var rule = CorruptedGenerationRules()
-    if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(timestampShiftInSlots = rnd.nextInt() % params.consensusSlotsInEpoch * 2)
+    /* @TODO add those checks. Implementation more complex logic is required: false positive test can occurs due forger is eligible for current and shifted slot
+    if (rnd.nextInt(100) < 2) {
+      rule = rule.copy(timestampShiftInSlots = rnd.nextInt() % (params.consensusSlotsInEpoch * 2))
     }
+
+    if (rnd.nextInt(100) < 2) {
+      rule = rule.copy(consensusSlotShift = rnd.nextInt() % (params.consensusSlotsInEpoch * 2))
+    }
+
+    if (rnd.nextInt(100) < 5) {
+      val consensusSlotShift = 0 - Math.abs(rnd.nextInt() % params.consensusSlotsInEpoch * 2)
+      val timestampShift = consensusSlotShift
+      rule = rule.copy(consensusSlotShift = consensusSlotShift, timestampShiftInSlots = timestampShift)
+    }*/
 
     if (rnd.nextInt(100) < 3) {
       rule = rule.copy(getOtherSidechainForgingData = true)
@@ -56,10 +67,6 @@ object CorruptedGenerationRules {
 
     if (rnd.nextInt(100) < 5) {
       rule = rule.copy(consensusNonceShift = BigInteger.valueOf(rnd.nextLong()))
-    }
-
-    if (rnd.nextInt(100) < 2) {
-      rule = rule.copy(consensusSlotShift = rule.timestampShiftInSlots + rnd.nextInt())
     }
 
     if (rnd.nextInt(100) < 3) {
@@ -110,15 +117,13 @@ object ForgerBoxCorruptionRules {
       rule = rule.copy(nonceShift = rnd.nextInt())
     }
 
-    /* Shall be enabled as value became part of Forger box Id
     if (rnd.nextInt(100) < 2) {
       rule = rule.copy(valueShift = rnd.nextInt())
-    }*/
+    }
 
-    /*Shall be enabled as rewardProposition became part of Forger box Id
     if (rnd.nextInt(100) < 1) {
       rule = rule.copy(rewardPropositionChanged = true)
-    }*/
+    }
 
     if (rnd.nextInt(100) < 2) {
       rule = rule.copy(vrfPubKeyChanged = true)

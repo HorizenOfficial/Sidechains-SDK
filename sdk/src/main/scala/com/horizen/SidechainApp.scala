@@ -103,9 +103,7 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -114,9 +112,7 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -125,9 +121,7 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

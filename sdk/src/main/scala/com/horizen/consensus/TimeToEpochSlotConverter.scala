@@ -19,6 +19,12 @@ trait TimeToEpochSlotConverter {
       intToConsensusSlotNumber(slotIndex.toInt + 1)
   }
 
+  //Slot number starting from genesis block
+  def timeStampToAbsoluteSlotNumber(timestamp: Block.Timestamp): ConsensusAbsoluteSlotNumber = {
+    val slotNumber = timeStampToEpochNumber(timestamp) * params.consensusSlotsInEpoch + timeStampToSlotNumber(timestamp)
+    intToConsensusAbsoluteSlotNumber(slotNumber)
+  }
+
   def getTimeStampForEpochAndSlot(epochNumber: ConsensusEpochNumber, slotNumber: ConsensusSlotNumber): Long = {
     require(slotNumber <= params.consensusSlotsInEpoch)
 

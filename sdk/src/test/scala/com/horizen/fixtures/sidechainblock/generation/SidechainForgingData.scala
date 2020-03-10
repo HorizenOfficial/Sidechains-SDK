@@ -4,7 +4,7 @@ import java.util.Random
 
 import com.horizen.box.ForgerBox
 import com.horizen.box.data.ForgerBoxData
-import com.horizen.consensus.hashToStakePercent
+import com.horizen.consensus._
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.vrf.{VRFKeyGenerator, VRFProof, VRFSecretKey}
 
@@ -19,12 +19,7 @@ case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfS
   }
 
   private def stakeCheck(proof: VRFProof, totalStake: Long): Boolean = {
-    val requiredPercentage: Double = hashToStakePercent(proof.proofToVRFHash())
-    val actualPercentage: Double = forgerBox.value().toDouble / totalStake
-
-    //println(s"For ${key.hashCode()} with value ${forgerBox.value()} and Vrf ${forgerBox.vrfPubKey().key.hashCode()}: required % ${requiredPercentage}, actual % ${actualPercentage}")
-
-    requiredPercentage <= actualPercentage
+    vrfProofCheckAgainstStake(forgerBox.value(), proof, totalStake)
   }
 
   val forgerId: Array[Byte] = forgerBox.id()

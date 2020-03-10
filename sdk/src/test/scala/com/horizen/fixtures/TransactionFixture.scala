@@ -1,41 +1,40 @@
 package com.horizen.fixtures
 
-import com.horizen.transaction.RegularTransaction
-import com.horizen.secret.PrivateKey25519
-import com.horizen.box.{NoncedBox, RegularBox}
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.box.RegularBox
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition}
+import com.horizen.box.{NoncedBox, RegularBox}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
-
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
-import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.util.Random
 
 trait TransactionFixture extends BoxFixture {
 
-  def generateRegularTransaction(rnd: Random, inputTransactionsSize: Int, outputTransactionsSize: Int): RegularTransaction = {
+  def generateRegularTransaction(rnd: Random, transactionBaseTimeStamp: Long, inputTransactionsSize: Int, outputTransactionsSize: Int): RegularTransaction = {
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to inputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextString(32).getBytes))
 
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to outputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(util.Random.nextString(32).getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextString(32).getBytes).publicImage())
 
-    getRegularTransaction(inputTransactionsList, outputTransactionsList)
+    getRegularTransaction(inputTransactionsList, outputTransactionsList, rnd = rnd, transactionBaseTimeStamp = transactionBaseTimeStamp)
   }
 
-  def getRegularTransaction(inputsSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
+  def getRegularTransaction(inputsSecrets: Seq[PrivateKey25519],
+                            outputPropositions: Seq[PublicKey25519Proposition],
+                            rnd: Random = new Random(),
+                            transactionBaseTimeStamp: Long = System.currentTimeMillis,
+                           ): RegularTransaction = {
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
     for(secret <- inputsSecrets) {
-      val value = 10 + Random.nextInt(10)
-      from.add(new JPair(getRegularBox(secret.publicImage(), Random.nextInt(1000), value), secret))
+      val value = 10 + rnd.nextInt(10)
+      from.add(new JPair(getRegularBox(secret.publicImage(), rnd.nextInt(1000), value), secret))
       totalFrom += value
     }
 
@@ -51,7 +50,7 @@ trait TransactionFixture extends BoxFixture {
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee, transactionBaseTimeStamp - rnd.nextInt(10000))
   }
 
   def getRegularTransaction(inputBoxes: Seq[RegularBox], inputSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
