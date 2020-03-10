@@ -61,27 +61,27 @@ class Forger(settings: SidechainSettings,
   ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor).execute(forgingInitiator)
 
   override def receive: Receive = {
-    startForging orElse stopForging orElse tryForgeNextBlock orElse {
+    processStartForgingMessage orElse processStopForgingMessage orElse processTryForgeNextBlockForEpochAndSlotMessage orElse {
       case message: Any => log.error("Forger received strange message: " + message)
     }
   }
 
 
-  protected def startForging: Receive = {
+  protected def processStartForgingMessage: Receive = {
     case Forger.ReceivableMessages.StartForging => {
       forgingIsActive = true
       sender() ! Success()
     }
   }
 
-  protected def stopForging: Receive = {
+  protected def processStopForgingMessage: Receive = {
     case Forger.ReceivableMessages.StopForging => {
       forgingIsActive = false
       sender() ! Success()
     }
   }
 
-  protected def tryForgeNextBlock: Receive = {
+  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
     case Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(consensusEpochNumber, consensusSlotNumber) => {
       val forgingFunctionForEpochAndSlot: View => Option[SidechainBlock] =
         tryToForgeNextBlock(intToConsensusEpochNumber(consensusEpochNumber), intToConsensusSlotNumber(consensusSlotNumber))
@@ -117,7 +117,7 @@ class Forger(settings: SidechainSettings,
 
     val availableForgersDataWithSecret: Seq[ForgerDataWithSecrets] = view.vault.getForgingDataWithSecrets(nextConsensusEpochNumber).getOrElse(Seq())
 
-    val newBlock = availableForgersDataWithSecret
+    val newBlockOpt = availableForgersDataWithSecret
       .toStream
       .map(forgerDataWithSecrets => (forgerDataWithSecrets, forgerDataWithSecrets.vrfSecret.prove(vrfMessage)))
       .find{case (forgerDataWithSecrets, vrfProof) =>
@@ -127,7 +127,7 @@ class Forger(settings: SidechainSettings,
         forgeBlock(view, bestBlockId, nextBockTimestamp, forgerDataWithSecrets, vrfProof)
       }
 
-    newBlock
+    newBlockOpt
   }
 
   protected def forgeBlock(view: View, parentBlockId: ModifierId, timestamp: Long, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VRFProof): SidechainBlock = {

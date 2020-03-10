@@ -160,14 +160,10 @@ object SidechainBlockRestSchema {
   private[api] case class RespBest(block: SidechainBlock, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] object RespStartForging extends SuccessResponse {
-    val result: String = "Forging had been started"
-  }
+  private[api] object RespStartForging extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] object RespStopForging extends SuccessResponse {
-    val result: String = "Forging had been stopped"
-  }
+  private[api] object RespStopForging extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSubmit(blockHex: String) {

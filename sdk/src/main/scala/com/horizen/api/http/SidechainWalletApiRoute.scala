@@ -26,7 +26,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("wallet")) {
-    allBoxes ~ balance ~ create25519Secret ~ allPublicKeys
+    allBoxes ~ balance ~ createPrivateKey25519 ~ allPublicKeys
   }
 
   /**
@@ -91,14 +91,14 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
     * Create new secret and return corresponding address (public key)
     */
-  def create25519Secret: Route = (post & path("create25519Secret")) {
+  def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
     withNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
       val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
       val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreate25519Secret(secret.publicImage()))
+          ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", Some(e)))
       }
@@ -143,7 +143,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreate25519Secret(proposition: Proposition) extends SuccessResponse
+  private[api] case class RespCreatePrivateKey25519(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreateVrfSecret(proposition: VRFPublicKey) extends SuccessResponse

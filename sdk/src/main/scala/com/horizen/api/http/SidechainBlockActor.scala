@@ -1,8 +1,10 @@
 package com.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.block.SidechainBlock
+import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import scorex.core.PersistentNodeViewModifier
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
@@ -10,7 +12,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.{Await, ExecutionContext, Promise}
 import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
@@ -83,6 +85,15 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     case ChangedHistory(history: SidechainHistory) =>
       processHistoryChangedEvent(history)
 
+  }
+
+  protected def forgeNextBlock: Receive = {
+    case messageToForger @ TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) =>
+    {
+        val future = forgerRef ? messageToForger
+        val forgerResult = Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]]
+        sender() ! forgerResult
+      }
   }
 
   override def receive: Receive = {
