@@ -70,6 +70,15 @@ class MainchainHeader(
   }
 
   override def bytes: Array[Byte] = mainchainHeaderBytes
+
+  override def hashCode(): Int = java.util.Arrays.hashCode(mainchainHeaderBytes)
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case header: MainchainHeader => mainchainHeaderBytes.sameElements(header.mainchainHeaderBytes)
+      case _ => false
+    }
+  }
 }
 
 

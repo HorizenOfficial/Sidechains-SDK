@@ -103,17 +103,6 @@ public final class MC2SCAggregatedTransaction
         return MC2SCAggregatedTransactionId.id();
     }
 
-    @JsonProperty("id")
-    @Override
-    public String id() {
-        return Base16.encode(Blake2b256.hash(_mc2scTransactionsMerkleRootHash));
-    }
-
-    @Override
-    public byte[] messageToSign() {
-        throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
-    }
-
     public byte[] mc2scMerkleRootHash() {
         return Arrays.copyOf(_mc2scTransactionsMerkleRootHash, _mc2scTransactionsMerkleRootHash.length);
     }

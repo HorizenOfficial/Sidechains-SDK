@@ -4,11 +4,11 @@ import com.horizen.utils.ByteArrayWrapper
 import supertagged.TaggedType
 
 package object chain {
-  object MainchainBlockReferenceId extends TaggedType[ByteArrayWrapper]
-  type MainchainBlockReferenceId = MainchainBlockReferenceId.Type
-  val mainchainBlockReferenceIdSize = 32
+  object MainchainBlockReferenceHash extends TaggedType[ByteArrayWrapper]
+  type MainchainBlockReferenceHash = MainchainBlockReferenceHash.Type
+  val mainchainBlockReferenceHashSize = 32
 
-  def byteWrapperToMainchainBlockReferenceId(wrapper: ByteArrayWrapper): MainchainBlockReferenceId = MainchainBlockReferenceId @@ wrapper
+  def byteWrapperToMainchainBlockReferenceHash(wrapper: ByteArrayWrapper): MainchainBlockReferenceHash = MainchainBlockReferenceHash @@ wrapper
 
-  def byteArrayToMainchainBlockReferenceId(bytes: Array[Byte]): MainchainBlockReferenceId = MainchainBlockReferenceId @@ new ByteArrayWrapper(bytes)
+  def byteArrayToMainchainBlockReferenceHash(bytes: Array[Byte]): MainchainBlockReferenceHash = MainchainBlockReferenceHash @@ new ByteArrayWrapper(bytes)
 }

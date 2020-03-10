@@ -172,7 +172,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.parentId)
       .thenAnswer(answer => bytesToId(initialVersion.data))
 
-    Mockito.when(mockedBlock.mainchainBlocks)
+    Mockito.when(mockedBlock.mainchainBlockReferences)
       .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)

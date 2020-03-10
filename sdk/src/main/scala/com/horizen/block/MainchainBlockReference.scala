@@ -8,7 +8,6 @@ import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
@@ -16,6 +15,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarIn
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.google.common.primitives.Bytes
+import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -41,9 +41,37 @@ class MainchainBlockReference(
   extends BytesSerializable
 {
 
-  lazy val hash: Array[Byte] = header.hash
+  // MainchainBlockReference Id must depend on the whole MainchainBlockReference content
+  // Note: In future inside snarks id calculation will be different
+  lazy val id: Array[Byte] = {
+    Blake2b256(Bytes.concat(
+      header.hash,
+      dataHash
+    ))
+  }
 
-  lazy val hashHex: String = BytesUtils.toHexString(hash)
+  lazy val dataHash: Array[Byte] = {
+    val sidechainsMerkleRootsMapRootHash: Array[Byte] = sidechainsMerkleRootsMap match {
+      case Some(mrMap) =>
+        val SCSeq = mrMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+        val merkleTreeLeaves = SCSeq.map(pair => {
+          BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
+            Bytes.concat(
+              BytesUtils.reverseBytes(pair._1.data),
+              BytesUtils.reverseBytes(pair._2)
+            )
+          ))
+        }).toList.asJava
+        val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
+        merkleTree.rootHash()
+      case None => Utils.ZEROS_HASH
+    }
+
+    Blake2b256(Bytes.concat(
+      sidechainRelatedAggregatedTransaction.map(tx => BytesUtils.fromHexString(tx.id())).getOrElse(Utils.ZEROS_HASH),
+      sidechainsMerkleRootsMapRootHash
+    ))
+  }
 
   override type M = MainchainBlockReference
 

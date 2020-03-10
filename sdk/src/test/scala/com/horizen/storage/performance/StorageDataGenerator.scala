@@ -4,7 +4,7 @@ import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{ByteArrayWrapper, byteArrayToWrapper, Pair => JPair, _}
-import scorex.util.idToBytes
+import scorex.util.{ModifierId, idToBytes}
 
 import scala.util.Random
 
@@ -71,7 +71,7 @@ case class TransactionStorageDataGenerator(inputTransactionsSizeRange: Range,
   private def generateTransactionEntry(): JPair[ByteArrayWrapper, ByteArrayWrapper] = {
     val transaction: RegularTransaction = generateRegularTransaction()
     val transactionData: ByteArrayWrapper =  byteArrayToWrapper(transaction.bytes())
-    val transactionId: ByteArrayWrapper = idToBytes(transaction.id)
+    val transactionId: ByteArrayWrapper = idToBytes(ModifierId @@ transaction.id)
     new JPair(transactionId, transactionData)
   }
 

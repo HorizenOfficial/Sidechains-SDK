@@ -18,7 +18,7 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.util.{bytesToId, idToBytes}
+import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
 import scala.io.Source
@@ -33,14 +33,14 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     BytesUtils.fromHexString("00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582"),
     230, BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"))
 
-  private val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
-  private val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
-  private val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  private val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  private val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
-  private val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
-  private val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
-  private val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
+  val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
+  val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
+  val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
+  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
+  val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
+  val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
+  val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
+  val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList
@@ -49,6 +49,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
     Instant.now.getEpochSecond - 10000,
+    Seq(),
+    Seq(),
     Seq(),
     Seq(),
     forgerBoxMetadata.rewardSecret,
@@ -112,7 +114,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     Mockito.when(history.searchTransactionInsideBlockchain(ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlockchain_return_value()) {
         val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
       } else
         Optional.empty()
     })
@@ -120,7 +122,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     Mockito.when(history.searchTransactionInsideSidechainBlock(ArgumentMatchers.any[String], ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_history_searchTransactionInBlock_return_value()) {
         val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
       } else
         Optional.empty()
     })
@@ -216,7 +218,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     Mockito.when(memoryPool.getTransactionById(ArgumentMatchers.any[String])).thenAnswer(asw => {
       if (sidechainApiMockConfiguration.getShould_memPool_searchTransactionInMemoryPool_return_value()) {
         val id = asw.getArgument(0).asInstanceOf[String]
-        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
+        Optional.ofNullable(Try(transactionList.asScala.filter(tx => BytesUtils.toHexString(idToBytes(ModifierId @@ tx.id)).equalsIgnoreCase(id)).head).getOrElse(null))
       } else
         Optional.empty()
     })

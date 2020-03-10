@@ -263,7 +263,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
 
-    Mockito.when(mockedBlock.mainchainBlocks)
+    Mockito.when(mockedBlock.mainchainBlockReferences)
       .thenAnswer(answer => Seq[MainchainBlockReference]())
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),

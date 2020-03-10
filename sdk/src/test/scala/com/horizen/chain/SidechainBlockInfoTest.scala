@@ -20,7 +20,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val timestamp: Block.Timestamp = 567081L
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
   val refIds = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
-    "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainBlockReferenceId(BytesUtils.fromHexString(hex)))
+    "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainBlockReferenceHash(BytesUtils.fromHexString(hex)))
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(10, 100)
 
   @Test

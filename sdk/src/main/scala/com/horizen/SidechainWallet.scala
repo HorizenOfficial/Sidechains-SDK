@@ -12,9 +12,10 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{ForgerBoxMerklePathInfo, ByteArrayWrapper, BytesUtils, MerklePath}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import scorex.core.VersionTag
 import com.horizen.utils._
+import scorex.util.ModifierId
 
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -115,7 +116,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     val newWalletBoxes = newBoxes.withFilter(box => pubKeys.contains(box.proposition())).map( box => {
       val boxTransaction = txBoxes(box.id())
-      new WalletBox(box, boxTransaction.id, boxTransaction.timestamp())
+      new WalletBox(box, ModifierId @@ boxTransaction.id, boxTransaction.timestamp())
     })
 
     val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])

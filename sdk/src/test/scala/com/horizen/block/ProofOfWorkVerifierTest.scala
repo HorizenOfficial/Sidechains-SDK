@@ -144,11 +144,11 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     // mock SC Blocks for History
     val scblocks = ListBuffer[SidechainBlock]()
 
-    scblocks.append(createSCBlockForPowTest(BytesUtils.toHexString(new Array[Byte](32)), powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(21)))) // SCBlock with genesis MCBlockRef
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, "", Seq())) // SCBlock with no MCBlockRef
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(21).mcblockhash, Seq(powRelatedDataList(22), powRelatedDataList(23), powRelatedDataList(24)))) // SCBlock with 3 MCBlockRefs
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(24).mcblockhash, Seq(powRelatedDataList(25), powRelatedDataList(26)))) // SCBlock with 2 MCBlockRefs
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(26).mcblockhash, Seq(powRelatedDataList(27)))) // SCBlock with 1 MCBlockRef
+    scblocks.append(createSCBlockForPowTest(BytesUtils.toHexString(new Array[Byte](32)), powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(21)), Seq())) // SCBlock with genesis MCBlockRef
+    scblocks.append(createSCBlockForPowTest(scblocks.last.id, "", Seq(), Seq())) // SCBlock with no MCBlockRef
+    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(21).mcblockhash, Seq(powRelatedDataList(22), powRelatedDataList(23), powRelatedDataList(24)), Seq())) // SCBlock with 3 MCBlockRefs
+    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(24).mcblockhash, Seq(powRelatedDataList(25), powRelatedDataList(26)), Seq())) // SCBlock with 2 MCBlockRefs
+    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(26).mcblockhash, Seq(powRelatedDataList(27)), Seq())) // SCBlock with 1 MCBlockRef
 
     // mock History methods used in test
     val storage = mock[SidechainHistoryStorage]
@@ -182,19 +182,19 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
 
 
     // Test 1: Check SCBlock without MainchainBlockReference
-    var block = createSCBlockForPowTest(scblocks.last.id, "", Seq())
+    var block = createSCBlockForPowTest(scblocks.last.id, "", Seq(), Seq())
     assertTrue("SC block without MainchainBlockReference expected to have valid PoW Targed.",
       ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 2: Check SCBlock with 1 valid MainchainBlockReference
-    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)))
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq())
     assertTrue("SC block with 1 valid MainchainBlockReference expected to have valid PoW Targed.",
       ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 3: Check SCBlock with multiple MainchainBlockReference
-    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29)))
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29)), Seq())
     assertTrue("SC block with 2 valid MainchainBlockReferences expected to have valid PoW Targed.",
       ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
@@ -202,25 +202,28 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     // Test 4: Check SCBlock, that contains 1 MainchainBlockReference with invalid target(bits)
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(
       PowRelatedData("0000000001c3eb8acfd95d591016300c9fc6422115cc14bd8e7402d6836df19e", 1559026662, 0x1c1104d4) // 0x1c1104d2 is valid one
-    ))
+    ), Seq())
     assertFalse("SC block, that contains 1 MainchainBlockReference with invalid target(bits), expected to have invalid PoW Targed.",
       ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
 
 
     // Test 5: Check SCBlock, that contains 1 MainchainBlockReference with invalid prev block reference
-    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28))) // 20 -> 27
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28)), Seq()) // 20 -> 27
     assertFalse("SC block, that contains 1 MainchainBlockReference with invalid prev block reference, expected to have invalid PoW Targed.",
       ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
   }
 
-  def createSCBlockForPowTest(prevSCBlockId: String, prevMCBlockHash: String, powRelatedDataSeq: Seq[PowRelatedData]): SidechainBlock = {
+  def createSCBlockForPowTest(prevSCBlockId: String,
+                              prevMCBlockHash: String,
+                              powRelatedDataSeq: Seq[PowRelatedData],
+                              nextHeadersPowRelatedDataSeq: Seq[PowRelatedData]): SidechainBlock = {
     var block: SidechainBlock = mock[SidechainBlock]
     var blockHash = new Array[Byte](32)
-    var tmpPrevMCBlockHash = prevMCBlockHash
     scala.util.Random.nextBytes(blockHash)
     Mockito.when(block.id).thenReturn(ModifierId @@ BytesUtils.toHexString(blockHash))
     Mockito.when(block.parentId).thenReturn(ModifierId @@ prevSCBlockId)
-    Mockito.when(block.mainchainBlocks).thenReturn({
+    Mockito.when(block.mainchainBlockReferences).thenReturn({
+      var tmpPrevMCBlockHash = prevMCBlockHash
       var res = Seq[MainchainBlockReference]()
       for(powRelatedData <- powRelatedDataSeq) {
         res = res :+ new MainchainBlockReference(
@@ -231,6 +234,18 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       }
       res
     })
+    Mockito.when(block.nextMainchainHeaders).thenReturn({
+      var res = Seq[MainchainHeader]()
+      if(powRelatedDataSeq.nonEmpty) {
+        var tmpPrevMCBlockHash = powRelatedDataSeq.last.mcblockhash
+        for (powRelatedData <- nextHeadersPowRelatedDataSeq) {
+          res = res :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
+          tmpPrevMCBlockHash = powRelatedData.mcblockhash
+        }
+      }
+      res
+    })
+    Mockito.when(block.ommers).thenReturn(Seq())
     block
   }
 }

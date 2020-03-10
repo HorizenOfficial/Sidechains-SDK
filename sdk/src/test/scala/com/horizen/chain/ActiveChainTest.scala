@@ -26,7 +26,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
   private def addNewBestBlockIsSuccessful(chain: ActiveChain,
                                           id: ModifierId,
                                           data: SidechainBlockInfo,
-                                          mainchainParent: Option[MainchainBlockReferenceId]): Unit = {
+                                          mainchainParent: Option[MainchainBlockReferenceHash]): Unit = {
     val adding = Try {chain.setBestBlock(id, data, mainchainParent)}
     val errorMessage = if (adding.isSuccess) {
       ""
@@ -43,7 +43,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
   private def addNewBestBlockShallBeFailed(chain: ActiveChain,
                                            id: ModifierId,
                                            data: SidechainBlockInfo,
-                                           mainchainParent: Option[MainchainBlockReferenceId]): Unit = {
+                                           mainchainParent: Option[MainchainBlockReferenceHash]): Unit = {
     val adding = Try {chain.setBestBlock(id, data, mainchainParent)}
     assertTrue(s"Element expected to not be added to the ActiveChain", adding.isFailure)
   }
@@ -67,7 +67,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
                                     data: SidechainBlockInfo,
                                     height: Int,
                                     mainchainInitialHeight: Int,
-                                    allMainchainReferences: Seq[MainchainBlockReferenceId]
+                                    allMainchainReferences: Seq[MainchainBlockReferenceHash]
                                    ): Unit = {
     assertTrue("Chain from shall not be empty for added element", chain.chainAfter(id).nonEmpty)
     assertTrue("Element shall be present in chain", chain.contains(id))
@@ -258,9 +258,9 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     // Update a tip of empty ActiveChain
     val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
-    val mainchainData: Seq[MainchainBlockReferenceId] = Seq()
+    val mainchainData: Seq[MainchainBlockReferenceHash] = Seq()
 
-    val (firstId: ModifierId, firstData: SidechainBlockInfo, firstMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(getRandomModifier(), Seq(generateMainchainBlockReference()))
+    val (firstId: ModifierId, firstData: SidechainBlockInfo, firstMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(getRandomModifier(), Seq(generateMainchainBlockReference()))
     addNewBestBlockIsSuccessful(chain, firstId, firstData, firstMainchainParent)
     val mainchainDataAfterFirst = mainchainData ++ firstData.mainchainBlockReferenceHashes
 
@@ -274,7 +274,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("ChainFrom the beginning should contain just a tip", Seq(firstId), chain.chainAfter(firstId))
 
     // Add second element
-    val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(firstId)
+    val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(firstId)
     addNewBestBlockIsSuccessful(chain, secondId, secondData, secondMainchainParent)
     val mainchainDataAfterSecond = mainchainDataAfterFirst ++ secondData.mainchainBlockReferenceHashes
 
@@ -284,7 +284,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     checkElementIsNotBest(chain, firstId, firstData, 1)
 
     // Add third element
-    val (thirdId: ModifierId, thirdData: SidechainBlockInfo, thirdMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(secondId)
+    val (thirdId: ModifierId, thirdData: SidechainBlockInfo, thirdMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(secondId)
     addNewBestBlockIsSuccessful(chain, thirdId, thirdData, thirdMainchainParent)
     val mainchainDataAfterThird = mainchainDataAfterSecond ++ thirdData.mainchainBlockReferenceHashes
 
@@ -294,7 +294,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     checkElementIsNotBest(chain, secondId, secondData, 2)
 
     // Add fourth element
-    val (fourthId: ModifierId, fourthData: SidechainBlockInfo, fourthMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(thirdId)
+    val (fourthId: ModifierId, fourthData: SidechainBlockInfo, fourthMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(thirdId)
     addNewBestBlockIsSuccessful(chain, fourthId, fourthData, fourthMainchainParent)
     val mainchainDataAfterFourth = mainchainDataAfterThird ++ fourthData.mainchainBlockReferenceHashes
 
@@ -302,7 +302,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId, fourthId), chain.chainAfter(firstId))
 
     //replace last element
-    val (otherFourthId: ModifierId, otherFourthData: SidechainBlockInfo, otherFourthMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(thirdId)
+    val (otherFourthId: ModifierId, otherFourthData: SidechainBlockInfo, otherFourthMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(thirdId)
     addNewBestBlockIsSuccessful(chain, otherFourthId, otherFourthData, otherFourthMainchainParent)
     val mainchainDataAfterOtherFourth = mainchainDataAfterThird ++ otherFourthData.mainchainBlockReferenceHashes
 
@@ -312,7 +312,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
 
     // do fork on the second element and add element
-    val (otherThirdId: ModifierId, otherThirdData: SidechainBlockInfo, otherThirdMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(secondId)
+    val (otherThirdId: ModifierId, otherThirdData: SidechainBlockInfo, otherThirdMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(secondId)
     addNewBestBlockIsSuccessful(chain, otherThirdId, otherThirdData, otherThirdMainchainParent)
     val mainchainDataAfterOtherThird = mainchainDataAfterSecond ++ otherThirdData.mainchainBlockReferenceHashes
 
@@ -321,7 +321,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     checkElementIsNotPresent(chain, otherFourthId, otherFourthData, 4)
     assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, otherThirdId), chain.chainAfter(firstId))
 
-    val (afterThirdId: ModifierId, afterThirdData: SidechainBlockInfo, afterThirdMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(otherThirdId)
+    val (afterThirdId: ModifierId, afterThirdData: SidechainBlockInfo, afterThirdMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(otherThirdId)
     addNewBestBlockIsSuccessful(chain, afterThirdId, afterThirdData, afterThirdMainchainParent)
     val mainchainDataAfterAfterThird = mainchainDataAfterOtherThird ++ afterThirdData.mainchainBlockReferenceHashes
 
@@ -330,7 +330,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, otherThirdId, afterThirdId), chain.chainAfter(firstId))
 
     // try to add unconnected element
-    val (unconnectedId: ModifierId, unconnectedData: SidechainBlockInfo, unconnectedMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(getRandomModifier())
+    val (unconnectedId: ModifierId, unconnectedData: SidechainBlockInfo, unconnectedMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(getRandomModifier())
     addNewBestBlockShallBeFailed(chain, unconnectedId, unconnectedData, unconnectedMainchainParent)
     checkElementIsPresent(chain, afterThirdId, afterThirdData, 4, mainchainDataAfterOtherThird.size, mainchainDataAfterAfterThird)
     checkElementIsBest(chain, afterThirdId, afterThirdData, 4)
@@ -342,10 +342,10 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     setSeed(testSeed)
 
     val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
-    val mainchainData: Seq[MainchainBlockReferenceId] = Seq()
+    val mainchainData: Seq[MainchainBlockReferenceHash] = Seq()
 
     // Add first element with no mainchain references
-    val (firstId: ModifierId, firstData: SidechainBlockInfo, mainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParentNoMainchainReferences(getRandomModifier())
+    val (firstId: ModifierId, firstData: SidechainBlockInfo, mainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParentNoMainchainReferences(getRandomModifier())
 
     addNewBestBlockShallBeFailed(chain, firstId, firstData, mainchainParent)
   }
@@ -357,7 +357,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
 
     // Add first element with no mainchain references and no parent
-    val (firstId: ModifierId, firstData: SidechainBlockInfo, _: Option[MainchainBlockReferenceId]) = getNewDataForParentNoMainchainReferences(getRandomModifier())
+    val (firstId: ModifierId, firstData: SidechainBlockInfo, _: Option[MainchainBlockReferenceHash]) = getNewDataForParentNoMainchainReferences(getRandomModifier())
     addNewBestBlockShallBeFailed(chain, firstId, firstData, None)
   }
 
@@ -367,9 +367,9 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
 
     // Update a tip of empty ActiveChain
     val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
-    val mainchainData: Seq[MainchainBlockReferenceId] = Seq()
+    val mainchainData: Seq[MainchainBlockReferenceHash] = Seq()
 
-    val (firstId: ModifierId, firstData: SidechainBlockInfo, mainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(getRandomModifier(), Seq(generateMainchainBlockReference()))
+    val (firstId: ModifierId, firstData: SidechainBlockInfo, mainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(getRandomModifier(), Seq(generateMainchainBlockReference()))
     addNewBestBlockIsSuccessful(chain, firstId, firstData, mainchainParent)
     val mainchainDataAfterFirst = mainchainData ++ firstData.mainchainBlockReferenceHashes
 
@@ -378,14 +378,14 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("ChainFrom the beginning should contain just a tip", Seq(firstId), chain.chainAfter(firstId))
 
     // Add second element
-    val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParent(firstId, Seq(generateMainchainBlockReference()))
+    val (secondId: ModifierId, secondData: SidechainBlockInfo, secondMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParent(firstId, Seq(generateMainchainBlockReference()))
     addNewBestBlockIsSuccessful(chain, secondId, secondData, secondMainchainParent)
     checkElementIsBest(chain, secondId, secondData, 2)
     assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId), chain.chainAfter(firstId))
     val mainchainDataAfterSecond = mainchainDataAfterFirst ++ secondData.mainchainBlockReferenceHashes
 
     // Add third element
-    val (thirdId: ModifierId, thirdData: SidechainBlockInfo, thirdMainchainParent: Option[MainchainBlockReferenceId]) = getNewDataForParentNoMainchainReferences(secondId)
+    val (thirdId: ModifierId, thirdData: SidechainBlockInfo, thirdMainchainParent: Option[MainchainBlockReferenceHash]) = getNewDataForParentNoMainchainReferences(secondId)
     addNewBestBlockIsSuccessful(chain, thirdId, thirdData, thirdMainchainParent)
     val mainchainDataAfterThird = mainchainDataAfterSecond ++ thirdData.mainchainBlockReferenceHashes
     checkElementIsPresent(chain, thirdId, thirdData, 3, mainchainDataAfterSecond.size, mainchainDataAfterThird)

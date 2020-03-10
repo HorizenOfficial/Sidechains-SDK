@@ -5,13 +5,13 @@ import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.{Random, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock}
+import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator.companion
-import com.horizen.fixtures.{CompanionsFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, TransactionFixture, VrfGenerator}
+import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -23,6 +23,7 @@ import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
 import scorex.core.block.Block
+import scorex.core.idToBytes
 import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
 
@@ -87,7 +88,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                         usedSlot: ConsensusSlotNumber,
                                         newForgers: PossibleForgersSet): SidechainBlocksGenerator = {
 
-    val bestPowInNewBlock: Option[BigInteger] = getMinimalHash(newBlock.mainchainBlocks.map(_.hash))
+    val bestPowInNewBlock: Option[BigInteger] = getMinimalHash(newBlock.mainchainBlockReferences.map(_.header.hash))
     val newBestPow: Option[BigInteger] = (bestPowInNewBlock, currentBestMainchainPoW) match {
       case (None, _) => currentBestMainchainPoW
       case (_, None) => bestPowInNewBlock
@@ -99,7 +100,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       forgersSet = newForgers,
       consensusDataStorage = consensusDataStorage,
       lastBlockId = newBlock.id,
-      lastMainchainBlockId = newBlock.mainchainBlocks.lastOption.map(ref => byteArrayToWrapper(ref.header.hash)).getOrElse(lastMainchainBlockId),
+      lastMainchainBlockId = newBlock.mainchainBlockReferences.lastOption.map(ref => byteArrayToWrapper(ref.header.hash)).getOrElse(lastMainchainBlockId),
       nextFreeSlotNumber = intToConsensusSlotNumber(usedSlot + 1), //in case if current slot is the last in epoch then next try to apply new block will finis epoch
       nextEpochNumber = nextEpochNumber,
       nextBlockNonceEpochId = nextBlockNonceEpochId,
@@ -119,6 +120,25 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       case None        => SidechainBlocksGenerator.mcRefGen.generateMainchainReferences(parentOpt = Some(lastMainchainBlockId))
     }
 
+    val nextMainchainHeaders: Seq[MainchainHeader] = Seq()
+    val mainchainHeaders = mainchainBlockReferences.map(_.header) ++ nextMainchainHeaders
+
+    val mainchainMerkleRootHash: Array[Byte] = if(mainchainHeaders.nonEmpty) {
+      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferences.isEmpty)
+        Utils.ZEROS_HASH
+      else
+        MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash()
+
+      // Calculate Merkle root hash of mainchainHeaders
+      val mainchainHeadersMerkleRootHash = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
+
+      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
+      MerkleTree.createMerkleTree(
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
+      ).rootHash()
+    } else Utils.ZEROS_HASH
+
+
     val forgingData: SidechainForgingData =
       if (generationRules.corruption.getOtherSidechainForgingData) {
         getIncorrectPossibleForger(possibleForger).forgingData
@@ -131,7 +151,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val forgerBox: ForgerBox = generationRules.corruption.forgerBoxCorruptionRules.map(getIncorrectForgerBox(forgingData.forgerBox, _)).getOrElse(forgingData.forgerBox)
 
-    val merklePath: MerklePath =
+    val forgerBoxMerklePath: MerklePath =
       if (generationRules.corruption.merklePathFromPreviousEpoch) {
         getCorruptedMerklePath(possibleForger)
       }
@@ -141,33 +161,54 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val vrfProofInBlock: VRFProof = vrfProof
 
-    val tx: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd, 1, 1))
+    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd, 1, 1))
+    val sidechainTransactionsMerkleRootHash = if(sidechainTransactions.nonEmpty) {
+      MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
+    } else Utils.ZEROS_HASH
+
+    val ommers: Seq[Ommer] = Seq()
+    val ommersMerkleRootHash: Array[Byte] = if(ommers.nonEmpty) {
+      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
+    } else Utils.ZEROS_HASH
 
 
-    val unsignedBlock: SidechainBlock = new SidechainBlock(
+    val unsignedBlockHeader = SidechainBlockHeader(
+      SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      mainchainBlockReferences,
-      tx,
       forgerBox,
-      vrfProofInBlock,
-      merklePath,
-      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
-      companion
+      forgerBoxMerklePath,
+      vrfProof,
+      sidechainTransactionsMerkleRootHash,
+      mainchainMerkleRootHash,
+      ommersMerkleRootHash,
+      ommers.size,
+      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
-    val signature = owner.sign(unsignedBlock.messageToSign)
+    val signature = owner.sign(unsignedBlockHeader.messageToSign)
 
-    val generatedBlock = new SidechainBlock(
+    val signedBlockHeader = SidechainBlockHeader(
+      SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      mainchainBlockReferences,
-      tx,
       forgerBox,
-      vrfProofInBlock,
-      merklePath,
-      signature,
-      companion)
+      forgerBoxMerklePath,
+      vrfProof,
+      sidechainTransactionsMerkleRootHash,
+      mainchainMerkleRootHash,
+      ommersMerkleRootHash,
+      ommers.size,
+      signature
+    )
+    val generatedBlock = new SidechainBlock(
+      signedBlockHeader,
+      sidechainTransactions,
+      mainchainBlockReferences,
+      nextMainchainHeaders,
+      ommers,
+      companion
+    )
 
     println(s"Generate new unique block with id ${generatedBlock.id}")
 
@@ -311,7 +352,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val genesisSidechainBlock: SidechainBlock = generateGenesisSidechainBlock(params, possibleForger.forgingData, vrfProof, merklePathForGenesisSidechainForgingData)
 
-    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHash(genesisSidechainBlock.mainchainBlocks.map(_.hash)).get)
+    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHash(genesisSidechainBlock.mainchainBlockReferences.map(_.header.hash)).get)
     val nonceInfo = NonceConsensusEpochInfo(genesisNonce)
     val stakeInfo = StakeConsensusEpochInfo(genesisMerkleTree.rootHash(), possibleForger.forgingData.forgerBox.value())
     val consensusDataStorage = createConsensusDataStorage(genesisSidechainBlock.id, nonceInfo, stakeInfo)
@@ -323,7 +364,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       forgersSet = new PossibleForgersSet(Set(possibleForger)),
       consensusDataStorage = consensusDataStorage,
       lastBlockId = genesisSidechainBlock.id,
-      lastMainchainBlockId = genesisSidechainBlock.mainchainBlocks.last.header.hash,
+      lastMainchainBlockId = genesisSidechainBlock.mainchainBlockReferences.last.header.hash,
       nextFreeSlotNumber = intToConsensusSlotNumber(consensusSlotNumber = 1),
       nextEpochNumber = intToConsensusEpochNumber(2),
       nextBlockNonceEpochId = blockIdToEpochId(genesisSidechainBlock.id),
@@ -357,35 +398,70 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       params.sidechainGenesisBlockTimestamp
     }
 
-    val mainchainBlockReferences = getHardcodedMainchainBlockReferencesWithSidechainCreation
+    val mainchainBlockReferences = getHardcodedMainchainBlockReferencesWithSidechainCreation.asScala
+    val nextMainchainHeaders: Seq[MainchainHeader] = Seq()
+    val mainchainHeaders = mainchainBlockReferences.map(_.header) ++ nextMainchainHeaders
+
+    val mainchainMerkleRootHash: Array[Byte] = if(mainchainHeaders.nonEmpty) {
+      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferences.isEmpty)
+        Utils.ZEROS_HASH
+      else
+        MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash()
+
+      // Calculate Merkle root hash of mainchainHeaders
+      val mainchainHeadersMerkleRootHash = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
+
+      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
+      MerkleTree.createMerkleTree(
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
+      ).rootHash()
+    } else Utils.ZEROS_HASH
+
+    val sidechainTransactionsMerkleRootHash = Utils.ZEROS_HASH
+
+    val ommersMerkleRootHash: Array[Byte] = Utils.ZEROS_HASH
 
     val owner: PrivateKey25519 = forgingData.key
     val forgerBox = forgingData.forgerBox
 
-    val unsignedBlock: SidechainBlock = new SidechainBlock(
+    val unsignedBlockHeader = SidechainBlockHeader(
+      SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      mainchainBlockReferences.asScala,
-      Seq(),
       forgerBox,
-      vrfProof,
       merklePath,
-      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
-      companion
+      vrfProof,
+      sidechainTransactionsMerkleRootHash,
+      mainchainMerkleRootHash,
+      ommersMerkleRootHash,
+      0,
+      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
-    val signature = owner.sign(unsignedBlock.messageToSign)
+    val signature = owner.sign(unsignedBlockHeader.messageToSign)
 
-    new SidechainBlock(
+    val signedBlockHeader = SidechainBlockHeader(
+      SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      mainchainBlockReferences.asScala,
-      Seq(),
       forgerBox,
-      vrfProof,
       merklePath,
-      signature,
-      companion)
+      vrfProof,
+      sidechainTransactionsMerkleRootHash,
+      mainchainMerkleRootHash,
+      ommersMerkleRootHash,
+      0,
+      signature
+    )
+
+    new SidechainBlock(
+      signedBlockHeader,
+      Seq(),
+      mainchainBlockReferences,
+      Seq(),
+      Seq(),
+      companion
+    )
   }
 
   private def createConsensusDataStorage(genesisBlockId: Block.BlockId, nonceInfo: NonceConsensusEpochInfo, stakeInfo: StakeConsensusEpochInfo): ConsensusDataStorage = {
@@ -415,7 +491,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainGenesisBlockId: ModifierId = genesisSidechainBlock.id
       override val genesisMainchainBlockHash: Array[Byte] = params.genesisMainchainBlockHash
       override val genesisPoWData: Seq[(Int, Int)] = params.genesisPoWData
-      override val mainchainCreationBlockHeight: Int = genesisSidechainBlock.mainchainBlocks.size + mainchainHeight
+      override val mainchainCreationBlockHeight: Int = genesisSidechainBlock.mainchainBlockReferences.size + mainchainHeight
       override val sidechainGenesisBlockTimestamp: Block.Timestamp = genesisSidechainBlock.timestamp
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot

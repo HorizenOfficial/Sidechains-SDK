@@ -30,7 +30,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     block = MainchainBlockReference.create(mcBlockBytes, params)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
-    assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.hashHex)
+    assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.header.hashHex)
     assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -52,7 +52,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     block = MainchainBlockReference.create(mcBlockBytes, params)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
-    assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.hashHex)
+    assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.header.hashHex)
     assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -73,7 +73,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     block = MainchainBlockReference.create(mcBlockBytes, params)
 
     assertTrue("Block expected to be parsed", block.isSuccess)
-    assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.hashHex)
+    assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.header.hashHex)
     assertFalse("Old Block occurred, SCMap expected to be undefined.", block.get.sidechainsMerkleRootsMap.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.sidechainRelatedAggregatedTransaction.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -101,7 +101,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
     val mcblock = mcblockTry.get
 
-    assertEquals("Block Hash is different.", "002061121ddac5438c6de656d046e80d3a044d06bac87c2501afc69eaff6fafa", mcblock.hashHex)
+    assertEquals("Block Hash is different.", "002061121ddac5438c6de656d046e80d3a044d06bac87c2501afc69eaff6fafa", mcblock.header.hashHex)
     assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
     assertEquals("Hash of previous block is different.", "006d20987ff5322196a1e5f530d52ed5c0b44750f4d1997daeda6a6c128ee14f", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "68bc6ede2f15ebb01dd6c9ff2c6dfcbe9ad824f4ec82264e4d38a8860af1d065", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
@@ -132,7 +132,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
     val mcblock = mcblockTry.get
 
-    assertEquals("Block Hash is different.", "0b9b3f9e2d3e136eaeec9c9d51f445a6f49005950cc4d91f957b20e3f50e36e7", mcblock.hashHex)
+    assertEquals("Block Hash is different.", "0b9b3f9e2d3e136eaeec9c9d51f445a6f49005950cc4d91f957b20e3f50e36e7", mcblock.header.hashHex)
     assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
     assertEquals("Hash of previous block is different.", "05518c30b2346285a57c7494ef884fb7dd8e4c5807166533cb36f0877b952bf9", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "82e0729fae0d7217086583c5eafda535b8a2f62af65425647808eee6c608dd06", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
@@ -199,7 +199,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
     val mcblock = mcblockTry.get
 
-    assertEquals("Block Hash is different.", "0aac2834707dffeea13d33bc655c1fd80f163540cdf221dd2b9eb8b889d1e18f", mcblock.hashHex)
+    assertEquals("Block Hash is different.", "0aac2834707dffeea13d33bc655c1fd80f163540cdf221dd2b9eb8b889d1e18f", mcblock.header.hashHex)
     assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
     assertEquals("Hash of previous block is different.", "0092d667863a6cb73dea30c69de18b0596725adaa9df1aaa6c467c873c14850e", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "e15ebc9e1dd5e7a5137b46823da18818f47ccc2d50725cfc899d5d01fa91a982", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))

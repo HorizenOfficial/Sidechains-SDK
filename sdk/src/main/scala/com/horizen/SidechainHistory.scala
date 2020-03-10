@@ -78,7 +78,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
           )
         } else {
           // Check if retrieved block is the best one, but from another chain
-          if (isBestBlock(block, parentBlockInfo.score)) {
+          if (isBestBlock(block, parentBlockInfo)) {
             bestForkChanges(block) match { // get info to switch to another chain
               case Success(progInfo) =>
                 (
@@ -107,29 +107,34 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
   }
 
-  def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
+  def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
-    val newScore = calculateChainScore(block, parentScore)
-    newScore > currentScore
+    val newScore = calculateChainScore(block, parentBlockInfo.score)
+    if(newScore > currentScore)
+      true
+    else if(newScore < currentScore)
+      false
+    else // equal score -> compare branch length
+      (parentBlockInfo.height + 1) > height
   }
 
-  // score is a long value, where
-  // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
-  // last 4 bytes contain heights of passed block
+  // score is a long value
+  // parentScore is a sum of the length of the chain till parent block and amount of ommers inside the chain
+  // So we should increase chain length by 1 and ommers amount with current block ommers number.
   private def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
+    parentScore + 1 + block.ommers.size
   }
 
   private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
     require(isGenesisBlock(block.id), "Passed block is not a genesis block.")
     SidechainBlockInfo(
       1,
-      (block.mainchainBlocks.size.toLong << 32) + 1,
+      1L,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
+      WithdrawalEpochInfo(1, block.mainchainBlockReferences.size) // First Withdrawal epoch value. Note: maybe put to params?
     )
   }
 

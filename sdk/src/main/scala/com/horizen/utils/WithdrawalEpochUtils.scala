@@ -9,16 +9,16 @@ object WithdrawalEpochUtils {
     val withdrawalEpoch: Int =
       if(parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
         parentEpochInfo.epoch + 1
-      else if(parentEpochInfo.lastEpochIndex + block.mainchainBlocks.size > params.withdrawalEpochLength) // block mc block references lead to surpassing of the epoch length
+      else if(parentEpochInfo.lastEpochIndex + block.mainchainBlockReferences.size > params.withdrawalEpochLength) // block mc block references lead to surpassing of the epoch length
         parentEpochInfo.epoch + 1
       else // Continue current withdrawal epoch
         parentEpochInfo.epoch
 
     val withdrawalEpochIndex: Int =
       if(withdrawalEpoch > parentEpochInfo.epoch) // New withdrawal epoch started
-        (parentEpochInfo.lastEpochIndex + block.mainchainBlocks.size) % params.withdrawalEpochLength // Note: in case of empty MC Block ref list index should be 0.
+        (parentEpochInfo.lastEpochIndex + block.mainchainBlockReferences.size) % params.withdrawalEpochLength // Note: in case of empty MC Block ref list index should be 0.
       else // Continue current withdrawal epoch
-        parentEpochInfo.lastEpochIndex + block.mainchainBlocks.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
+        parentEpochInfo.lastEpochIndex + block.mainchainBlockReferences.size // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
 
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }

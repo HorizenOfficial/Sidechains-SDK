@@ -294,7 +294,7 @@ public class ListSerializerTest {
 
         // Test 3: broken bytes: contains some garbage in the end
         exceptionOccurred = false;
-        bytes = new byte[]{ 0, 0, 0, 0, 1};
+        bytes = new byte[]{ 10, 0, 0, 0, 1};
         try {
             listSerializerWithLimits.parseBytesTry(bytes).get();
         }
@@ -320,7 +320,7 @@ public class ListSerializerTest {
 
         // Test 5: broken bytes passed
         exceptionOccurred = false;
-        bytes = new byte[]{ 0, 0, 0, 2, 1, 0, 3, 0, 1, 0, 4, 5, 6};
+        bytes = new byte[]{ 10, 0, 0, 2, 1, 0, 3, 0, 1, 0, 4, 5, 6};
         try {
             listSerializerWithLimits.parseBytesTry(bytes).get();
         }
@@ -372,7 +372,7 @@ public class ListSerializerTest {
 
         // Test 3: broken bytes: contains some garbage in the end
         exceptionOccurred = false;
-        bytes = new byte[]{ 0, 0, 0, 0, 1};
+        bytes = new byte[]{ 10, 0, 0, 0, 1};
         try {
             listSerializerWithLimits.parseBytesTry(bytes).get();
         }
@@ -398,7 +398,7 @@ public class ListSerializerTest {
 
         // Test 5: broken bytes passed
         exceptionOccurred = false;
-        bytes = new byte[]{ 0, 0, 0, 2, 1, 0, 3, 0, 1, 0, 4, 5, 6};
+        bytes = new byte[]{ 10, 0, 0, 2, 1, 0, 3, 0, 1, 0, 4, 5, 6};
         try {
             listSerializerWithLimits.parseBytesTry(bytes).get();
         }

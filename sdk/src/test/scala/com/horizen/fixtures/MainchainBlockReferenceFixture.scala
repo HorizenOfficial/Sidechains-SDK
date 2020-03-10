@@ -3,7 +3,7 @@ package com.horizen.fixtures
 import java.time.Instant
 
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceId, byteArrayToMainchainBlockReferenceId}
+import com.horizen.chain.{MainchainBlockReferenceHash, byteArrayToMainchainBlockReferenceHash}
 import com.horizen.params.NetworkParams
 import com.horizen.utils._
 
@@ -20,7 +20,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   }
 
   private val generatedMainchainBlockReferences =
-    new mutable.HashMap[MainchainBlockReferenceId, MainchainBlockReference]()
+    new mutable.HashMap[MainchainBlockReferenceHash, MainchainBlockReference]()
 
   private val initialMainchainBlockReferenceHeader = new MainchainHeader(generateBytes(),
     -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
@@ -31,8 +31,8 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
 
 
   private def addNewReference(ref: MainchainBlockReference): Unit = {
-    generatedMainchainBlockReferences.put(byteArrayToMainchainBlockReferenceId(ref.header.hash), ref)
-    lastGeneratedHash = ref.hash
+    generatedMainchainBlockReferences.put(byteArrayToMainchainBlockReferenceHash(ref.header.hash), ref)
+    lastGeneratedHash = ref.header.hash
   }
 
   def generateMainchainBlockReference(parentOpt: Option[ByteArrayWrapper] = None, blockHash: Option[Array[Byte]] = None): MainchainBlockReference = {
@@ -40,24 +40,34 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
 
     val parent = parentOpt.getOrElse(lastGeneratedHash)
     val headerWithNoSerialization = new MainchainHeader(mainchainHeaderBytes, 1, parent, generateBytes(), generateBytes(), Instant.now.getEpochSecond.toInt, util.Random.nextInt(), generateBytes(), generateBytes(1344))
-    val header = new MainchainHeader(
-      mainchainHeaderToBytes(headerWithNoSerialization),
-      headerWithNoSerialization.version,
-      headerWithNoSerialization.hashPrevBlock,
-      headerWithNoSerialization.hashMerkleRoot,
-      headerWithNoSerialization.hashSCMerkleRootsMap,
-      headerWithNoSerialization.time,
-      headerWithNoSerialization.bits,
-      headerWithNoSerialization.nonce,
-      headerWithNoSerialization.solution)
+
+    val header: MainchainHeader = blockHash match {
+      case Some(hashData) => new MainchainHeader(
+          mainchainHeaderToBytes(headerWithNoSerialization),
+          headerWithNoSerialization.version,
+          headerWithNoSerialization.hashPrevBlock,
+          headerWithNoSerialization.hashMerkleRoot,
+          headerWithNoSerialization.hashSCMerkleRootsMap,
+          headerWithNoSerialization.time,
+          headerWithNoSerialization.bits,
+          headerWithNoSerialization.nonce,
+          headerWithNoSerialization.solution) {
+          override lazy val hash: Array[Byte] = hashData
+        }
+      case None => new MainchainHeader(
+        mainchainHeaderToBytes(headerWithNoSerialization),
+        headerWithNoSerialization.version,
+        headerWithNoSerialization.hashPrevBlock,
+        headerWithNoSerialization.hashMerkleRoot,
+        headerWithNoSerialization.hashSCMerkleRootsMap,
+        headerWithNoSerialization.time,
+        headerWithNoSerialization.bits,
+        headerWithNoSerialization.nonce,
+        headerWithNoSerialization.solution)
+    }
 
     val newReference = new MainchainBlockReference(header, None, None) {
       override def semanticValidity(params: NetworkParams): Boolean = true
-
-      override lazy val hash: Array[Byte] = blockHash match {
-        case Some(data) => data
-        case _ => header.hash // identically to super.hash. super.hash can't be used due compiler limitations
-      }
     }
 
     addNewReference(newReference)

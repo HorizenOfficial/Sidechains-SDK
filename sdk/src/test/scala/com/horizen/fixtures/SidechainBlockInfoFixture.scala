@@ -1,7 +1,7 @@
 package com.horizen.fixtures
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceId, SidechainBlockInfo, byteArrayToMainchainBlockReferenceId}
+import com.horizen.chain.{MainchainBlockReferenceHash, SidechainBlockInfo, byteArrayToMainchainBlockReferenceHash}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.consensus.ModifierSemanticValidity
@@ -32,7 +32,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   }
 
   ///////
-  private val initialMainchainReference = byteArrayToMainchainBlockReferenceId(generateBytes())
+  private val initialMainchainReference = byteArrayToMainchainBlockReferenceHash(generateBytes())
   private val initialSidechainBlockId = bytesToId(generateBytes())
   private val initialSidechainBlockInfo =
     SidechainBlockInfo(
@@ -41,15 +41,15 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       getRandomModifier(),
       Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
+      generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceHash(id.header.hash)),
       WithdrawalEpochInfo(1, 1)
     )
 
   val generatedData =
-    new mutable.HashMap[ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceId])]()
+    new mutable.HashMap[ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceHash])]()
   generatedData.put(initialSidechainBlockId, (initialSidechainBlockInfo, Option(initialMainchainReference)))
 
-  private def findParentMainchainReference(id: ModifierId): Option[MainchainBlockReferenceId] = {
+  private def findParentMainchainReference(id: ModifierId): Option[MainchainBlockReferenceHash] = {
     val data = generatedData.get(id)
 
     data.flatMap(parentData => parentData._1.mainchainBlockReferenceHashes.lastOption)
@@ -58,9 +58,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   }
 
 
-  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams()): (ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceId])) = {
+  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams()): (ModifierId, (SidechainBlockInfo, Option[MainchainBlockReferenceHash])) = {
     val id = getRandomModifier()
-    val parentData: (SidechainBlockInfo, Option[MainchainBlockReferenceId]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId, Seq(), params)._2)
+    val parentData: (SidechainBlockInfo, Option[MainchainBlockReferenceHash]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId, Seq(), params)._2)
     val parentSidechainBlockInfo = parentData._1
 
     val generatedScBlockInfo = SidechainBlockInfo(
@@ -69,9 +69,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       parent,
       Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      (refs ++ generateMainchainReferences(parentOpt = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
+      (refs ++ generateMainchainReferences(parentOpt = parentData._2)).map(d => byteArrayToMainchainBlockReferenceHash(d.header.hash)),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        new SidechainBlock(null, 0L, refs, null, null, null, null, null, null),
+        new SidechainBlock(null, null, refs, null, null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params)
     )
@@ -81,7 +81,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
   def getNewDataForParent(parent: ModifierId,
                           refs: Seq[MainchainBlockReference] = Seq(),
-                          params: NetworkParams = RegTestParams()): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId]) = {
+                          params: NetworkParams = RegTestParams()): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash]) = {
     val (newId, data) = generateEntry(parent, refs, params)
     generatedData.put(newId, data)
     generatedData.get(newId).map { case (sbInfo, newParent) =>
@@ -90,7 +90,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   }
 
   def getNewDataForParentNoMainchainReferences(parent: ModifierId,
-                                               params: NetworkParams = RegTestParams()): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId]) = {
+                                               params: NetworkParams = RegTestParams()): (ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash]) = {
     val (newId, data) = generateEntry(parent, Seq(), params)
     val dataWithoutReferences =
       data.copy(_1 = data._1.copy(mainchainBlockReferenceHashes = Seq()), _2 = None)
@@ -102,9 +102,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
   @tailrec
   final def generateDataSequence(count: Int,
-                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = Seq(),
+                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash])] = Seq(),
                                  params: NetworkParams = RegTestParams()
-                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = {
+                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash])] = {
     if (count > 0) {
       val parent = generatedData.last._1
       generateDataSequence(count - 1, generatedData :+ getNewDataForParent(parent, Seq(), params))
@@ -115,9 +115,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   }
 
   final def generateDataSequenceWithGenesisBlock(count: Int,
-                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = Seq(),
+                                 generatedData: Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash])] = Seq(),
                                  params: NetworkParams = RegTestParams()
-                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceId])] = {
+                                ): Seq[(ModifierId, SidechainBlockInfo, Option[MainchainBlockReferenceHash])] = {
     if (count > 0) {
       generateDataSequence(count - 1, Seq((initialSidechainBlockId, initialSidechainBlockInfo, Some(initialMainchainReference))), params)
     }

@@ -57,4 +57,15 @@ class SidechainBlockTest
     }
 
   }
+
+  @Test
+  def serialization(): Unit = {
+    val block = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L)
+    val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
+
+    val blockBytes = sidechainBlockSerializer.toBytes(block)
+
+    val parsedBlockTry = sidechainBlockSerializer.parseBytesTry(blockBytes)
+    assertTrue("Block deserialization failed.", parsedBlockTry.isSuccess)
+  }
 }

@@ -60,7 +60,7 @@ trait SidechainNodeViewHolderFixture
     case "regtest" => RegTestParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -71,7 +71,7 @@ trait SidechainNodeViewHolderFixture
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -82,7 +82,7 @@ trait SidechainNodeViewHolderFixture
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.block.MainchainBlockReference;
+import com.horizen.block.MainchainHeader;
+import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainBoxesDataCompanion;
@@ -21,7 +23,6 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.VarInt;
-import com.horizen.utils.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -204,6 +205,8 @@ public class CommandProcessor {
                     System.currentTimeMillis() / 1000,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<MainchainHeader>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
                     null,
                     null,
@@ -215,7 +218,7 @@ public class CommandProcessor {
 
             int withdrawalEpochLength;
             try {
-                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlocks().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferences().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                 withdrawalEpochLength = creationOutput.withdrawalEpochLength();
             }
             catch (Exception e) {

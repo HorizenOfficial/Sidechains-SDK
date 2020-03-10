@@ -54,7 +54,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val mcRefTry = mcnode.getBlockByHeight(height)
     assertTrue("MCBlock ref expected to be retrieved.", mcRefTry.isSuccess)
-    assertEquals("MCBlock ref hash is different.", hash, mcRefTry.get.hashHex)
+    assertEquals("MCBlock ref hash is different.", hash, mcRefTry.get.header.hashHex)
   }
 
 
@@ -96,7 +96,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val mcRefTry = mcnode.getBlockByHash(hash)
     assertTrue("MCBlock ref expected to be retrieved.", mcRefTry.isSuccess)
     assertEquals("MCBlock ref hash is different.",
-      "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", mcRefTry.get.hashHex)
+      "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", mcRefTry.get.header.hashHex)
   }
 
   @Test

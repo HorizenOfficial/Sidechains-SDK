@@ -19,16 +19,16 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
 
   private def validateGenesisBlock(block: SidechainBlock): Try[Unit] = Try {
     // Verify that block contains only 1 MC block reference with a valid Sidechain Creation info
-    if(block.mainchainBlocks.size != 1)
+    if(block.mainchainBlockReferences.size != 1)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block should contain single MC block reference.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    val sidechainCreation = block.mainchainBlocks.head.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
+    val sidechainCreation = block.mainchainBlockReferences.head.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
     if(sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
   }
 
   private def validateBlock(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
-    for(mcblock <- block.mainchainBlocks) {
+    for(mcblock <- block.mainchainBlockReferences) {
       mcblock.sidechainRelatedAggregatedTransaction match {
         case Some(aggTx) =>
           if(aggTx.mc2scTransactionsOutputs().stream().anyMatch(output => output.isInstanceOf[SidechainCreation]))

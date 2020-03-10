@@ -2,7 +2,7 @@ package com.horizen.validation
 import java.time.Instant
 
 import com.horizen.SidechainHistory
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{NonceConsensusEpochInfo, _}
 import scorex.core.block.Block
@@ -39,8 +39,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
     val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, blockInfo)
 
-    verifyVrf(history, verifiedBlock, fullConsensusEpochInfo.nonceConsensusEpochInfo)
-    verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    verifyVrf(history, verifiedBlock.header, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+    verifyForgerBox(verifiedBlock.header, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+
+    verifyOmmers(verifiedBlock, fullConsensusEpochInfo,  history)
   }
 
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -52,31 +54,61 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
-  private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {
-    val message = buildVrfMessage(history.timeStampToSlotNumber(block.timestamp), nonceInfo)
+  private def verifyOmmers(verifiedBlock: SidechainBlock, fullConsensusEpochInfo: FullConsensusEpochInfo, history: SidechainHistory): Unit = {
+    val verifiedBlockEpochNumber = history.timeStampToEpochNumber(verifiedBlock.timestamp)
+    val verifiedBlockSlotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
 
-    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(message, block.vrfProof)
+    // Last ommer epoch&slot number must be before current block one
+    verifiedBlock.ommers.lastOption match {
+      case Some(ommer) =>
+        // TODO: put to separate utils function, that can compare timestamp in a context of slot/epoch
+        val ommerEpochNumber = history.timeStampToEpochNumber(ommer.sidechainBlockHeader.timestamp)
+        val ommerSlotNumber = history.timeStampToSlotNumber(ommer.sidechainBlockHeader.timestamp)
+        if(ommerEpochNumber > verifiedBlockEpochNumber ||
+            (ommerEpochNumber == verifiedBlockEpochNumber && ommerSlotNumber >= verifiedBlockSlotNumber))
+          throw new IllegalArgumentException("Block refers to the ommer that belongs at the same slot or after it.")
+      case _ =>
+    }
+
+    for(ommer <- verifiedBlock.ommers) {
+      val ommerEpochNumber = history.timeStampToEpochNumber(ommer.sidechainBlockHeader.timestamp)
+      if(ommerEpochNumber == verifiedBlockEpochNumber) {
+        // TODO: error messages from functions below is not enough. We should tell that it's for Ommer
+        verifyVrf(history, ommer.sidechainBlockHeader, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+        verifyForgerBox(ommer.sidechainBlockHeader, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+      }
+      else { // ommer is from epoch number before verifiedBlock epoch.
+        // TODO: is it possible, if ommer is not from previous epoch but even earlier?
+        // TODO get fullConsensusEpochInfo for ommer epoch
+      }
+    }
+  }
+
+  private def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
+    val message = buildVrfMessage(history.timeStampToSlotNumber(header.timestamp), nonceInfo)
+
+    val vrfIsCorrect = header.forgerBox.vrfPubKey().verify(message, header.vrfProof)
     if(!vrfIsCorrect) {
-      throw new IllegalStateException(s"VRF check for block ${block.id} had been failed")
+      throw new IllegalStateException(s"VRF check for block ${header.id} had been failed")
     }
   }
 
   //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
-    log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${block.merklePath.bytes().deep.mkString}")
+  private def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
+    log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgerBoxMerklePath.bytes().deep.mkString}")
 
-    val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(block.merklePath.apply(block.forgerBox.id()))
+    val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgerBoxMerklePath.apply(header.forgerBox.id()))
     if (!forgerBoxIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
+      throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
     }
 
-    val relativeStake = (block.forgerBox.value().toDouble / stakeConsensusEpochInfo.totalStake.toDouble)
-    val requiredRelativeStake = hashToStakePercent(block.vrfProof.proofToVRFHash())
+    val relativeStake = (header.forgerBox.value().toDouble / stakeConsensusEpochInfo.totalStake.toDouble)
+    val requiredRelativeStake = hashToStakePercent(header.vrfProof.proofToVRFHash())
 
     val stakeIsEnough = relativeStake > requiredRelativeStake
     if (!stakeIsEnough) {
-      throw new IllegalArgumentException(s"Stake value in forger box in block ${block.id} is not enough for to be forger. Required relative stake ${requiredRelativeStake}, but actual is ${relativeStake}")
+      throw new IllegalArgumentException(s"Stake value in forger box in block ${header.id} is not enough for to be forger. Required relative stake ${requiredRelativeStake}, but actual is ${relativeStake}")
     }
   }
 }

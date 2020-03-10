@@ -1,5 +1,5 @@
 package com.horizen.chain
 
-case class MainchainBlockReferenceData(sidechainHeight: Int, private val parent: MainchainBlockReferenceId) extends LinkedElement[MainchainBlockReferenceId] {
-  override def getParentId: MainchainBlockReferenceId = parent
+case class MainchainBlockReferenceData(sidechainHeight: Int, private val parent: MainchainBlockReferenceHash) extends LinkedElement[MainchainBlockReferenceHash] {
+  override def getParentId: MainchainBlockReferenceHash = parent
 }
