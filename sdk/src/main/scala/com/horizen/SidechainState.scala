@@ -86,10 +86,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       s"${version} expected")
     mod.transactions.foreach(tx => validate(tx).get)
 
+    //Check content of the backward transfer certificate if it exists
+    //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
+    //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
     for (certificate <- mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) {
       withdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
-          var isEqual = true
+          var isEqual = false
           if (withdrawalRequests.size == certificate.outputs.size) {
             isEqual = true
             for (o <- certificate.outputs)
@@ -167,7 +170,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
   //    if fail -> rollback applicationState
   // 3) ensure everithing applied OK and return new SDKState. If not -> return error
   override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB], newVersion: VersionTag,
-                            withdrawalEpochInfo: WithdrawalEpochInfo, backwardTransferCertificate: Boolean): Try[SidechainState] = Try {
+                            withdrawalEpochInfo: WithdrawalEpochInfo, containsBackwardTransferCertificate: Boolean): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this, version.data,
       changes.toAppend.map(_.box).asJava,
@@ -179,7 +182,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
                   changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet,
                   changes.toRemove.map(_.boxId.array).toSet,
                   changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet, backwardTransferCertificate)
+                    .map(_.asInstanceOf[WithdrawalRequestBox]).toSet, containsBackwardTransferCertificate)
           .get,
           this.params, newVersion, appState)
       case Failure(exception) => throw exception

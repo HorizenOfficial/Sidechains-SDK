@@ -1,17 +1,20 @@
 package com.horizen.block
 
+import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.utils.{BytesUtils, ListSerializer, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-class MainchainBackwardTransferCertificate
-  (val certificateBytes: Array[Byte],
-   val version: Int,
-   val sidechainId: Array[Byte],
-   val epochNumber: Int,
-   val endEpochBlockHash: Array[Byte],
-   val totalAmount: Long,
-   val outputs: Seq[MainchainBackwardTransferCertificateOutput])
+import scala.collection.JavaConverters._
+
+case class MainchainBackwardTransferCertificate
+  (certificateBytes: Array[Byte],
+   version: Int,
+   sidechainId: Array[Byte],
+   epochNumber: Int,
+   endEpochBlockHash: Array[Byte],
+   totalAmount: Long,
+   outputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
   override type M = MainchainBackwardTransferCertificate
@@ -21,6 +24,22 @@ class MainchainBackwardTransferCertificate
   def size: Int = certificateBytes.length
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
+
+  override def bytes: Array[Byte] = {
+    val outputBytes = MainchainBackwardTransferCertificate.outpustListSerializer.toBytes(outputs.asJava)
+    Bytes.concat(
+      Ints.toByteArray(certificateBytes.length),
+      certificateBytes,
+      Ints.toByteArray(version),
+      Ints.toByteArray(sidechainId.length),
+      sidechainId,
+      Ints.toByteArray(epochNumber),
+      Ints.toByteArray(endEpochBlockHash.length),
+      endEpochBlockHash,
+      Longs.toByteArray(totalAmount),
+      Ints.toByteArray(outputBytes.length),
+      outputBytes)
+  }
 
 }
 
@@ -70,21 +89,59 @@ object MainchainBackwardTransferCertificate {
       sidechainId, epochNumber, endEpochBlockHash, totalAmount, outputsWithFee)
 
   }
+
+  lazy val outpustListSerializer = new ListSerializer[MainchainBackwardTransferCertificateOutput](MainchainBackwardTransferCertificateOutputSerializer)
+
+  def parseBytes(bytes: Array[Byte]): MainchainBackwardTransferCertificate = {
+    var offset: Int = 0
+
+    val certificateBytesSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset +=4
+
+    val certificateBytes = bytes.slice(offset, offset + certificateBytesSize)
+    offset += certificateBytesSize
+
+    val version = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset +=4
+
+    val sidechainIdSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset +=4
+
+    val sidechainId = bytes.slice(offset, offset + sidechainIdSize)
+    offset += sidechainIdSize
+
+    val epochNumber = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset +=4
+
+    val endEpochBlockHashSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset += 4
+
+    val endEpochBlockHash = bytes.slice(offset, offset + endEpochBlockHashSize)
+    offset += endEpochBlockHashSize
+
+    val totalAmount = Longs.fromByteArray(bytes.slice(offset, offset + 8))
+    offset += 8
+
+    val outputsSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
+    offset += 4
+
+    val outputs = outpustListSerializer.parseBytes(bytes.slice(offset, offset + outputsSize))
+    offset += outputsSize
+
+    new MainchainBackwardTransferCertificate(certificateBytes, version, sidechainId, epochNumber,
+      endEpochBlockHash, totalAmount, outputs.asScala)
+  }
 }
 
 object MainchainBackwardTransferCertificateSerializer
   extends ScorexSerializer[MainchainBackwardTransferCertificate]
 {
-
   override def serialize(certificate: MainchainBackwardTransferCertificate, w: Writer): Unit = {
-    w.putInt(certificate.certificateBytes.length)
-    w.putBytes(certificate.certificateBytes)
+    w.putBytes(certificate.bytes)
 }
 
   override def parse(r: Reader): MainchainBackwardTransferCertificate = {
-    val certificateBytesSize = r.getInt()
-    val certificateBytes = r.getBytes(certificateBytesSize)
-    MainchainBackwardTransferCertificate.parse(certificateBytes, 0)
+    MainchainBackwardTransferCertificate.parseBytes(r.getBytes(r.remaining))
   }
 
 }

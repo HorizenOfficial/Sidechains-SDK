@@ -97,7 +97,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
              boxUpdateList : Set[SidechainTypes#SCB],
              boxIdsRemoveList : Set[Array[Byte]],
              withdrawalRequestAppendList : Set[WithdrawalRequestBox],
-             backwardTransferCertificate: Boolean) : Try[SidechainStateStorage] = Try {
+             containsBackwardTransferCertificate: Boolean) : Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveList != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -127,7 +127,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
 
     }
 
-    if (backwardTransferCertificate)
+    if (containsBackwardTransferCertificate)
       updateList.add(new JPair(getWithdrawalBlockKey(getWithdrawalEpochInfo.get.epoch - 1),
         version))
 

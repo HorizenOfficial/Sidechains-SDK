@@ -24,7 +24,7 @@ trait BoxMinimalState[P <: Proposition,
 
   def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
-                   backwardTransferCertificate: Boolean): Try[BMS]
+                   containsBackwardTransferCertificate: Boolean): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 
