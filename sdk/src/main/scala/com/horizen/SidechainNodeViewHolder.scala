@@ -3,7 +3,7 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, StakeConsensusEpochInfo}
+import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
@@ -230,12 +230,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
           val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
-          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(
-            lastBlockInEpoch,
-            StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
-          )
+          val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
+          val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
+
+          val historyAfterConsensusInfoApply =
+            updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+
           val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
-          (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
+          (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
         } else
           (updateInfo.history, updateInfo.wallet)
 

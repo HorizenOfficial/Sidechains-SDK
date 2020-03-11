@@ -84,7 +84,7 @@ class Forger(settings: SidechainSettings,
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
     case Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(consensusEpochNumber, consensusSlotNumber) => {
       val forgingFunctionForEpochAndSlot: View => Option[SidechainBlock] =
-        tryToForgeNextBlock(intToConsensusEpochNumber(consensusEpochNumber), intToConsensusSlotNumber(consensusSlotNumber))
+        tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber)
 
       val forgeMessage =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[SidechainBlock]](forgingFunctionForEpochAndSlot)
@@ -109,7 +109,7 @@ class Forger(settings: SidechainSettings,
     val bestBlockId = view.history.bestBlockId
     val bestBlockInfo = view.history.bestBlockInfo
     val nextBockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    require(nextBockTimestamp > bestBlockInfo.timestamp)
+    require(timeStampToAbsoluteSlotNumber(nextBockTimestamp) > timeStampToAbsoluteSlotNumber(bestBlockInfo.timestamp))
 
     val consensusInfo: FullConsensusEpochInfo = view.history.getFullConsensusEpochInfoForNextBlock(bestBlockId, nextConsensusEpochNumber)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
@@ -169,7 +169,7 @@ object Forger extends ScorexLogging {
 
     case object StartForging
     case object StopForging
-    case class TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: Int, consensusSlotNumber: Int)
+    case class TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
   }
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]

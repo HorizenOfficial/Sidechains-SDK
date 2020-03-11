@@ -8,6 +8,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
+import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages._
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -113,7 +114,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]){ body =>
-      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(body.epochNumber, body.slotNumber)
+      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber))
       val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
       Await.result(submitResultFuture, timeout.duration) match {
         case Success(id) =>

@@ -37,7 +37,9 @@ trait HistoryConsensusChecker extends CompanionsFixture {
     generationResult match {
       case Right(generatedBlockInfo) => (Seq(nextGenerator), generatedBlockInfo.block)
       case Left(finishedEpochInfo) => {
-        history.applyStakeConsensusEpochInfo(nextGenerator.lastBlockId, finishedEpochInfo.stakeConsensusEpochInfo)
+        val nonce = history.calculateNonceForEpoch(blockIdToEpochId(nextGenerator.lastBlockId))
+        val stake = finishedEpochInfo.stakeConsensusEpochInfo
+        history.applyFullConsensusInfo(nextGenerator.lastBlockId, FullConsensusEpochInfo(stake, nonce))
         println(s"//////////////// Epoch ${nextGenerator.lastBlockId} had been ended ////////////////")
         val (nextNextGenerator, firstEpochBlockGenerationInfo) = nextGenerator.tryToGenerateCorrectBlock(generationRule.copy(mcReferenceIsPresent = Some(true)))
         (Seq(nextGenerator, nextNextGenerator), firstEpochBlockGenerationInfo.right.get.block)

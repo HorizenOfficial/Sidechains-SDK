@@ -124,7 +124,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                         usedSlot: ConsensusSlotNumber,
                                         newForgers: PossibleForgersSet): SidechainBlocksGenerator = {
 
-    val bestPowInNewBlock: Option[BigInteger] = getMinimalHashOpt(newBlock.mainchainBlocks.map(_.hash))
+    val bestPowInNewBlock: Option[BigInteger] = getMinimalHashOptFromBlock(newBlock)
     val newBestPow: Option[BigInteger] = (bestPowInNewBlock, currentBestMainchainPoW) match {
       case (None, _) => currentBestMainchainPoW
       case (_, None) => bestPowInNewBlock
@@ -338,7 +338,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val genesisSidechainBlock: SidechainBlock = generateGenesisSidechainBlock(params, possibleForger.forgingData, vrfProof, merklePathForGenesisSidechainForgingData)
 
-    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHashOpt(genesisSidechainBlock.mainchainBlocks.map(_.hash)).get)
+    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHashOptFromBlock(genesisSidechainBlock).get)
     val nonceInfo = NonceConsensusEpochInfo(genesisNonce)
     val stakeInfo = StakeConsensusEpochInfo(genesisMerkleTree.rootHash(), possibleForger.forgingData.forgerBox.value())
     val consensusDataStorage = createConsensusDataStorage(genesisSidechainBlock.id, nonceInfo, stakeInfo)
