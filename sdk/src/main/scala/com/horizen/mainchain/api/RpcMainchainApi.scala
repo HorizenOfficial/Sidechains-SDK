@@ -52,11 +52,16 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
 
   override def sendCertificate(certificateRequest: CertificateRequest): CertificateResponce = {
     val objectMapper = new ObjectMapper()
+    val feeParam: String = if (!certificateRequest.subtractFeeFromAmount) {
+        " false " + certificateRequest.fee
+    } else ""
     val responce = callRpc("send_certificate "
       + enclosStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
       + certificateRequest.epochNumber + " "
       + enclosStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
-      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.withdrawalRequests)))
+      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.withdrawalRequests))
+      + feeParam
+      )
 
     CertificateResponce(BytesUtils.fromHexString(responce))
   }

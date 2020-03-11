@@ -30,7 +30,9 @@ case class CertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
-   withdrawalRequests: Seq[WithdrawalRequest])
+   withdrawalRequests: Seq[WithdrawalRequest],
+   subtractFeeFromAmount: Boolean = false,
+   fee: Double = 0.00001)
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
   require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
