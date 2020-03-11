@@ -85,8 +85,8 @@ object ProofOfWorkVerifier {
       return false
 
     // Verify next work for ommers MainchainHeaders in requested block
-    // Ommers first MainchainHeader have the same parent as first mainchainBlockReference
-    val orphanedMainchainBlockHeaders: Seq[MainchainHeader] = block.ommers.flatMap(_.mainchainBlockHeaders).distinct
+    // Ommers first MainchainHeader have the same parent as first mainchainBlockReference. We can rely on correct order of headers in Ommers.
+    val orphanedMainchainBlockHeaders: Seq[MainchainHeader] = (block.ommers.flatMap(_.mainchainReferencesHeaders) ++ block.ommers.flatMap(_.nextMainchainHeaders)).distinct
     if(!checkHeadersNextWorkRequired(orphanedMainchainBlockHeaders, timeBitsData, bitsTotal, params))
       return false
 

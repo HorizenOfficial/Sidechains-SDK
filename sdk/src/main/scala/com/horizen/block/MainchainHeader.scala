@@ -69,6 +69,8 @@ class MainchainHeader(
     true
   }
 
+  def hasParent(parent: MainchainHeader): Boolean = hashPrevBlock.sameElements(parent.hash)
+
   override def bytes: Array[Byte] = mainchainHeaderBytes
 
   override def hashCode(): Int = java.util.Arrays.hashCode(mainchainHeaderBytes)

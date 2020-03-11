@@ -13,7 +13,8 @@ import scala.collection.JavaConverters._
 case class Ommer(
                   sidechainBlockHeader: SidechainBlockHeader,
                   mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]], // Empty if no mainchainBlockReferences present in block.
-                  mainchainBlockHeaders: Seq[MainchainHeader] // mainchainBlockReferences.headers + nextMainchainHeaders
+                  mainchainReferencesHeaders: Seq[MainchainHeader],
+                  nextMainchainHeaders: Seq[MainchainHeader]
                 ) extends BytesSerializable {
   override type M = Ommer
 
@@ -23,35 +24,61 @@ case class Ommer(
     Blake2b256(Bytes.concat(
       idToBytes(sidechainBlockHeader.id),
       mainchainReferencesDataMerkleRootHashOption.getOrElse(Utils.ZEROS_HASH),
-      MerkleTree.createMerkleTree(mainchainBlockHeaders.map(_.hash).asJava).rootHash()
+      if(mainchainReferencesHeaders.isEmpty) Utils.ZEROS_HASH else MerkleTree.createMerkleTree(mainchainReferencesHeaders.map(_.hash).asJava).rootHash(),
+      if(nextMainchainHeaders.isEmpty) Utils.ZEROS_HASH else  MerkleTree.createMerkleTree(nextMainchainHeaders.map(_.hash).asJava).rootHash()
     ))
   }
 
   def semanticValidity(params: NetworkParams): Boolean = {
-    if(sidechainBlockHeader == null || mainchainBlockHeaders == null)
+    if(sidechainBlockHeader == null || mainchainReferencesHeaders == null || nextMainchainHeaders == null)
       return false
 
     if(!sidechainBlockHeader.semanticValidity())
       return false
 
-    for(mainchainHeader <- mainchainBlockHeaders)
+    val ommerMainchainHeaders = mainchainReferencesHeaders ++ nextMainchainHeaders
+    // Verify that each MainchainHeader is semantically valid
+    for(mainchainHeader <- ommerMainchainHeaders)
       if(!mainchainHeader.semanticValidity(params))
         return false
 
-    // Verify that Ommers' mainchainBlockHeaders and ReferencesData root hash are consistent to sidechainBlockHeader.mainchainMerkleRootHash.
-    if(mainchainBlockHeaders.isEmpty && mainchainReferencesDataMerkleRootHashOption.isEmpty) {
+    // Verify that mainchainReferencesHeaders and nextMainchainHeaders lead to consistent MC chain
+    for (i <- 1 until ommerMainchainHeaders.size) {
+      if (ommerMainchainHeaders(i).hasParent(ommerMainchainHeaders(i-1)))
+        return false
+    }
+
+    // Verify that Ommers' mainchainReferencesHeaders, ReferencesData and nextMainchainHeaders root hashes are consistent to sidechainBlockHeader.mainchainMerkleRootHash.
+    if(mainchainReferencesHeaders.isEmpty && nextMainchainHeaders.isEmpty && mainchainReferencesDataMerkleRootHashOption.isEmpty) {
       if(!sidechainBlockHeader.mainchainMerkleRootHash.sameElements(Utils.ZEROS_HASH))
         return false
     } else {
+      // Calculate Merkle root hashes of mainchainBlockReferences Data
       val mainchainReferencesDataMerkleRootHash = mainchainReferencesDataMerkleRootHashOption.getOrElse(Utils.ZEROS_HASH)
-      val headersMerkleRootHash = MerkleTree.createMerkleTree(mainchainBlockHeaders.map(_.hash).asJava).rootHash()
+
+      // Calculate Merkle root hashes of mainchainBlockReferences Headers
+      val mainchainReferencesHeadersMerkleRootHash = if (mainchainReferencesHeaders.isEmpty)
+        Utils.ZEROS_HASH
+      else {
+          MerkleTree.createMerkleTree(mainchainReferencesHeaders.map(_.hash).asJava).rootHash()
+      }
+
+      // Calculate Merkle root hash of next MainchainHeaders
+      val nextMainchainHeadersMerkleRootHash = if (nextMainchainHeaders.isEmpty)
+        Utils.ZEROS_HASH
+      else
+        MerkleTree.createMerkleTree(nextMainchainHeaders.map(_.hash).asJava).rootHash()
+
+      // Calculate final root hash, that takes as leaves three previously calculated root hashes.
       val calculatedMerkleRootHash = MerkleTree.createMerkleTree(
-        Seq(mainchainReferencesDataMerkleRootHash, headersMerkleRootHash).asJava
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainReferencesHeadersMerkleRootHash, nextMainchainHeadersMerkleRootHash).asJava
       ).rootHash()
 
-      if(!sidechainBlockHeader.mainchainMerkleRootHash.sameElements(calculatedMerkleRootHash))
+      // Compare final hash with the one stored in SidechainBlockHeader
+      if (!sidechainBlockHeader.mainchainMerkleRootHash.sameElements(calculatedMerkleRootHash))
         return false
     }
+
     true
   }
 }
@@ -69,7 +96,8 @@ object OmmerSerializer extends ScorexSerializer[Ommer] {
       case None =>
         w.putInt(0)
     }
-    mainchainHeaderListSerializer.serialize(obj.mainchainBlockHeaders.asJava, w)
+    mainchainHeaderListSerializer.serialize(obj.mainchainReferencesHeaders.asJava, w)
+    mainchainHeaderListSerializer.serialize(obj.nextMainchainHeaders.asJava, w)
   }
 
   override def parse(r: Reader): Ommer = {
@@ -80,8 +108,10 @@ object OmmerSerializer extends ScorexSerializer[Ommer] {
     else
       Some(r.getBytes(referencesDataHashLength))
 
-    val mainchainBlockHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
+    val mainchainReferencesHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
 
-    Ommer(sidechainBlockHeader, mainchainReferencesDataMerkleRootHashOption, mainchainBlockHeaders)
+    val nextMainchainHeaders: Seq[MainchainHeader] = mainchainHeaderListSerializer.parse(r).asScala
+
+    Ommer(sidechainBlockHeader, mainchainReferencesDataMerkleRootHashOption, mainchainReferencesHeaders, nextMainchainHeaders)
   }
 }

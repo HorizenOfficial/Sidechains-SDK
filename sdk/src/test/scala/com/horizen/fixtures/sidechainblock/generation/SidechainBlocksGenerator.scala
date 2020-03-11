@@ -123,20 +123,30 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     val nextMainchainHeaders: Seq[MainchainHeader] = Seq()
     val mainchainHeaders = mainchainBlockReferences.map(_.header) ++ nextMainchainHeaders
 
-    val mainchainMerkleRootHash: Array[Byte] = if(mainchainHeaders.nonEmpty) {
-      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferences.isEmpty)
+    val mainchainMerkleRootHash: Array[Byte] = if(mainchainBlockReferences.isEmpty && nextMainchainHeaders.isEmpty)
+      Utils.ZEROS_HASH
+    else {
+      // Calculate Merkle root hashes of mainchainBlockReferences Data and Headers
+      val (mainchainReferencesDataMerkleRootHash, mainchainReferencesHeadersMerkleRootHash) = if(mainchainBlockReferences.isEmpty)
+        (Utils.ZEROS_HASH, Utils.ZEROS_HASH)
+      else {
+        (
+          MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash(),
+          MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.header.hash).asJava).rootHash()
+        )
+      }
+
+      // Calculate Merkle root hash of next MainchainHeaders
+      val nextMainchainHeadersMerkleRootHash = if(nextMainchainHeaders.isEmpty)
         Utils.ZEROS_HASH
       else
-        MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash()
+        MerkleTree.createMerkleTree(nextMainchainHeaders.map(_.hash).asJava).rootHash()
 
-      // Calculate Merkle root hash of mainchainHeaders
-      val mainchainHeadersMerkleRootHash = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
-
-      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
+      // Calculate final root hash, that takes as leaves three previously calculated root hashes.
       MerkleTree.createMerkleTree(
-        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainReferencesHeadersMerkleRootHash, nextMainchainHeadersMerkleRootHash).asJava
       ).rootHash()
-    } else Utils.ZEROS_HASH
+    }
 
 
     val forgingData: SidechainForgingData =
@@ -402,20 +412,30 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     val nextMainchainHeaders: Seq[MainchainHeader] = Seq()
     val mainchainHeaders = mainchainBlockReferences.map(_.header) ++ nextMainchainHeaders
 
-    val mainchainMerkleRootHash: Array[Byte] = if(mainchainHeaders.nonEmpty) {
-      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferences.isEmpty)
+    val mainchainMerkleRootHash: Array[Byte] = if(mainchainBlockReferences.isEmpty && nextMainchainHeaders.isEmpty)
+      Utils.ZEROS_HASH
+    else {
+      // Calculate Merkle root hashes of mainchainBlockReferences Data and Headers
+      val (mainchainReferencesDataMerkleRootHash, mainchainReferencesHeadersMerkleRootHash) = if(mainchainBlockReferences.isEmpty)
+        (Utils.ZEROS_HASH, Utils.ZEROS_HASH)
+      else {
+        (
+          MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash(),
+          MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.header.hash).asJava).rootHash()
+        )
+      }
+
+      // Calculate Merkle root hash of next MainchainHeaders
+      val nextMainchainHeadersMerkleRootHash = if(nextMainchainHeaders.isEmpty)
         Utils.ZEROS_HASH
       else
-        MerkleTree.createMerkleTree(mainchainBlockReferences.map(_.dataHash).asJava).rootHash()
+        MerkleTree.createMerkleTree(nextMainchainHeaders.map(_.hash).asJava).rootHash()
 
-      // Calculate Merkle root hash of mainchainHeaders
-      val mainchainHeadersMerkleRootHash = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
-
-      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
+      // Calculate final root hash, that takes as leaves three previously calculated root hashes.
       MerkleTree.createMerkleTree(
-        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainReferencesHeadersMerkleRootHash, nextMainchainHeadersMerkleRootHash).asJava
       ).rootHash()
-    } else Utils.ZEROS_HASH
+    }
 
     val sidechainTransactionsMerkleRootHash = Utils.ZEROS_HASH
 
