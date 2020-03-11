@@ -6,7 +6,7 @@ import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
-import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.box.{Box, ForgerBox, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo

@@ -1,7 +1,9 @@
 package com.horizen
 
-import java.math.BigInteger
+import java.math.{BigDecimal, BigInteger, MathContext}
 
+import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.vrf.VRFProof
 import scorex.util.ModifierId
 import supertagged.TaggedType
 
@@ -9,9 +11,9 @@ package object consensus {
   val merkleTreeHashLen: Int = 32
   val sha256HashLen: Int = 32
 
-  val consensusHardcodedSaltString: String = "TEST" //do we need it? In original Ouroboros it was used for distinguish forging VRF and nonce VRF
-  val stakePercentPrecision: BigInteger = BigInteger.valueOf(1000000) // where 1 / STAKE_PERCENT_PRECISION -- minimal possible stake percentage to be able to forge
-  val stakePercentPrecisionAsDouble: Double = stakePercentPrecision.doubleValue()
+  val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes()
+  val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
+  val stakeConsensusDivideMathContext: MathContext = MathContext.DECIMAL128 //shall be used during dividing, otherwise ArithmeticException is thrown in case of irrational number as division result
 
   object ConsensusEpochNumber extends TaggedType[Int]
   type ConsensusEpochNumber = ConsensusEpochNumber.Type
@@ -32,30 +34,47 @@ package object consensus {
   type ConsensusSlotNumber = ConsensusSlotNumber.Type
   def intToConsensusSlotNumber(consensusSlotNumber: Int): ConsensusSlotNumber = ConsensusSlotNumber @@ consensusSlotNumber
 
+  //Slot number starting from genesis block
+  object ConsensusAbsoluteSlotNumber extends TaggedType[Int]
+  type ConsensusAbsoluteSlotNumber = ConsensusAbsoluteSlotNumber.Type
+  def intToConsensusAbsoluteSlotNumber(consensusSlotNumber: Int): ConsensusAbsoluteSlotNumber = ConsensusAbsoluteSlotNumber @@ consensusSlotNumber
+
+
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
   def bigIntToConsensusNonce(consensusNonce: BigInteger): ConsensusNonce = ConsensusNonce @@ consensusNonce.toByteArray
 
   def buildVrfMessage(slotNumber: ConsensusSlotNumber, nonce: NonceConsensusEpochInfo): Array[Byte] = {
-    val slotNumberAsString = slotNumber.toString
-    val nonceAsString = nonce.getAsStringForVrfBuilding
+    val slotNumberBytes = Ints.toByteArray(slotNumber)
+    val nonceBytes = nonce.consensusNonce
 
-    val vrfString = nonceAsString + slotNumberAsString + consensusHardcodedSaltString
-    vrfString.getBytes
+    Bytes.concat(slotNumberBytes, nonceBytes, consensusHardcodedSaltString)
   }
 
-  def sha256HashToBigInteger(bytes: Array[Byte]): BigInteger = {
+  def sha256HashToPositiveBigInteger(bytes: Array[Byte]): BigInteger = {
     require(bytes.length == sha256HashLen)
     new BigInteger(1, bytes)
   }
 
-  // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
-  def hashToStakePercent(bytes: Array[Byte]): Double = {
-    //@TODO check correctness!
-    val hashAsNumber: BigInteger = sha256HashToBigInteger(bytes)
-    (Math.abs(hashAsNumber.remainder(stakePercentPrecision).doubleValue()) / stakePercentPrecisionAsDouble) / 10 //@TODO WILL BE CHANGED!!!
+  def vrfProofCheckAgainstStake(actualStake: Long, vrfProof: VRFProof, totalStake: Long): Boolean = {
+    val requiredStakePercentage: BigDecimal = vrfProofToRequiredStakePercentage(vrfProof)
+    val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
+
+    requiredStakePercentage.compareTo(actualStakePercentage) match {
+      case -1 => true //required percentage is less than actual
+      case  0 => true //required percentage is equal to actual
+      case  _ => false //any other case
+    }
   }
 
-  //Shall be SNARK friendly???
-  def getMinimalHash(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToBigInteger).reduceOption(_ min _)
+  // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
+  def vrfProofToRequiredStakePercentage(vrfProof: VRFProof): BigDecimal = {
+    val hashAsBigDecimal: BigDecimal = new BigDecimal(sha256HashToPositiveBigInteger(vrfProof.proofToVRFHash()))
+
+    hashAsBigDecimal
+      .remainder(forgerStakePercentPrecision) //got random number from 0 to forgerStakePercentPrecision - 1
+      .divide(forgerStakePercentPrecision, stakeConsensusDivideMathContext) //got random number from 0 to 0.(9)
+  }
+
+  def getMinimalHashOpt(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
 }

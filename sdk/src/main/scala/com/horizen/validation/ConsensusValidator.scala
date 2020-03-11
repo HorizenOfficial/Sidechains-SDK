@@ -25,7 +25,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new IllegalArgumentException(s"Genesis block timestamp ${block.timestamp} is differ than expected timestamp from configuration ${history.params.sidechainGenesisBlockTimestamp}")
     }
 
-    val vrfSignIsNotCorrect = false //shall be implemented as VRF key will be used for block signing
+    val vrfSignIsNotCorrect = false //@TODO we should call verifyVfr and verifyForgerBox with consensusEpochInfo calculated from SC creation TX and a constant for nonce
     if (vrfSignIsNotCorrect) {
       throw new IllegalArgumentException(s"Genesis block timestamp is not signed his own forger box")
     }
@@ -48,6 +48,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
     if (verifiedBlockTimestamp > Instant.now.getEpochSecond) throw new IllegalArgumentException("Block had been generated in the future")
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
+
+    val absoluteSlotNumberForVerifiedBlock = history.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
+    val absoluteSlotNumberForParentBlock = history.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
+    if (absoluteSlotNumberForVerifiedBlock <= absoluteSlotNumberForParentBlock) throw new IllegalArgumentException("Block absolute slot number is equal or less than parent block")
 
     val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
     val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
@@ -103,12 +107,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
     }
 
-    val relativeStake = (header.forgerBox.value().toDouble / stakeConsensusEpochInfo.totalStake.toDouble)
-    val requiredRelativeStake = hashToStakePercent(header.vrfProof.proofToVRFHash())
-
-    val stakeIsEnough = relativeStake > requiredRelativeStake
+    val stakeIsEnough = vrfProofCheckAgainstStake(header.forgerBox.value(), header.vrfProof, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {
-      throw new IllegalArgumentException(s"Stake value in forger box in block ${header.id} is not enough for to be forger. Required relative stake ${requiredRelativeStake}, but actual is ${relativeStake}")
+      throw new IllegalArgumentException(
+        s"Stake value in forger box in block ${header.id} is not enough for to be forger.")
     }
   }
 }

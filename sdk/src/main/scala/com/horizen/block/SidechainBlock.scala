@@ -7,7 +7,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
+import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.vrf.VRFProof

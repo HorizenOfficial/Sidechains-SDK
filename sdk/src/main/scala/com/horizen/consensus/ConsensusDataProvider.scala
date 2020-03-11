@@ -20,10 +20,9 @@ trait ConsensusDataProvider {
   def getFullConsensusEpochInfoForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): FullConsensusEpochInfo = {
     log.debug(s"Requested FullConsensusEpochInfo for ${blockId} block id")
 
-    val previousEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
+    val previousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
 
-    val nonceEpochInfo: NonceConsensusEpochInfo =
-      consensusDataStorage.getNonceConsensusEpochInfoOrElseUpdate(previousEpochId, calculateNonceForEpoch(previousEpochId))
+    val nonceEpochInfo: NonceConsensusEpochInfo = getNonceConsensusEpochAndUpdateIfNecessary(previousEpochId)
 
     val lastBlockIdInPreviousEpoch = lastBlockIdInEpochId(previousEpochId)
     val prePreviousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInPreviousEpoch, storage.blockInfoById(lastBlockIdInPreviousEpoch))
@@ -35,22 +34,33 @@ trait ConsensusDataProvider {
     FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)
   }
 
+  private def getNonceConsensusEpochAndUpdateIfNecessary(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
+    consensusDataStorage.getNonceConsensusEpochInfo(epochId).getOrElse{
+      val newNonceInfo: NonceConsensusEpochInfo = calculateNonceForEpoch(epochId)
+      consensusDataStorage.addNonceConsensusEpochInfo(epochId, newNonceInfo)
+      newNonceInfo
+    }
+  }
 
   private def calculateNonceForEpoch(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
     val lastBlockIdInEpoch: ModifierId = lastBlockIdInEpochId(epochId)
-    val lastBlockInfoInEpoch = storage.blockInfoById(lastBlockIdInEpoch)
+    val lastBlockInfoInEpoch: SidechainBlockInfo = storage.blockInfoById(lastBlockIdInEpoch)
 
-    val nonceSource: Option[BigInteger] = foldEpoch[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
-      (_, blockInfo, accumulator) => (getMinimalHash(blockInfo.mainchainBlockReferenceHashes.map(_.data)), accumulator) match {
-        case (None, _) => accumulator
-        case (minimalHashOpt, None) => minimalHashOpt
-        case (Some(a), Some(b)) => Option(a.min(b))
+    val nonceOpt: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
+      (blockId: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
+        {
+          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainBlockReferenceHashes.map(_.data))
+          (minimalHashForCurrentBlockOpt, accumulator) match {
+            case (None, _) => accumulator
+            case (minimalHashOpt, None) => minimalHashOpt
+            case (Some(a), Some(b)) => Option(a.min(b))
+        }
       }
     }
 
-    assert(nonceSource.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
+    assert(nonceOpt.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
 
-    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceSource.get))
+    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceOpt.get))
   }
 
   /**
@@ -61,13 +71,13 @@ trait ConsensusDataProvider {
       blockIdToEpochId(blockId)
     }
     else {
-      val lastBlockId = foldEpoch(blockInfo.parentId, blockId, blockInfo)((_, blockInfo, _) => blockInfo.parentId)
+      val lastBlockId = foldEpochRight(blockInfo.parentId, blockId, blockInfo)((_, blockInfo, _) => blockInfo.parentId)
       blockIdToEpochId(lastBlockId)
     }
   }
 
   /**
-   * Perform folding on whole epoch, i.e. apply op function on every Sidechain block starting from given block in epoch to a start of the epoch
+   * Perform folding right on whole epoch, i.e. apply op function on every Sidechain block starting from given block in epoch to a start of the epoch
    * @param accumulator initial value
    * @param blockId start point for folding, not necessary to be a real last block in consensus epoch
    * @param blockInfo appropriate blockInfo for blockId
@@ -75,12 +85,12 @@ trait ConsensusDataProvider {
    * @tparam A type of accumulator
    * @return result of performed operations on blocks in epochs
    */
-  private def foldEpoch[A](accumulator: A, blockId: ModifierId, blockInfo: SidechainBlockInfo)(op: (ModifierId, SidechainBlockInfo, A) => A): A = {
+  private def foldEpochRight[A](accumulator: A, blockId: ModifierId, blockInfo: SidechainBlockInfo)(op: (ModifierId, SidechainBlockInfo, A) => A): A = {
     @tailrec
-    def foldEpochIteration[B](accumulator: B, blockId: ModifierId, blockInfo: SidechainBlockInfo, currentEpochNumber: ConsensusEpochNumber)
+    def foldEpochIteration[B](accumulator: B, blockId: ModifierId, blockInfo: SidechainBlockInfo, processedEpochNumber: ConsensusEpochNumber)
                              (op: (ModifierId, SidechainBlockInfo, B) => B): B = {
       val blockEpochNumber = timeStampToEpochNumber(blockInfo.timestamp)
-      if (blockEpochNumber < currentEpochNumber) {
+      if (blockEpochNumber < processedEpochNumber) {
         accumulator
       }
       else {
@@ -88,12 +98,12 @@ trait ConsensusDataProvider {
           op(blockId, blockInfo, accumulator)
         }
         else {
-          require(currentEpochNumber == blockEpochNumber)
+          require(processedEpochNumber == blockEpochNumber)
 
           val currentBlockOpResult = op(blockId, blockInfo, accumulator)
           val parentId = blockInfo.parentId
           val parentBlockInfo = storage.blockInfoById(parentId)
-          foldEpochIteration(currentBlockOpResult, parentId, parentBlockInfo, currentEpochNumber)(op)
+          foldEpochIteration(currentBlockOpResult, parentId, parentBlockInfo, processedEpochNumber)(op)
         }
       }
     }
