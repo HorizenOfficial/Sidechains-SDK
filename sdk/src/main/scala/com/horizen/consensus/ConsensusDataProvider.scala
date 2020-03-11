@@ -66,7 +66,7 @@ trait ConsensusDataProvider {
   /**
    * @return Return last block in previous epoch, for genesis block last block of previous epoch is genesis block itself
    */
-  private def getPreviousConsensusEpochIdForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): ConsensusEpochId = {
+  def getPreviousConsensusEpochIdForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): ConsensusEpochId = {
     if (isGenesisBlock(blockId)) {
       blockIdToEpochId(blockId)
     }

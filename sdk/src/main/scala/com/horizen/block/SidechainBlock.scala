@@ -134,7 +134,7 @@ class SidechainBlock(
 
     // Check MainchainBlockReferences and next MainchainHeaders order in current block.
     for(i <- 1 until mainchainHeaders.size) {
-      if(!mainchainHeaders(i).hashPrevBlock.sameElements(mainchainHeaders(i-1).hash))
+      if(!mainchainHeaders(i).hasParent(mainchainHeaders(i-1)))
         return false
     }
 
@@ -170,7 +170,8 @@ class SidechainBlock(
     if (ommers.head.sidechainBlockHeader.parentId != header.parentId)
       return false
 
-    // Note: Verification, that last Ommer epoch&slot number must be before current block one is done in proper ConsensusValidator.
+    // Note: Verification, that Ommer epoch&slot order and last Ommer epoch&slot must be before current block epoch&slot is done in ConsensusValidator.
+    // Why? Require TimeToEpochSlotConverter extension.
 
     // Ommers must reference to MainchainHeaders for different chain than current SidechainBlock does.
     // In our case first Ommer should contain non empty headers seq and it should be different to the same length subseq of current SidechainBlock headers.

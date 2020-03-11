@@ -138,6 +138,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     )
   }
 
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
+
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
   // Calculate SidechainBlock info based on passed block and parent info.
