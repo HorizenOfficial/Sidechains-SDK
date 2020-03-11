@@ -77,6 +77,8 @@ object MainchainBackwardTransferCertificate {
     val ccoutCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += ccoutCount.size()
 
+    // We don't need to parse vbt_ccout array, because each vbt_ccout entry is an empty object
+
     val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 

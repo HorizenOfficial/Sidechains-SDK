@@ -49,11 +49,13 @@ case class RawCertificateResponce
   (hex: Array[Byte])
 
 object CertificateRequestCreator {
+
+  val ZEN_COINS_DIVIDOR = 100000000
+
   def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              params: NetworkParams) : CertificateRequest = {
     CertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
-      for (wrb <- withdrawalRequestBoxes)
-        yield WithdrawalRequest(wrb.proposition().bytes(), wrb.value()))
+      withdrawalRequestBoxes.map(wrb => WithdrawalRequest(wrb.proposition().bytes(), wrb.value().toDouble/ZEN_COINS_DIVIDOR)))
   }
 }

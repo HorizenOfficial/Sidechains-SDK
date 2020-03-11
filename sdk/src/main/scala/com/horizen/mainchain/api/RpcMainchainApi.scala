@@ -17,10 +17,11 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
       1
   }
 
-  private val clientPath = sidechainSettings.mainchainSettings.path + "zen-cli " +
+  private val clientPath = sidechainSettings.mainchainSettings.path +
     sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => "-regtest "
     case "testnet" => "-testnet "
+    case _ => ""
   }
 
   private def callRpc(params: String) : String = {

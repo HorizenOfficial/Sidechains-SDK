@@ -56,14 +56,14 @@ class CertificateSubmitter
             WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
           val withdrawalRequests = sidechainNodeView.getNodeState.getWithdrawalRequests(withdrawalEpochInfo.epoch - 1)
           if (withdrawalRequests.isPresent) {
-            val mcEndEpochBlockHash = sidechainNodeView.getNodeHistory
+            val mcEndEpochBlockHashOpt = sidechainNodeView.getNodeHistory
               .getMainchainBlockReferenceInfoByMainchainBlockHeight(
                 params.mainchainCreationBlockHeight +
                   withdrawalEpochInfo.epoch * params.withdrawalEpochLength - 1)
             mainchainApi.sendCertificate(
               CertificateRequestCreator.create(
                 withdrawalEpochInfo.epoch - 1,
-                mcEndEpochBlockHash.get().getMainchainBlockReferenceHash,
+                mcEndEpochBlockHashOpt.get().getMainchainBlockReferenceHash,
                 withdrawalRequests.get().asScala,
                 params
               )
@@ -77,7 +77,7 @@ class CertificateSubmitter
 
   override def receive: Receive = {
     case SemanticallySuccessfulModifier(sidechainBlock: SidechainBlock) => {
-
+      trySubmitCertificate
     }
     case message: Any => log.error("CertificateSubmitter received strange message: " + message)
   }

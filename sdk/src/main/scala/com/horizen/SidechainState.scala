@@ -93,18 +93,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
       withdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
           var isEqual = false
-          if (withdrawalRequests.size == certificate.outputs.size) {
-            isEqual = true
+          if (withdrawalRequests.size != certificate.outputs.size)
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
             for (o <- certificate.outputs)
-              isEqual &= withdrawalRequests.exists(r => {
+              if (!withdrawalRequests.exists(r => {
                 util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
                   r.value().equals(o.originalAmount)
-              })
-          }
-          if (!isEqual)
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+                }))
+              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
         case None =>
-          throw new Exception("Block contains backward transfer certificate for epoch %d, but list of unprocessed withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
+          throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
     }
 

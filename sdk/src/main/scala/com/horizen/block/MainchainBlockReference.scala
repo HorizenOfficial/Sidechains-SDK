@@ -55,7 +55,7 @@ class MainchainBlockReference(
       return false
 
     if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
-      // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
+      // If there is not SC related outputs in MC block, SCMap, AggTx and Certificate expected to be not defined.
       if (sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined ||
           backwardTransferCertificate.isDefined)
         return false
@@ -80,8 +80,8 @@ class MainchainBlockReference(
 
       val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
       if (sidechainMerkleRootHash.isEmpty) {
-        // there is no related outputs for current Sidechain, AggTx expected to be not defined.
-        return sidechainRelatedAggregatedTransaction.isEmpty
+        // there is no related outputs for current Sidechain, AggTx and Certificate expected to be not defined.
+        return sidechainRelatedAggregatedTransaction.isEmpty && backwardTransferCertificate.isEmpty
       } else {
         if (sidechainRelatedAggregatedTransaction.isEmpty && backwardTransferCertificate.isEmpty)
           return false
