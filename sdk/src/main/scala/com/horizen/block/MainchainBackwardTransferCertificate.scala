@@ -26,19 +26,7 @@ case class MainchainBackwardTransferCertificate
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
 
   override def bytes: Array[Byte] = {
-    val outputBytes = MainchainBackwardTransferCertificate.outpustListSerializer.toBytes(outputs.asJava)
-    Bytes.concat(
-      Ints.toByteArray(certificateBytes.length),
-      certificateBytes,
-      Ints.toByteArray(version),
-      Ints.toByteArray(sidechainId.length),
-      sidechainId,
-      Ints.toByteArray(epochNumber),
-      Ints.toByteArray(endEpochBlockHash.length),
-      endEpochBlockHash,
-      Longs.toByteArray(totalAmount),
-      Ints.toByteArray(outputBytes.length),
-      outputBytes)
+    certificateBytes
   }
 
 }
@@ -92,47 +80,6 @@ object MainchainBackwardTransferCertificate {
 
   }
 
-  lazy val outpustListSerializer = new ListSerializer[MainchainBackwardTransferCertificateOutput](MainchainBackwardTransferCertificateOutputSerializer)
-
-  def parseBytes(bytes: Array[Byte]): MainchainBackwardTransferCertificate = {
-    var offset: Int = 0
-
-    val certificateBytesSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset +=4
-
-    val certificateBytes = bytes.slice(offset, offset + certificateBytesSize)
-    offset += certificateBytesSize
-
-    val version = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset +=4
-
-    val sidechainIdSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset +=4
-
-    val sidechainId = bytes.slice(offset, offset + sidechainIdSize)
-    offset += sidechainIdSize
-
-    val epochNumber = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset +=4
-
-    val endEpochBlockHashSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset += 4
-
-    val endEpochBlockHash = bytes.slice(offset, offset + endEpochBlockHashSize)
-    offset += endEpochBlockHashSize
-
-    val totalAmount = Longs.fromByteArray(bytes.slice(offset, offset + 8))
-    offset += 8
-
-    val outputsSize = Ints.fromByteArray(bytes.slice(offset, offset + 4))
-    offset += 4
-
-    val outputs = outpustListSerializer.parseBytes(bytes.slice(offset, offset + outputsSize))
-    offset += outputsSize
-
-    new MainchainBackwardTransferCertificate(certificateBytes, version, sidechainId, epochNumber,
-      endEpochBlockHash, totalAmount, outputs.asScala)
-  }
 }
 
 object MainchainBackwardTransferCertificateSerializer
@@ -143,7 +90,7 @@ object MainchainBackwardTransferCertificateSerializer
 }
 
   override def parse(r: Reader): MainchainBackwardTransferCertificate = {
-    MainchainBackwardTransferCertificate.parseBytes(r.getBytes(r.remaining))
+    MainchainBackwardTransferCertificate.parse(r.getBytes(r.remaining), 0)
   }
 
 }
