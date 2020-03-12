@@ -1,27 +1,26 @@
 package com.horizen.forge
 
-import java.time.Instant
-import java.util.concurrent.Executors
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.{ForgerDataWithSecrets, _}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import com.horizen.forge.Forger.SendMessages.{ForgeFailed, ForgeResult, ForgeSuccess, SkipSlot}
+import com.horizen.forge.Forger.View
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.vrf.VRFProof
+import com.horizen.{ForgerDataWithSecrets, _}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.block.Block
 import scorex.util.{ModifierId, ScorexLogging}
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
@@ -40,76 +39,45 @@ class Forger(settings: SidechainSettings,
              companion: SidechainTransactionsCompanion,
              val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
 
-  import com.horizen.forge.Forger._
-  import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
-  @volatile private var forgingIsActive: Boolean = true
-
-  val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
-  val forgingInitiator: Runnable = () => {
-    while (forgingIsActive) {
-      val currentTime: Long = Instant.now.getEpochSecond
-      self ! Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(timeStampToEpochNumber(currentTime), timeStampToSlotNumber(currentTime))
-    }
-
-    Thread.sleep(consensusMillisecondsInSlot)
-  }
-
-  ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor).execute(forgingInitiator)
-
   override def receive: Receive = {
-    processStartForgingMessage orElse processStopForgingMessage orElse processTryForgeNextBlockForEpochAndSlotMessage orElse {
-      case message: Any => log.error("Forger received strange message: " + message)
-    }
-  }
-
-
-  protected def processStartForgingMessage: Receive = {
-    case Forger.ReceivableMessages.StartForging => {
-      forgingIsActive = true
-      sender() ! Success()
-    }
-  }
-
-  protected def processStopForgingMessage: Receive = {
-    case Forger.ReceivableMessages.StopForging => {
-      forgingIsActive = false
-      sender() ! Success()
+    processTryForgeNextBlockForEpochAndSlotMessage orElse {
+      case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(consensusEpochNumber, consensusSlotNumber) => {
-      val forgingFunctionForEpochAndSlot: View => Option[SidechainBlock] =
-        tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber)
+    case TryForgeNextBlockForEpochAndSlot(consensusEpochNumber, consensusSlotNumber) => {
+      val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber)
 
       val forgeMessage =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[SidechainBlock]](forgingFunctionForEpochAndSlot)
+        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
+
+      val forgeMessageSender: ActorRef = sender()
 
       val forgedBlockAsFuture = sidechainNodeViewHolderRef ? forgeMessage
-
       forgedBlockAsFuture.onComplete{
-        case Success(Some(newBlock: SidechainBlock)) => {
-          sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](newBlock) //return block without applying? is it caller responsibility of applying new created block?
-          sender() ! Success(newBlock.id)
-        }
-
-        case Success(_) => sender() ! Success(None) //no eligible forger box is present, just skip slot
-
-        case Failure(exception) => sender() ! Failure(exception) // got some error during forging
+        case Success(forgeResult) => forgeMessageSender ! forgeResult //caller is responsible for applying new created block if required
+        case Failure(exception) => forgeMessageSender ! ForgeFailed(exception) //got some error during future completing
       }
     }
   }
 
-
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(view: View): Option[SidechainBlock] = {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(view: View): ForgeResult = {
+    log.info(s"Try to forge block for epoch ${nextConsensusEpochNumber} with slot ${nextConsensusSlotNumber}")
     val bestBlockId = view.history.bestBlockId
     val bestBlockInfo = view.history.bestBlockInfo
+    val bestBlockEpochAndSlot = timestampToEpochAndSlot(bestBlockInfo.timestamp)
+
     val nextBockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    require(timeStampToAbsoluteSlotNumber(nextBockTimestamp) > timeStampToAbsoluteSlotNumber(bestBlockInfo.timestamp))
+    val nextBlockEpochAndSlot = EpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
+    if(bestBlockEpochAndSlot > nextBlockEpochAndSlot) {
+      log.warn(s"Try to forge block with epochAndSlot ${nextBlockEpochAndSlot} but current best block epochAndSlot are: ${bestBlockEpochAndSlot}")
+    }
+
+    if ((nextConsensusEpochNumber - timeStampToEpochNumber(bestBlockInfo.timestamp)) > 1) log.warn("Forging is not possible: whole consensus epoch(s) are missed")
 
     val consensusInfo: FullConsensusEpochInfo = view.history.getFullConsensusEpochInfoForNextBlock(bestBlockId, nextConsensusEpochNumber)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
@@ -117,20 +85,20 @@ class Forger(settings: SidechainSettings,
 
     val availableForgersDataWithSecret: Seq[ForgerDataWithSecrets] = view.vault.getForgingDataWithSecrets(nextConsensusEpochNumber).getOrElse(Seq())
 
-    val newBlockOpt = availableForgersDataWithSecret
+    val forgingDataOpt: Option[(ForgerDataWithSecrets, VRFProof)] = availableForgersDataWithSecret
       .toStream
-      .map(forgerDataWithSecrets => (forgerDataWithSecrets, forgerDataWithSecrets.vrfSecret.prove(vrfMessage)))
-      .find{case (forgerDataWithSecrets, vrfProof) =>
-        vrfProofCheckAgainstStake(forgerDataWithSecrets.forgerBox.value(), vrfProof, totalStake)
-      }
-      .map{case (forgerDataWithSecrets, vrfProof) =>
-        forgeBlock(view, bestBlockId, nextBockTimestamp, forgerDataWithSecrets, vrfProof)
-      }
+      .map(forgerDataWithSecrets => (forgerDataWithSecrets, forgerDataWithSecrets.vrfSecret.prove(vrfMessage))) //get secrets thus filter forger boxes not owned by node
+      .find{case (forgerDataWithSecrets, vrfProof) => vrfProofCheckAgainstStake(forgerDataWithSecrets.forgerBox.value(), vrfProof, totalStake)} //check our forger boxes against stake
 
-    newBlockOpt
+    val forgingResult = forgingDataOpt
+                                      .map{case (forgerDataWithSecrets, vrfProof) => forgeBlock(view, bestBlockId, nextBockTimestamp, forgerDataWithSecrets, vrfProof)}
+                                      .getOrElse(SkipSlot)
+
+    log.info(s"Forge result is: ${forgingResult}")
+    forgingResult
   }
 
-  protected def forgeBlock(view: View, parentBlockId: ModifierId, timestamp: Long, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VRFProof): SidechainBlock = {
+  protected def forgeBlock(view: View, parentBlockId: ModifierId, timestamp: Long, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VRFProof): ForgeResult = {
     var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
@@ -149,27 +117,36 @@ class Forger(settings: SidechainSettings,
           .toSeq
       }
 
-    SidechainBlock.create(
-      parentBlockId,
-      timestamp,
-      mainchainBlockRefToInclude,
-      txsToInclude,
-      forgerDataWithSecrets.forgerBoxRewardPrivateKey,
-      forgerDataWithSecrets.forgerBox,
-      vrfProof,
-      forgerDataWithSecrets.merklePath,
-      companion,
-      params
-    ).get
+    val blockCreationResult = SidechainBlock.create(
+                                                      parentBlockId,
+                                                      timestamp,
+                                                      mainchainBlockRefToInclude,
+                                                      txsToInclude,
+                                                      forgerDataWithSecrets.forgerBoxRewardPrivateKey,
+                                                      forgerDataWithSecrets.forgerBox,
+                                                      vrfProof,
+                                                      forgerDataWithSecrets.merklePath,
+                                                      companion,
+                                                      params)
+
+    blockCreationResult match {
+      case Success(block) => ForgeSuccess(block)
+      case Failure(exception) => ForgeFailed(exception)
+    }
   }
 }
 
 object Forger extends ScorexLogging {
   object ReceivableMessages {
-
-    case object StartForging
-    case object StopForging
     case class TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+  }
+
+  object SendMessages {
+    sealed trait ForgeResult
+
+    case class ForgeSuccess(block: SidechainBlock) extends ForgeResult {override def toString: String = s"Successfully generated block ${block.id.toString}"}
+    case object SkipSlot extends ForgeResult {override def toString: String = s"Skipped slot for forging"}
+    case class ForgeFailed(ex: Throwable) extends ForgeResult {override def toString: String = s"Failed block generation due ${ex}"}
   }
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]

@@ -15,7 +15,7 @@ import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSide
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
-import com.horizen.forge.Forger
+import com.horizen.forge.{Forger, ForgingControl}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
@@ -161,13 +161,24 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case Forger.ReceivableMessages.StartForging =>
-          sender ! Success
+        case Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot =>
+          sender ! Forger.SendMessages.SkipSlot
       }
       TestActor.KeepRunning
     }
   })
   val mockedSidechainBlockForgerActorRef: ActorRef = mockedSidechainBlockForgerActor.ref
+
+  val mockedSidechainBlockForgingControlActor = TestProbe()
+  mockedSidechainBlockForgingControlActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case ForgingControl.ReceivableMessages.StopForging =>
+      }
+      TestActor.KeepRunning
+    }
+  })
+  val mockedSidechainBlockForgingControlActorRef: ActorRef = mockedSidechainBlockForgingControlActor.ref
 
   val mockedSidechainBlockActor = TestProbe()
   mockedSidechainBlockActor.setAutoPilot(new testkit.TestActor.AutoPilot {
@@ -199,7 +210,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     sidechainTransactionsCompanion, sidechainCoreTransactionFactory).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
+  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef, mockedSidechainBlockForgingControlActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, new SimpleCustomApi()).route
   val walletBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "balance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route

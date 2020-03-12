@@ -10,6 +10,7 @@ import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages._
+import com.horizen.forge.ForgingControl.ReceivableMessages.{StartForging, StopForging}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
@@ -19,7 +20,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
+case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef, forgingControlRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
@@ -91,7 +92,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
   def startForging: Route = (post & path("startForging")) {
-    val future = forgerRef ? StartForging
+    val future = forgingControlRef ? StartForging
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
     result match {
       case Success(_) =>
@@ -102,7 +103,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
   def stopForging: Route = (post & path("stopForging")) {
-    val future = forgerRef ? StopForging
+    val future = forgingControlRef ? StopForging
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
     result match {
       case Success(_) =>
@@ -119,6 +120,8 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
       Await.result(submitResultFuture, timeout.duration) match {
         case Success(id) =>
           ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+        case Failure(ex: SkipSlotExceptionMessage) =>
+          ApiResponseUtil.toResponse(RespGenerateSkipSlot)
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
       }
@@ -181,6 +184,11 @@ object SidechainBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespGenerate(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] object RespGenerateSkipSlot extends SuccessResponse {
+    val result = "No block is generated due no eligible forger box are present, skip slot"
+  }
 
 }
 

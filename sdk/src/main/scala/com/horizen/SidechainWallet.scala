@@ -12,6 +12,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
+import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import scorex.core.VersionTag
 import com.horizen.utils._
@@ -62,6 +63,10 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   //@TODO Shall be changed ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret, shall be processed via addSecret()
   val vrfSecretMap = new mutable.HashMap[VRFPublicKey, VRFSecretKey]()
+
+  //remove it as well after fix SidechainCreation
+  addSecret(SidechainCreation.genesisSecret)
+  vrfSecretMap.put(SidechainCreation.genesisVrfPair._2, SidechainCreation.genesisVrfPair._1)
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
@@ -273,9 +278,10 @@ object SidechainWallet
                                      genesisBlock: SidechainBlock,
                                      consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
 
-    if (walletBoxStorage.isEmpty)
-      new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
-        .scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
+    if (walletBoxStorage.isEmpty) {
+      val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
+      genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
+    }
     else
       throw new RuntimeException("WalletBox storage is not empty!")
   }

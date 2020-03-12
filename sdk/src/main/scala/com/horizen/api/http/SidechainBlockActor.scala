@@ -5,17 +5,20 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.block.SidechainBlock
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import com.horizen.forge.Forger.SendMessages._
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
+import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.core.PersistentNodeViewModifier
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, ExecutionContext, Promise}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
+class SkipSlotExceptionMessage extends RuntimeException
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
 (settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
@@ -75,7 +78,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     }
   }
 
-  protected def sidechainNodeViewHolderEvents: Receive = {
+  protected def processSidechainNodeViewHolderEvents: Receive = {
     case SemanticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
       processBlockFailedEvent(sidechainBlock, throwable)
 
@@ -87,17 +90,31 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 
   }
 
-  protected def forgeNextBlock: Receive = {
+  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
     case messageToForger @ TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) =>
     {
-        val future = forgerRef ? messageToForger
-        val forgerResult = Await.result(future, timeoutDuration).asInstanceOf[Try[ModifierId]]
-        sender() ! forgerResult
+      val future = forgerRef ? messageToForger
+      val result = Await.result(future, timeoutDuration).asInstanceOf[ForgeResult]
+      result match {
+        case ForgeSuccess(block) => {
+          // Create a promise, that will wait for block applying result from Node
+          val prom = Promise[Try[ModifierId]]()
+          submitBlockPromises += (block.id -> prom)
+
+          //and only then apply new block
+          sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
+
+          sender() ! prom.future
+        }
+        case SkipSlot => sender() ! Future(Failure(new SkipSlotExceptionMessage()))
+
+        case ForgeFailed(exception) => sender() ! Future(exception)
       }
+    }
   }
 
   override def receive: Receive = {
-    sidechainNodeViewHolderEvents orElse {
+    processSidechainNodeViewHolderEvents orElse processTryForgeNextBlockForEpochAndSlotMessage orElse {
       case message: Any => log.error("SidechainBlockActor received strange message: " + message)
     }
   }
