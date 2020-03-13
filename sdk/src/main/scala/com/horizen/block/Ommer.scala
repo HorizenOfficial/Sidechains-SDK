@@ -44,7 +44,7 @@ case class Ommer(
 
     // Verify that mainchainReferencesHeaders and nextMainchainHeaders lead to consistent MC chain
     for (i <- 1 until ommerMainchainHeaders.size) {
-      if (ommerMainchainHeaders(i).hasParent(ommerMainchainHeaders(i-1)))
+      if (!ommerMainchainHeaders(i).hasParent(ommerMainchainHeaders(i-1)))
         return false
     }
 
@@ -53,6 +53,10 @@ case class Ommer(
       if(!sidechainBlockHeader.mainchainMerkleRootHash.sameElements(Utils.ZEROS_HASH))
         return false
     } else {
+      // mainchainReferencesDataMerkleRootHashOption must be defined or not according to mainchainReferencesHeaders existence.
+      if(mainchainReferencesHeaders.isEmpty != mainchainReferencesDataMerkleRootHashOption.isEmpty)
+        return false
+
       // Calculate Merkle root hashes of mainchainBlockReferences Data
       val mainchainReferencesDataMerkleRootHash = mainchainReferencesDataMerkleRootHashOption.getOrElse(Utils.ZEROS_HASH)
 
@@ -80,6 +84,35 @@ case class Ommer(
     }
 
     true
+  }
+
+  override def hashCode(): Int = java.util.Arrays.hashCode(id)
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case ommer: Ommer => id.sameElements(ommer.id)
+      case _ => false
+    }
+  }
+}
+
+
+object Ommer {
+  def toOmmer(block: SidechainBlock): Ommer = {
+    val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = {
+      val referencesDataHashes: Seq[Array[Byte]] = block.mainchainBlockReferences.map(_.dataHash)
+      if (referencesDataHashes.isEmpty)
+        None
+      else
+        Some(MerkleTree.createMerkleTree(referencesDataHashes.asJava).rootHash())
+    }
+
+    Ommer(
+      block.header,
+      mainchainReferencesDataMerkleRootHashOption,
+      block.mainchainBlockReferences.map(_.header),
+      block.nextMainchainHeaders
+    )
   }
 }
 

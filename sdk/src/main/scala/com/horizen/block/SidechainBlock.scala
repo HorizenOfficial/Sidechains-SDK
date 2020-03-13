@@ -49,6 +49,7 @@ class SidechainBlock(
 
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
+  // TODO: probably should take into consideration block body?
   override lazy val id: ModifierId = header.id
 
   override lazy val transactions: Seq[SidechainTypes#SCBT] = {

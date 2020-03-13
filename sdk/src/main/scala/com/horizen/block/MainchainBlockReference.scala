@@ -121,6 +121,15 @@ class MainchainBlockReference(
 
     true
   }
+
+  override def hashCode(): Int = java.util.Arrays.hashCode(id)
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case ref: MainchainBlockReference => id.sameElements(ref.id)
+      case _ => false
+    }
+  }
 }
 
 
@@ -197,7 +206,7 @@ object MainchainBlockReference {
       case Success(header) =>
         offset += header.mainchainHeaderBytes.length
 
-        val transactionsCount: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
+        val transactionsCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
         offset += transactionsCount.size()
 
         // parse transactions
@@ -246,7 +255,7 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   }
 
   override def parse(r: Reader): MainchainBlockReference = {
-    if(r.remaining < 4 + MainchainHeader.HEADER_SIZE + 4 + 4)
+    if(r.remaining < 4 + MainchainHeader.HEADER_MIN_SIZE + 4 + 4)
       throw new IllegalArgumentException("Input data corrupted.")
 
     val headerSize: Int = r.getInt()

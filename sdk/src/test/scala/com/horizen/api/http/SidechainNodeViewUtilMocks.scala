@@ -102,7 +102,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
     Mockito.when(history.getMainchainBlockReferenceByHash(ArgumentMatchers.any())).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getMainchainBlockReferenceByHash_return_value()) {
-        val mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
+        val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
         val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
         MainchainBlockReference.create(mcBlockBytes, MainNetParams()) match {
           case Success(ref) => Optional.of(ref)

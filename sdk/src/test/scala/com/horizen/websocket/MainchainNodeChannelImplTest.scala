@@ -24,7 +24,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
     val height = 473173
     val hash = "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660"
-    val mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
+    val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
     val expectedReqType = 0
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
@@ -65,7 +65,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
     val height = 473173
     val hash = "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660"
-    val mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
+    val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
     val expectedReqType = 0
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
@@ -157,7 +157,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val height = 473173
     val hash = "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660"
-    val mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
+    val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
     val expectedEventType = 0
 
     class OnUpdateEventHandlerImpl extends OnUpdateTipEventHandler {

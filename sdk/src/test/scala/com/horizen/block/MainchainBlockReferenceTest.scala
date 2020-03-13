@@ -24,8 +24,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params = MainNetParams()
 
     // Test 1: Block #473173
-    // mcblock473173 data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660
-    mcBlockHex = Source.fromResource("mcblock473173").getLines().next()
+    // mcblock473173_mainnet data in RPC byte order: https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660
+    mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
     mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     block = MainchainBlockReference.create(mcBlockBytes, params)
 

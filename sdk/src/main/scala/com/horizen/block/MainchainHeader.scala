@@ -71,8 +71,6 @@ class MainchainHeader(
 
   def hasParent(parent: MainchainHeader): Boolean = hashPrevBlock.sameElements(parent.hash)
 
-  override def bytes: Array[Byte] = mainchainHeaderBytes
-
   override def hashCode(): Int = java.util.Arrays.hashCode(mainchainHeaderBytes)
 
   override def equals(obj: Any): Boolean = {
@@ -85,10 +83,10 @@ class MainchainHeader(
 
 
 object MainchainHeader {
-  val HEADER_SIZE: Int = 140
+  val HEADER_MIN_SIZE: Int = 140 // HEADER_SIZE = 140 + equihash size
 
   def create(headerBytes: Array[Byte], offset: Int): Try[MainchainHeader] = Try {
-    if(offset < 0 || headerBytes.length - offset < HEADER_SIZE)
+    if(offset < 0 || headerBytes.length - offset < HEADER_MIN_SIZE)
       throw new IllegalArgumentException("Input data corrupted.")
 
     var currentOffset: Int = offset
@@ -126,7 +124,7 @@ object MainchainHeader {
 }
 
 object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
-  override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.bytes)
+  override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.mainchainHeaderBytes)
 
   override def parse(r: Reader): MainchainHeader = MainchainHeader.create(r.getBytes(r.remaining), 0).get
 }

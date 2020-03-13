@@ -18,7 +18,7 @@ import com.horizen.utils._
 import com.horizen.vrf.{VRFKeyGenerator, VRFProof}
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
-import scorex.util.bytesToId
+import scorex.util.{ModifierId, bytesToId}
 
 import scala.util.Random
 
@@ -77,16 +77,23 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                              genGenesisMainchainBlockHash: Option[Array[Byte]] = None,
                              parentOpt: Option[Block.BlockId] = None,
                              mcParent: Option[ByteArrayWrapper] = None,
-                             timestamp: Option[Block.Timestamp] = None
+                             timestampOpt: Option[Block.Timestamp] = None,
+                             includeReference: Boolean = true
                             ): SidechainBlock = {
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
     val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(basicSeed.toByte))._1.prove(Array.fill(32)((basicSeed + 1).toByte))
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
+    val timestamp = timestampOpt.getOrElse(Instant.now.getEpochSecond - 10000)
+    val refereces: Seq[MainchainBlockReference] = if(includeReference)
+      Seq(generateMainchainBlockReference(mcParent, genGenesisMainchainBlockHash, new java.util.Random(basicSeed), (timestamp - 100).toInt))
+      else
+      Seq()
+
     SidechainBlock.create(
       parent,
-      timestamp.getOrElse(Instant.now.getEpochSecond - 10000),
-      Seq(generateMainchainBlockReference(parentOpt = mcParent, blockHash = genGenesisMainchainBlockHash)),
+      timestamp,
+      refereces,
       Seq(),
       Seq(), // TODO
       Seq(), // TODO
@@ -100,7 +107,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
   }
 }
 
-trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
+trait SidechainBlockFixture extends MainchainBlockReferenceFixture with SidechainBlockHeaderFixture {
   def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
@@ -195,5 +202,11 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       companion = companion,
       params = params,
       basicSeed = basicSeed)
+  }
+
+  def getRandomBlockId(seed: Long = 1312): ModifierId = {
+    val id: Array[Byte] = new Array[Byte](32)
+    new Random(seed).nextBytes(id)
+    bytesToId(id)
   }
 }

@@ -63,6 +63,7 @@ case class SidechainBlockHeader(
       || forgerBox == null || signature == null)
       return false
 
+    // TODO: do we need to allow Blocks from nearest future as in MC for Ouroboros?
     // Check if timestamp is valid and not too far in the future
     if(timestamp <= 0 || timestamp > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen MC
       return false

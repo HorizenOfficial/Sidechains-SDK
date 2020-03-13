@@ -39,7 +39,7 @@ class SidechainHistoryTest extends JUnitSuite
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getTransactionsCompanionWithCustomTransactions(customTransactionSerializers)
 
-  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestamp = Some(100000))
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestampOpt = Some(100000))
   val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(
     genesisMainchainBlockHash = Some(genesisBlock.mainchainBlockReferences.head.header.hash),
     validity = ModifierSemanticValidity.Valid,
