@@ -75,7 +75,7 @@ class MainchainHeader(
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case header: MainchainHeader => mainchainHeaderBytes.sameElements(header.mainchainHeaderBytes)
+      case header: MainchainHeader => hash.sameElements(header.hash)
       case _ => false
     }
   }

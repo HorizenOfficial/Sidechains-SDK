@@ -69,7 +69,7 @@ class SidechainBlock(
     if(header == null
         || sidechainTransactions == null || sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
         || mainchainBlockReferences == null || mainchainBlockReferences.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER
-        || nextMainchainHeaders == null || ommers == null || ommers.size != header.ommersNumber)
+        || nextMainchainHeaders == null || ommers == null)
       return false
 
     // Check Block size
@@ -123,16 +123,6 @@ class SidechainBlock(
         return false
     }
 
-    // Verify that included ommers are consistent to header.ommersMerkleRootHash.
-    if(ommers.isEmpty) {
-      if(!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        return false
-    } else {
-      val calculatedMerkleRootHash = MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
-      if(!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        return false
-    }
-
     // Check MainchainBlockReferences and next MainchainHeaders order in current block.
     for(i <- 1 until mainchainHeaders.size) {
       if(!mainchainHeaders(i).hasParent(mainchainHeaders(i-1)))
@@ -154,8 +144,19 @@ class SidechainBlock(
   }
 
   private def verifyOmmers(params: NetworkParams): Boolean = {
-    if (ommers.isEmpty)
+    // Verify ommers number consistency to SidechainBlockHeader
+    if(ommers.size != header.ommersNumber)
+      return false
+
+    // Verify that included ommers are consistent to header.ommersMerkleRootHash.
+    if(ommers.isEmpty) {
+      if(!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
+        return false
       return true
+    }
+    val calculatedMerkleRootHash = MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
+    if(!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
+      return false
 
     // Verify that each Ommer is semantically valid
     for (ommer <- ommers)
@@ -198,7 +199,7 @@ class SidechainBlock(
             case Some(expectedReferenceHeader) =>
               if (!refHeader.equals(expectedReferenceHeader))
                 return false
-              ommersExpectedReferenceHeaders.drop(1)
+              ommersExpectedReferenceHeaders.remove(0)
             case _ =>
           }
         }
@@ -219,7 +220,7 @@ class SidechainBlock(
       if (ommersLastReferenceHeader.isDefined && !ommersExpectedReferenceHeaders.head.hasParent(ommersLastReferenceHeader.get))
         return false
       for (i <- 1 until ommersExpectedReferenceHeaders.size) {
-        if (ommersExpectedReferenceHeaders(i).hasParent(ommersExpectedReferenceHeaders(i - 1)))
+        if (!ommersExpectedReferenceHeaders(i).hasParent(ommersExpectedReferenceHeaders(i - 1)))
           return false
       }
     }
@@ -252,7 +253,7 @@ object SidechainBlock extends ScorexEncoding {
              vrfProof: VRFProof,
              forgerBoxMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
-             params: NetworkParams,
+             params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[SidechainBlock] = Try {
     require(mainchainBlockReferences != null)
@@ -344,8 +345,10 @@ object SidechainBlock extends ScorexEncoding {
       companion
     )
 
-    if(!block.semanticValidity(params))
-      throw new Exception("Sidechain Block is semantically invalid.")
+    // Probably it's a mistake to verify semanticValidity as a last step of creation
+    // It will be verified or during applying or on demand (like in tests)
+    /*if(!block.semanticValidity(params))
+      throw new Exception("Sidechain Block is semantically invalid.")*/
 
     block
   }
