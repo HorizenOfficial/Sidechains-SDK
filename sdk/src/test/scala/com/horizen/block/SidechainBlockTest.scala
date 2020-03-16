@@ -561,13 +561,28 @@ class SidechainBlockTest
       headerOpt = Some(signedModifiedHeader)
     )
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+
+
+    // Test 10: SidechainBlock MC headers follows different parent than Ommers MC headers -> must be invalid
+    // Create Seq of mocked MCHeaders with stubs needed for semanticValidity verifications
+    val anotherMcBranchPoint: Array[Byte] = new Array[Byte](32)
+    random.nextBytes(anotherMcBranchPoint)
+    val inconsistentForkMainchainHeaders = mockForkMainchainHeaders(Seq(mcBlockRef1, mcBlockRef2, mcBlockRef3, mcBlockRef4).map(_.header), Some(anotherMcBranchPoint))
+
+    invalidBlock = createBlock(
+      timestamp = 123666L,
+      nextMainchainHeaders = inconsistentForkMainchainHeaders, // first header parent is different to first ommer mc header parent
+      ommers = ommers
+    )
+    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
   }
 
 
   // Accept N real MainchainHeader objects
   // Return N+1 mocked semantically valid MainchainHeader objects started from branching point
-  private def mockForkMainchainHeaders(headers: Seq[MainchainHeader]): Seq[MainchainHeader] = {
-    var nextParent: Array[Byte] = headers.head.hashPrevBlock
+  private def mockForkMainchainHeaders(headers: Seq[MainchainHeader],
+                                       firstMockedHeaderParentOpt: Option[Array[Byte]] = None): Seq[MainchainHeader] = {
+    var nextParent: Array[Byte] = firstMockedHeaderParentOpt.getOrElse(headers.head.hashPrevBlock)
     var seed: Long = 1L
 
     (headers :+ headers.last).map(h => {

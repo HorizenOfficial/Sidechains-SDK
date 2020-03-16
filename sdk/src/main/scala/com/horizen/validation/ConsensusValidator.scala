@@ -78,7 +78,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
       }
 
-      // Verify Ommers SidehcainBlockHeader VRF and ForgerBox
+      // Verify Ommers SidechainBlockHeader VRF and ForgerBox
       val verifiedBlockEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(verifiedBlock.timestamp)
       var tempConsensusEpochInfo: FullConsensusEpochInfo = verifierBlockFullConsensusEpochInfo
       var tempEpochNumber: ConsensusEpochNumber = verifiedBlockEpochNumber

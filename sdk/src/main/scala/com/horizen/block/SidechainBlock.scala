@@ -179,7 +179,12 @@ class SidechainBlock(
     // In our case first Ommer should contain non empty headers seq and it should be different to the same length subseq of current SidechainBlock headers.
     val firstOmmerHeaders = ommers.head.mainchainReferencesHeaders ++ ommers.head.nextMainchainHeaders
     val blockMainchainHeaders = mainchainBlockReferences.map(_.header) ++ nextMainchainHeaders
+    if(blockMainchainHeaders.isEmpty)
+      return false
     if (firstOmmerHeaders.isEmpty || firstOmmerHeaders.equals(blockMainchainHeaders.take(firstOmmerHeaders.size)))
+      return false
+    // Ommers MC chain must follow the same MC parent as Block MC chain does
+    if(!firstOmmerHeaders.head.hashPrevBlock.sameElements(blockMainchainHeaders.head.hashPrevBlock))
       return false
 
     // Verify Ommers mainchainReferencesHeaders and nextMainchainHeaders chain consistency
