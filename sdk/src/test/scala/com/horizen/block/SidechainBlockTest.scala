@@ -54,7 +54,7 @@ class SidechainBlockTest
     ),
     mainchainBlockReferences = Seq(mcBlockRef1, mcBlockRef2),
     nextMainchainHeaders = Seq(mcBlockRef3.header, mcBlockRef4.header),
-    ommers = generateOmmersSeq(parentId, 3,
+    ommers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(), Seq()),
@@ -302,7 +302,7 @@ class SidechainBlockTest
   @Test
   def ommersValidation(): Unit = {
 
-    val ommers: Seq[Ommer] = generateOmmersSeq(parentId, 3,
+    val ommers: Seq[Ommer] = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(), Seq()),
@@ -325,7 +325,7 @@ class SidechainBlockTest
     )
     assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
 
-    var anotherOmmers = generateOmmersSeq(parentId, 2,
+    var anotherOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(), Seq(mcBlockRef3.header, mcBlockRef4.header))
@@ -354,7 +354,7 @@ class SidechainBlockTest
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
 
     // Another ommers list of the same length
-    anotherOmmers = generateOmmersSeq(parentId, 3,
+    anotherOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(mcBlockRef2), Seq()),
@@ -407,7 +407,7 @@ class SidechainBlockTest
 
     // Test 6: SidechainBlock with not consistent Ommers mc headers -> must be invalid
     // First Ommer has no mc headers at all
-    var invalidOmmers: Seq[Ommer] = generateOmmersSeq(parentId, 3,
+    var invalidOmmers: Seq[Ommer] = generateOmmersSeq(parentId,
       Seq(
         (Seq(), Seq()),
         (Seq(mcBlockRef1), Seq()),
@@ -422,7 +422,7 @@ class SidechainBlockTest
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
 
     // Second Ommer duplicate nextMainchainHeader from first Ommer
-    invalidOmmers = generateOmmersSeq(parentId, 2,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(), Seq(mcBlockRef2.header))
@@ -436,7 +436,7 @@ class SidechainBlockTest
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
 
     // Second Ommer MCRef header not connected to last MCRef header of first Ommer
-    invalidOmmers = generateOmmersSeq(parentId, 2,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq()),
         (Seq(mcBlockRef3), Seq(mcBlockRef4.header))
@@ -451,7 +451,7 @@ class SidechainBlockTest
 
     // First Ommer MCRefHeaders and nextMainchainHeaders are not consisted (not ordered one by one)
     // Note: see case 11 in samanticValidity() Test
-    invalidOmmers = generateOmmersSeq(parentId, 3,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef3.header)),
         (Seq(mcBlockRef2), Seq()),
@@ -466,7 +466,7 @@ class SidechainBlockTest
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
 
     // Unprocessed inconsistent first nextMainchainHeader left -> must be invalid
-    invalidOmmers = generateOmmersSeq(parentId, 3,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(mcBlockRef2), Seq()),
@@ -481,7 +481,7 @@ class SidechainBlockTest
     assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
 
     // Unprocessed inconsistent second nextMainchainHeader left -> must be invalid
-    invalidOmmers = generateOmmersSeq(parentId, 2,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(), Seq(mcBlockRef4.header)) // mcBlockRef4 header left and doesn't follow mcBlockRef2 header
@@ -510,7 +510,7 @@ class SidechainBlockTest
       override lazy val hash: Array[Byte] = new Array[Byte](32)
     }
 
-    invalidOmmers = generateOmmersSeq(parentId, 3,
+    invalidOmmers = generateOmmersSeq(parentId,
       Seq(
         (Seq(mcBlockRef1), Seq(mcBlockRef2.header)),
         (Seq(mcBlockRef2), Seq(differentMcHeader3)),
@@ -635,14 +635,12 @@ class SidechainBlockTest
   }
 
 
-  private def generateOmmersSeq(parent: ModifierId, ommersSize: Int, ommersData: Seq[(Seq[MainchainBlockReference], Seq[MainchainHeader])]): Seq[Ommer] = {
-    require(ommersSize == ommersData.size, "Broken generateOmmersSeq inputs")
-
+  private def generateOmmersSeq(parent: ModifierId, ommersData: Seq[(Seq[MainchainBlockReference], Seq[MainchainHeader])]): Seq[Ommer] = {
     var blockSeq: Seq[SidechainBlock] = Seq()
     var currenTimestamp = 123444L
     var currentParent = parent
 
-    for(i <- 0 until ommersSize) {
+    for(i <- ommersData.indices) {
       blockSeq = blockSeq :+ createBlock(
         parent = currentParent,
         timestamp = currenTimestamp,

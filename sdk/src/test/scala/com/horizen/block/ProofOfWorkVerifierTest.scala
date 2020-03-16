@@ -22,7 +22,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
   val params = MainNetParams()
 
   @Test
-  def ProofOfWorkVerifierTest_CheckPoW(): Unit = {
+  def checkPoW(): Unit = {
     var hash: Array[Byte] = null
     var bits: Int = 0
 
@@ -51,7 +51,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
   }
 
   @Test
-  def ProofOfWorkVerifierTest_CalculateNextWorkRequired(): Unit = {
+  def calculateNextWorkRequired(): Unit = {
     var nLastRetargetTime: Int = 0
     var nThisTime: Int = 0
     var bitsAvg: BigInteger = null
@@ -102,7 +102,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
   case class PowRelatedData (mcblockhash: String, time: Int, bits: Int)
 
   @Test
-  def ProofOfWorkVerifierTest_CheckNextWorkRequired(): Unit = {
+  def checkNextWorkRequired(): Unit = {
 
     // Set PoW related data for testing
     var powRelatedDataList: List[PowRelatedData] = List(
@@ -138,17 +138,48 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       PowRelatedData("000000001077fee4738c153526d66dc61a835cc5c8eb12b058c9e2050ba3bbdc", 1559026200, 0x1c113e3e), // 27 MC block #523507
       // MC blocks to check
       PowRelatedData("000000000efb0d5a2231c4312e84d0134d1534dd4da5b9e0555779fd70e37e03", 1559026523, 0x1c111cab), // 28 MC block #523508
-      PowRelatedData("0000000001c3eb8acfd95d591016300c9fc6422115cc14bd8e7402d6836df19e", 1559026662, 0x1c1104d2)  // 29 MC block #523509
+      PowRelatedData("0000000001c3eb8acfd95d591016300c9fc6422115cc14bd8e7402d6836df19e", 1559026662, 0x1c1104d2), // 29 MC block #523509
+      PowRelatedData("0000000000dbcf4933946284221bfc732dd819e5bdd99ca129c3664a63ba5409", 1559026677, 0x1c110252)  // 30 MC block #523510
     )
 
-    // mock SC Blocks for History
+    // Mock SC Blocks for History
     val scblocks = ListBuffer[SidechainBlock]()
 
-    scblocks.append(createSCBlockForPowTest(BytesUtils.toHexString(new Array[Byte](32)), powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(21)), Seq())) // SCBlock with genesis MCBlockRef
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, "", Seq(), Seq())) // SCBlock with no MCBlockRef
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(21).mcblockhash, Seq(powRelatedDataList(22), powRelatedDataList(23), powRelatedDataList(24)), Seq())) // SCBlock with 3 MCBlockRefs
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(24).mcblockhash, Seq(powRelatedDataList(25), powRelatedDataList(26)), Seq())) // SCBlock with 2 MCBlockRefs
-    scblocks.append(createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(26).mcblockhash, Seq(powRelatedDataList(27)), Seq())) // SCBlock with 1 MCBlockRef
+    // SCBlock with genesis MCBlockRef
+    scblocks.append(createSCBlockForPowTest(
+      BytesUtils.toHexString(new Array[Byte](32)),
+      powRelatedDataList(20).mcblockhash,
+      Seq(powRelatedDataList(21)),
+      Seq()
+    ))
+    // SCBlock with no MCBlockRef and nextMCHeaders
+    scblocks.append(createSCBlockForPowTest(
+      scblocks.last.id,
+      "",
+      Seq(),
+      Seq()
+    ))
+    // SCBlock with 3 MCBlockRefs and 2 nextMCHeader
+    scblocks.append(createSCBlockForPowTest(
+      scblocks.last.id,
+      powRelatedDataList(21).mcblockhash,
+      Seq(powRelatedDataList(22), powRelatedDataList(23), powRelatedDataList(24)),
+      Seq(powRelatedDataList(25), powRelatedDataList(26))
+    ))
+    // SCBlock with 2 MCBlockRefs and 1 nextMCHeader
+    scblocks.append(createSCBlockForPowTest(
+      scblocks.last.id,
+      powRelatedDataList(24).mcblockhash,
+      Seq(powRelatedDataList(25), powRelatedDataList(26)),
+      Seq(powRelatedDataList(27))
+    ))
+    // SCBlock with 1 MCBlockRef and no bext MCHeaders
+    scblocks.append(createSCBlockForPowTest(
+      scblocks.last.id,
+      powRelatedDataList(26).mcblockhash,
+      Seq(powRelatedDataList(27)),
+      Seq()
+    ))
 
     // mock History methods used in test
     val storage = mock[SidechainHistoryStorage]
@@ -157,95 +188,198 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
         Some(scblocks.filter(block => block.id.equals(answer.getArgument(0))).head)
       })
 
-    // mock Params with Test genesis data
-    // TO DO: review this
-    class PowtestParams extends NetworkParams {
-      override val EquihashN: Int = 0
-      override val EquihashK: Int = 0
-      override val EquihashVarIntLength: Int = 0
-      override val EquihashSolutionLength: Int = 0
-      override val powLimit: BigInteger = new BigInteger("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
-      override val nPowAveragingWindow: Int = 17 // = MainNetParams.nPowAveragingWindow
-      override val nPowMaxAdjustDown: Int = 32
-      override val nPowMaxAdjustUp: Int = 16
-      override val nPowTargetSpacing: Int = 150
-      override val sidechainId: Array[Byte] = null
-      override val sidechainGenesisBlockId: ModifierId = null
-      override val mainchainCreationBlockHeight: Int = 1
+    // MainNetParams with Test genesis data
+    class PowtestParams extends MainNetParams {
       override val genesisMainchainBlockHash: Array[Byte] = BytesUtils.fromHexString(powRelatedDataList(21).mcblockhash)
       override val genesisPoWData: List[(Int, Int)] = powRelatedDataList.slice(0, 21).map(powData => Tuple2(powData.time, powData.bits))
       override val sidechainGenesisBlockTimestamp: Timestamp = 0
-      override val withdrawalEpochLength: Int = 100
-      override val consensusSecondsInSlot: Int = 120
-      override val consensusSlotsInEpoch: Int = 720
     }
 
+    val params = new PowtestParams()
 
-    // Test 1: Check SCBlock without MainchainBlockReference
+
+    // Test 1: Check SCBlock without MainchainBlockReferences, nextMainchainHeaders and Ommers
     var block = createSCBlockForPowTest(scblocks.last.id, "", Seq(), Seq())
-    assertTrue("SC block without MainchainBlockReference expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
+    assertTrue("SC block without MainchainBlockReference expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
 
 
     // Test 2: Check SCBlock with 1 valid MainchainBlockReference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq())
-    assertTrue("SC block with 1 valid MainchainBlockReference expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
+    assertTrue("SC block with 1 valid MainchainBlockReference expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
 
 
     // Test 3: Check SCBlock with multiple MainchainBlockReference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29)), Seq())
-    assertTrue("SC block with 2 valid MainchainBlockReferences expected to have valid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
+    assertTrue("SC block with 2 valid MainchainBlockReferences expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
 
 
-    // Test 4: Check SCBlock, that contains 1 MainchainBlockReference with invalid target(bits)
+    // Test 4: Check SCBlock, that contains 1 MainchainBlockReference that doesn't follow last MCBlockReference in the chain
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(29)), Seq()) // Block (28) is missed
+    assertFalse("SC block with MainchainBlockReference that doesn't follow last MCBlockReference in the chain expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 5: Check SCBlock, that contains 1 MainchainBlockReference with invalid target(bits)
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(
-      PowRelatedData("0000000001c3eb8acfd95d591016300c9fc6422115cc14bd8e7402d6836df19e", 1559026662, 0x1c1104d4) // 0x1c1104d2 is valid one
+      powRelatedDataList(28).copy(bits = 0x1c111ca1) // 0x1c111cab is valid one
     ), Seq())
-    assertFalse("SC block, that contains 1 MainchainBlockReference with invalid target(bits), expected to have invalid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
+    assertFalse("SC block, that contains 1 MainchainBlockReference with invalid target(bits), expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
 
 
-    // Test 5: Check SCBlock, that contains 1 MainchainBlockReference with invalid prev block reference
+    // Test 6: Check SCBlock, that contains 1 MainchainBlockReference with invalid prev block reference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28)), Seq()) // 20 -> 27
-    assertFalse("SC block, that contains 1 MainchainBlockReference with invalid prev block reference, expected to have invalid PoW Targed.",
-      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, new PowtestParams()))
+    assertFalse("SC block, that contains 1 MainchainBlockReference with invalid prev block reference, expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 7: Check SCBlock with 1 valid nextMainchainHeaders
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(), Seq(powRelatedDataList(28)))
+    assertTrue("SC block with 1 valid nextMainchainHeaders expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 8: Check SCBlock with multiple nextMainchainHeaders
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(), Seq(powRelatedDataList(28), powRelatedDataList(29)))
+    assertTrue("SC block with 2 valid nextMainchainHeaders expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 9: Check SCBlock, that contains 1 nextMainchainHeaders with invalid target(bits)
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(), Seq(
+      powRelatedDataList(28).copy(bits = 0x1c111ca8) // 0x1c111cab is valid one
+    ))
+    assertFalse("SC block, that contains 1 nextMainchainHeaders with invalid target(bits), expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 10: Check SCBlock, that contains 1 nextMainchainHeaders with invalid prev block reference
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28)), Seq()) // 20 -> 27
+    assertFalse("SC block, that contains 1 nextMainchainHeaders with invalid prev block reference, expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 11: Check SCBlock with 1 valid MainchainBlockReference and 2 valid nextMainchainHeader
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29), powRelatedDataList(30)))
+    assertTrue("SC block with 1 valid MainchainBlockReference and 2 valid nextMainchainHeaders expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 12: Check SCBlock with 1 MainchainBlockReference and 1 nextMainchainHeader that doesn't follow reference
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(30))) // (29) is missed
+    assertFalse("SC block with 1 MainchainBlockReference and 1 nextMainchainHeader that doesn't follow reference expected to have invalid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 13: Check SCBlock with 1 MainchainBlockReference and valid Ommers
+     var ommers: Seq[Ommer] = generateOmmersSeqForPowTest(
+       powRelatedDataList(27).mcblockhash,
+       Seq(
+         (Seq(powRelatedDataList(28)), Seq()),
+         (Seq(), Seq(powRelatedDataList(29)))
+       )
+     )
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29), powRelatedDataList(30)), ommers)
+    assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+    ommers = generateOmmersSeqForPowTest(
+      powRelatedDataList(27).mcblockhash,
+      Seq(
+        (Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29))),
+        (Seq(), Seq()),
+        (Seq(powRelatedDataList(29)), Seq(powRelatedDataList(30)))
+      )
+    )
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29), powRelatedDataList(30)), ommers)
+    assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+
+    // Test 14: Check SCBlock with 1 MainchainBlockReference and invalid Ommers
+    // Ommers headers are not a consistent chain: (29) is missed
+    ommers = generateOmmersSeqForPowTest(
+      powRelatedDataList(27).mcblockhash,
+      Seq(
+        (Seq(powRelatedDataList(28)), Seq()),
+        (Seq(), Seq(powRelatedDataList(30)))
+      )
+    )
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29), powRelatedDataList(30)), ommers)
+    assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
+
+    // Ommers first header doesn't follow the same parent as first Block header: (28) is missed in Ommers
+    ommers = generateOmmersSeqForPowTest(
+      powRelatedDataList(27).mcblockhash,
+      Seq(
+        (Seq(powRelatedDataList(29)), Seq()),
+        (Seq(), Seq(powRelatedDataList(30)))
+      )
+    )
+    block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)), Seq(powRelatedDataList(29), powRelatedDataList(30)), ommers)
+    assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
+      ProofOfWorkVerifier.checkNextWorkRequired(block, storage, params))
   }
 
-  def createSCBlockForPowTest(prevSCBlockId: String,
-                              prevMCBlockHash: String,
-                              powRelatedDataSeq: Seq[PowRelatedData],
-                              nextHeadersPowRelatedDataSeq: Seq[PowRelatedData]): SidechainBlock = {
-    var block: SidechainBlock = mock[SidechainBlock]
-    var blockHash = new Array[Byte](32)
+  private def createSCBlockForPowTest(prevSCBlockId: String,
+                                      prevMCBlockHash: String,
+                                      powRelatedDataSeq: Seq[PowRelatedData],
+                                      nextHeadersPowRelatedDataSeq: Seq[PowRelatedData],
+                                      ommers: Seq[Ommer] = Seq()): SidechainBlock = {
+    var tmpPrevMCBlockHash = prevMCBlockHash
+    val block: SidechainBlock = mock[SidechainBlock]
+    val blockHash = new Array[Byte](32)
     scala.util.Random.nextBytes(blockHash)
     Mockito.when(block.id).thenReturn(ModifierId @@ BytesUtils.toHexString(blockHash))
     Mockito.when(block.parentId).thenReturn(ModifierId @@ prevSCBlockId)
-    Mockito.when(block.mainchainBlockReferences).thenReturn({
-      var tmpPrevMCBlockHash = prevMCBlockHash
-      var res = Seq[MainchainBlockReference]()
-      for(powRelatedData <- powRelatedDataSeq) {
-        res = res :+ new MainchainBlockReference(
-          MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time),
-          null,
-          null)
+
+    var mcBlockRefs = Seq[MainchainBlockReference]()
+    for(powRelatedData <- powRelatedDataSeq) {
+      mcBlockRefs = mcBlockRefs :+ new MainchainBlockReference(
+        MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time),
+        null,
+        null)
+      tmpPrevMCBlockHash = powRelatedData.mcblockhash
+    }
+    Mockito.when(block.mainchainBlockReferences).thenReturn(mcBlockRefs)
+
+    var mcNextHeaders = Seq[MainchainHeader]()
+    for (powRelatedData <- nextHeadersPowRelatedDataSeq) {
+      mcNextHeaders = mcNextHeaders :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
+      tmpPrevMCBlockHash = powRelatedData.mcblockhash
+    }
+    Mockito.when(block.nextMainchainHeaders).thenReturn(mcNextHeaders)
+
+    Mockito.when(block.ommers).thenReturn(ommers)
+    block
+  }
+
+  private def generateOmmersSeqForPowTest(prevMCBlockHash: String,
+                                          ommersPowData: Seq[(Seq[PowRelatedData], Seq[PowRelatedData])]): Seq[Ommer] = {
+    var tmpPrevMCBlockHash = prevMCBlockHash
+
+    ommersPowData.map(data => {
+      val ommer: Ommer = mock[Ommer]
+
+      var mcBlockRefsHeaders = Seq[MainchainHeader]()
+      for (powRelatedData <- data._1) {
+        mcBlockRefsHeaders = mcBlockRefsHeaders :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
         tmpPrevMCBlockHash = powRelatedData.mcblockhash
       }
-      res
-    })
-    Mockito.when(block.nextMainchainHeaders).thenReturn({
-      var res = Seq[MainchainHeader]()
-      if(powRelatedDataSeq.nonEmpty) {
-        var tmpPrevMCBlockHash = powRelatedDataSeq.last.mcblockhash
-        for (powRelatedData <- nextHeadersPowRelatedDataSeq) {
-          res = res :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
-          tmpPrevMCBlockHash = powRelatedData.mcblockhash
-        }
+      Mockito.when(ommer.mainchainReferencesHeaders).thenReturn(mcBlockRefsHeaders)
+
+      var mcNextHeaders = Seq[MainchainHeader]()
+      for (powRelatedData <- data._2) {
+        mcNextHeaders = mcNextHeaders :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
+        tmpPrevMCBlockHash = powRelatedData.mcblockhash
       }
-      res
+      Mockito.when(ommer.nextMainchainHeaders).thenReturn(mcNextHeaders)
+
+      ommer
     })
-    Mockito.when(block.ommers).thenReturn(Seq())
-    block
   }
 }

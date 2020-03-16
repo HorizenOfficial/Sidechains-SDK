@@ -26,7 +26,7 @@ object ProofOfWorkVerifier {
     true
   }
 
-  // Check that PoW target (bits) is correct for all MainchainBlockReferences, next MainchainHeader knowledge proofs and Ommers' MainchainHeaders included into SidechainBlock.
+  // Check that PoW target (bits) is correct for all MainchainBlockReferences, next MainchainHeader and Ommers' MainchainHeaders included into SidechainBlock.
   // The order of MainchainHeader (both active and orphaned) verified in block semantic validity method
   def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
     if(block.mainchainBlockReferences.isEmpty && block.nextMainchainHeaders.isEmpty)
@@ -35,16 +35,15 @@ object ProofOfWorkVerifier {
     // Collect information of time and bits for last "params.nPowAveragingWindow + params.nMedianTimeSpan" MainchainBlockReferences
     // already presented in a current chain of SidechainBlocks.
     var timeBitsData = List[Tuple2[Int, Int]]()
-    var currentMCBlockReference = block.mainchainBlockReferences.head
+    // Take firt MC Ref header if exists, else get first nextMCHeader
+    var currentHeader = block.mainchainBlockReferences.headOption.map(_.header).getOrElse(block.nextMainchainHeaders.head)
     var currentBlock: SidechainBlock = block
     breakable {
       while (true) {
-        if (currentMCBlockReference.header.hash.sameElements(params.genesisMainchainBlockHash)) {
+        if (currentHeader.hash.sameElements(params.genesisMainchainBlockHash)) {
           // We reached the genesis MC block reference. So get the rest of (time, bits) pairs from genesis pow data.
           for(timeBitsTuple <- params.genesisPoWData.reverse) {
             timeBitsData = timeBitsTuple :: timeBitsData
-            if(timeBitsData.size == params.nPowAveragingWindow + params.nMedianTimeSpan)
-              break
           }
           break
         }
@@ -58,10 +57,10 @@ object ProofOfWorkVerifier {
         // check for mainchain block references and their order, and collect data from them.
         if(currentBlock.mainchainBlockReferences.nonEmpty) {
           for(mcref <- currentBlock.mainchainBlockReferences.reverse) {
-            if(!mcref.header.hash.sameElements(currentMCBlockReference.header.hashPrevBlock))
+            if(!mcref.header.hash.sameElements(currentHeader.hashPrevBlock))
               return false
             timeBitsData = Tuple2[Int, Int](mcref.header.time, mcref.header.bits) :: timeBitsData
-            currentMCBlockReference = mcref
+            currentHeader = mcref.header
             if(timeBitsData.size == params.nPowAveragingWindow + params.nMedianTimeSpan)
               break
           }
