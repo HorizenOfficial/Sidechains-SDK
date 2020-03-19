@@ -33,7 +33,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
         val currentGenerators: mutable.IndexedSeq[SidechainBlocksGenerator] =  acc._2
 
         val nextGenerator: SidechainBlocksGenerator = generatorSelection(rnd, currentGenerators)
-        val nextCorrectGenerationRules: GenerationRules = GenerationRules.generateCorrectGenerationRules(rnd, nextGenerator)
+        val nextCorrectGenerationRules: GenerationRules = GenerationRules.generateCorrectGenerationRules(rnd, nextGenerator.getNotSpentBoxes)
 
         println("try to add incorrect block(s)")
         tryToAddIncorrectBlocks(params, currentHistory, nextGenerator, nextCorrectGenerationRules, rnd)
