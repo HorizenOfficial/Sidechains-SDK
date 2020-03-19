@@ -72,9 +72,9 @@ class Forger(settings: SidechainSettings,
     val bestBlockEpochAndSlot = timestampToEpochAndSlot(bestBlockInfo.timestamp)
 
     val nextBockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    val nextBlockEpochAndSlot = EpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    if(bestBlockEpochAndSlot > nextBlockEpochAndSlot) {
-      log.warn(s"Try to forge block with epochAndSlot ${nextBlockEpochAndSlot} but current best block epochAndSlot are: ${bestBlockEpochAndSlot}")
+    val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
+    if(bestBlockEpochAndSlot >= nextBlockEpochAndSlot) {
+      ForgeFailed(new IllegalArgumentException (s"Try to forge block with epochAndSlot ${nextBlockEpochAndSlot} but current best block epochAndSlot are: ${bestBlockEpochAndSlot}"))
     }
 
     if ((nextConsensusEpochNumber - timeStampToEpochNumber(bestBlockInfo.timestamp)) > 1) log.warn("Forging is not possible: whole consensus epoch(s) are missed")

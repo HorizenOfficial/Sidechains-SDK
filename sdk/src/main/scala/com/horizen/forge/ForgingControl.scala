@@ -21,7 +21,7 @@ class ForgingControl(settings: SidechainSettings, forgerRef: ActorRef, viewHolde
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
-  @volatile private var forgingIsActive: Boolean = true
+  @volatile private var forgingIsActive: Boolean = false
 
   val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
   val forgingInitiator: Runnable = () => {
