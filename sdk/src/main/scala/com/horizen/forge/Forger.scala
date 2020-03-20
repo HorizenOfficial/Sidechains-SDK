@@ -8,29 +8,19 @@ import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
-import com.horizen.forge.Forger.SendMessages.{ForgeFailed, ForgeResult, ForgeSuccess, SkipSlot}
 import com.horizen.forge.Forger.View
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.PrivateKey25519
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.vrf.VRFProof
 import com.horizen.{ForgerDataWithSecrets, _}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.block.Block
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Success}
-
-
-case class ForgingInfo(parentId: Block.BlockId,
-                       timestamp: Block.Timestamp,
-                       mainchainBlockRefToInclude: Seq[MainchainBlockReference],
-                       txsToInclude: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
-                       ownerPrivateKey: PrivateKey25519)
+import scala.util.{Failure, Success, Try}
 
 
 class Forger(settings: SidechainSettings,
@@ -43,9 +33,13 @@ class Forger(settings: SidechainSettings,
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   override def receive: Receive = {
-    processTryForgeNextBlockForEpochAndSlotMessage orElse {
+    processTryForgeNextBlockForEpochAndSlotMessage orElse processCreatedBlockId orElse {
       case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
+  }
+
+  protected def processCreatedBlockId: Receive = {
+    case _: Try[ModifierId] => //just to skip "Strange message" log
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
@@ -139,14 +133,6 @@ class Forger(settings: SidechainSettings,
 object Forger extends ScorexLogging {
   object ReceivableMessages {
     case class TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
-  }
-
-  object SendMessages {
-    sealed trait ForgeResult
-
-    case class ForgeSuccess(block: SidechainBlock) extends ForgeResult {override def toString: String = s"Successfully generated block ${block.id.toString}"}
-    case object SkipSlot extends ForgeResult {override def toString: String = s"Skipped slot for forging"}
-    case class ForgeFailed(ex: Throwable) extends ForgeResult {override def toString: String = s"Failed block generation due ${ex}"}
   }
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]

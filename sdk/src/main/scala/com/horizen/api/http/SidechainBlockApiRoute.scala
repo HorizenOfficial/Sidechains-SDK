@@ -120,8 +120,6 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
       Await.result(submitResultFuture, timeout.duration) match {
         case Success(id) =>
           ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
-        case Failure(ex: SkipSlotExceptionMessage) =>
-          ApiResponseUtil.toResponse(RespGenerateSkipSlot)
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
       }

@@ -213,7 +213,7 @@ class SidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef, sidechainBlockForgerControlActorRef)
 
 
   // Init API
