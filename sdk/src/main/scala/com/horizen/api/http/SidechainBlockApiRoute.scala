@@ -9,8 +9,7 @@ import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.forge.Forger.ReceivableMessages._
-import com.horizen.forge.ForgingControl.ReceivableMessages.{StartForging, StopForging}
+import com.horizen.forge.Forger.ReceivableMessages.{StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings

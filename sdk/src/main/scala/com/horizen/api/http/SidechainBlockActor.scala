@@ -4,7 +4,6 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.block.SidechainBlock
-import com.horizen.forge.ForgeResult
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import scorex.core.PersistentNodeViewModifier
@@ -19,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
-(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef, forgerControlRef: ActorRef)(implicit ec: ExecutionContext)
+(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
   private var generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
@@ -92,11 +91,8 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     case messageToForger @ TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) =>
     {
       val blockCreationFuture = forgerRef ? messageToForger
-      val blockCreationResult = Await.result(blockCreationFuture, timeoutDuration).asInstanceOf[ForgeResult]
-
-      val blockApplyFuture = forgerControlRef ? blockCreationResult
-      val blockApplyResult = Await.result(blockApplyFuture, timeoutDuration).asInstanceOf[Try[ModifierId]]
-      blockApplyResult match {
+      val blockCreationResult = Await.result(blockCreationFuture, timeoutDuration).asInstanceOf[Try[ModifierId]]
+      blockCreationResult match {
         case Success(blockId) => {
           // Create a promise, that will wait for block applying result from Node
           val prom = Promise[Try[ModifierId]]()
@@ -128,11 +124,15 @@ object SidechainBlockActor {
 }
 
 object SidechainBlockActorRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef, sidechainForgingControlRef: ActorRef)
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgerRef, sidechainForgingControlRef))
+    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef))
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef, sidechainForgingControlRef: ActorRef)
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef, sidechainForgingControlRef))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef), name)
+
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef))
 }

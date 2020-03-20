@@ -15,7 +15,7 @@ import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSide
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
-import com.horizen.forge.{Forger, ForgingControl}
+import com.horizen.forge.Forger
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
@@ -157,23 +157,11 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
-  val mockedSidechainBlockForgerActor = TestProbe()
-  mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
-    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
-      msg match {
-        case Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot =>
-          sender ! Forger.SendMessages.SkipSlot
-      }
-      TestActor.KeepRunning
-    }
-  })
-  val mockedSidechainBlockForgerActorRef: ActorRef = mockedSidechainBlockForgerActor.ref
-
   val mockedSidechainBlockForgingControlActor = TestProbe()
   mockedSidechainBlockForgingControlActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case ForgingControl.ReceivableMessages.StopForging =>
+        case Forger.ReceivableMessages.StopForging =>
       }
       TestActor.KeepRunning
     }

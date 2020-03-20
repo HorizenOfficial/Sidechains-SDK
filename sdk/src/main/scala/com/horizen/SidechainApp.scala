@@ -24,7 +24,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
-import com.horizen.forge.{ForgerRef, ForgingControlRef, MainchainSynchronizer}
+import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.websocket._
 import scorex.core.transaction.Transaction
 import scorex.util.ScorexLogging
@@ -207,13 +207,12 @@ class SidechainApp @Inject()
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
-  val sidechainBlockForgerControlActorRef: ActorRef = ForgingControlRef("ForgerControl", sidechainSettings, sidechainBlockForgerActorRef, nodeViewHolderRef, params)
+  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, params)
 
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef, sidechainBlockForgerControlActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
 
   // Init API
@@ -230,7 +229,7 @@ class SidechainApp @Inject()
 
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerControlActorRef),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
