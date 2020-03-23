@@ -19,7 +19,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
     val rnd: Random = new Random(testSeed)
 
     val initialParams = TestNetParams(consensusSlotsInEpoch = 10, sidechainGenesisBlockTimestamp = 1333344452L)
-    val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(1000000L, testSeed, initialParams)
+    val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(10000000000L, testSeed, initialParams)
     val history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)
     val nonce = history.calculateNonceForEpoch(blockIdToEpochId(genesisBlock.id))
     val stake = genesisEndEpochInfo.stakeConsensusEpochInfo

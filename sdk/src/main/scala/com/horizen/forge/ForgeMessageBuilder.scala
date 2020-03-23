@@ -9,7 +9,6 @@ import com.horizen.proposition.Proposition
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.vrf.VRFProof
 import com.horizen.{ForgerDataWithSecrets, _}
-import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -19,7 +18,6 @@ import scala.util.{Failure, Success}
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
                           val params: NetworkParams) extends ScorexLogging with TimeToEpochSlotConverter {
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
   type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
 
   def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber): ForgeMessageType = {
