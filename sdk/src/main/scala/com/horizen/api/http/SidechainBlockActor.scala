@@ -124,15 +124,15 @@ object SidechainBlockActor {
 }
 
 object SidechainBlockActorRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef))
+    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef), name)
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgingControlRef: ActorRef)
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgingControlRef))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 }

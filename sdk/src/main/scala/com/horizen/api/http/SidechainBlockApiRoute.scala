@@ -9,7 +9,8 @@ import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.forge.Forger.ReceivableMessages.{StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.ForgingInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
@@ -19,12 +20,12 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgingControlRef: ActorRef)
+case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   /**
@@ -91,7 +92,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
   def startForging: Route = (post & path("startForging")) {
-    val future = forgingControlRef ? StartForging
+    val future = forgerRef ? StartForging
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
     result match {
       case Success(_) =>
@@ -102,7 +103,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   }
 
   def stopForging: Route = (post & path("stopForging")) {
-    val future = forgingControlRef ? StopForging
+    val future = forgerRef ? StopForging
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
     result match {
       case Success(_) =>
@@ -122,6 +123,15 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
       }
+    }
+  }
+
+  def getForgingInfo: Route = (post & path("forgingInfo")){
+    val future = forgerRef ? GetForgingInfo
+    val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
+    result match {
+      case Success(forgingInfo) => ApiResponseUtil.toResponse(RespForgingInfo(forgingInfo.consensusSecondsInSlot, forgingInfo.consensusSlotsInEpoch, forgingInfo.currentBestEpochAndSlot.epochNumber, forgingInfo.currentBestEpochAndSlot.slotNumber))
+      case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", None))
     }
   }
 
@@ -165,6 +175,9 @@ object SidechainBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespStopForging extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int, consensusSlotsInEpoch: Int, bestEpochNumber: Int, bestSlotNumber: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSubmit(blockHex: String) {
@@ -217,5 +230,9 @@ object SidechainBlockErrorResponse {
 
   case class ErrorStopForging(description: String, exception: Option[Throwable]) extends ErrorResponse {
     override val code: String = "0107"
+  }
+
+  case class ErrorGetForgingInfo(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0108"
   }
 }

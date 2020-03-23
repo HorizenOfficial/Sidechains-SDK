@@ -1,41 +1,35 @@
 package com.horizen.api.http
 
-import java.{lang, util}
+import java.lang
+import java.util.{Collections, ArrayList => JArrayList, List => JList}
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.{Box, ForgerBox, NoncedBox, RegularBox}
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeWallet, SidechainNodeView}
-import com.horizen.proposition._
-import com.horizen.secret.PrivateKey25519
-import com.horizen.SidechainTypes
-import com.horizen.transaction._
-import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
-import com.horizen.utils.Pair
-
-import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.horizen.SidechainTypes
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
-import com.horizen.serialization.Views
-import java.util.{ArrayList => JArrayList, List => JList}
-import java.util.Collections
-
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proof.Proof
-
-import scala.util.control.Breaks._
+import com.horizen.proposition._
+import com.horizen.serialization.Views
+import com.horizen.transaction._
+import com.horizen.utils.BytesUtils
 import com.horizen.vrf.VRFPublicKey
+import scorex.core.settings.RESTApiSettings
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.control.Breaks._
+import scala.util.{Failure, Success, Try}
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,

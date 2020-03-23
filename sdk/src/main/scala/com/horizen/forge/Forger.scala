@@ -9,9 +9,10 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusEpochNumber, ConsensusSlotNumber, TimeToEpochSlotConverter}
-import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber, TimeToEpochSlotConverter}
+import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
+import scorex.core.NodeViewHolder.ReceivableMessages
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.util.ScorexLogging
 
@@ -25,7 +26,7 @@ class Forger(settings: SidechainSettings,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
              val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
-  val forger: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params)
+  val foreMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -44,13 +45,16 @@ class Forger(settings: SidechainSettings,
   ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor).execute(forgingInitiator)
 
   override def receive: Receive = {
-    processStartForgingMessage orElse processStopForgingMessage orElse processTryForgeNextBlockForEpochAndSlotMessage orElse {
+    processStartForgingMessage orElse
+    processStopForgingMessage orElse
+    processTryForgeNextBlockForEpochAndSlotMessage orElse
+    processGetForgeInfo orElse {
       case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
   }
 
   protected def processStartForgingMessage: Receive = {
-    case Forger.ReceivableMessages.StartForging => {
+    case StartForging => {
       log.info("Receive StartForging message")
       forgingIsActive = true
       tryToCreateBlockNow()
@@ -59,7 +63,7 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def processStopForgingMessage: Receive = {
-    case Forger.ReceivableMessages.StopForging => {
+    case StopForging => {
       log.info("Receive StopForging message")
       forgingIsActive = false
       sender() ! Success()
@@ -78,7 +82,7 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef]): Unit = {
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forger.buildForgeMessageForEpochAndSlot(epochNumber, slot)
+    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = foreMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -103,6 +107,29 @@ class Forger(settings: SidechainSettings,
       }
     }
   }
+
+  protected def processGetForgeInfo: Receive = {
+    case GetForgingInfo => {
+      val forgerInfoRequester = sender()
+
+      val getInfoMessage
+        = ReceivableMessages.GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ConsensusEpochAndSlot](getEpochAndSlotForBestBlock)
+      val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
+      epochAndSlotFut.onComplete{
+        case Success(epochAndSlot: ConsensusEpochAndSlot) => {
+          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot))
+        }
+        case failure @ Failure(ex) => {
+          forgerInfoRequester ! failure
+        }
+      }
+    }
+  }
+
+  def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
+    val history = view.history
+    history.timestampToEpochAndSlot(history.bestBlockInfo.timestamp)
+  }
 }
 
 object Forger extends ScorexLogging {
@@ -110,6 +137,7 @@ object Forger extends ScorexLogging {
     case object StartForging
     case object StopForging
     case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+    case object GetForgingInfo
   }
 }
 
