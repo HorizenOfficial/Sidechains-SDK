@@ -35,15 +35,15 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def allBoxes: Route = (post & path("allBoxes")) {
     entity(as[ReqAllBoxes]) { body =>
       withNodeView { sidechainNodeView =>
-        var optBoxTypeClass = body.boxTypeClass
-        var wallet = sidechainNodeView.getNodeWallet
-        var idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+        val optBoxTypeClass = body.boxTypeClass
+        val wallet = sidechainNodeView.getNodeWallet
+        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
         if (optBoxTypeClass.isEmpty) {
-          var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
+          val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxTypeClass.get).asSubclass(classOf[SidechainTypes#SCB])
-          var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxTypeClass.get)
+          val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
         }
       }
@@ -57,13 +57,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqBalance]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optBoxType = body.boxType
+        val optBoxType = body.boxType
         if (optBoxType.isEmpty) {
-          var sumOfBalances: Long = wallet.allBoxesBalance()
+          val sumOfBalances: Long = wallet.allBoxesBalance()
           ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxType.get).asSubclass(classOf[SidechainTypes#SCB])
-          var balance = wallet.boxesBalance(clazz)
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxType.get)
+          val balance = wallet.boxesBalance(clazz)
           ApiResponseUtil.toResponse(RespBalance(balance))
         }
       }
@@ -112,19 +112,24 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqAllPropositions]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optPropType = body.proptype
+        val optPropType = body.proptype
         if (optPropType.isEmpty) {
-          var listOfPropositions = wallet.allSecrets().asScala.map(s =>
+          val listOfPropositions = wallet.allSecrets().asScala.map(s =>
             s.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(optPropType.get).asSubclass(classOf[SidechainTypes#SCS])
-          var listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(optPropType.get).asSubclass(classOf[SidechainTypes#SCS])
+          val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
             secret.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         }
       }
     }
+  }
+
+  def getClassByBoxClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCB] = {
+    Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])}.
+      getOrElse(Class.forName("com.horizen.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
   }
 }
 
