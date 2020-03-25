@@ -13,9 +13,9 @@ case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfS
   /**
    * @return VrfProof in case if can be forger
    */
-  def canBeForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[VRFProof] = {
+  def canBeForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[VRFProof] = {
     val checker = (stakeCheck _).tupled.andThen(additionalCheck)
-    Some(vrfSecret.prove(vrfMessage)).filter(checker(_, totalStake))
+    Some(vrfSecret.prove(slotNumber, nonceConsensusEpochInfo.consensusNonce)).filter(checker(_, totalStake))
   }
 
   private def stakeCheck(proof: VRFProof, totalStake: Long): Boolean = {

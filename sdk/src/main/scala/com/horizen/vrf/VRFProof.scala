@@ -5,8 +5,9 @@ package com.horizen.vrf
 class VRFProof(proof: Array[Byte]) {
   def proofToVRFHash(): Array[Byte] = {
     require(proof.length == VRFProof.length)
-    val xorByte = (proof.head ^ proof.last).toByte
-    proof.map(b => (b ^ xorByte).toByte)
+    VrfLoader.vrfFunctions.proofBytesToVrfHashBytes(proof)
+    //val xorByte = (proof.head ^ proof.last).toByte
+    //proof.map(b => (b ^ xorByte).toByte)
   } // jni call to Rust impl
 
   def bytes: Array[Byte] = proof

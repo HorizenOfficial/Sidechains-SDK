@@ -2,7 +2,6 @@ package com.horizen
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 
-import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.vrf.VRFProof
 import scorex.util.ModifierId
 import supertagged.TaggedType
@@ -43,13 +42,6 @@ package object consensus {
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
   def bigIntToConsensusNonce(consensusNonce: BigInteger): ConsensusNonce = ConsensusNonce @@ consensusNonce.toByteArray
-
-  def buildVrfMessage(slotNumber: ConsensusSlotNumber, nonce: NonceConsensusEpochInfo): Array[Byte] = {
-    val slotNumberBytes = Ints.toByteArray(slotNumber)
-    val nonceBytes = nonce.consensusNonce
-
-    Bytes.concat(slotNumberBytes, nonceBytes, consensusHardcodedSaltString)
-  }
 
   def sha256HashToPositiveBigInteger(bytes: Array[Byte]): BigInteger = {
     require(bytes.length == sha256HashLen)

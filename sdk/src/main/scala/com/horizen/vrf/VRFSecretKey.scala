@@ -2,35 +2,36 @@ package com.horizen.vrf
 
 import java.util
 
-import com.horizen.utils.Utils
-import com.horizen.vrf
+import com.horizen.secret.{Secret, SecretsIdsEnum}
 
 // See https://tools.ietf.org/id/draft-goldbe-vrf-01.html#rfc.section.2 as functions description
 
-class VRFSecretKey(val key: Array[Byte]) {
-  def prove(message: Array[Byte]): VRFProof = {
-    val messageWithCorrectLength: Array[Byte] = Utils.doubleSHA256Hash(message)
+class VRFSecretKey(val secret: Array[Byte], publicKey: Array[Byte]) extends Secret{
+  override def secretTypeId(): Byte = SecretsIdsEnum.VrfPrivateKey.id()
 
-    new vrf.VRFProof(messageWithCorrectLength.map(byte => (byte ^ key.head).toByte))
+  def prove(slotNumber: Int, nonceBytes: Array[Byte]): VRFProof = {
+    val vrfProofBytes = VrfLoader.vrfFunctions.messageToVrfProofBytes(secret, slotNumber, nonceBytes)
+    //val messageWithCorrectLength: Array[Byte] = Utils.doubleSHA256Hash(message)
+    //new vrf.VRFProof(messageWithCorrectLength.map(byte => (byte ^ key.head).toByte))
+    new VRFProof(vrfProofBytes)
   } // jni call to Rust impl
 
-  def vrfHash(message: Array[Byte]): Array[Byte] = {
-    prove(message).proofToVRFHash()
+  def vrfHash(slotNumber: Int, nonceBytes: Array[Byte]): Array[Byte] = {
+    VrfLoader.vrfFunctions.proofBytesToVrfHashBytes(prove(slotNumber, nonceBytes).bytes)
   }
 
-  def bytes: Array[Byte] = key
+  override def bytes: Array[Byte] = secret
 
-  override def hashCode(): Int = util.Arrays.hashCode(key)
+  override def hashCode(): Int = util.Arrays.hashCode(secret)
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case that: VRFSecretKey => this.key sameElements that.key
+      case that: VRFSecretKey => this.secret sameElements that.secret
       case _ =>
         false
     }
   }
 }
-
 
 object VRFSecretKey {
   val length: Int = 32 //sha256HashLen

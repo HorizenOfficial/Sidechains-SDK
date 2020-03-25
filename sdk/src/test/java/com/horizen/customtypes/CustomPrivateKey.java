@@ -6,16 +6,15 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 
 import java.util.Arrays;
+
+import static com.horizen.secret.SecretsIdsEnum.CustomPrivateKey;
 
 public class CustomPrivateKey implements Secret
 {
     public static final int KEY_LENGTH = 128;
-    public static final byte SECRET_TYPE_ID = 1;
+    public static final byte SECRET_TYPE_ID = CustomPrivateKey.id();
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;

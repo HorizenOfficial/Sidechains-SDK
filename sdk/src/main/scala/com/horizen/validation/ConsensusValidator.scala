@@ -57,9 +57,8 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {
-    val message = buildVrfMessage(history.timeStampToSlotNumber(block.timestamp), nonceInfo)
-
-    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(message, block.vrfProof)
+    val slotNumber = history.timeStampToSlotNumber(block.timestamp)
+    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(slotNumber, nonceInfo.consensusNonce, block.vrfProof)
     if(!vrfIsCorrect) {
       throw new IllegalStateException(s"VRF check for block ${block.id} had been failed")
     }

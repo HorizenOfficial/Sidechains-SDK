@@ -2,8 +2,6 @@ package com.horizen.vrf
 
 import java.util
 
-import com.horizen.utils.Utils
-
 // See https://tools.ietf.org/id/draft-goldbe-vrf-01.html#rfc.section.2 as functions description
 
 // TO DO: add json representation to all VRF related classes
@@ -11,15 +9,16 @@ import com.horizen.utils.Utils
 class VRFPublicKey(val key: Array[Byte]) {
   require(key.length == VRFPublicKey.length)
 
-  def verify(message: Array[Byte], proof: VRFProof): Boolean = {
-    val messageWithCorrectLength: Array[Byte] = Utils.doubleSHA256Hash(message)
+  def verify(slotNumber: Int, nonceBytes: Array[Byte], proof: VRFProof): Boolean = {
+    VrfLoader.vrfFunctions.verify(key, slotNumber, nonceBytes, proof.bytes)
+    //val messageWithCorrectLength: Array[Byte] = Utils.doubleSHA256Hash(message)
 
-    val decoded = proof.bytes.map(byte => (byte ^ key.head).toByte)
-    messageWithCorrectLength.sameElements(decoded)
+    //val decoded = proof.bytes.map(byte => (byte ^ key.head).toByte)
+    //messageWithCorrectLength.sameElements(decoded)
   } // jni call to Rust impl
 
   // maybe also a method for verifying VRFPublicKey
-  def isValid: Boolean = true // jni call to Rust impl
+  def isValid: Boolean = VrfLoader.vrfFunctions.isValid // jni call to Rust impl
 
   def bytes: Array[Byte] = key
 

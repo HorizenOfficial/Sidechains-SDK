@@ -15,9 +15,9 @@ public class VrfGenerator {
         rnd.nextBytes(vrfSeed);
         Tuple2<VRFSecretKey, VRFPublicKey> vrfKeys = VRFKeyGenerator.generate(vrfSeed);
 
-        byte[] vrfMessage = new byte[32];
-        rnd.nextBytes(vrfMessage);
+        byte[] nonceBytes = new byte[32];
+        rnd.nextBytes(nonceBytes);
 
-        return vrfKeys._1.prove(vrfMessage);
+        return vrfKeys._1.prove(rnd.nextInt(10), nonceBytes);
     }
 }
