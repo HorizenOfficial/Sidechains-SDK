@@ -57,9 +57,8 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {
-    val message = buildVrfMessage(history.timeStampToSlotNumber(block.timestamp), nonceInfo)
-
-    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(message, block.vrfProof)
+    val slotNumber = history.timeStampToSlotNumber(block.timestamp)
+    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(slotNumber, nonceInfo.consensusNonce, block.vrfProof)
     if(!vrfIsCorrect) {
       throw new IllegalStateException(s"VRF check for block ${block.id} had been failed")
     }
@@ -72,7 +71,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(block.merklePath.apply(block.forgerBox.id()))
     if (!forgerBoxIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
+      throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
     }
 
     val stakeIsEnough = vrfProofCheckAgainstStake(block.forgerBox.value(), block.vrfProof, stakeConsensusEpochInfo.totalStake)

@@ -2,18 +2,20 @@ package com.horizen.fixtures.sidechainblock.generation
 
 import java.util.Random
 
+import scorex.util.ModifierId
+
 case class GenerationRules(forgingBoxesToAdd: Set[SidechainForgingData] = Set(),
-                          forgingBoxesToSpent: Set[SidechainForgingData] = Set(),
-                          mcReferenceIsPresent: Option[Boolean] = None,
-                          corruption: CorruptedGenerationRules = CorruptedGenerationRules.emptyCorruptedGenerationRules
+                           forgingBoxesToSpent: Set[SidechainForgingData] = Set(),
+                           mcReferenceIsPresent: Option[Boolean] = None,
+                           corruption: CorruptedGenerationRules = CorruptedGenerationRules.emptyCorruptedGenerationRules,
+                           forcedParentId: Option[ModifierId] = None,
+                           forcedTimestamp: Option[Long] = None
                          ) {
   def isCorrupted: Boolean = corruption == CorruptedGenerationRules.emptyCorruptedGenerationRules
 }
 
 object GenerationRules {
-  def generateCorrectGenerationRules(rnd: Random, generator: SidechainBlocksGenerator): GenerationRules = {
-
-    val allNotSpentForgerData: Set[SidechainForgingData] = generator.getNotSpentBoxes
+  def generateCorrectGenerationRules(rnd: Random, allNotSpentForgerData: Set[SidechainForgingData]): GenerationRules = {
     val addForgingData: Set[SidechainForgingData] =
       if (allNotSpentForgerData.size > 100) {
         Set(SidechainForgingData.generate(rnd, Math.abs(rnd.nextInt(1000000))))

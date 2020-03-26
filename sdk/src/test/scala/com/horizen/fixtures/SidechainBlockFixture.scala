@@ -78,7 +78,8 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                              timestamp: Option[Block.Timestamp] = None
                             ): SidechainBlock = {
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
-    val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(basicSeed.toByte))._1.prove(Array.fill(32)((basicSeed + 1).toByte))
+    val vrfKey = VRFKeyGenerator.generate(Array.fill(32)(basicSeed.toByte))._1
+    val vrfProof = vrfKey.prove(basicSeed.toInt % 10, Array.fill(32)((basicSeed + 1).toByte))
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     SidechainBlock.create(

@@ -32,8 +32,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val mainchainReferences = mcBlocksSerializer.parse(reader)
     val (forgerBox: ForgerBox, forgerMetadata)= ForgerBoxFixture.generateForgerBox(seed)
     val (secretKey, publicKey) = VRFKeyGenerator.generate(seed.toString.getBytes)
-    val vrfMessage: Array[Byte] = "!SomeVrfMessage1!SomeVrfMessage2".getBytes
-    val vrfProof: VRFProof = secretKey.prove(vrfMessage)
+    val vrfProof: VRFProof = secretKey.prove(1, "GenesisNonce".getBytes)
     val merklePath = MerkleTreeFixture.generateRandomMerklePath(seed + 1)
     val companion = getDefaultTransactionsCompanion
 
