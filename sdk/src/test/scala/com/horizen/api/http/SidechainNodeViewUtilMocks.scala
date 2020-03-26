@@ -31,7 +31,9 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val mainchainBlockReferenceInfoRef = new MainchainBlockReferenceInfo(
     BytesUtils.fromHexString("0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0"),
     BytesUtils.fromHexString("00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582"),
-    230, BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"))
+    230,
+    BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"),
+    BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208")) // TO DO: check, probably use different sc id
 
   val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
   val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())

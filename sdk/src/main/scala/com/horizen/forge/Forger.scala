@@ -83,7 +83,7 @@ class Forger(settings: SidechainSettings,
     case Forger.ReceivableMessages.TryGetBlockTemplate =>
       getNextBlockForgingInfo match {
         case Success(pfi) =>
-          sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, Seq(), Seq(), pfi.ownerPrivateKey, null, null, null, companion, params)
+          sender() ! SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude.map(_.data), pfi.txsToInclude, pfi.mainchainBlockRefToInclude.map(_.header), Seq(), pfi.ownerPrivateKey, null, null, null, companion, params)
         case Failure(e) =>
           sender() ! Failure(new Exception(s"Unable to collect information for block template creation: ${e.getMessage}"))
       }
@@ -108,7 +108,7 @@ class Forger(settings: SidechainSettings,
     case Forger.ReceivableMessages.TryForgeNextBlock =>
       getNextBlockForgingInfo match {
         case Success(pfi) =>
-          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude, pfi.txsToInclude, Seq(), Seq(), pfi.ownerPrivateKey,  null, null, null, companion, params) match {
+          SidechainBlock.create(pfi.parentId, pfi.timestamp, pfi.mainchainBlockRefToInclude.map(_.data), pfi.txsToInclude, pfi.mainchainBlockRefToInclude.map(_.header), Seq(), pfi.ownerPrivateKey,  null, null, null, companion, params) match {
             case Success(block) =>
               sidechainNodeViewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
               sender() ! Success(block.id)

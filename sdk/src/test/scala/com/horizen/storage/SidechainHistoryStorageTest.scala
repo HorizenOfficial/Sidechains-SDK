@@ -12,17 +12,18 @@ import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.utils.Pair
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue, assertArrayEquals}
 import org.junit._
 import org.mockito._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, idToBytes}
+import scorex.util.{ModifierId, idToBytes, bytesToId}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
+
 
 class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with SidechainBlockFixture with SidechainBlockInfoFixture with CompanionsFixture {
 
@@ -58,38 +59,60 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     dataList
   }
 
-  private def checkMainchainReferences(historyStorage: SidechainHistoryStorage, blocks: Seq[SidechainBlock], blockIndex: Int): Unit = {
-    val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlockReferences.length).sum + params.mainchainCreationBlockHeight
+  private def checkMainchainContent(historyStorage: SidechainHistoryStorage, blocks: Seq[SidechainBlock], blockIndex: Int): Unit = {
+    // Check MainchainHeaders
+    blocks(blockIndex).mainchainHeaders.foreach { case mainchainHeader =>
+      assertEquals("Storage must return correct sidechain block by mainchain header hash",
+        blocks(blockIndex).id, historyStorage.getMainchainHeaderContainingBlock(mainchainHeader.hash).get.id)
 
-    blocks(blockIndex).mainchainBlockReferences.zipWithIndex.foreach { case (mcBlock, mainchainReferenceIndex) =>
-      assertEquals("Storage shall return correct sidechain block by mainchain block reference hash",
-        blocks(blockIndex).id, historyStorage.getSidechainBlockByMainchainBlockReferenceHash(mcBlock.header.hash).get.id)
+      assertArrayEquals("Storage must return correct mainchain header by mainchain header hash",
+        mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(mainchainHeader.hash).get.mainchainHeaderBytes)
+    }
 
-      assertTrue("Storage shall return correct mainchain block reference by mainchain block reference id",
-        mcBlock.header.mainchainHeaderBytes.sameElements(historyStorage.getMainchainBlockReferenceByHash(mcBlock.header.hash).get.header.mainchainHeaderBytes))
+    // Check MainchainBlockReferenceData
+    blocks(blockIndex).mainchainBlockReferencesData.foreach { case mainchainReferenceData =>
+      assertEquals("Storage must return correct sidechain block by mainchain reference data header hash",
+        blocks(blockIndex).id, historyStorage.getMainchainReferenceDataContainingBlock(mainchainReferenceData.headerHash).get.id)
 
-      val mainchainHeight = mainchainLength + mainchainReferenceIndex
+      assertArrayEquals("Storage must return correct mainchain data by mainchain reference data header hash",
+        mainchainReferenceData.hash, historyStorage.getMainchainReferenceDataByHash(mainchainReferenceData.headerHash).get.hash)
+    }
+
+    val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlockReferencesData.length).sum + params.mainchainCreationBlockHeight
+
+    // Check MainchainBlockReferences
+    blocks(blockIndex).mainchainHeaders.zip(blocks(blockIndex).mainchainBlockReferencesData)
+        .zipWithIndex.foreach { case ((mainchainHeader, mainchainReferenceData), mainchainIndex) =>
+      val mainchainHeight = mainchainLength + mainchainIndex
       val receivedInfoByHeight = historyStorage.getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainHeight).get
-      val receivedInfoByHash = historyStorage.getMainchainBlockReferenceInfoByHash(mcBlock.header.hash)
+      val receivedInfoByHash = historyStorage.getMainchainBlockReferenceInfoByHash(mainchainReferenceData.headerHash)
 
       val allInfos = Seq(receivedInfoByHeight, receivedInfoByHash.get)
 
       allInfos.foreach{receivedInfo =>
-        assertEquals(
-          s"Storage shall return correct mainchain block reference id by mainchain block reference height for block ${mcBlock.header.hash.deep} for ${mainchainReferenceIndex}nth mainchain block",
-          mcBlock.header.hash.deep, receivedInfo.getMainchainBlockReferenceHash.deep)
+        assertArrayEquals(
+          s"Storage shall return correct mainchain header hash for header ${mainchainHeader.hash.deep} for ${mainchainIndex}nth mainchain block",
+          mainchainHeader.hash, receivedInfo.getMainchainHeaderHash)
+
+        assertArrayEquals(
+          s"Storage shall return correct mainchain header hash for reference data ${mainchainReferenceData.headerHash.deep} for ${mainchainIndex}nth mainchain block",
+          mainchainReferenceData.headerHash, receivedInfo.getMainchainHeaderHash)
 
         assertEquals(
-          s"Storage shall return correct mainchain block reference height by mainchain block reference height for block ${mcBlock.header.hash.deep} for ${mainchainReferenceIndex}nth mainchain block",
+          s"Storage shall return correct mainchain block reference height for block ${mainchainHeader.hash.deep} for ${mainchainIndex}nth mainchain block",
           mainchainHeight, receivedInfo.getMainchainHeight)
 
         assertEquals(
-          s"Storage shall return correct sidechain block reference by mainchain block reference height for block ${mcBlock.header.hash.deep} for ${mainchainReferenceIndex}nth mainchain block",
-          idToBytes(blocks(blockIndex).id).deep, receivedInfo.getSidechainBlockId.deep)
+          s"Storage shall return correct mainchain header containing sidechain block id for header ${mainchainHeader.hash.deep} for ${mainchainIndex}nth mainchain block",
+          blocks(blockIndex).id, bytesToId(receivedInfo.getMainchainHeaderSidechainBlockId))
 
         assertEquals(
-          s"Storage shall return correct mainchain block parent by mainchain block reference height for block ${mcBlock.header.hash.deep} for ${mainchainReferenceIndex}nth mainchain block",
-          mcBlock.header.hashPrevBlock.deep, receivedInfo.getParentMainchainBlockReferenceHash.deep)
+          s"Storage shall return correct mainchain ref data containing sidechain block id for ref data ${mainchainReferenceData.headerHash.deep} for ${mainchainIndex}nth mainchain block",
+          blocks(blockIndex).id, bytesToId(receivedInfo.getMainchainReferenceDataSidechainBlockId))
+
+        assertArrayEquals(
+          s"Storage shall return correct mainchain block parent for header ${mainchainHeader.hash.deep} for ${mainchainIndex}nth mainchain block",
+          mainchainHeader.hashPrevBlock, receivedInfo.getParentMainchainHeaderHash)
       }
     }
   }
@@ -100,7 +123,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val genesisBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
     activeChainBlockList += genesisBlock
     activeChainBlockInfoList += generateGenesisBlockInfo(
-      genesisMainchainBlockHash = Some(activeChainBlockList.head.mainchainBlockReferences.head.header.hash),
+      genesisMainchainHeaderHash = Some(activeChainBlockList.head.mainchainHeaders.head.hash),
+      genesisMainchainReferenceDataHeaderHash = Some(activeChainBlockList.head.mainchainBlockReferencesData.head.headerHash),
       timestamp = Some(genesisBlock.timestamp))
 
     // declare real genesis block id
@@ -116,7 +140,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
         companion = sidechainTransactionsCompanion,
         params = params,
         parentOpt = Some(genesisBlock.id),
-        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlockReferences.last.header.hash))).map(block => {
+        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainHeaders.last.hash))).map(block => {
       activeChainBlockList += block
       activeChainBlockInfoList += generateBlockInfo(
         block = block,
@@ -130,7 +154,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
         params = params,
         parentOpt = Some(genesisBlock.id),
         basicSeed = 13213111L,
-        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainBlockReferences.last.header.hash))).map(block => {
+        mcParent = Some(byteArrayToWrapper(genesisBlock.mainchainHeaders.last.hash))).map(block => {
       forkChainBlockList += block
       forkChainBlockInfoList += generateBlockInfo(
         block = block,
@@ -161,14 +185,15 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   def testGet(): Unit = {
     val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, params)
 
-    // Test 0: check mainchain references
-    (0 until height).foreach{ index => checkMainchainReferences(historyStorage, activeChainBlockList, index) }
+    // Test 0: check mainchain headers, references and data
+    (0 until height).foreach{ index => checkMainchainContent(historyStorage, activeChainBlockList, index) }
 
-    val index = activeChainBlockList.lastIndexWhere(b => b.mainchainBlockReferences.nonEmpty)
-    val expectedBestMainchainReferenceOption = activeChainBlockList.lift(index).flatMap(_.mainchainBlockReferences.lastOption)
-    expectedBestMainchainReferenceOption.foreach{expectedBestId =>
-      assertEquals("Best mainchain reference shall be as expected", expectedBestId.header.hash.deep, historyStorage.getBestMainchainBlockReferenceInfo.get.getMainchainBlockReferenceHash.deep)
+    val index = activeChainBlockList.lastIndexWhere(b => b.mainchainBlockReferencesData.nonEmpty)
+    val expectedBestMainchainReferenceDataOption = activeChainBlockList.lift(index).flatMap(_.mainchainBlockReferencesData.lastOption)
+    expectedBestMainchainReferenceDataOption.foreach{expectedBestData =>
+      assertArrayEquals("Best mainchain reference shall be as expected", expectedBestData.headerHash, historyStorage.getBestMainchainBlockReferenceInfo.get.getMainchainHeaderHash)
     }
+
 
     // Test 1: get height
     assertEquals("Storage contains wrong height", height, historyStorage.height)
@@ -373,7 +398,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           activeChainBlockList.last.parentId,
           activeChainBlockInfoList.last.timestamp,
           tipNewValidity,
-          activeChainBlockInfoList.last.mainchainBlockReferenceHashes,
+          activeChainBlockInfoList.last.mainchainHeaderHashes,
+          activeChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo
         ).bytes)
     ))
@@ -389,7 +415,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkChainBlockList.last.parentId,
           forkChainBlockList.last.timestamp,
           forkTipNewValidity,
-          forkChainBlockInfoList.last.mainchainBlockReferenceHashes,
+          forkChainBlockInfoList.last.mainchainHeaderHashes,
+          forkChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo
         ).bytes)
     ))
@@ -441,7 +468,16 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update best block exception")
 
     val newBestBlock = forkChainBlockList.head
-    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2))
+    val newBestBlockInfo = SidechainBlockInfo(
+      2,
+      2,
+      newBestBlock.parentId,
+      20,
+      ModifierSemanticValidity.Valid,
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(newBestBlock),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
+      WithdrawalEpochInfo(1, 2)
+    )
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(
       new ByteArrayWrapper(Array.fill(32)(-1: Byte)),

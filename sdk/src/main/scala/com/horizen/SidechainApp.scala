@@ -99,7 +99,7 @@ class SidechainApp @Inject()
     case "regtest" => RegTestParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -108,7 +108,7 @@ class SidechainApp @Inject()
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -117,7 +117,7 @@ class SidechainApp @Inject()
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlockReferences.head.header.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,

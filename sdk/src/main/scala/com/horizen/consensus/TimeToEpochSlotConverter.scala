@@ -39,3 +39,7 @@ trait TimeToEpochSlotConverter {
     epochIndex.toInt
   }
 }
+
+// Note: Make an object and pass params as a methods parameter
+// This class is used, bacouse in the place where methods needed, I don't want to nest TimeToEpochSlotConverter methods and don't want to keep `val params...`
+case class TimeToEpochSlotConverterUtils(params: NetworkParams) extends TimeToEpochSlotConverter

@@ -27,9 +27,9 @@ case class SidechainBlockHeader(
                                  @JsonSerialize(using = classOf[MerklePathSerializer]) forgerBoxMerklePath: MerklePath,
                                  @JsonSerialize(using = classOf[VRFProofSerializer]) vrfProof: VRFProof,
                                  sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
-                                 mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders (ref headers and next headers) root hash
+                                 mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                  ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
-                                 ommersNumber: Int, // to be able to calculate the score of the block without having the full SB. For future
+                                 ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                  signature: Signature25519
                                ) extends BytesSerializable {
 
@@ -50,16 +50,15 @@ case class SidechainBlockHeader(
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
-      Ints.toByteArray(ommersNumber)
+      Longs.toByteArray(ommersCumulativeScore)
     )
   }
 
-  // TODO verify if it's enough
   def semanticValidity(): Boolean = {
     if(parentId == null || parentId.length != 64
       || sidechainTransactionsMerkleRootHash == null || sidechainTransactionsMerkleRootHash.length != 32
       || mainchainMerkleRootHash == null || mainchainMerkleRootHash.length != 32
-      || ommersMerkleRootHash == null || ommersMerkleRootHash.length != 32 || ommersNumber < 0
+      || ommersMerkleRootHash == null || ommersMerkleRootHash.length != 32 || ommersCumulativeScore < 0
       || forgerBox == null || signature == null)
       return false
 
@@ -103,7 +102,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     w.putBytes(obj.ommersMerkleRootHash)
 
-    w.putInt(obj.ommersNumber)
+    w.putLong(obj.ommersCumulativeScore)
 
     val signatureBytes = Signature25519Serializer.getSerializer.toBytes(obj.signature)
     w.putInt(signatureBytes.length)
@@ -132,7 +131,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val ommersNumber: Int = r.getInt()
+    val ommersCumulativeScore: Long = r.getLong()
 
     val signatureLength: Int = r.getInt()
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parseBytes(r.getBytes(signatureLength))
@@ -147,7 +146,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
-      ommersNumber,
+      ommersCumulativeScore,
       signature)
   }
 }

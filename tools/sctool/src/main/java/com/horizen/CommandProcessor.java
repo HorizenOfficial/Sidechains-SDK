@@ -203,9 +203,9 @@ public class CommandProcessor {
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.data())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<MainchainHeader>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
                     null,
@@ -218,7 +218,7 @@ public class CommandProcessor {
 
             int withdrawalEpochLength;
             try {
-                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferences().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                 withdrawalEpochLength = creationOutput.withdrawalEpochLength();
             }
             catch (Exception e) {

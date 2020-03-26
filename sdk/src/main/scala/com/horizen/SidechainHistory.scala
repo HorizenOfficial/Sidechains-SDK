@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
@@ -122,19 +122,20 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   // parentScore is a sum of the length of the chain till parent block and amount of ommers inside the chain
   // So we should increase chain length by 1 and ommers amount with current block ommers number.
   private def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + 1 + block.ommers.size
+    parentScore + block.score
   }
 
   private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
     require(isGenesisBlock(block.id), "Passed block is not a genesis block.")
     SidechainBlockInfo(
       1,
-      1L,
+      block.score,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlockReferences.size) // First Withdrawal epoch value. Note: maybe put to params?
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
+      WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size) // First Withdrawal epoch value. Note: maybe put to params?
     )
   }
 
@@ -150,7 +151,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
     )
   }
@@ -454,8 +456,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
   }
 
-  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReference] = {
-    storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
+  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainBlockReference] = {
+    storage.getMainchainBlockReferenceByHash(mainchainHeaderHash).asJava
+  }
+
+  override def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainHeader] = {
+    storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 
   def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
@@ -478,7 +484,6 @@ object SidechainHistory
       None
   }
 
-  //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,

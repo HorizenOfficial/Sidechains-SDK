@@ -5,7 +5,7 @@ import java.time.Instant
 import java.util.{HashMap => JHashMap}
 
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -24,7 +24,7 @@ import scala.util.Random
 
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
-  extends SidechainBlock(block.header, block.sidechainTransactions, block.mainchainBlockReferences, block.nextMainchainHeaders, block.ommers, companion) {
+  extends SidechainBlock(block.header, block.sidechainTransactions, block.mainchainBlockReferencesData, block.mainchainHeaders, block.ommers, companion) {
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
@@ -39,8 +39,9 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
   def copy(initialBlock: SidechainBlock,
            parentId: Block.BlockId = null,
            timestamp: Block.Timestamp = -1,
-           mainchainBlocks: Seq[MainchainBlockReference] = null,
+           mainchainBlocksReferencesData: Seq[MainchainBlockReferenceData] = null,
            sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
+           mainchainHeaders: Seq[MainchainHeader] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VRFProof = null,
            merklePath: MerklePath = null,
@@ -56,10 +57,10 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
     SidechainBlock.create(
       firstOrSecond(parentId, initialBlock.parentId),
       Math.max(timestamp, initialBlock.timestamp),
-      firstOrSecond(mainchainBlocks, initialBlock.mainchainBlockReferences),
+      firstOrSecond(mainchainBlocksReferencesData, initialBlock.mainchainBlockReferencesData),
       firstOrSecond(sidechainTransactions, initialBlock.sidechainTransactions),
-      Seq(), // TODO
-      Seq(), // TODO
+      firstOrSecond(mainchainHeaders, initialBlock.mainchainHeaders),
+      Seq(), // TODO: ommers support
       forgerMetadata.rewardSecret,
       forgingBox,
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
@@ -85,7 +86,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     val timestamp = timestampOpt.getOrElse(Instant.now.getEpochSecond - 10000)
-    val refereces: Seq[MainchainBlockReference] = if(includeReference)
+    val references: Seq[MainchainBlockReference] = if(includeReference)
       Seq(generateMainchainBlockReference(mcParent, genGenesisMainchainBlockHash, new java.util.Random(basicSeed), (timestamp - 100).toInt))
       else
       Seq()
@@ -93,10 +94,10 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
     SidechainBlock.create(
       parent,
       timestamp,
-      refereces,
+      references.map(_.data),
       Seq(),
-      Seq(), // TODO
-      Seq(), // TODO
+      references.map(_.header),
+      Seq(), // TODO: ommers suport
       forgerMetadata.rewardSecret,
       forgerBox,
       vrfProof,
@@ -108,7 +109,8 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 }
 
 trait SidechainBlockFixture extends MainchainBlockReferenceFixture with SidechainBlockHeaderFixture {
-  def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None,
+  def generateGenesisBlockInfo(genesisMainchainHeaderHash: Option[Array[Byte]] = None,
+                               genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
     SidechainBlockInfo(
@@ -117,7 +119,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       bytesToId(new Array[Byte](32)),
       timestamp.getOrElse(Random.nextLong()),
       validity,
-      Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceHash(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
+      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))),
+      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainReferenceDataHeaderHash.getOrElse(new Array[Byte](32)))),
       WithdrawalEpochInfo(1, 1)
     )
   }
@@ -129,7 +132,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       blockInfo.parentId,
       blockInfo.timestamp,
       validity,
-      blockInfo.mainchainBlockReferenceHashes,
+      blockInfo.mainchainHeaderHashes,
+      blockInfo.mainchainReferenceDataHeaderHashes,
       WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.lastEpochIndex)
     )
   }
@@ -142,14 +146,16 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                         timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
-      customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainBlockReferenceHashes.size.toLong << 32) + 1),
+      customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainHeaderHashes.size.toLong << 32) + 1),
       block.parentId,
       block.timestamp,
       validity,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
     )
   }
+
 
   def generateSidechainBlockSeq(count: Int,
                                 companion: SidechainTransactionsCompanion,
@@ -159,19 +165,21 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                 mcParent: Option[ByteArrayWrapper] = None): Seq[SidechainBlock] = {
     require(count > 0)
     val firstBlock = SidechainBlockFixture.generateSidechainBlock(companion = companion, basicSeed = basicSeed, params = params, parentOpt = parentOpt, mcParent = mcParent)
-    (1 until count).foldLeft((Seq(firstBlock), firstBlock.mainchainBlockReferences.last.header.hash)) { (acc, i) =>
+    (1 until count).foldLeft((Seq(firstBlock), firstBlock.mainchainHeaders.last.hash)) { (acc, i) =>
       val generatedSeq = acc._1
       val lastMc = acc._2
       val lastBlock = generatedSeq.last
+      val refs = Seq(generateMainchainBlockReference(Some(byteArrayToWrapper(lastMc))))
       val newSeq: Seq[SidechainBlock] = generatedSeq :+ SidechainBlockFixture.copy(lastBlock,
                                                                                     parentId = lastBlock.id,
                                                                                     timestamp = Instant.now.getEpochSecond - 1000 + i * 10,
-                                                                                    mainchainBlocks = Seq(generateMainchainBlockReference(Some(byteArrayToWrapper(lastMc)))),
+                                                                                    mainchainBlocksReferencesData = refs.map(_.data),
                                                                                     sidechainTransactions = Seq(),
+                                                                                    mainchainHeaders = refs.map(_.header),
                                                                                     companion = companion,
                                                                                     params = params,
                                                                                     basicSeed = basicSeed)
-      (newSeq, newSeq.last.mainchainBlockReferences.last.header.hash)
+      (newSeq, newSeq.last.mainchainHeaders.last.hash)
     }._1
   }
 
@@ -181,8 +189,9 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + blockGenerationDelta,
-      mainchainBlocks = Seq(),
+      mainchainBlocksReferencesData = Seq(),
       sidechainTransactions = Seq(),
+      mainchainHeaders = Seq(),
       companion = companion,
       params = params,
       basicSeed = basicSeed)

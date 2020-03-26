@@ -41,7 +41,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
   def genesisBlockValidation(): Unit = {
     val validator = new WithdrawalEpochValidator(params)
 
-    // Test 1: invalid genesis block - no MCBlockReferences
+    // Test 1: invalid genesis block - no MainchainBlockReferenceData
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
@@ -59,22 +59,23 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
-    assertTrue("Sidechain genesis block with no MC block references expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain genesis block with no MainchainBlockReferenceData expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 2: invalid genesis block - multiple MCBlockReferences
+    // Test 2: invalid genesis block - multiple MainchainBlockReferenceData
     val (forgerBox2, forgerMeta2) = ForgerBoxFixture.generateForgerBox(322)
+    var mcRefs: Seq[MainchainBlockReference] = Seq(generateMainchainBlockReference(), generateMainchainBlockReference())
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(), generateMainchainBlockReference()),
+      mcRefs.map(_.data),
       Seq(),
-      Seq(),
+      mcRefs.map(_.header),
       Seq(),
       forgerMeta2.rewardSecret,
       forgerBox2,
@@ -85,22 +86,23 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
-    assertTrue("Sidechain genesis block with multiple MC block references expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain genesis block with multiple MainchainBlockReferenceData expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 3: invalid genesis block - 1 MCBlockRef without sc creation tx
+    // Test 3: invalid genesis block - 1 MainchainBlockReferenceData without sc creation tx
     val (forgerBox3, forgerMeta3) = ForgerBoxFixture.generateForgerBox(32)
+    mcRefs = Seq(generateMainchainBlockReference())
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference()),
+      mcRefs.map(_.data),
       Seq(),
-      Seq(),
+      mcRefs.map(_.header),
       Seq(),
       forgerMeta3.rewardSecret,
       forgerBox3,
@@ -111,14 +113,14 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
-    assertTrue("Sidechain genesis block with 1 MC block references without sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain genesis block with 1 MainchainBlockReferenceData without sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: NoSuchElementException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 4: valid genesis block with 1 MCBlockRef with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
+    // Test 4: valid genesis block with 1 MainchainBlockReferenceData with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
@@ -127,14 +129,15 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    mcRefs = Seq(mcBlockRef)
 
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(324)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(mcBlockRef), //
+      mcRefs.map(_.data),
       Seq(),
-      Seq(),
+      mcRefs.map(_.header),
       Seq(),
       forgerMeta4.rewardSecret,
       forgerBox4,
@@ -146,7 +149,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
     Mockito.when(params.withdrawalEpochLength).thenReturn(123)
-    assertTrue("Sidechain genesis block with 1 MC block references with sc creation inside with incorrect withdrawalEpochLength expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain genesis block with 1 MainchainBlockReferenceData with sc creation inside with incorrect withdrawalEpochLength expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
@@ -155,7 +158,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 5: the same as above but with valid withdrawalEpochLength specified in params / sc creation
     Mockito.when(params.withdrawalEpochLength).thenReturn(100)
-    assertTrue("Sidechain genesis block with 1 MC block references with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain genesis block with 1 MainchainBlockReferencesData with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
   }
 
   @Test
@@ -166,7 +169,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(params.withdrawalEpochLength).thenReturn(withdrawalEpochLength)
 
 
-    // Test 1: invalid block - no MC block references, parent is missed
+    // Test 1: invalid block - no MainchainBlockReferencesData, parent is missed
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(1)
 
     var block: SidechainBlock = SidechainBlock.create(
@@ -191,7 +194,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
-    // Test 2: valid block - no MC block references, parent is the last block of previous epoch
+    // Test 2: valid block - no MainchainBlockReferenceData, parent is the last block of previous epoch
     val (forgerBox2, forgerMeta2) = ForgerBoxFixture.generateForgerBox(22)
 
     block = SidechainBlock.create(
@@ -210,40 +213,40 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength)
       ))
     })
-    assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 3: valid block - no MC block references, parent is in the middle of the epoch
+    // Test 3: valid block - no MainchainBlockReferenceData, parent is in the middle of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength / 2)
       ))
     })
-    assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 4: valid block - no MC block references, parent is at the beginning of the epoch
+    // Test 4: valid block - no MainchainBlockReferenceData, parent is at the beginning of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, 0)
       ))
     })
-    assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 5: valid block - with MC block references, that are in the middle of the epoch
+    // Test 5: valid block - with MainchainBlockReferenceData, that are in the middle of the epoch
     val (forgerBox5, forgerMeta5) = ForgerBoxFixture.generateForgerBox(3524)
-
+    var mcRefs: Seq[MainchainBlockReference] = Seq(generateMainchainBlockReference(), generateMainchainBlockReference()) // 2 MC block refs
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
+      mcRefs.map(_.data), // 2 MainchainBlockReferenceData
       Seq(),
-      Seq(),
+      Seq(), // No MainchainHeaders - no need of them
       Seq(),
       forgerMeta5.rewardSecret,
       forgerBox5,
@@ -254,42 +257,43 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
     })
-    assertTrue("Sidechain block with MCBlock references that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with MainchainBlockReferenceData that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 6: valid block - without SC transactions and with MC block references, that lead to the end of the epoch
+    // Test 6: valid block - without SC transactions and with MainchainBlockReferenceData, that lead to the end of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
     })
-    assertTrue("Sidechain block with MCBlock references that lead to the finish of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with MainchainBlockReferenceData that lead to the finish of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 7: invalid block - without SC transactions and with MC block references, that lead to switching the epoch
+    // Test 7: invalid block - without SC transactions and with MainchainBlockReferenceData, that lead to switching the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))
     })
-    assertTrue("Sidechain block with MCBlock references that lead to epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain block with MainchainBlockReferenceData that lead to epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 8: valid block - with SC transactions and MC block references, that are in the middle of the epoch
+    // Test 8: valid block - with SC transactions and MainchainBlockReferenceData, that are in the middle of the epoch
     val (forgerBox8, forgerMeta8) = ForgerBoxFixture.generateForgerBox(324)
+    mcRefs = Seq(generateMainchainBlockReference(), generateMainchainBlockReference()) // 2 MC block refs
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(), generateMainchainBlockReference()), // 2 MC block refs
+      mcRefs.map(_.data), // 2 MainchainBlockReferenceData
       Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
       Seq(),
       Seq(),
@@ -302,40 +306,40 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3) // lead to the middle index -> no epoch switch
       ))
     })
-    assertTrue("Sidechain block with SC transactions and MCBlock references that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
+    assertTrue("Sidechain block with SC transactions andMainchainBlockReferenceData that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
 
 
-    // Test 9: invalid block - with SC transactions and MC block references, that lead to the end of the epoch (no sc tx allowed)
+    // Test 9: invalid block - with SC transactions and MainchainBlockReferenceData, that lead to the end of the epoch (no sc tx allowed)
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
       ))
     })
-    assertTrue("Sidechain block with SC transactions and MCBlock references that lead to the finish of the epoch expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain block with SC transactions and MainchainBlockReferenceData that lead to the finish of the epoch expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 10: invalid block - with SC transactions and MC block references, that lead to switching the epoch (no sc tx and no switch allowed)
+    // Test 10: invalid block - with SC transactions and MainchainBlockReferenceData, that lead to switching the epoch (no sc tx and no switch allowed)
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1) // lead to the switching of the epoch
       ))
     })
-    assertTrue("Sidechain block with SC transactions and MCBlock references that lead to the epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain block with SC transactions and MainchainBlockReferenceData that lead to the epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 11: invalid block - with 1 MCBlockRef with sc creation tx with declared
+    // Test 11: invalid block - with 1 MainchainBlockReferenceData with sc creation tx with declared sidechain creation output
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
@@ -348,7 +352,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(mcBlockRef),
+      Seq(mcBlockRef.data),
       Seq(),
       Seq(),
       Seq(),
@@ -360,20 +364,21 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       mcBlockRefRegTestParams
     ).get
 
-    assertTrue("Sidechain non-genesis block with 1 MC block references with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain non-genesis block with 1 MainchainBlockReferenceData with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 12: invalid block - with 2 MCBlockRef, the second one is with sc creation tx
+    // Test 12: invalid block - with 2 MainchainBlockReferenceData, the second one is with sc creation tx
     val (forgerBox12, forgerMeta12) = ForgerBoxFixture.generateForgerBox(31224)
+    mcRefs = Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef)
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef),
+      mcRefs.map(_.data),
       Seq(),
       Seq(),
       Seq(),
@@ -385,20 +390,20 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       mcBlockRefRegTestParams
     ).get
 
-    assertTrue("Sidechain non-genesis block with 2 MC block references, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain non-genesis block with 2 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
 
 
-    // Test 13: invalid block - with 3 MCBlockRef, the second one is with sc creation tx
+    // Test 13: invalid block - with 3 MainchainBlockReferenceData, the second one is with sc creation tx
     val (forgerBox13, forgerMeta13) = ForgerBoxFixture.generateForgerBox(32413)
-
+    mcRefs = Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.header.hash))))
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.header.hash)))),
+      mcRefs.map(_.data),
       Seq(),
       Seq(),
       Seq(),
@@ -410,10 +415,37 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       mcBlockRefRegTestParams
     ).get
 
-    assertTrue("Sidechain non-genesis block with 3 MC block references, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
+    assertTrue("Sidechain non-genesis block with 3 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>
       case e => assertTrue("Different exception type expected, got %s".format(e.getClass.getName), false)
     }
+
+
+    // Test 14: valid block - with 2 MainchainBlockReferenceData, that lead to epoch ending, and 2 more MainchainHeaders
+    val (forgerBox14, forgerMeta14) = ForgerBoxFixture.generateForgerBox(35274)
+    mcRefs = Seq(generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference()) // 4 MC block refs
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      mcRefs.take(2).map(_.data), // 2 MainchainBlockReferenceData
+      Seq(),
+      mcRefs.map(_.header), // 4 MainchainHeaders, from different withdrawal epochs
+      Seq(),
+      forgerMeta14.rewardSecret,
+      forgerBox14,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
+      sidechainTransactionsCompanion,
+      null
+    ).get
+
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
+        WithdrawalEpochInfo(1, withdrawalEpochLength - 2) // lead to the last epoch index -> no epoch switch
+      ))
+    })
+    assertTrue("Sidechain block with MainchainBlockReferenceData that lead to the finish of the epoch and 2 more MainchainHeaders expected to be valid.",
+      validator.validate(block, history).isSuccess)
   }
 }

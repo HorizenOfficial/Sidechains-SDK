@@ -174,15 +174,18 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("blockReferenceInfo").isObject)
         val node = result.get("blockReferenceInfo")
-        assertEquals(4, node.elements().asScala.length)
+        assertEquals(5, node.elements().asScala.length)
         assertTrue(node.get("hash").isTextual)
         assertTrue(node.get("parentHash").isTextual)
         assertTrue(node.get("height").isInt)
-        assertTrue(node.get("sidechainBlockId").isTextual)
-        assertEquals(node.get("hash").textValue(), BytesUtils.toHexString(mcRef.getMainchainBlockReferenceHash))
-        assertEquals(node.get("parentHash").textValue(), BytesUtils.toHexString(mcRef.getParentMainchainBlockReferenceHash))
+        assertTrue(node.get("mainchainHeaderSidechainBlockId").isTextual)
+        assertTrue(node.get("mainchainReferenceDataSidechainBlockId").isTextual)
+
+        assertEquals(node.get("hash").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderHash))
+        assertEquals(node.get("parentHash").textValue(), BytesUtils.toHexString(mcRef.getParentMainchainHeaderHash))
         assertEquals(node.get("height").asInt(), mcRef.getMainchainHeight)
-        assertEquals(node.get("sidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getSidechainBlockId))
+        assertEquals(node.get("mainchainHeaderSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderSidechainBlockId))
+        assertEquals(node.get("mainchainReferenceDataSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainReferenceDataSidechainBlockId))
       case _ => fail("Serialization failed for object MainchainApiResponse")
     }
   }

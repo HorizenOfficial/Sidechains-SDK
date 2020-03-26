@@ -49,7 +49,7 @@ trait ConsensusDataProvider {
     val nonceOpt: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
       (blockId: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
         {
-          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainBlockReferenceHashes.map(_.data))
+          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainReferenceDataHeaderHashes.map(_.data))
           (minimalHashForCurrentBlockOpt, accumulator) match {
             case (None, _) => accumulator
             case (minimalHashOpt, None) => minimalHashOpt

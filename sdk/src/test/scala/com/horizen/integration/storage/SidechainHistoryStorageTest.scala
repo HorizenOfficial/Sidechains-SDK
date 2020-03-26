@@ -22,7 +22,11 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
-  val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(Some(genesisBlock.mainchainBlockReferences.head.header.hash), ModifierSemanticValidity.Valid)
+  val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(
+    Some(genesisBlock.mainchainHeaders.head.hash),
+    Some(genesisBlock.mainchainBlockReferencesData.head.headerHash),
+    ModifierSemanticValidity.Valid,
+    Some(genesisBlock.timestamp))
 
   val params: NetworkParams = MainNetParams(new Array[Byte](32), genesisBlock.id)
 

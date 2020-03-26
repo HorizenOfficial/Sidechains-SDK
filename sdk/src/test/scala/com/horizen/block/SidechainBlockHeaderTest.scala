@@ -32,7 +32,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     assertArrayEquals("SidechainBlockHeader sidechainTransactionsMerkleRootHash is different", header.sidechainTransactionsMerkleRootHash, serializedHeader.sidechainTransactionsMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader mainchainMerkleRootHash is different", header.mainchainMerkleRootHash, serializedHeader.mainchainMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader ommersMerkleRootHash is different", header.ommersMerkleRootHash, serializedHeader.ommersMerkleRootHash)
-    assertEquals("SidechainBlockHeader ommersNumber is different", header.ommersNumber, serializedHeader.ommersNumber)
+    assertEquals("SidechainBlockHeader ommersNumber is different", header.ommersCumulativeScore, serializedHeader.ommersCumulativeScore)
     assertEquals("SidechainBlockHeader id is different", header.id, serializedHeader.id)
 
     // Set to true to regenerate regression data
@@ -73,7 +73,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     assertArrayEquals("SidechainBlockHeader sidechainTransactionsMerkleRootHash is different", header.sidechainTransactionsMerkleRootHash, deserializedHeader.sidechainTransactionsMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader mainchainMerkleRootHash is different", header.mainchainMerkleRootHash, deserializedHeader.mainchainMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader ommersMerkleRootHash is different", header.ommersMerkleRootHash, deserializedHeader.ommersMerkleRootHash)
-    assertEquals("SidechainBlockHeader ommersNumber is different", header.ommersNumber, deserializedHeader.ommersNumber)
+    assertEquals("SidechainBlockHeader ommersNumber is different", header.ommersCumulativeScore, deserializedHeader.ommersCumulativeScore)
     assertEquals("SidechainBlockHeader id is different", header.id, deserializedHeader.id)
   }
 

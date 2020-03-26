@@ -40,95 +40,14 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(Seq())
 
     // Mock other data
-    val verifiedBlockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifierBlockFullConsensusEpochInfo: FullConsensusEpochInfo = mock[FullConsensusEpochInfo]
+    val currentFullConsensusEpochInfo: FullConsensusEpochInfo = mock[FullConsensusEpochInfo]
+    val previousFullConsensusEpochInfo: FullConsensusEpochInfo = mock[FullConsensusEpochInfo]
 
     Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
+      consensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) =>
       case Failure(e) => throw e //jFail("Block with no ommers expected to be Valid.")
-    }
-  }
-
-  @Test
-  def ommersTimestampsValidation(): Unit = {
-    // Mock history
-    val history = mockHistory()
-    // Mock other data
-    val verifiedBlockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifierBlockFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
-
-    // Mock ommers
-    var ommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 11)) // after verifiedBlock Slot
-    )
-
-    // Mock block with ommers
-    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
-    var verifiedBlock: SidechainBlock = mock[SidechainBlock]
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
-    Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
-
-
-    // Test 1: One of the ommers Slot is after verifiedBlock Slot
-    Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
-    } match {
-      case Success(_) => jFail("Block with no ommers expected to be Invalid.")
-      case Failure(_) =>
-    }
-
-
-    // Test 2: One of the ommers Slot is equal to verifiedBlock Slot
-    ommers = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 11)) // equals to verifiedBlock Slot
-    )
-    verifiedBlock = mock[SidechainBlock]
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
-    Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
-
-    Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
-    } match {
-      case Success(_) => jFail("Block with no ommers expected to be Invalid.")
-      case Failure(_) =>
-    }
-
-
-    // Test 3: Ommers slot order is wrong
-    ommers = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 8)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)) // lower than previous Ommer slot
-    )
-    verifiedBlock = mock[SidechainBlock]
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
-    Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
-
-    Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
-    } match {
-      case Success(_) => jFail("Block with no wrong ommers slot order expected to be Invalid.")
-      case Failure(_) =>
-    }
-
-
-    // Test 4: Ommers Epoch is 2 or more epoch before verifiedBlock Epoch
-    ommers = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 1, ConsensusSlotNumber @@ 20)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 1, ConsensusSlotNumber @@ 22)) // much lower than previous Ommer Epoch
-    )
-    verifiedBlock = mock[SidechainBlock]
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
-    Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
-
-    Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
-    } match {
-      case Success(_) => jFail("Block with no wrong ommers slot order expected to be Invalid.")
-      case Failure(_) =>
     }
   }
 
@@ -137,8 +56,8 @@ class ConsensusValidatorOmmersTest
     // Mock history
     val history = mockHistory()
     // Mock other data
-    val verifiedBlockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifierBlockFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
 
     // Test 1: Valid Ommers in correct order from the same epoch as VerifiedBlock
     // Mock ommers
@@ -149,12 +68,23 @@ class ConsensusValidatorOmmersTest
 
     // Mock block with ommers
     val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
-    var verifiedBlock: SidechainBlock = mock[SidechainBlock]
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
+    val verifiedBlock: SidechainBlock = mock[SidechainBlock]
+    val header = mock[SidechainBlockHeader]
+    Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
+    Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
+    val currentEpochConsensusValidator = new ConsensusValidator {
+      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
+        assertEquals("Different nonceInfo expected", currentFullConsensusEpochInfo.nonceConsensusEpochInfo, nonceInfo)
+      }
+      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
+        assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
+      }
+    }
+
     Try {
-      consensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
+      consensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) =>
       case Failure(e) => throw e //jFail("Block with no ommers expected to be Valid.")
@@ -162,7 +92,7 @@ class ConsensusValidatorOmmersTest
 
 
     // Test 2: Same as above, but Ommers contains invalid forger box data
-    val fbException = new Exception("ForgerBoxExpection")
+    val fbException = new Exception("ForgerBoxException")
     val forgerBoxFailConsensusValidator = new ConsensusValidator {
       // always successful
       override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {}
@@ -171,7 +101,7 @@ class ConsensusValidatorOmmersTest
     }
 
     Try {
-      forgerBoxFailConsensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
+      forgerBoxFailConsensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) => jFail("Block with no ommers expected to be invalid.")
       case Failure(e) => assertEquals("Different exception expected.", fbException, e)
@@ -179,7 +109,7 @@ class ConsensusValidatorOmmersTest
 
 
     // Test 3: Same as above, but Ommers contains invalid VRF data
-    val vrfException = new Exception("VRFExpcetion")
+    val vrfException = new Exception("VRFException")
     val vrfFailConsensusValidator = new ConsensusValidator {
       // always successful
       override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = throw vrfException
@@ -188,7 +118,7 @@ class ConsensusValidatorOmmersTest
     }
 
     Try {
-      vrfFailConsensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
+      vrfFailConsensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) => jFail("Block with no ommers expected to be invalid.")
       case Failure(e) => assertEquals("Different exception expected.", vrfException, e)
@@ -198,30 +128,12 @@ class ConsensusValidatorOmmersTest
   @Test
   def previousEpochOmmersValidation(): Unit = {
     val verifiedBlockId: ModifierId = getRandomBlockId(1000L)
-    val previousEpochId: ConsensusEpochId = blockIdToEpochId(getRandomBlockId(2000L))
-    val previousEpochFullConsensusEpoch = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
 
     // Mock other data
-    val verifiedBlockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifierBlockFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
     // Mock history
     val history = mockHistory()
-    // Expect for verified block data as input
-    Mockito.when(history.getPreviousConsensusEpochIdForBlock(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[SidechainBlockInfo])).thenAnswer(answer => {
-      assertEquals("Block id is different. VerifiedBlock id expected.", verifiedBlockId, answer.getArgument(0))
-      assertEquals("Block info is different. VerifiedBlock info expected.", verifiedBlockInfo, answer.getArgument(1))
-      previousEpochId
-    })
-    // Expect for previous epoch last block id as input
-    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
-      assertEquals("Block id is different. Previous epoch last block id expected.", lastBlockIdInEpochId(previousEpochId), answer.getArgument(0))
-      mock[SidechainBlockInfo]
-    })
-    // Expect for previous epoch last block data info retrieving
-    Mockito.when(history.getFullConsensusEpochInfoForBlock(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[SidechainBlockInfo])).thenAnswer(answer => {
-      assertEquals("Block id is different. Previous epoch last block id expected.", lastBlockIdInEpochId(previousEpochId), answer.getArgument(0))
-      previousEpochFullConsensusEpoch
-    })
 
     // Test 1: Valid Ommers in correct order from the previous epoch as VerifiedBlock
     // Mock ommers
@@ -234,20 +146,22 @@ class ConsensusValidatorOmmersTest
     val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
     var verifiedBlock: SidechainBlock = mock[SidechainBlock]
     Mockito.when(verifiedBlock.id).thenReturn(verifiedBlockId)
-    Mockito.when(verifiedBlock.timestamp).thenReturn(verifiedBlockTimestamp)
+    val header = mock[SidechainBlockHeader]
+    Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
+    Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val previousEpochConsensusValidator = new ConsensusValidator {
       override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
-        assertEquals("Different nonceInfo expected", previousEpochFullConsensusEpoch.nonceConsensusEpochInfo, nonceInfo)
+        assertEquals("Different nonceInfo expected", previousFullConsensusEpochInfo.nonceConsensusEpochInfo, nonceInfo)
       }
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
-        assertEquals("Different stakeConsensusEpochInfo expected", previousEpochFullConsensusEpoch.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
+        assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
       }
     }
 
     Try {
-      previousEpochConsensusValidator.verifyOmmers(verifiedBlock, verifiedBlockInfo, verifierBlockFullConsensusEpochInfo, history)
+      previousEpochConsensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) =>
       case Failure(e) => throw e //jFail("Block with no ommers expected to be Valid.")
@@ -256,7 +170,40 @@ class ConsensusValidatorOmmersTest
 
   @Test
   def switchingEpochOmmersValidation(): Unit = {
-    // TODO: Case when some ommers are part of previous epoch, some - of current epoch
+    // Case when some ommers are part of previous epoch is not supported yet - so exception expected
+    val verifiedBlockId: ModifierId = getRandomBlockId(1000L)
+
+    // Mock other data
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    // Mock history
+    val history = mockHistory()
+
+    // Test 1: Valid Ommers in correct order from the previous epoch as VerifiedBlock
+    // Mock ommers
+    val ommers: Seq[Ommer] = Seq(
+      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 20)),
+      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 9))
+    )
+
+    // Mock block with ommers
+    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
+    var verifiedBlock: SidechainBlock = mock[SidechainBlock]
+    Mockito.when(verifiedBlock.id).thenReturn(verifiedBlockId)
+    val header = mock[SidechainBlockHeader]
+    Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
+    Mockito.when(verifiedBlock.header).thenReturn(header)
+    Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
+
+    Try {
+      consensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+    } match {
+      case Success(_) => jFail("Block with ommers form different epochs expected to be Invalid.")
+      case Failure(e) => e match {
+        case _: IllegalStateException =>
+        case otherException => throw otherException //jFail("Different exception expected")
+      }
+    }
   }
 
   private def getMockedOmmer(timestamp: Long): Ommer = {

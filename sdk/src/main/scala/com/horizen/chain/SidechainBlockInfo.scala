@@ -18,7 +18,8 @@ case class SidechainBlockInfo(height: Int,
                               parentId: ModifierId,
                               timestamp: Block.Timestamp,
                               semanticValidity: ModifierSemanticValidity,
-                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceHash], //mainchain block ids
+                              mainchainHeaderHashes: Seq[MainchainHeaderHash],
+                              mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash],
                               withdrawalEpochInfo: WithdrawalEpochInfo,
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
@@ -34,8 +35,12 @@ case class SidechainBlockInfo(height: Int,
 }
 
 object SidechainBlockInfo {
-  def mainchainReferencesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainBlockReferenceHash] = {
-    sidechainBlock.mainchainBlockReferences.map(d => byteArrayToMainchainBlockReferenceHash(d.header.hash))
+  def mainchainHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
+    sidechainBlock.mainchainHeaders.map(header => byteArrayToMainchainHeaderHash(header.hash))
+  }
+
+  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
+    sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
 }
 
@@ -46,18 +51,20 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     w.putBytes(idToBytes(obj.parentId))
     w.putLong(obj.timestamp)
     w.put(obj.semanticValidity.code)
-    w.putInt(obj.mainchainBlockReferenceHashes.size)
-    obj.mainchainBlockReferenceHashes.foreach(id => w.putBytes(id.data))
+    w.putInt(obj.mainchainHeaderHashes.size)
+    obj.mainchainHeaderHashes.foreach(id => w.putBytes(id.data))
+    w.putInt(obj.mainchainReferenceDataHeaderHashes.size)
+    obj.mainchainReferenceDataHeaderHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
   }
 
-  private def readMainchainReferencesIds(r: Reader): Seq[MainchainBlockReferenceHash] = {
-    var references: ArrayBuffer[MainchainBlockReferenceHash] = ArrayBuffer()
+  private def readMainchainHeadersHashes(r: Reader): Seq[MainchainHeaderHash] = {
+    var references: ArrayBuffer[MainchainHeaderHash] = ArrayBuffer()
     val length = r.getInt()
 
     (0 until length).foreach(_ => {
-      val bytes = r.getBytes(mainchainBlockReferenceHashSize)
-      references.append(byteArrayToMainchainBlockReferenceHash(bytes))
+      val bytes = r.getBytes(mainchainHeaderHashSize)
+      references.append(byteArrayToMainchainHeaderHash(bytes))
     })
 
     references
@@ -69,9 +76,11 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
     val timestamp = r.getLong()
     val semanticValidityCode = r.getByte()
-    val mainChainReferences = readMainchainReferencesIds(r)
+    val mainchainHeaderHashes = readMainchainHeadersHashes(r)
+    val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
-    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo)
+    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode),
+      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo)
   }
 }

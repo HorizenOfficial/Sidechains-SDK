@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -107,11 +107,11 @@ class SidechainJSONBOChecker {
   }
 
   def assertsOnBlockJson(json: JsonNode, block: SidechainBlock): Unit = {
-    assertEquals(8, json.elements().asScala.length)
+    assertEquals(json.toString, 8, json.elements().asScala.length)
     assertTrue(json.get("header").isObject)
-    assertTrue(json.get("mainchainBlockReferences").isArray)
+    assertTrue(json.get("mainchainBlockReferencesData").isArray)
     assertTrue(json.get("sidechainTransactions").isArray)
-    assertTrue(json.get("nextMainchainHeaders").isArray)
+    assertTrue(json.get("mainchainHeaders").isArray)
     assertTrue(json.get("ommers").isArray)
     assertTrue(json.get("timestamp").isNumber)
     assertTrue(json.get("parentId").isTextual)
@@ -125,7 +125,7 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("sidechainTransactionsMerkleRootHash").isTextual)
     assertTrue(headerJson.get("mainchainMerkleRootHash").isTextual)
     assertTrue(headerJson.get("ommersMerkleRootHash").isTextual)
-    assertTrue(headerJson.get("ommersNumber").isNumber)
+    assertTrue(headerJson.get("ommersCumulativeScore").isNumber)
     assertTrue(headerJson.get("forgerBox").isObject)
     assertTrue(headerJson.get("vrfProof").isTextual)
     assertTrue(headerJson.get("forgerBoxMerklePath").isTextual)
@@ -145,29 +145,18 @@ class SidechainJSONBOChecker {
 
 
 
-    val mainchainBlocks = json.get("mainchainBlockReferences").elements().asScala.toList
+    val mainchainBlockReferencesDataJson = json.get("mainchainBlockReferencesData").elements().asScala.toList
     val sidechainTransactions = json.get("sidechainTransactions").elements().asScala.toList
-    assertEquals(block.mainchainBlockReferences.size, mainchainBlocks.size)
+    assertEquals(block.mainchainBlockReferencesData.size, mainchainBlockReferencesDataJson.size)
     assertEquals(block.sidechainTransactions.size, sidechainTransactions.size)
 
-    val mcBlocks = block.mainchainBlockReferences
-    for (i <- mcBlocks.indices)
-      assertsOnMainchainBlockReferenceJson(mainchainBlocks(i), mcBlocks(i))
+    val mainchainBlockReferencesData = block.mainchainBlockReferencesData
+    for (i <- mainchainBlockReferencesData.indices)
+      assertsOnMainchainDataJson(mainchainBlockReferencesDataJson(i), mainchainBlockReferencesData(i))
 
     val scTransaction = block.sidechainTransactions
-    for (i <- mcBlocks.indices)
+    for (i <- scTransaction.indices)
       assertsOnTransactionJson(sidechainTransactions(i), scTransaction(i))
-  }
-
-  def assertsOnMainchainBlockReferenceJson(json: JsonNode, mc: MainchainBlockReference): Unit = {
-    assertEquals(3, json.elements().asScala.length)
-    assertTrue(json.get("header").isObject)
-    assertTrue(json.get("sidechainRelatedAggregatedTransaction").isObject)
-    assertTrue(json.get("merkleRoots").isArray)
-
-    assertsOnMainchainHeaderJson(json.get("header"), mc.header)
-    assertsOnMerklerootsJson(json.get("merkleRoots"), mc.sidechainsMerkleRootsMap)
-    assertsOnM2SCTransactionJson(json.get("sidechainRelatedAggregatedTransaction"), mc.sidechainRelatedAggregatedTransaction)
   }
 
   def assertsOnMainchainHeaderJson(json: JsonNode, header: MainchainHeader): Unit = {
@@ -192,6 +181,18 @@ class SidechainJSONBOChecker {
     assertEquals(json.get("bits").asInt(), header.bits)
     assertEquals(json.get("time").asInt(), header.time)
     assertEquals(json.get("version").asInt(), header.version)
+  }
+
+
+  def assertsOnMainchainDataJson(json: JsonNode, data: MainchainBlockReferenceData): Unit = {
+    assertEquals(3, json.elements().asScala.length)
+    assertTrue(json.get("headerHash").isTextual)
+    assertTrue(json.get("sidechainRelatedAggregatedTransaction").isObject)
+    assertTrue(json.get("merkleRoots").isArray)
+
+    assertEquals(BytesUtils.fromHexString(json.get("headerHash").asText()), data.headerHash)
+    assertsOnMerklerootsJson(json.get("merkleRoots"), data.sidechainsMerkleRootsMap)
+    assertsOnM2SCTransactionJson(json.get("sidechainRelatedAggregatedTransaction"), data.sidechainRelatedAggregatedTransaction)
   }
 
   def assertsOnM2SCTransactionJson(json: JsonNode, sdt: Option[MC2SCAggregatedTransaction]): Unit = {

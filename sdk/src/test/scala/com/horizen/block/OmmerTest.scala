@@ -29,30 +29,30 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
   @Test
   def semanticValidity(): Unit = {
-    // Test 1: ommer with valid SidechainBlockHeader and no headers at all must be valid
-    // Create Block with no MainchainBlockReferences and nextMainchainHeaders
+    // Test 1: ommer with valid SidechainBlockHeader and no headers&ommers at all must be valid
+    // Create Block with no MainchainBlockReferencesData and MainchainHeaders
     var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
     var ommer: Ommer = Ommer.toOmmer(block)
     assertTrue("Ommer expected to be semantically Valid.", ommer.semanticValidity(params))
 
 
-    // Test 2: ommers with valid SidechainBlockHeader, without mc block references headers but with defined RefDataHash must be invalid
+    // Test 2: ommers with valid SidechainBlockHeader, without mc block references data but with defined RefDataHash must be invalid
     var invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = Some(new Array[Byte](32)))
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
-    // Test 3: ommer with valid SidechainBlockHeader, RefHeaders and nextHeaders must be valid
+    // Test 3: ommer with valid SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders must be valid
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
     val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
-    // Create block with 2 MainchainBlockReferences and 1 nextMainchainHeader
+    // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
       123444L,
-      Seq(mcBlockRef1, mcBlockRef2),
+      Seq(mcBlockRef1.data),
       Seq(),  // No txs
-      Seq(mcBlockRef3.header),
+      Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
       forgerMetadata.rewardSecret,
       forgerBox,
@@ -66,89 +66,62 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     assertTrue("Ommer expected to be semantically Valid.", ommer.semanticValidity(params))
 
 
-    // Test 4: ommer with valid SidechainBlockHeader, RefHeaders and nextHeaders, but missed RefDataHash must be invalid
+    // Test 4: ommer with valid SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders, but missed RefDataHash must be invalid
     invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = None)
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
-    // Test 5: ommer with valid SidechainBlockHeader, RefHeaders and nextHeaders, but invalid RefDataHash must be invalid
+    // Test 5: ommer with SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders, but invalid RefDataHash must be invalid
     invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = Some(new Array[Byte](32)))
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
-    // Test 6: ommer with valid SidechainBlockHeader and non consistent chain of headers must be invalid
-    // RefHeaders part inconsistent
-    invalidOmmer = ommer.copy(mainchainReferencesHeaders = ommer.mainchainReferencesHeaders.reverse)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
-
-    // Next Headers part inconsistent
-    invalidOmmer = ommer.copy(nextMainchainHeaders = Seq(ommer.mainchainReferencesHeaders.head))
+    // Test 6: ommer with valid SidechainBlockHeader and non consistent chain of MainchainHeaders must be invalid
+    invalidOmmer = ommer.copy(mainchainHeaders = Seq(mcBlockRef1.header, mcBlockRef3.header, mcBlockRef4.header))
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
-    // Test 7: ommer with valid SidechainBlockHeader but with inconsistent headers must be invalid
-    // Without first RefHeader
-    invalidOmmer = ommer.copy(mainchainReferencesHeaders = ommer.mainchainReferencesHeaders.tail)
+    // Test 7: ommer with valid SidechainBlockHeader but with inconsistent MainchainHeaders must be invalid
+    // Without first MainchainHeaders
+    invalidOmmer = ommer.copy(mainchainHeaders = ommer.mainchainHeaders.tail)
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
-    // Without first nextHeader
-    invalidOmmer = ommer.copy(nextMainchainHeaders = ommer.nextMainchainHeaders.tail)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
-
-    // With one more nextHeader in the end
-    invalidOmmer = ommer.copy(nextMainchainHeaders = ommer.nextMainchainHeaders :+ mcBlockRef4.header)
+    // With one more MainchainHeader in the end
+    invalidOmmer = ommer.copy(mainchainHeaders = ommer.mainchainHeaders :+ mcBlockRef3.header)
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
-    // Test 8: ommer with valid SidechainBlockHeader that expects refs nad next headers, but no data in ommer must be invalid
-    invalidOmmer = Ommer(block.header, None, Seq(), Seq())
+    // Test 8: ommer with valid SidechainBlockHeader that expects MainchainHeaders, but no data in ommer must be invalid
+    // With no MainchainHeaders at all
+    invalidOmmer = ommer.copy(mainchainHeaders = Seq())
+    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    // With no MainchainBlockReferencesData and MainchainHeaders at all
+    invalidOmmer = ommer.copy(mainchainHeaders = Seq(), mainchainReferencesDataMerkleRootHashOption = None)
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
     // Test 9: ommer with semantically invalid SidechainBlockHeader must be invalid
     // Broke block header signature
-    invalidOmmer = ommer.copy(sidechainBlockHeader = block.header.copy(signature = new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))))
+    invalidOmmer = ommer.copy(header = block.header.copy(signature = new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))))
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
 
 
     // Test 10: ommer with valid SidechainBlockHeader, but broken mcHeader
     // Broke mc header
-    val invalidMcHeader = new MainchainHeader(
-      mcBlockRef3.header.mainchainHeaderBytes,
-      mcBlockRef3.header.version,
-      mcBlockRef3.header.hashPrevBlock,
-      mcBlockRef3.header.hashMerkleRoot,
-      mcBlockRef3.header.hashSCMerkleRootsMap,
+    val invalidMcHeader1 = new MainchainHeader(
+      mcBlockRef1.header.mainchainHeaderBytes,
+      mcBlockRef1.header.version,
+      mcBlockRef1.header.hashPrevBlock,
+      mcBlockRef1.header.hashMerkleRoot,
+      mcBlockRef1.header.hashSCMerkleRootsMap,
       -1, // broke time
-      mcBlockRef3.header.bits,
-      mcBlockRef3.header.nonce,
-      mcBlockRef3.header.solution
+      mcBlockRef1.header.bits,
+      mcBlockRef1.header.nonce,
+      mcBlockRef1.header.solution
     )
 
-    invalidOmmer = ommer.copy(nextMainchainHeaders = Seq(invalidMcHeader))
+    invalidOmmer = ommer.copy(mainchainHeaders = Seq(invalidMcHeader1, mcBlockRef2.header))
     assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
-
-
-    // Test 11: ommer with valid SidechainBlockHeader, with nextHeaders only must be valid
-    // Create block with no MainchainBlockReferences and 1 nextMainchainHeader
-    block = SidechainBlock.create(
-      parentId,
-      123444L,
-      Seq(),
-      Seq(),  // No txs
-      Seq(mcBlockRef3.header),
-      Seq(),  // No ommers
-      forgerMetadata.rewardSecret,
-      forgerBox,
-      vrfProof,
-      MerkleTreeFixture.generateRandomMerklePath(seed),
-      sidechainTransactionsCompanion,
-      params
-    ).get
-
-    ommer = Ommer.toOmmer(block)
-    assertTrue("Ommer expected to be semantically Valid.", ommer.semanticValidity(params))
-
   }
 
   @Test
@@ -177,37 +150,36 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
 
   @Test
   def serialization(): Unit = {
-    // Test 1: Ommer with SidechainBlockHeader and no references
+    // Test 1: Ommer with SidechainBlockHeader and no MainchainBlockReferencesData and MainchainHeaders
     var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
     var ommer: Ommer = Ommer.toOmmer(block)
     var bytes = ommer.bytes
 
-    // Test 1: try to deserializer valid bytes
     var serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
     assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
 
     var serializedOmmer = serializedOmmerTry.get
-    assertEquals("Ommer sidechainBlockHeader is different", ommer.sidechainBlockHeader.id, serializedOmmer.sidechainBlockHeader.id)
+    assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
     assertEquals("Ommer mainchainReferencesDataMerkleRootHashOption expected to be None",
       ommer.mainchainReferencesDataMerkleRootHashOption, serializedOmmer.mainchainReferencesDataMerkleRootHashOption)
-    assertEquals("Ommer mainchainReferencesHeaders is different", ommer.mainchainReferencesHeaders, serializedOmmer.mainchainReferencesHeaders)
-    assertEquals("Ommer nextMainchainHeaders is different", ommer.nextMainchainHeaders, serializedOmmer.nextMainchainHeaders)
+    assertEquals("Ommer MainchainHeaders seq is different", ommer.mainchainHeaders, serializedOmmer.mainchainHeaders)
+    assertEquals("Ommer ommers seq is different", ommer.ommers, serializedOmmer.ommers)
     assertArrayEquals("Ommer id is different", ommer.id, serializedOmmer.id)
     assertEquals("Ommer is different", ommer, serializedOmmer)
 
 
-    // Test 2: ommer with mc headers
+    // Test 2: ommer with MainchainBlockReferencesData and MainchainHeaders
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
     val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
-    // Create block with 2 MainchainBlockReferences and 1 nextMainchainHeader
+    // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
       123444L,
-      Seq(mcBlockRef1, mcBlockRef2),
+      Seq(mcBlockRef1.data),
       Seq(),  // No txs
-      Seq(mcBlockRef3.header),
+      Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
       forgerMetadata.rewardSecret,
       forgerBox,
@@ -221,7 +193,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     bytes = ommer.bytes
 
     // Set to true to regenerate regression data
-    if(true) {
+    if(false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/ommer_hex"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
@@ -231,14 +203,13 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
 
     serializedOmmer = serializedOmmerTry.get
-    assertEquals("Ommer sidechainBlockHeader is different", ommer.sidechainBlockHeader.id, serializedOmmer.sidechainBlockHeader.id)
+    assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, serializedOmmer.header.id)
     assertArrayEquals("Ommer mainchainReferencesDataMerkleRootHashOption is different",
       ommer.mainchainReferencesDataMerkleRootHashOption.get, serializedOmmer.mainchainReferencesDataMerkleRootHashOption.get)
-    assertEquals("Ommer mainchainReferencesHeaders is different", ommer.mainchainReferencesHeaders, serializedOmmer.mainchainReferencesHeaders)
-    assertEquals("Ommer nextMainchainHeaders is different", ommer.nextMainchainHeaders, serializedOmmer.nextMainchainHeaders)
+    assertEquals("Ommer MainchainHeaders seq is different", ommer.mainchainHeaders, serializedOmmer.mainchainHeaders)
+    assertEquals("Ommer ommers seq is different", ommer.ommers, serializedOmmer.ommers)
     assertArrayEquals("Ommer id is different", ommer.id, serializedOmmer.id)
     assertEquals("Ommer is different", ommer, serializedOmmer)
-
 
     // Test 3: try to deserialize broken bytes.
     assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
@@ -262,13 +233,13 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
     val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
-    // Create block with 2 MainchainBlockReferences and 1 nextMainchainHeader
+    // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     val block = SidechainBlock.create(
       parentId,
       123444L,
-      Seq(mcBlockRef1, mcBlockRef2),
+      Seq(mcBlockRef1.data),
       Seq(),  // No txs
-      Seq(mcBlockRef3.header),
+      Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
       forgerMetadata.rewardSecret,
       forgerBox,
@@ -284,11 +255,11 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     assertTrue("Ommer expected to by parsed.", deserializedOmmerTry.isSuccess)
 
     val deserializedOmmer = deserializedOmmerTry.get
-    assertEquals("Ommer sidechainBlockHeader is different", ommer.sidechainBlockHeader.id, deserializedOmmer.sidechainBlockHeader.id)
+    assertEquals("Ommer sidechainBlockHeader is different", ommer.header.id, deserializedOmmer.header.id)
     assertArrayEquals("Ommer mainchainReferencesDataMerkleRootHashOption is different",
       ommer.mainchainReferencesDataMerkleRootHashOption.get, deserializedOmmer.mainchainReferencesDataMerkleRootHashOption.get)
-    assertEquals("Ommer mainchainReferencesHeaders is different", ommer.mainchainReferencesHeaders, deserializedOmmer.mainchainReferencesHeaders)
-    assertEquals("Ommer nextMainchainHeaders is different", ommer.nextMainchainHeaders, deserializedOmmer.nextMainchainHeaders)
+    assertEquals("Ommer MainchainHeaders seq is different", ommer.mainchainHeaders, deserializedOmmer.mainchainHeaders)
+    assertEquals("Ommer ommers seq is different", ommer.ommers, deserializedOmmer.ommers)
     assertArrayEquals("Ommer id is different", ommer.id, deserializedOmmer.id)
     assertEquals("Ommer is different", ommer, deserializedOmmer)
   }
