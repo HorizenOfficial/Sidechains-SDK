@@ -116,7 +116,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgerBoxMerklePath.apply(header.forgerBox.id()))
     if (!forgerBoxIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash}")
+      throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
     }
 
     val stakeIsEnough = vrfProofCheckAgainstStake(header.forgerBox.value(), header.vrfProof, stakeConsensusEpochInfo.totalStake)

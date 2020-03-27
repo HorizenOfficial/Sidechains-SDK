@@ -47,7 +47,16 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     val mainchainHeaderBytes = generateBytes(rnd = rnd)
 
     val parent = parentOpt.getOrElse(lastGeneratedHash)
-    val headerWithNoSerialization = new MainchainHeader(mainchainHeaderBytes, 1, parent, generateBytes(), generateBytes(), Instant.now.getEpochSecond.toInt, util.Random.nextInt(), generateBytes(), generateBytes(1344))
+    val headerWithNoSerialization = new MainchainHeader(
+      mainchainHeaderBytes,
+      version = 1,
+      parent,
+      generateBytes(rnd = rnd),
+      generateBytes(rnd = rnd),
+      timestamp,
+      rnd.nextInt(),
+      generateBytes(rnd = rnd),
+      generateBytes(size = 1344, rnd = rnd))
 
     val header: MainchainHeader = blockHash match {
       case Some(hashData) => new MainchainHeader(

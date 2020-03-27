@@ -40,7 +40,7 @@ trait HistoryConsensusChecker extends CompanionsFixture {
         history.applyStakeConsensusEpochInfo(nextGenerator.lastBlockId, finishedEpochInfo.stakeConsensusEpochInfo)
         println(s"//////////////// Epoch ${nextGenerator.lastBlockId} had been ended ////////////////")
         val (nextNextGenerator, firstEpochBlockGenerationInfo) = nextGenerator.tryToGenerateCorrectBlock(generationRule.copy(mcReferenceIsPresent = Some(true)))
-        (Seq(nextGenerator, nextNextGenerator), firstEpochBlockGenerationInfo.right.get.block)
+        (Seq(nextNextGenerator), firstEpochBlockGenerationInfo.right.get.block)
       }
     }
   }
