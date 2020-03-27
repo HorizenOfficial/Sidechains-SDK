@@ -3,16 +3,18 @@ package com.horizen.fixtures.sidechainblock.generation
 import java.math.BigInteger
 import java.util.Random
 
+import com.horizen.fixtures.VrfGenerator
 import com.horizen.params.NetworkParams
+import com.horizen.vrf.VRFProof
 
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,
                                     merklePathFromPreviousEpoch: Boolean = false,
                                     consensusNonceShift: BigInteger = BigInteger.valueOf(0),
                                     consensusSlotShift: Int = 0,
-                                    stakeCheckCorruptionCheck: Boolean = false,
-                                    stakeCheckCorruption: Boolean => Boolean = {b => b},
-                                    forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None
+                                    stakeCheckCorruption: Boolean = false,
+                                    forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None,
+                                    forcedVrfProof: Option[VRFProof] = None
                                    ) {
   override def toString: String = {
     "CorruptedGenerationRules(" +
@@ -21,13 +23,18 @@ case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
     s"merklePathFromPreviousEpoch = ${merklePathFromPreviousEpoch}, " +
     s"consensusNonceShift = ${consensusNonceShift}, " +
     s"consensusSlotShift = ${consensusSlotShift}, " +
-    s"stakeCheckCorruptionCheck = ${stakeCheckCorruptionCheck}, " +
+    s"stakeCheckCorruptionCheck = ${stakeCheckCorruption} " +
     s"forgerBoxCorruptionRules = ${forgerBoxCorruptionRules})"
   }
+
+  def getStakeCheckCorruptionFunction: Boolean => Boolean =
+    if (stakeCheckCorruption) CorruptedGenerationRules.stakeInversion else CorruptedGenerationRules.stakeIdentity
 }
 
 object CorruptedGenerationRules {
   val emptyCorruptedGenerationRules: CorruptedGenerationRules = CorruptedGenerationRules()
+  val stakeInversion: Boolean => Boolean = b => !b
+  val stakeIdentity: Boolean => Boolean = b => b
 
   def corruptGenerationRules(rnd: Random, params: NetworkParams, generator: SidechainBlocksGenerator, initialRules: GenerationRules): GenerationRules = {
     initialRules.copy(corruption = CorruptedGenerationRules.generate(rnd, params))
@@ -70,13 +77,16 @@ object CorruptedGenerationRules {
     }
 
     if (rnd.nextInt(100) < 3) {
-      rule = rule.copy(stakeCheckCorruption = {b => !b}, stakeCheckCorruptionCheck = true)
+      rule = rule.copy(stakeCheckCorruption = true)
     }
 
     if (rnd.nextInt(100) < 5) {
       rule = rule.copy(forgerBoxCorruptionRules = Some(ForgerBoxCorruptionRules.generate(rnd, params)))
     }
 
+    if (rnd.nextInt(100) < 3) {
+      VrfGenerator.generateProof(rnd.nextInt())
+    }
 
     rule
   }

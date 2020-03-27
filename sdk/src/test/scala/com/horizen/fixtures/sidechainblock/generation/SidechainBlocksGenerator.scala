@@ -110,7 +110,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
         val slotWithShift = intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch))
         println(s"Process slot: ${slotWithShift}")
         val vrfMessage = buildVrfMessage(slotWithShift, consensusNonce)
-        val res = forgersSet.getEligibleForger(vrfMessage, totalStake, generationRules.corruption.stakeCheckCorruption)
+        val res = forgersSet.getEligibleForger(vrfMessage, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
         if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
         res.map{case(forger, proof) => (forger, proof, intToConsensusSlotNumber(currentSlot))}
       }
@@ -147,8 +147,9 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
   }
 
   private def generateBlock(possibleForger: PossibleForger, vrfProof: VRFProof, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
-    val parentId = lastBlockId
-    val timestamp = getTimeStampForEpochAndSlot(nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot
+    val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
+    val timestamp = generationRules.forcedTimestamp.getOrElse{
+      getTimeStampForEpochAndSlot(nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot}
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {
       //generate at least one MC block reference
@@ -184,7 +185,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
         possibleForger.merklePathInPrePreviousEpochOpt.get
       }
 
-    val vrfProofInBlock: VRFProof = vrfProof
+    val vrfProofInBlock: VRFProof = generationRules.corruption.forcedVrfProof.getOrElse(vrfProof)
 
     val tx: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1))
