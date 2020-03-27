@@ -29,7 +29,7 @@ object ProofOfWorkVerifier {
   }
 
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
-  // The order of MainchainHeaders (both active and orphaned) verified in block semantic validity method
+  // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
   def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
     if(block.mainchainHeaders.isEmpty)
       return true
