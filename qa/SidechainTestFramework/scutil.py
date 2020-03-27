@@ -587,3 +587,45 @@ Return the output of the Api REST request /block/generate
 """
 def sc_generate_blocks(sc_node, number=1):
     return sc_node.block_generate(number=number)
+
+
+def generate_forging_request(epoch, slot):
+    return json.dumps({"epochNumber": epoch, "slotNumber": slot})
+
+
+def get_next_epoch_slot(epoch, slot, slots_in_epoch):
+    next_slot = slot + 1
+    next_epoch = epoch
+
+    if next_slot > slots_in_epoch:
+        next_slot = 1
+        next_epoch += 1
+    return next_epoch, next_slot
+
+
+def generate_next_block(node, node_name):
+    forging_info = node.block_forgingInfo()["result"]
+    slots_in_epoch = forging_info["consensusSlotsInEpoch"]
+    best_slot = forging_info["bestSlotNumber"]
+    best_epoch = forging_info["bestEpochNumber"]
+
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+
+    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+
+    while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
+        print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
+        next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
+        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+
+    assert_true(forge_result.has_key("result"), "Error during block generation for SC {0}".format(node_name))
+    block_id = forge_result["result"]["blockId"]
+    print("Successfully forged block with id {blockId}".format(blockId = block_id))
+    return forge_result["result"]["blockId"]
+
+
+def generate_next_blocks(node, node_name, blocks_count):
+    blocks_ids = []
+    for i in range(blocks_count):
+        blocks_ids.append(generate_next_block(node, node_name))
+    return blocks_ids
