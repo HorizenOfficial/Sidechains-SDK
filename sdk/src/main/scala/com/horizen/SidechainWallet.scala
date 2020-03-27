@@ -16,7 +16,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import scorex.core.VersionTag
 import com.horizen.utils._
-import com.horizen.vrf.{VRFPublicKey, VRFSecretKey}
+import com.horizen.vrf.{VrfPublicKey, VrfSecretKey}
 
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -41,7 +41,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-case class ForgerDataWithSecrets(forgerBox: ForgerBox, merklePath: MerklePath, forgerBoxRewardPrivateKey: PrivateKey25519, vrfSecret: VRFSecretKey)
+case class ForgerDataWithSecrets(forgerBox: ForgerBox, merklePath: MerklePath, forgerBoxRewardPrivateKey: PrivateKey25519, vrfSecret: VrfSecretKey)
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
@@ -62,11 +62,11 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
 
   //@TODO Shall be changed ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret, shall be processed via addSecret()
-  val vrfSecretMap = new mutable.HashMap[VRFPublicKey, VRFSecretKey]()
+  val vrfSecretMap = new mutable.HashMap[VrfPublicKey, VrfSecretKey]()
 
   //remove it as well after fix SidechainCreation
   addSecret(SidechainCreation.genesisSecret)
-  vrfSecretMap.put(SidechainCreation.genesisVrfPair._2, SidechainCreation.genesisVrfPair._1)
+  vrfSecretMap.put(SidechainCreation.vrfPublicKey, SidechainCreation.vrfSecretKey)
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion

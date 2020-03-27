@@ -9,7 +9,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
-import com.horizen.vrf.{VRFPublicKey, VRFSecretKey}
+import com.horizen.vrf.{VrfPublicKey, VrfSecretKey}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
@@ -261,7 +261,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
-    case class LocallyGeneratedVrfSecret(secret: VRFSecretKey, public: VRFPublicKey)   //@TODO Shall be deleted ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
+    case class LocallyGeneratedVrfSecret(secret: VrfSecretKey, public: VrfPublicKey)   //@TODO Shall be deleted ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
 
   }
 }

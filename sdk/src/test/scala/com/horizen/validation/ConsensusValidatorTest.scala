@@ -6,7 +6,7 @@ import java.util.Random
 
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
-import com.horizen.consensus.HistoryConsensusChecker
+import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgerBoxCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.TestNetParams
@@ -23,8 +23,13 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, blocksCount: Int):
     (SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock]) = {
     var res: Option[(SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock])] =  None
+    var iteration = 0
     while (res.isEmpty) {
-      res = Try(createHistoryWithBlocksNoForks(new Random(rnd.nextLong()), epochSizeInSlots, slotLengthInSeconds, blocksCount)).toOption
+      val resTry = Try(createHistoryWithBlocksNoForks(new Random(rnd.nextLong()), epochSizeInSlots, slotLengthInSeconds, blocksCount))
+      if (resTry.isFailure) println(resTry.failed.get.printStackTrace())
+      res = resTry.toOption
+      iteration = iteration + 1
+      require(iteration < 500, "Cannot generate blocks chain for test, block generation is broken")
     }
     val generators = res.get._2
     (res.get._1, generators.take(generators.size - 1), res.get._3)
@@ -39,10 +44,11 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       consensusSecondsInSlot = slotLengthInSeconds,
       sidechainGenesisBlockTimestamp = genesisTimestamp)
 
-    val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(1000000L, rnd.nextInt(), initialParams)
+    val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(10000000000L, rnd.nextInt(), initialParams)
 
     var history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)
-    history.applyStakeConsensusEpochInfo(genesisBlock.id, genesisEndEpochInfo.stakeConsensusEpochInfo)
+    val fullConsensusEpochInfo = FullConsensusEpochInfo(genesisEndEpochInfo.stakeConsensusEpochInfo, genesisEndEpochInfo.nonceConsensusEpochInfo)
+    history.applyFullConsensusInfo(genesisBlock.id, fullConsensusEpochInfo)
     println(s"//////////////// Genesis epoch ${genesisBlock.id} had been ended ////////////////")
 
     val generators = mutable.Buffer(genesisGenerator)

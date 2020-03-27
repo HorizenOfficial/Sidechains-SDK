@@ -5,8 +5,8 @@ import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import com.horizen.vrf.VRFKeyGenerator;
-import com.horizen.vrf.VRFPublicKey;
+import com.horizen.vrf.VrfKeyGenerator;
+import com.horizen.vrf.VrfPublicKey;
 import org.junit.Test;
 import java.util.Random;
 
@@ -27,7 +27,7 @@ public class ForgerBoxTest extends BoxFixtureClass {
         Pair<byte[], byte[]> rewardKeyPair = Ed25519.createKeyPair(propositionKeyPair.getKey());
         PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
 
-        VRFPublicKey vrfPubKey = VRFKeyGenerator.generate(rewardKeyPair.getKey())._2();
+        VrfPublicKey vrfPubKey = VrfKeyGenerator.getInstance().generateSecret(rewardKeyPair.getKey()).publicImage();
         ForgerBox box = getForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
 
         assertEquals("Proposition shall be equal", proposition, box.proposition());

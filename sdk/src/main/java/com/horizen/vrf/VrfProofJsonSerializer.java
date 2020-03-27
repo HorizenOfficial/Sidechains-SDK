@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
-public class VRFProofSerializer extends JsonSerializer<VRFProof> {
+public class VrfProofJsonSerializer extends JsonSerializer<VrfProof> {
     @Override
-    public void serialize(VRFProof value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(VrfProof value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         gen.writeBinary(value.bytes());
     }
 }

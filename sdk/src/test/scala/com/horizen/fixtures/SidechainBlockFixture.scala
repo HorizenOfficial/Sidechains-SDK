@@ -15,7 +15,7 @@ import com.horizen.proof.Signature25519
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
-import com.horizen.vrf.{VRFKeyGenerator, VRFProof}
+import com.horizen.vrf.{VrfKeyGenerator, VrfProof}
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.bytesToId
@@ -42,7 +42,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
            mainchainBlocks: Seq[MainchainBlockReference] = null,
            sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
-           vrfProof: VRFProof = null,
+           vrfProof: VrfProof = null,
            merklePath: MerklePath = null,
            companion: SidechainTransactionsCompanion,
            params: NetworkParams,
@@ -78,8 +78,8 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                              timestamp: Option[Block.Timestamp] = None
                             ): SidechainBlock = {
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
-    val vrfKey = VRFKeyGenerator.generate(Array.fill(32)(basicSeed.toByte))._1
-    val vrfProof = vrfKey.prove(basicSeed.toInt % 10, Array.fill(32)((basicSeed + 1).toByte))
+    val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
+    val vrfProof = vrfKey.prove("Some non random string as input".getBytes)
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     SidechainBlock.create(

@@ -11,10 +11,9 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Utils;
 import com.horizen.utils.Pair;
-import com.horizen.vrf.VRFKeyGenerator;
-import com.horizen.vrf.VRFPublicKey;
-import com.horizen.vrf.VRFSecretKey;
-import scala.Tuple2;
+import com.horizen.vrf.VrfKeyGenerator;
+import com.horizen.vrf.VrfPublicKey;
+import com.horizen.vrf.VrfSecretKey;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -83,14 +82,14 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
     private static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
     public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
-    public static Tuple2<VRFSecretKey, VRFPublicKey> genesisVrfPair = VRFKeyGenerator.generate(genesisStakeKeys.getKey());
+    public static VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(genesisStakeKeys.getKey());
+    public static VrfPublicKey vrfPublicKey = vrfSecretKey.publicImage();
 
     public static long initialValue = 10000000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {
         PublicKey25519Proposition proposition = genesisSecret.publicImage();
         PublicKey25519Proposition rewardProposition = genesisSecret.publicImage();
-        VRFPublicKey vrfPubKey = genesisVrfPair._2;
-        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, rewardProposition, vrfPubKey);
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, rewardProposition, vrfPublicKey);
         long nonce = 42L;
 
         return forgerBoxData.getBox(nonce);

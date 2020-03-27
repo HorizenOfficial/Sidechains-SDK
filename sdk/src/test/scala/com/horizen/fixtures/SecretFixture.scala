@@ -6,7 +6,7 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.vrf.VRFPublicKey
+import com.horizen.vrf.{VrfKeyGenerator, VrfPublicKey}
 
 import scala.util.Random
 
@@ -93,16 +93,12 @@ trait SecretFixture {
     keyList
   }
 
-  def getVRFPublicKey: VRFPublicKey = {
-    val keyHashBytes = new Array[Byte](VRFPublicKey.length)
-    Random.nextBytes(keyHashBytes)
-
-    new VRFPublicKey(keyHashBytes)
+  def getVRFPublicKey: VrfPublicKey = {
+    VrfKeyGenerator.getInstance().generateSecret(Random.nextString(32).getBytes).publicImage()
   }
 
-  def getVRFPublicKey(seed: Long): VRFPublicKey = {
-    Random.setSeed(seed)
-    getVRFPublicKey
+  def getVRFPublicKey(seed: Long): VrfPublicKey = {
+    VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes).publicImage()
   }
 }
 

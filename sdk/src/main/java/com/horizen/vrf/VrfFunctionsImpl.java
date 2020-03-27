@@ -6,29 +6,25 @@ import com.google.common.primitives.Ints;
 import com.horizen.utils.Utils;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class VrfFunctionsImpl implements VrfFunctions {
     private static int vrfLength = 32; //sha256HashLen
     private static byte[] consensusHardcodedSaltString = "TEST".getBytes();
 
     @Override
-    public List<byte[]> generate(byte[] seed) {
+    public EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed) {
         byte[] secretAndPublic = new byte[vrfLength];
         Arrays.fill(secretAndPublic, (byte) Objects.hash(new BigInteger(1, seed)));
 
-        List<byte[]> res = new ArrayList<>();
-        res.add(Arrays.copyOf(secretAndPublic, secretAndPublic.length));
-        res.add(Arrays.copyOf(secretAndPublic, secretAndPublic.length));
+        EnumMap<KeyType, byte[]> res = new EnumMap<>(KeyType.class);
+        res.put(KeyType.PUBLIC, Arrays.copyOf(secretAndPublic, secretAndPublic.length));
+        res.put(KeyType.SECRET, Arrays.copyOf(secretAndPublic, secretAndPublic.length));
         return res;
     }
 
     @Override
-    public boolean verify(byte[] publicKey, int slotNumber, byte[] nonceBytes, byte[] proofBytes) {
-        byte[] messageBytes = buildVrfMessageAsBytes(slotNumber, nonceBytes);
+    public boolean verifyMessage(byte[] messageBytes, byte[] publicKey, byte[] proofBytes) {
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(messageBytes);
 
         byte[] decoded = Arrays.copyOf(proofBytes, proofBytes.length);
@@ -39,12 +35,12 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public boolean isValid() {
-        return true;
+    public boolean publicKeyIsValid(byte[] publicKey) {
+        return publicKey.length == vrfLength;
     }
 
     @Override
-    public byte[] proofBytesToVrfHashBytes(byte[] proof) {
+    public byte[] vrfProofToVrfHash(byte[] publicKey, byte[] message, byte[] proof) {
         assert (proof.length == vrfLength);
         int xorByte = proof[0] ^ proof[proof.length - 1];
 
@@ -56,9 +52,8 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public byte[] messageToVrfProofBytes(byte[] secretKey, int slotNumber, byte[] nonceBytes){
-        byte[] messageBytes = buildVrfMessageAsBytes(slotNumber, nonceBytes);
-        byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(messageBytes);
+    public byte[] createVrfProofForMessage(byte[] secretKey, byte[] publicKey, byte[] message){
+        byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(message);
 
         byte[] proofBytes = Arrays.copyOf(messageWithCorrectLength, messageWithCorrectLength.length);;
         for (int i = 0; i < proofBytes.length; ++i) {
@@ -66,10 +61,4 @@ public class VrfFunctionsImpl implements VrfFunctions {
         }
         return proofBytes;
     }
-
-    private static byte[] buildVrfMessageAsBytes(int slotNumber, byte[] nonceBytes) {
-        byte[] slotNumberAsBytes = Ints.toByteArray(slotNumber);
-        return Bytes.concat(slotNumberAsBytes, nonceBytes, consensusHardcodedSaltString);
-    }
-
 }

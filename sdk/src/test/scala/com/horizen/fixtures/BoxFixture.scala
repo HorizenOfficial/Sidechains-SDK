@@ -11,7 +11,7 @@ import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
-import com.horizen.vrf.VRFPublicKey
+import com.horizen.vrf.VrfPublicKey
 
 import scala.collection.JavaConverters._
 
@@ -166,7 +166,7 @@ trait BoxFixture
 
 
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
-                   rewardProposition: PublicKey25519Proposition, vrfPublicKey: VRFPublicKey): ForgerBox = {
+                   rewardProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): ForgerBox = {
     new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey).getBox(nonce)
   }
 

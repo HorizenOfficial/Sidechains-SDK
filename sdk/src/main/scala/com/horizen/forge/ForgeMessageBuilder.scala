@@ -7,7 +7,7 @@ import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.vrf.VRFProof
+import com.horizen.vrf.VrfProof
 import com.horizen.{ForgerDataWithSecrets, _}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -49,10 +49,13 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val availableForgersDataWithSecret: Seq[ForgerDataWithSecrets] = view.vault.getForgingDataWithSecrets(nextConsensusEpochNumber).getOrElse(Seq())
 
-    val forgingDataOpt: Option[(ForgerDataWithSecrets, VRFProof)] = availableForgersDataWithSecret
+    val forgingDataOpt: Option[(ForgerDataWithSecrets, VrfProof)] = availableForgersDataWithSecret
       .toStream
       .map(forgerDataWithSecrets => (forgerDataWithSecrets, forgerDataWithSecrets.vrfSecret.prove(vrfMessage))) //get secrets thus filter forger boxes not owned by node
-      .find{case (forgerDataWithSecrets, vrfProof) => vrfProofCheckAgainstStake(forgerDataWithSecrets.forgerBox.value(), vrfProof, totalStake)} //check our forger boxes against stake
+      .find{case (forgerDataWithSecrets, vrfProof) =>
+        val value = forgerDataWithSecrets.forgerBox.value()
+        val vrfPublicKey = forgerDataWithSecrets.forgerBox.vrfPubKey()
+        vrfProofCheckAgainstStake(vrfProof, vrfPublicKey, vrfMessage, value, totalStake)} //check our forger boxes against stake
 
     val forgingResult = forgingDataOpt
                                       .map{case (forgerDataWithSecrets, vrfProof) => forgeBlock(view, bestBlockId, nextBockTimestamp, forgerDataWithSecrets, vrfProof)}
@@ -62,7 +65,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     forgingResult
   }
 
-  protected def forgeBlock(view: View, parentBlockId: ModifierId, timestamp: Long, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VRFProof): ForgeResult = {
+  protected def forgeBlock(view: View, parentBlockId: ModifierId, timestamp: Long, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VrfProof): ForgeResult = {
     var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength

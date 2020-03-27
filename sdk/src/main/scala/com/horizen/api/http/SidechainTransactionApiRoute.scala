@@ -22,7 +22,7 @@ import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.BytesUtils
-import com.horizen.vrf.VRFPublicKey
+import com.horizen.vrf.VrfPublicKey
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -200,7 +200,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
             )
           )
 
@@ -364,7 +364,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
             )
           )
 
@@ -476,7 +476,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value),
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+        new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
       )
     )
 

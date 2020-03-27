@@ -1,11 +1,20 @@
 package com.horizen.vrf;
 
-import java.util.List;
+import java.util.EnumMap;
 
 public interface VrfFunctions {
-    List<byte[]> generate(byte[] seed);
-    boolean verify(byte[] publicKey, int slotNumber, byte[] nonceBytes, byte[] proofBytes);
-    boolean isValid();
-    byte[] proofBytesToVrfHashBytes(byte[] proof);
-    byte[] messageToVrfProofBytes(byte[] secretKey, int slotNumber, byte[] nonceBytes);
+    enum KeyType {
+        SECRET,
+        PUBLIC
+    }
+
+    EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed);
+
+    byte[] createVrfProofForMessage(byte[] secretKey, byte[] publicKey, byte[] message);
+
+    boolean verifyMessage(byte[] message, byte[] publicKey, byte[] proofBytes);
+
+    boolean publicKeyIsValid(byte[] publicKey);
+
+    byte[] vrfProofToVrfHash(byte[] publicKey, byte[] message, byte[] proof);
 }

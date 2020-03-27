@@ -14,12 +14,12 @@ import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.Views
-import com.horizen.vrf.{VRFKeyGenerator, VRFPublicKey}
+import com.horizen.vrf.{VrfKeyGenerator, VrfPublicKey}
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -76,12 +76,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def createVrfSecret: Route = (post & path("createVrfSecret")) {
     withNodeView { sidechainNodeView =>
       //replace to VRFKeyGenerator.generateNextSecret(wallet)
-      val secret = VRFKeyGenerator.generate(Random.nextLong().toString.getBytes())
+      val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
+      val public = secret.publicImage()
 
-      val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedVrfSecret(secret._1, secret._2)
+      val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedVrfSecret(secret, public)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreateVrfSecret(secret._2))
+          ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", Some(e)))
       }
@@ -146,7 +147,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespCreatePrivateKey25519(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateVrfSecret(proposition: VRFPublicKey) extends SuccessResponse
+  private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllPropositions(proptype: Option[String])
