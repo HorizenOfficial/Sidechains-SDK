@@ -28,7 +28,6 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
 
     val generators = mutable.IndexedSeq(genesisGenerator)
 
-
     (1 to 300)
       .foldLeft[(SidechainHistory, mutable.IndexedSeq[SidechainBlocksGenerator])]((history, generators)) { (acc, index) =>
         val currentHistory: SidechainHistory = acc._1

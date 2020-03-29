@@ -26,9 +26,13 @@ public final class ForgerBox
         return ForgerBoxId.id();
     }
 
-    @JsonProperty("vrfPubKey")
     public VrfPublicKey vrfPubKey() {
         return boxData.vrfPublicKey();
+    }
+
+    @JsonProperty("vrfPubKey")
+    public byte[] vrfPubKeyBytes() {
+        return boxData.vrfPublicKey().bytes();
     }
 
     @JsonProperty("rewardProposition")

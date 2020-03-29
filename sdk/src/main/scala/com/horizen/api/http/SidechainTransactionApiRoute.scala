@@ -339,7 +339,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-    * Create and sign a CoreTransaction, specifying inputs and outputs.
+    * Create and sign a CoreTransaction, specifying inputs and outputs, add that transaction to the memory pool
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def spendForgingStake: Route = (post & path("spendForgingStake")) {
@@ -386,11 +386,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
             })
 
-            val transaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
-            if (body.format.getOrElse(false))
-              ApiResponseUtil.toResponse(TransactionDTO(transaction))
-            else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+            val transaction: SidechainCoreTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
+            val txRepresentation: (SidechainTypes#SCBT => SuccessResponse) =
+              if (body.format.getOrElse(false)) {
+                tx => TransactionDTO(tx)
+              } else {
+                tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
+              }
+            validateAndSendTransaction(transaction, txRepresentation)
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -400,15 +403,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT) = {
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val defaultTransactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = {
+    transaction => TransactionIdDTO(transaction.id)
+  }
+
+  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
+                                         transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
     withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
           sidechainTransactionActorRef ? BroadcastTransaction(transaction),
           settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier) {
-          case Success(result) =>
-            ApiResponseUtil.toResponse(TransactionIdDTO(transaction.id))
+          case Success(_) =>
+            ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
           case Failure(exp) =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
             )
