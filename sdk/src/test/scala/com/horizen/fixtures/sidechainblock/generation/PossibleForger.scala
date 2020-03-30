@@ -1,8 +1,8 @@
 package com.horizen.fixtures.sidechainblock.generation
 
 import com.horizen.consensus.VrfMessage
+import com.horizen.proof.VrfProof
 import com.horizen.utils.MerklePath
-import com.horizen.vrf.VrfProof
 
 
 case class PossibleForger(forgingData: SidechainForgingData,

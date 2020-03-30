@@ -1,10 +1,9 @@
-package com.horizen.vrf;
+package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
-import com.horizen.secret.Secret;
-import com.horizen.secret.SecretCreator;
+import com.horizen.vrf.VrfLoader;
 import scorex.crypto.hash.Blake2b256;
 import com.horizen.vrf.VrfFunctions.KeyType;
 import java.util.EnumMap;
@@ -28,7 +27,7 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
 
     @Override
     public VrfSecretKey generateSecret(byte[] seed) {
-        EnumMap<VrfFunctions.KeyType, byte[]> keys = VrfLoader.vrfFunctions().generatePublicAndSecretKeys(seed);
+        EnumMap<KeyType, byte[]> keys = VrfLoader.vrfFunctions().generatePublicAndSecretKeys(seed);
         return new VrfSecretKey(keys.get(KeyType.SECRET), keys.get(KeyType.PUBLIC));
     }
 

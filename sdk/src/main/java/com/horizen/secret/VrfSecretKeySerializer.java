@@ -1,6 +1,5 @@
-package com.horizen.vrf;
+package com.horizen.secret;
 
-import com.horizen.secret.SecretSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 

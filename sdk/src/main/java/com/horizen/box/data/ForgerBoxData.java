@@ -5,7 +5,7 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
-import com.horizen.vrf.VrfPublicKey;
+import com.horizen.proposition.VrfPublicKey;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;

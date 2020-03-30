@@ -1,6 +1,5 @@
-package com.horizen.vrf;
+package com.horizen.proposition;
 
-import com.horizen.proposition.PropositionSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 

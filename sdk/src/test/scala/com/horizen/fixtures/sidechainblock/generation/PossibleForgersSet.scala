@@ -4,8 +4,8 @@ import java.util.{Random, ArrayList => JArrayList}
 
 import com.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.utils._
-import com.horizen.vrf.VrfProof
 import com.horizen.consensus._
+import com.horizen.proof.VrfProof
 
 import scala.collection.immutable.TreeMap
 

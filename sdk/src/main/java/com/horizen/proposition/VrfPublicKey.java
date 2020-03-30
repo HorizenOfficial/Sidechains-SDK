@@ -1,11 +1,16 @@
-package com.horizen.vrf;
+package com.horizen.proposition;
 
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PropositionSerializer;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.secret.VrfSecretKey;
+import com.horizen.serialization.Views;
+import com.horizen.vrf.VrfLoader;
+import com.horizen.proof.VrfProof;
 
 import java.util.Arrays;
 import java.util.Objects;
 
+@JsonView(Views.Default.class)
 public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     private final byte[] publicBytes;
 
@@ -24,6 +29,7 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
         return VrfLoader.vrfFunctions().publicKeyIsValid(pubKeyBytes());
     }
 
+    @JsonProperty("publicKey")
     @Override
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(publicBytes, publicBytes.length);

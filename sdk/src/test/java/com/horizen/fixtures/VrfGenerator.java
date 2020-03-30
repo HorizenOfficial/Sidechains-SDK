@@ -1,8 +1,8 @@
 package com.horizen.fixtures;
 
-import com.horizen.vrf.VrfKeyGenerator;
-import com.horizen.vrf.VrfProof;
-import com.horizen.vrf.VrfSecretKey;
+import com.horizen.secret.VrfKeyGenerator;
+import com.horizen.proof.VrfProof;
+import com.horizen.secret.VrfSecretKey;
 
 import java.util.Random;
 

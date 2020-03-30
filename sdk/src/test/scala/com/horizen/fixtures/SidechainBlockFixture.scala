@@ -11,11 +11,11 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
+import com.horizen.secret.VrfKeyGenerator
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
-import com.horizen.vrf.{VrfKeyGenerator, VrfProof}
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.bytesToId

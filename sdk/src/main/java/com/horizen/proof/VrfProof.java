@@ -1,7 +1,8 @@
-package com.horizen.vrf;
+package com.horizen.proof;
 
-import com.horizen.proof.ProofOfKnowledge;
-import com.horizen.proof.ProofSerializer;
+import com.horizen.proposition.VrfPublicKey;
+import com.horizen.secret.VrfSecretKey;
+import com.horizen.vrf.VrfLoader;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -45,7 +46,7 @@ public class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        com.horizen.vrf.VrfProof vrfProof = (com.horizen.vrf.VrfProof) o;
+        com.horizen.proof.VrfProof vrfProof = (com.horizen.proof.VrfProof) o;
         return Arrays.equals(proofBytes, vrfProof.proofBytes);
     }
 

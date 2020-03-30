@@ -4,7 +4,8 @@ import java.math.{BigDecimal, BigInteger, MathContext}
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.block.SidechainBlock
-import com.horizen.vrf.{VrfProof, VrfPublicKey}
+import com.horizen.proof.VrfProof
+import com.horizen.proposition.VrfPublicKey
 import scorex.util.ModifierId
 import supertagged.TaggedType
 

@@ -6,7 +6,7 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.vrf.VrfPublicKey;
+import com.horizen.proposition.VrfPublicKey;
 
 import java.util.Arrays;
 

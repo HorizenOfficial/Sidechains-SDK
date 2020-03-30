@@ -12,8 +12,8 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures._
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
@@ -368,7 +368,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   private def buildGenesisSidechainForgingData(initialValue: Long, seed: Long): SidechainForgingData = {
     val key = SidechainCreation.genesisSecret
     val forgerBox = SidechainCreation.getHardcodedGenesisForgerBox
-    SidechainForgingData(key, forgerBox, SidechainCreation.vrfSecretKey)
+    SidechainForgingData(key, forgerBox, SidechainCreation.vrfGenesisSecretKey)
   }
 
   private def buildGenesisMerkleTree(genesisForgerBox: ForgerBox): MerkleTree = {

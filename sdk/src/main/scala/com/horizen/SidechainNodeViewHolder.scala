@@ -9,7 +9,6 @@ import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
-import com.horizen.vrf.{VrfPublicKey, VrfSecretKey}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
@@ -87,12 +86,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
   }
 
-  //@TODO Shall be changed ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
-  protected def processLocallyGeneratedVrfSecret: Receive = {
-    case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedVrfSecret =>
-      vault().vrfSecretMap.put(ls.public, ls.secret)
-  }
-
   protected def processLocallyGeneratedSecret: Receive = {
     case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
       secretModify(ls.secret)
@@ -110,7 +103,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def receive: Receive = getCurrentSidechainNodeViewInfo orElse
     processLocallyGeneratedSecret orElse
-    processLocallyGeneratedVrfSecret orElse
     super.receive
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -261,8 +253,6 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
-    case class LocallyGeneratedVrfSecret(secret: VrfSecretKey, public: VrfPublicKey)   //@TODO Shall be deleted ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
-
   }
 }
 

@@ -18,11 +18,10 @@ import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proof.Proof
-import com.horizen.proposition._
+import com.horizen.proposition.{VrfPublicKey, _}
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.BytesUtils
-import com.horizen.vrf.VrfPublicKey
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._

@@ -1,4 +1,4 @@
-package com.horizen.vrf;
+package com.horizen.proof;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;

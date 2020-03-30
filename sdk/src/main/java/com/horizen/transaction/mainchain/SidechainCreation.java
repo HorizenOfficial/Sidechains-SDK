@@ -11,9 +11,9 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Utils;
 import com.horizen.utils.Pair;
-import com.horizen.vrf.VrfKeyGenerator;
-import com.horizen.vrf.VrfPublicKey;
-import com.horizen.vrf.VrfSecretKey;
+import com.horizen.secret.VrfKeyGenerator;
+import com.horizen.proposition.VrfPublicKey;
+import com.horizen.secret.VrfSecretKey;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -82,8 +82,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
     private static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
     public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
-    public static VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(genesisStakeKeys.getKey());
-    public static VrfPublicKey vrfPublicKey = vrfSecretKey.publicImage();
+    public static VrfSecretKey vrfGenesisSecretKey = VrfKeyGenerator.getInstance().generateSecret(genesisStakeKeys.getKey());
+    private static VrfPublicKey vrfPublicKey = vrfGenesisSecretKey.publicImage();
 
     public static long initialValue = 10000000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {

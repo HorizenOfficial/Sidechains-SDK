@@ -5,8 +5,8 @@ import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
-import com.horizen.vrf.VrfKeyGenerator;
-import com.horizen.vrf.VrfPublicKey;
+import com.horizen.secret.VrfKeyGenerator;
+import com.horizen.proposition.VrfPublicKey;
 import org.junit.Test;
 import java.util.Random;
 

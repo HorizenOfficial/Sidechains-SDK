@@ -1,17 +1,22 @@
-package com.horizen.vrf;
+package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.secret.Secret;
-import com.horizen.secret.SecretSerializer;
-import com.horizen.secret.SecretsIdsEnum;
+import com.horizen.vrf.VrfLoader;
+import com.horizen.proof.VrfProof;
+import com.horizen.proposition.VrfPublicKey;
 
 import java.util.Arrays;
 import java.util.Objects;
 
+import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKey;
+
 public class VrfSecretKey implements Secret {
+    public static final byte SECRET_TYPE_ID = VrfPrivateKey.id();
+    private static final VrfSecretKeySerializer SERIALIZER = VrfSecretKeySerializer.getSerializer();
+
     private final byte[] secretBytes;
     private final byte[] publicBytes;
 
@@ -37,7 +42,7 @@ public class VrfSecretKey implements Secret {
 
     @Override
     public byte secretTypeId() {
-        return SecretsIdsEnum.VrfPrivateKey.id();
+        return VrfPrivateKey.id();
     }
 
     @Override
@@ -65,7 +70,7 @@ public class VrfSecretKey implements Secret {
 
     @Override
     public SecretSerializer serializer() {
-        return null;
+        return SERIALIZER;
     }
 
     @Override

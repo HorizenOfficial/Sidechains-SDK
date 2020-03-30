@@ -5,7 +5,7 @@ import java.util.Random
 
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.params.NetworkParams
-import com.horizen.vrf.VrfProof
+import com.horizen.proof.VrfProof
 
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,

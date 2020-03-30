@@ -5,8 +5,9 @@ import java.util.Random
 import com.horizen.box.ForgerBox
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.consensus._
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.vrf.{VrfKeyGenerator, VrfProof, VrfPublicKey, VrfSecretKey}
+import com.horizen.proof.VrfProof
+import com.horizen.proposition.VrfPublicKey
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
 
 
 case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VrfSecretKey) {

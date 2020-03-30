@@ -9,13 +9,12 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof, VrfProofJsonSerializer}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerklePathSerializer}
-import com.horizen.vrf.{VrfProof, VrfProofJsonSerializer}
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.serialization.ScorexSerializer

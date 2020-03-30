@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import scorex.core.bytesToId
 import com.horizen.box._
-import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import java.util.{ArrayList => JArrayList, List => JList}
 
@@ -11,7 +11,6 @@ import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
-import com.horizen.vrf.VrfPublicKey
 
 import scala.collection.JavaConverters._
 

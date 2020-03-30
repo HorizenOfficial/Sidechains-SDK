@@ -7,10 +7,10 @@ import java.time.Instant
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock}
 import com.horizen.box.ForgerBox
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.utils.ListSerializer
-import com.horizen.vrf.{VrfKeyGenerator, VrfProof}
 import com.horizen.consensus._
+import com.horizen.secret.VrfKeyGenerator
 import org.junit.Test
 import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
