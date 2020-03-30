@@ -3,6 +3,7 @@ package com.horizen
 import java.math.{BigDecimal, BigInteger, MathContext}
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.block.SidechainBlock
 import com.horizen.vrf.VRFProof
 import scorex.util.ModifierId
 import supertagged.TaggedType
@@ -75,6 +76,8 @@ package object consensus {
       .remainder(forgerStakePercentPrecision) //got random number from 0 to forgerStakePercentPrecision - 1
       .divide(forgerStakePercentPrecision, stakeConsensusDivideMathContext) //got random number from 0 to 0.(9)
   }
+
+  def getMinimalHashOptFromBlock(block: SidechainBlock): Option[BigInteger] = getMinimalHashOpt(block.mainchainBlockReferencesData.map(_.headerHash))
 
   def getMinimalHashOpt(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
 }

@@ -10,6 +10,7 @@ import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, Genera
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
 import com.horizen.validation.ConsensusValidator
+import scorex.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -32,13 +33,29 @@ trait HistoryConsensusChecker extends CompanionsFixture {
       .get
   }
 
-  def generateBlock(generationRule: GenerationRules, generator: SidechainBlocksGenerator, history: SidechainHistory): (Seq[SidechainBlocksGenerator], SidechainBlock) = {
+
+  def defaultFunctionOnEpochEnd(history: SidechainHistory)(finishedEpochInfo: FinishedEpochInfo): Unit = {
+    val finishedEpochId: ConsensusEpochId = finishedEpochInfo.epochId
+    val nonce = history.calculateNonceForEpoch(finishedEpochId)
+    val stake = finishedEpochInfo.stakeConsensusEpochInfo
+    history.applyFullConsensusInfo(ModifierId @@ finishedEpochId.untag(ConsensusEpochId), FullConsensusEpochInfo(stake, nonce))
+    println(s"//////////////// Epoch ${finishedEpochId} had been ended ////////////////")
+  }
+
+  def generateBlock(generationRule: GenerationRules,
+                    generator: SidechainBlocksGenerator,
+                    history: SidechainHistory): (Seq[SidechainBlocksGenerator], SidechainBlock) = {
+    generateBlock(generationRule, generator, defaultFunctionOnEpochEnd(history) _)
+  }
+
+  def generateBlock(generationRule: GenerationRules,
+                    generator: SidechainBlocksGenerator,
+                    epochEndAction: FinishedEpochInfo => Unit = {_ => ()}): (Seq[SidechainBlocksGenerator], SidechainBlock) = {
     val (nextGenerator, generationResult) = generator.tryToGenerateCorrectBlock(generationRule)
     generationResult match {
       case Right(generatedBlockInfo) => (Seq(nextGenerator), generatedBlockInfo.block)
       case Left(finishedEpochInfo) => {
-        history.applyStakeConsensusEpochInfo(nextGenerator.lastBlockId, finishedEpochInfo.stakeConsensusEpochInfo)
-        println(s"//////////////// Epoch ${nextGenerator.lastBlockId} had been ended ////////////////")
+        epochEndAction(finishedEpochInfo)
         val (nextNextGenerator, firstEpochBlockGenerationInfo) = nextGenerator.tryToGenerateCorrectBlock(generationRule.copy(mcReferenceIsPresent = Some(true)))
         (Seq(nextNextGenerator), firstEpochBlockGenerationInfo.right.get.block)
       }

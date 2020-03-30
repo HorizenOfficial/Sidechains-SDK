@@ -3,12 +3,13 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, StakeConsensusEpochInfo}
+import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
+import com.horizen.vrf.{VRFPublicKey, VRFSecretKey}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
@@ -86,6 +87,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
   }
 
+  //@TODO Shall be changed ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
+  protected def processLocallyGeneratedVrfSecret: Receive = {
+    case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedVrfSecret =>
+      vault().vrfSecretMap.put(ls.public, ls.secret)
+  }
+
   protected def processLocallyGeneratedSecret: Receive = {
     case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
       secretModify(ls.secret)
@@ -101,7 +108,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
-  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse processLocallyGeneratedSecret orElse super.receive
+  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse
+    processLocallyGeneratedSecret orElse
+    processLocallyGeneratedVrfSecret orElse
+    super.receive
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
@@ -220,12 +230,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
           val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
-          val historyAfterStakeConsensusApply = updateInfo.history.applyStakeConsensusEpochInfo(
-            lastBlockInEpoch,
-            StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
-          )
+          val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
+          val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake)
+
+          val historyAfterConsensusInfoApply =
+            updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+
           val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
-          (historyAfterStakeConsensusApply, walletAfterStakeConsensusApply)
+          (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
         } else
           (updateInfo.history, updateInfo.wallet)
 
@@ -249,6 +261,8 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class LocallyGeneratedVrfSecret(secret: VRFSecretKey, public: VRFPublicKey)   //@TODO Shall be deleted ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret
+
   }
 }
 

@@ -7,6 +7,7 @@ import com.horizen.vrf
 
 // See https://tools.ietf.org/id/draft-goldbe-vrf-01.html#rfc.section.2 as functions description
 
+//@TODO Shall be changed ASAP: VRFSecret shall be reimplemented as extension of com.horizen.secret.Secret
 class VRFSecretKey(val key: Array[Byte]) {
   def prove(message: Array[Byte]): VRFProof = {
     val messageWithCorrectLength: Array[Byte] = Utils.doubleSHA256Hash(message)

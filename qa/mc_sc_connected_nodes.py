@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
 from SidechainTestFramework.scutil import check_regularbox_balance, connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, sc_generate_blocks, \
+    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
     check_mainchain_block_reference_info, check_wallet_balance
 
 """
@@ -105,7 +105,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
         first_mainchain_node_new_block = first_mainchain_node.getblock(block_hash)
 
         # SC node 1 forges 1 SC block
-        sc_generate_blocks(first_sidechain_node)
+        generate_next_blocks(first_sidechain_node, "first node", 1)
 
         # verify the block is included inside SC node 1
         first_sc_node_best_block = first_sidechain_node.block_best()["result"]

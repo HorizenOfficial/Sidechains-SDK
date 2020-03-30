@@ -85,7 +85,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
     public static Tuple2<VRFSecretKey, VRFPublicKey> genesisVrfPair = VRFKeyGenerator.generate(genesisStakeKeys.getKey());
 
-    public static long initialValue = 1000000L;
+    public static long initialValue = 10000000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {
         PublicKey25519Proposition proposition = genesisSecret.publicImage();
         PublicKey25519Proposition rewardProposition = genesisSecret.publicImage();

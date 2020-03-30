@@ -28,9 +28,13 @@ public final class ForgerBox
         return ForgerBoxId.id();
     }
 
-    @JsonProperty("vrfPubKey")
     public VRFPublicKey vrfPubKey() {
         return boxData.vrfPublicKey();
+    }
+
+    @JsonProperty("vrfPubKey")
+    public byte[] vrfPubKeyBytes() {
+        return boxData.vrfPublicKey().bytes();
     }
 
     @JsonProperty("rewardProposition")
@@ -59,6 +63,6 @@ public final class ForgerBox
         int forgerBoxDataOffset = Longs.BYTES;
         ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, bytes.length));
 
-        return new ForgerBox(boxData, nonce);
+        return boxData.getBox(nonce);
     }
 }

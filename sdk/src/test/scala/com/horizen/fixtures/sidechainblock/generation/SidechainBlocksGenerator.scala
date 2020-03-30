@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)
-case class FinishedEpochInfo(stakeConsensusEpochInfo: StakeConsensusEpochInfo, nonceConsensusEpochInfo: NonceConsensusEpochInfo)
+case class FinishedEpochInfo(epochId: ConsensusEpochId, stakeConsensusEpochInfo: StakeConsensusEpochInfo, nonceConsensusEpochInfo: NonceConsensusEpochInfo)
 
 //will be thrown if block generation no longer is possible, for example: nonce no longer can be calculated due no mainchain references in whole epoch
 class GenerationIsNoLongerPossible extends IllegalStateException
@@ -39,7 +39,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                         consensusDataStorage: ConsensusDataStorage,
                                         val lastBlockId: Block.BlockId,
                                         lastMainchainBlockId: ByteArrayWrapper,
-                                        nextFreeSlotNumber: ConsensusSlotNumber,
+                                        val nextFreeSlotNumber: ConsensusSlotNumber,
                                         nextEpochNumber: ConsensusEpochNumber,
                                         nextBlockNonceEpochId: ConsensusEpochId,
                                         nextBlockStakeEpochId: ConsensusEpochId,
@@ -122,7 +122,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                         usedSlot: ConsensusSlotNumber,
                                         newForgers: PossibleForgersSet): SidechainBlocksGenerator = {
 
-    val bestPowInNewBlock: Option[BigInteger] = getMinimalHashOpt(newBlock.mainchainBlockReferencesData.map(_.headerHash))
+    val bestPowInNewBlock: Option[BigInteger] = getMinimalHashOptFromBlock(newBlock)
     val newBestPow: Option[BigInteger] = (bestPowInNewBlock, currentBestMainchainPoW) match {
       case (None, _) => currentBestMainchainPoW
       case (_, None) => bestPowInNewBlock
@@ -326,7 +326,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                                   currentBestMainchainPoW = None,
                                                   rnd = rnd)
 
-    (newGenerator, FinishedEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+    (newGenerator, FinishedEpochInfo(finishedEpochId, stakeConsensusEpochInfo, nonceConsensusEpochInfo))
   }
 
 
@@ -359,7 +359,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val genesisSidechainBlock: SidechainBlock = generateGenesisSidechainBlock(params, possibleForger.forgingData, vrfProof, merklePathForGenesisSidechainForgingData)
 
-    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHashOpt(genesisSidechainBlock.mainchainBlockReferencesData.map(_.headerHash)).get)
+    val genesisNonce: ConsensusNonce = bigIntToConsensusNonce(getMinimalHashOptFromBlock(genesisSidechainBlock).get)
     val nonceInfo = NonceConsensusEpochInfo(genesisNonce)
     val stakeInfo = StakeConsensusEpochInfo(genesisMerkleTree.rootHash(), possibleForger.forgingData.forgerBox.value())
     val consensusDataStorage = createConsensusDataStorage(genesisSidechainBlock.id, nonceInfo, stakeInfo)
@@ -379,7 +379,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       currentBestMainchainPoW = None,
       rnd = random)
 
-    (networkParams, genesisSidechainBlock, genesisGenerator, possibleForger.forgingData, FinishedEpochInfo(stakeInfo, nonceInfo))
+    (networkParams, genesisSidechainBlock, genesisGenerator, possibleForger.forgingData, FinishedEpochInfo(blockIdToEpochId(genesisSidechainBlock.id), stakeInfo, nonceInfo))
   }
 
   private def buildGenesisSidechainForgingData(initialValue: Long, seed: Long): SidechainForgingData = {

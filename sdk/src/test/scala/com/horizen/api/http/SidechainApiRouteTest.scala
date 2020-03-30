@@ -1,12 +1,10 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.{lang, util}
+import java.util
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
-import akka.http.scaladsl.server.RouteConcatenation._
-import akka.http.scaladsl.server.Directives.{path, post, _}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
@@ -15,15 +13,12 @@ import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
-import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.params.MainNetParams
-import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.forge.Forger
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
+import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -167,11 +162,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case TryGetBlockTemplate =>
-          if (sidechainApiMockConfiguration.getShould_forger_TryGetBlockTemplate_reply())
-            sender ! Try(genesisBlock)
-          else sender ! Failure(new Exception(s"Unable to collect information for block template creation."))
-
+        case Forger.ReceivableMessages.StopForging =>
       }
       TestActor.KeepRunning
     }
