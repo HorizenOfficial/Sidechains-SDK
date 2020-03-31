@@ -48,6 +48,8 @@ final class ActiveChain private(private val sidechainCache: ElementsChain[Modifi
 
   def mcReferenceDataMetadataByMcHash(mainchainHeaderHash: MainchainHeaderHash): Option[MainchainHeaderMetadata] = mainchainReferenceDataCache.dataById(mainchainHeaderHash)
 
+  def bestMainchainHeaderHash: Option[MainchainHeaderHash] = mainchainHeadersCache.bestId
+
   // Mixed data retrieval
   def heightByMcHeader(mainchainHeaderHash: MainchainHeaderHash): Option[Int] = {
     mainchainHeadersCache.dataById(mainchainHeaderHash).map(_.sidechainHeight)

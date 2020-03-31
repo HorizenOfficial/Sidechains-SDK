@@ -13,7 +13,11 @@ trait MainchainNodeChannel {
 
   def getBlockByHash(hash: String): Try[MainchainBlockReference]
 
-  def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[Seq[String]]
+  def getBlockHashesAfterHeight(height: Int, limit: Int): Try[Seq[String]]
+
+  def getBlockHashesAfterHash(hash: String, limit: Int): Try[Seq[String]]
+
+  def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[(Int, Seq[String])]
 
   def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit]
 

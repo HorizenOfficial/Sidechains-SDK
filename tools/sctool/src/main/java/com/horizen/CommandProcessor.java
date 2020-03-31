@@ -7,6 +7,7 @@ import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
 import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
+import com.horizen.box.ForgerBox;
 import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
@@ -22,7 +23,10 @@ import com.horizen.secret.PrivateKey25519Serializer;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
+import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
+import com.horizen.vrf.VRFProof;
+import com.horizen.vrf.VRFSecretKey;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -200,6 +204,14 @@ public class CommandProcessor {
             SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
 
+            // TODO: hardcoded
+            ForgerBox forgerBox = SidechainCreation.getHardcodedGenesisForgerBox();
+            PrivateKey25519 forgerSecret = SidechainCreation.genesisSecret;
+            byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
+            VRFSecretKey vrfSecret = SidechainCreation.genesisVrfPair._1();
+            VRFProof vrfProof  = vrfSecret.prove(vrfMessage);
+            MerklePath mp = new MerklePath(new ArrayList<>());
+
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
@@ -207,10 +219,10 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
-                    key,
-                    null,
-                    null,
-                    null,
+                    forgerSecret,
+                    forgerBox,
+                    vrfProof,
+                    mp,
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()

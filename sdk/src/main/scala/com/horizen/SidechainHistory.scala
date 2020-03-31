@@ -3,7 +3,7 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -462,6 +462,46 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   override def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainHeader] = {
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
+  }
+
+  def getBestMainchainHeaderInfo: Option[MainchainHeaderInfo] = storage.getBestMainchainHeaderInfo
+
+  def getMainchainHeaderInfoByHeight(height: Int): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHeight(height)
+
+  def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHash(mainchainHeaderHash)
+
+  def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = storage.getBestMainchainBlockReferenceDataInfo
+
+  def getMainchainBlockReferenceDataInfoByHeight(height: Int): Option[MainchainBlockReferenceDataInfo] = storage.getMainchainBlockReferenceDataInfoByHeight(height)
+
+  def getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceDataInfo] = storage.getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash)
+
+  def getMainchainHashesLocator: Seq[MainchainHeaderHash] = storage.getMainchainHashesLocator
+
+  // first - the most recent hash, last - the oldest hash
+  def getMainchainHashes(best: Array[Byte], last: Array[Byte]): Seq[MainchainHeaderHash] = {
+    val bestHeight = storage.getMainchainHeaderInfoByHash(best)
+      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash ${best} not found."))
+      .height
+    val lastHeight = storage.getMainchainHeaderInfoByHash(last)
+      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash ${last} not found."))
+      .height
+    require(bestHeight >= lastHeight, "Best hash must lead to the higher MainchainHeader than the last one.")
+
+    val indexes: Seq[Int] = lastHeight to bestHeight
+    storage.getMainchainHashes(indexes)
+  }
+
+  def missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = {
+    val bestMainchainReferenceDataHeight: Int = getBestMainchainBlockReferenceDataInfo.get.height
+    val bestMainchainHeaderHeight: Int = getBestMainchainHeaderInfo.get.height
+
+    if(bestMainchainHeaderHeight == bestMainchainReferenceDataHeight)
+      Seq()
+    else {
+      val missedDataIndexes = bestMainchainReferenceDataHeight to bestMainchainHeaderHeight
+      storage.getMainchainHashes(missedDataIndexes)
+    }
   }
 
   def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): SidechainHistory = {

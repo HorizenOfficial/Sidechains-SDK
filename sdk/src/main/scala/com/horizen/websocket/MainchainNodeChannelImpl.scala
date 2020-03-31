@@ -9,10 +9,13 @@ import scala.concurrent.{Await, Future}
 
 case class GetBlockByHeightRequestPayload(height: Int) extends RequestPayload
 case class GetBlockByHashRequestPayload(hash: String) extends RequestPayload
+case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) extends RequestPayload
+case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
+case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 
 
@@ -38,12 +41,29 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     MainchainBlockReference.create(blockBytes, params).get
   }
 
-  override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[Seq[String]] = Try {
+  def getBlockHashesAfterHeight(height: Int, limit: Int): Try[Seq[String]] = Try {
+    val future: Future[BlocksResponsePayload] =
+      client.sendRequest(1, GetBlocksAfterHeightRequestPayload(height, limit), classOf[BlocksResponsePayload])
+
+    val response: BlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
+    response.hashes
+  }
+
+  def getBlockHashesAfterHash(hash: String, limit: Int): Try[Seq[String]] = Try {
+    val future: Future[BlocksResponsePayload] =
+      client.sendRequest(1, GetBlocksAfterHashRequestPayload(hash, limit), classOf[BlocksResponsePayload])
+
+    val response: BlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
+    response.hashes
+  }
+
+
+  override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[(Int, Seq[String])] = Try {
     val future: Future[NewBlocksResponsePayload] =
       client.sendRequest(2, GetNewBlocksRequestPayload(locatorHashes, limit), classOf[NewBlocksResponsePayload])
 
     val response: NewBlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
-    response.hashes
+    (response.height, response.hashes)
   }
 
   override def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit] = {
