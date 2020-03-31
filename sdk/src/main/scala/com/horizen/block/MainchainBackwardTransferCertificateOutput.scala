@@ -8,13 +8,8 @@ import scorex.util.serialization.{Reader, Writer}
 case class MainchainBackwardTransferCertificateOutput
   (outputBytes: Array[Byte],
    pubKeyHash: Array[Byte],
-   amount: Long,
-   fee: Long = 0)
+   amount: Long)
 {
-
-  def originalAmount: Long = {
-    amount + fee
-  }
 
   def size: Int = outputBytes.length
 

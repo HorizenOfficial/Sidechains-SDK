@@ -26,7 +26,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
     new Array[Byte](0), new Array[Byte](0))
   private val initialMainchainBlockReference =
-    new MainchainBlockReference(initialMainchainBlockReferenceHeader, None, None, None)
+    new MainchainBlockReference(initialMainchainBlockReferenceHeader, None, None, (None, None), None)
   private var lastGeneratedHash: ByteArrayWrapper = initialMainchainBlockReferenceHeader.hash
 
 
@@ -51,7 +51,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       headerWithNoSerialization.nonce,
       headerWithNoSerialization.solution)
 
-    val newReference = new MainchainBlockReference(header, None, None, None) {
+    val newReference = new MainchainBlockReference(header, None, None, (None, None), None) {
       override def semanticValidity(params: NetworkParams): Boolean = true
 
       override lazy val hash: Array[Byte] = blockHash match {
@@ -69,7 +69,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       val mainchainHeaderBytes: Array[Byte] = new Array[Byte](16)
       util.Random.nextBytes(mainchainHeaderBytes)
       val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null, null, 0, util.Random.nextInt(), null, null)
-      new MainchainBlockReference(header, null, null, null)
+      new MainchainBlockReference(header, None, None, (None, None), None)
   }
 
   def generateMainchainReferences(generated: Seq[MainchainBlockReference] = Seq(), parent: Option[ByteArrayWrapper] = None): Seq[MainchainBlockReference] = {

@@ -14,6 +14,7 @@ case class MainchainBackwardTransferCertificate
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
    totalAmount: Long,
+   fee: Long,
    outputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
@@ -51,6 +52,9 @@ object MainchainBackwardTransferCertificate {
     val totalAmount: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
+    val fee: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
+    currentOffset += 8
+
     val outputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += outputCount.size()
 
@@ -70,13 +74,8 @@ object MainchainBackwardTransferCertificate {
     val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val totalFee: Long = totalAmount - outputs.map(_.amount).sum
-    val fee = totalFee / outputs.size
-
-    val outputsWithFee = outputs.map(o => MainchainBackwardTransferCertificateOutput(o.outputBytes, o.pubKeyHash, o.amount, fee))
-
     new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, outputsWithFee)
+      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, outputs)
 
   }
 
