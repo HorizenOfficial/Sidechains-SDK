@@ -52,13 +52,6 @@ class SidechainHashList
       )
     )
 
-    val t1 = BytesUtils.toHexString(transactionMerkleRoot)
-    val b1 = BytesUtils.toHexString(backwardMerkleRoot)
-    val t2 = BytesUtils.toHexString(txsHash)
-    val w1 = BytesUtils.toHexString(withdrawalCertificateHash.getOrElse(SidechainHashList.MAGIC_SC_STRING))
-    val sci = BytesUtils.toHexString(sidechainId)
-    val s1 = BytesUtils.toHexString(scHash)
-
     scHash
   }
 
@@ -111,8 +104,6 @@ class SidechainHashMap
         shl.addWithdrawalCertificateHash(certificateHash)
         sidechainHashMap.put(sidechainId, shl)
     }
-
-    val cb = BytesUtils.toHexString(certificate.certificateBytes)
 
     this
   }

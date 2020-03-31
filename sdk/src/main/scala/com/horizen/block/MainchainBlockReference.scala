@@ -88,10 +88,6 @@ class MainchainBlockReference(
 
         val sidechainMerkleRoot = sidechainHashMap.getMerkleRoot(sidechainId)
 
-        val m0 = BytesUtils.toHexString(sidechainMerkleRoot)
-        val m1 = BytesUtils.toHexString(mproof.get.apply(sidechainMerkleRoot))
-        val m2 = BytesUtils.toHexString(header.hashSCMerkleRootsMap)
-
         if (!util.Arrays.equals(header.hashSCMerkleRootsMap, mproof.get.apply(sidechainMerkleRoot)))
           return false
 
