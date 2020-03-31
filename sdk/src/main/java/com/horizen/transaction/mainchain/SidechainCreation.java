@@ -41,6 +41,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     @Override
     public byte[] bytes() {
         return Bytes.concat(
+                Ints.toByteArray(output.size()),
                 output.sidechainCreationOutputBytes(),
                 containingTxHash,
                 Ints.toByteArray(index)
@@ -48,13 +49,17 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {
-        if(bytes.length < 36 + MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE())
-            throw new IllegalArgumentException("Input data corrupted.");
 
         int offset = 0;
 
+        int sidechainCreationSize = BytesUtils.getInt(bytes, offset);
+        offset += 4;
+
+        if(bytes.length < 40 + sidechainCreationSize)
+            throw new IllegalArgumentException("Input data corrupted.");
+
         MainchainTxSidechainCreationCrosschainOutput output = MainchainTxSidechainCreationCrosschainOutput.create(bytes, offset).get();
-        offset += MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE();
+        offset += sidechainCreationSize;
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;

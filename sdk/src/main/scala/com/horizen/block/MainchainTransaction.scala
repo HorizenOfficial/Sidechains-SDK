@@ -85,7 +85,7 @@ object MainchainTransaction {
       currentOffset += creationOutputsNumber.size()
       for (i <- 1 to creationOutputsNumber.value().intValue()) {
         val output = MainchainTxSidechainCreationCrosschainOutput.create(transactionBytes, currentOffset).get
-        currentOffset += MainchainTxSidechainCreationCrosschainOutput.SIDECHAIN_CREATION_OUTPUT_SIZE
+        currentOffset += output.size
         crosschainOutputs = crosschainOutputs :+ output
       }
 

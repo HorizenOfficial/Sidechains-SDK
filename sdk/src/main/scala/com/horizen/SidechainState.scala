@@ -98,7 +98,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
             for (o <- certificate.outputs)
               if (!withdrawalRequests.exists(r => {
                 util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
-                  r.value().equals(o.originalAmount)
+                  r.value().equals(o.amount)
                 }))
               throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
         case None =>
