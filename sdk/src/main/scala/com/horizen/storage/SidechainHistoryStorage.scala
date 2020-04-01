@@ -228,7 +228,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {
-    getMainchainBlockReferenceDataInfoByHeight(activeChain.heightOfMcHeaders)
+    getMainchainBlockReferenceDataInfoByHeight(activeChain.heightOfMcReferencesData)
   }
 
   def getMainchainBlockReferenceDataInfoByHeight(mainchainHeight: Int): Option[MainchainBlockReferenceDataInfo] = {

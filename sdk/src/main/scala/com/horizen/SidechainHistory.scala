@@ -499,7 +499,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     if(bestMainchainHeaderHeight == bestMainchainReferenceDataHeight)
       Seq()
     else {
-      val missedDataIndexes = bestMainchainReferenceDataHeight to bestMainchainHeaderHeight
+      val missedDataIndexes = bestMainchainReferenceDataHeight + 1 to bestMainchainHeaderHeight
       storage.getMainchainHashes(missedDataIndexes)
     }
   }
