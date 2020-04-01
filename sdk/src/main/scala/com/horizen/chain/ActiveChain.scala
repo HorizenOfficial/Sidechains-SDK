@@ -5,10 +5,10 @@ import scorex.util.ModifierId
 import scala.collection.mutable.ArrayBuffer
 
 
-final class ActiveChain private(private val sidechainCache: ElementsChain[ModifierId, SidechainBlockInfo],
-                                private val mainchainHeadersCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
-                                private val mainchainReferenceDataCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
-                                private val mainchainCreationBlockHeight: Int = 1) {
+final class ActiveChain private(sidechainCache: ElementsChain[ModifierId, SidechainBlockInfo],
+                                mainchainHeadersCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
+                                mainchainReferenceDataCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
+                                mainchainCreationBlockHeight: Int = 1) {
 
   require(mainchainCreationBlockHeight > 0, "Mainchain creation block height height shall be at least 1")
   private val mainchainCreationBlockHeightDifference = mainchainCreationBlockHeight - 1
@@ -125,7 +125,7 @@ final class ActiveChain private(private val sidechainCache: ElementsChain[Modifi
     val preparedMainchainHeadersInfo = buildMainchainHeadersInfo(addedTipHeight, newTipInfo.mainchainHeaderHashes, mainchainHeaderParentHashOpt)
     preparedMainchainHeadersInfo.foreach { case (id, data) => mainchainHeadersCache.appendData(id, data) }
 
-    val preparedMainchainRefDataHeadersInfo = buildMainchainHeadersInfo(addedTipHeight, newTipInfo.mainchainReferenceDataHeaderHashes, mainchainHeaderParentHashOpt)
+    val preparedMainchainRefDataHeadersInfo = buildMainchainHeadersInfo(addedTipHeight, newTipInfo.mainchainReferenceDataHeaderHashes, mainchainRefDataParentHeaderHash)
     preparedMainchainRefDataHeadersInfo.foreach { case (id, data) => mainchainReferenceDataCache.appendData(id, data) }
   }
 
