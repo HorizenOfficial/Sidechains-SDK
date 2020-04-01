@@ -80,7 +80,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       allRefsHeadersHashes,
       allRefsDataHeadersHashes,
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        new SidechainBlock(null, null, refs.map(_.data), refs.map(_.header), null, null),
+        new SidechainBlock(null, null, allRefs.map(_.data), allRefs.map(_.header), null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params)
     )

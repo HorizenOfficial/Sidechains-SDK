@@ -3,9 +3,11 @@ package com.horizen.chain
 import java.io.{PrintWriter, StringWriter}
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
+import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.ModifierId
 
 import scala.collection.breakOut
@@ -458,6 +460,88 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     checkElementIsPresent(chain, thirdId, thirdData, 3, mainchainDataAfterSecond.size, mainchainDataAfterThird)
     checkElementIsBest(chain, thirdId, thirdData, 3)
     assertEquals("ChainFrom the beginning should contain all ids", Seq(firstId, secondId, thirdId), chain.chainAfter(firstId))
+  }
+
+  @Test
+  def anotherTest(): Unit = {
+    setSeed(testSeed+3)
+
+    // Create empty ActiveChain
+    val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
+
+    // Add genesis block info
+    val blockId0: ModifierId = getRandomModifier()
+    val blockId1: ModifierId = getRandomModifier()
+    val mcHash0: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcHash1: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val blockInfo1 = getBlockInfo(blockId0, Seq(mcHash1), Seq(mcHash1), 1)
+
+    addNewBestBlockIsSuccessful(chain, blockId1, blockInfo1, Some(mcHash0))
+    assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight, chain.heightOfMcHeaders)
+    assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight, chain.heightOfMcReferencesData)
+    assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash1), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
+    assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash1), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+
+    // Add block info with MainchainHeaders only
+    val blockId2: ModifierId = getRandomModifier()
+    val mcHash2: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcHash3: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val blockInfo2 = getBlockInfo(blockId1, Seq(mcHash2, mcHash3), Seq(), 2)
+
+    addNewBestBlockIsSuccessful(chain, blockId2, blockInfo2, Some(mcHash1))
+    assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 2, chain.heightOfMcHeaders)
+    assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight, chain.heightOfMcReferencesData)
+    assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash3), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
+    assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash1), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+
+
+    // Add block info with MainchainRefData only
+    val blockId3: ModifierId = getRandomModifier()
+    val blockInfo3 = getBlockInfo(blockId2, Seq(), Seq(mcHash2, mcHash3), 3)
+
+    addNewBestBlockIsSuccessful(chain, blockId3, blockInfo3, None)
+    assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 2, chain.heightOfMcHeaders)
+    assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight + 2, chain.heightOfMcReferencesData)
+    assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash3), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
+    assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash3), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+
+
+    // Add block with 3 MainchainHeader and 2 corresponding MainchainRefData
+    val blockId4: ModifierId = getRandomModifier()
+    val mcHash4: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcHash5: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcHash6: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val blockInfo4 = getBlockInfo(blockId3, Seq(mcHash4, mcHash5, mcHash6), Seq(mcHash4, mcHash5), 4)
+
+    addNewBestBlockIsSuccessful(chain, blockId4, blockInfo4, Some(mcHash3))
+    assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 5, chain.heightOfMcHeaders)
+    assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight + 4, chain.heightOfMcReferencesData)
+    assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash6), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
+    assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash5), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+
+    // Add block with 1 MainchainHeader and 2 MainchainRefData (1 for previous headers and 1 for current one)
+    val blockId5: ModifierId = getRandomModifier()
+    val mcHash7: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val blockInfo5 = getBlockInfo(blockId4, Seq(mcHash7), Seq(mcHash6, mcHash7), 5)
+
+    addNewBestBlockIsSuccessful(chain, blockId5, blockInfo5, Some(mcHash6))
+    assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 6, chain.heightOfMcHeaders)
+    assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight + 6, chain.heightOfMcReferencesData)
+    assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash7), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
+    assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash7), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+  }
+
+  private def getBlockInfo(parentId: ModifierId, headers: Seq[MainchainHeaderHash], refData: Seq[MainchainHeaderHash], height: Int): SidechainBlockInfo = {
+    SidechainBlockInfo(
+      height,
+      height,
+      parentId,
+      1000,
+      ModifierSemanticValidity.Unknown,
+      headers,
+      refData,
+      WithdrawalEpochInfo(0, height)
+    )
   }
 
   //@Test
