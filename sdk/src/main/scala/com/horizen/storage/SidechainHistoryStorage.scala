@@ -182,29 +182,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     new MainchainBlockReferenceInfo(mcHash, referenceInfo.getParentId, mcBlockHeight, idToBytes(mainchainHeaderSidechainBlockId), idToBytes(mainchainReferenceDataSidechainBlockId))
   }
 
-  // Create MC Locator sequence from most recent Mainchain Header to MC Creation Block
-  // Locator in Bitcoin style
-  def getMainchainHashesLocator: Seq[MainchainHeaderHash] = {
-    val firstMcRefHeight: Int = params.mainchainCreationBlockHeight
-
-    var indexes: Seq[Int] = Seq()
-    var step: Int = 1
-    var index: Int = activeChain.heightOfMcHeaders
-
-    while (index > firstMcRefHeight) {
-      indexes = indexes :+ index
-      // Push top 10 indexes first, then back off exponentially.
-      if(indexes.size >= 10)
-        step *= 2
-      index -= step
-    }
-    // Push the genesis mc ref index.
-    indexes = indexes :+ firstMcRefHeight
-
-    getMainchainHashes(indexes)
-  }
-
-  def getMainchainHashes(indexes: Seq[Int]): Seq[MainchainHeaderHash] = {
+  def getMainchainHashesForIndexes(indexes: Seq[Int]): Seq[MainchainHeaderHash] = {
     indexes.flatMap(index => activeChain.mcHashByMcHeight(index))
   }
 

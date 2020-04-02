@@ -37,8 +37,8 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
       val commonHashLocatorIndex: Int = locatorHashes.indexOf(commonHashHex)
       val commonHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(commonHashHex))
       val lastUnknownHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(locatorHashes(commonHashLocatorIndex - 1)))
-      // Get the list of MainchainHeader Hashes between last unknown point and previously found common point
-      val locator: Seq[String] = history.getMainchainHashes(lastUnknownHash, commonHash).map(baw => BytesUtils.toHexString(baw.data))
+      // Get the list of MainchainHeader Hashes between last unknown point and previously found common point. Order them from newest to oldest.
+      val locator: Seq[String] = history.getMainchainHashes(commonHash, lastUnknownHash).map(baw => BytesUtils.toHexString(baw.data)).reverse
 
       mainchainNodeChannel.getNewBlockHashes(locator, 1) match {
         case Success((height, hashes)) => (height, hashes.head)

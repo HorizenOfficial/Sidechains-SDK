@@ -11,7 +11,7 @@ import com.horizen.transaction.SidechainTransaction
 import com.horizen.vrf.VRFProof
 import com.horizen.{ForgerDataWithSecrets, _}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import scorex.util.{ModifierId, ScorexLogging}
 import com.horizen.chain._
 
 import scala.util.{Failure, Success, Try}
@@ -35,11 +35,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(view: View): ForgeResult = {
     log.info(s"Try to forge block for epoch ${nextConsensusEpochNumber} with slot ${nextConsensusSlotNumber}")
-    val branchPointInfo = getBranchPointInfo(view.history) match {
+    val branchPointInfo: BranchPointInfo = getBranchPointInfo(view.history) match {
       case Success(info) => info
       case Failure(ex) => return ForgeFailed(ex)
     }
-
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo = view.history.blockInfoById(parentBlockId)
     val parentBlockEpochAndSlot = timestampToEpochAndSlot(parentBlockInfo.timestamp)
@@ -73,9 +72,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   protected def getBranchPointInfo(history: SidechainHistory): Try[BranchPointInfo] = Try {
     val bestMainchainHeaderInfo = history.getBestMainchainHeaderInfo.get
 
-    val (firstKnownHashHeight: Int, headerHashes: Seq[MainchainHeaderHash]) =
+    val (bestKnownHashHeight: Int, newHeaderHashes: Seq[MainchainHeaderHash]) =
       mainchainSynchronizer.getMainchainDivergentSuffix(history, MainchainSynchronizer.MAX_BLOCKS_REQUEST) match {
-        case Success((height, hashes)) => (height, hashes)
+        case Success((height, hashes)) => (height, hashes.tail) // hashes contains also the hash of best known block
         case Failure(ex) =>
           // For regtest Forger is allowed to produce next block in case if there is no MC Node connection
           if (params.isInstanceOf[RegTestParams])
@@ -85,8 +84,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
-    if(firstKnownHashHeight == bestMainchainHeaderInfo.height) {
-      val branchPointId = history.bestBlockId
+    if(bestKnownHashHeight == bestMainchainHeaderInfo.height) {
+      val branchPointId: ModifierId = history.bestBlockId
       var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
@@ -94,7 +93,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       val maxReferenceDataNumber: Int = Math.min(SidechainBlock.MAX_MC_BLOCKS_NUMBER, withdrawalEpochMcBlocksLeft) // to not to include mcblock references from different withdrawal epochs
 
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
-      val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ headerHashes.tail
+      val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
 
       val mainchainReferenceDataHeaderHashesToInclude = nextMainchainReferenceDataHeaderHashes.take(maxReferenceDataNumber)
       val mainchainHeadersHashesToInclude = mainchainReferenceDataHeaderHashesToInclude.filter(hash => !missedMainchainReferenceDataHeaderHashes.contains(hash))
@@ -102,25 +101,27 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       BranchPointInfo(branchPointId, mainchainReferenceDataHeaderHashesToInclude, mainchainHeadersHashesToInclude)
     }
     else { // Some blocks in SC Active chain contains orphaned MainchainHeaders
-      val orphanedMainchainHeadersNumber: Int = bestMainchainHeaderInfo.height - firstKnownHashHeight
-      val newMainchainHeadersNumber = headerHashes.size - 1
+      val orphanedMainchainHeadersNumber: Int = bestMainchainHeaderInfo.height - bestKnownHashHeight
+      val newMainchainHeadersNumber = newHeaderHashes.size
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
         ForgeFailed(new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders."))
       }
 
-      val commonMainchainHeaderInfo = history.getMainchainHeaderInfoByHeight(firstKnownHashHeight).get
-      val commonSidechainBlockId: ModifierId = commonMainchainHeaderInfo.sidechainBlockId
-      val commonSidechainBlockInfo: SidechainBlockInfo = history.blockInfoById(commonSidechainBlockId)
+      val firstOrphanedHashHeight: Int = bestKnownHashHeight + 1
+      val firstOrphanedMainchainHeaderInfo = history.getMainchainHeaderInfoByHeight(firstOrphanedHashHeight).get
+      val orphanedSidechainBlockId: ModifierId = firstOrphanedMainchainHeaderInfo.sidechainBlockId
+      val orphanedSidechainBlockInfo: SidechainBlockInfo = history.blockInfoById(orphanedSidechainBlockId)
 
-      if (commonSidechainBlockInfo.mainchainHeaderHashes.last.equals(commonMainchainHeaderInfo.hash)) {
-        // Common MainchainHeader is the last header inside the containing SidechainBlock, so no orphaned MainchainHeaders present in SidechainBlock
-        BranchPointInfo(commonSidechainBlockId, Seq(), headerHashes.tail)
+      if (firstOrphanedMainchainHeaderInfo.hash.equals(orphanedSidechainBlockInfo.mainchainHeaderHashes.head)) {
+        // First Unknown MainchainHeader is the first header inside the containing SidechainBlock, so no common MainchainHeaders present in SidechainBlock before it
+        BranchPointInfo(orphanedSidechainBlockInfo.parentId, Seq(), newHeaderHashes)
       }
       else {
-        //  SidechainBlock also contains some orphaned MainchainHeaders
-        BranchPointInfo(commonSidechainBlockInfo.parentId, Seq(),
-          commonSidechainBlockInfo.mainchainHeaderHashes.takeWhile(hash => !hash.equals(commonMainchainHeaderInfo.hash)) ++ headerHashes.tail)
+        // SidechainBlock also contains some common MainchainHeaders before first orphaned MainchainHeader
+        // So we should add that common MainchainHeaders to the SidechainBlock as well
+        BranchPointInfo(orphanedSidechainBlockInfo.parentId, Seq(),
+          orphanedSidechainBlockInfo.mainchainHeaderHashes.takeWhile(hash => !hash.equals(firstOrphanedMainchainHeaderInfo.hash)) ++ newHeaderHashes)
       }
     }
   }
@@ -164,7 +165,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     var ommers: Seq[Ommer] = Seq()
     var blockId = view.history.bestBlockId
     while (blockId != branchPointInfo.branchPointId) {
-      val block = view.history.getBlockById(blockId).get() // TODO: replace with method blockById
+      val block = view.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }

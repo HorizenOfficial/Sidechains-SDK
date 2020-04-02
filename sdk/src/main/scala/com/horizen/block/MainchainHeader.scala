@@ -21,7 +21,7 @@ import scala.util.Try
 // hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
 //
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("hash", "hashHex"))
+@JsonIgnoreProperties(Array("mainchainHeaderBytes", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
                        val version: Int,                      // 4 bytes

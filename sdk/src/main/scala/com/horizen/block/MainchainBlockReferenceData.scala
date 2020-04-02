@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("headerHash"))
+@JsonIgnoreProperties(Array("hash"))
 case class MainchainBlockReferenceData(
                                    headerHash: Array[Byte],
                                    sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],

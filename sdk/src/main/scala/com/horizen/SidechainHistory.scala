@@ -476,10 +476,31 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   def getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceDataInfo] = storage.getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash)
 
-  def getMainchainHashesLocator: Seq[MainchainHeaderHash] = storage.getMainchainHashesLocator
+  // Create MC Locator sequence from most recent Mainchain Header to MC Creation Block
+  // Locator in Bitcoin style
+  def getMainchainHashesLocator: Seq[MainchainHeaderHash] = {
+    val firstMainchainHeaderHeight: Int = getMainchainCreationBlockHeight
 
-  // first - the most recent hash, last - the oldest hash
-  def getMainchainHashes(best: Array[Byte], last: Array[Byte]): Seq[MainchainHeaderHash] = {
+    var indexes: Seq[Int] = Seq()
+    var step: Int = 1
+    var index: Int = storage.getBestMainchainHeaderInfo.get.height
+
+    while (index > firstMainchainHeaderHeight) {
+      indexes = indexes :+ index
+      // Push top 10 indexes first, then back off exponentially.
+      if (indexes.size >= 10)
+        step *= 2
+      index -= step
+    }
+    // Push the genesis mc ref index.
+    indexes = indexes :+ firstMainchainHeaderHeight
+
+    storage.getMainchainHashesForIndexes(indexes)
+  }
+
+  // Retrieve the sequence of MainchainHeader hashes from last hash to best hash.
+  // best - the most recent hash, last - the oldest hash
+  def getMainchainHashes(last: Array[Byte], best: Array[Byte]): Seq[MainchainHeaderHash] = {
     val bestHeight = storage.getMainchainHeaderInfoByHash(best)
       .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash ${best} not found."))
       .height
@@ -489,7 +510,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     require(bestHeight >= lastHeight, "Best hash must lead to the higher MainchainHeader than the last one.")
 
     val indexes: Seq[Int] = lastHeight to bestHeight
-    storage.getMainchainHashes(indexes)
+    storage.getMainchainHashesForIndexes(indexes)
   }
 
   def missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = {
@@ -500,7 +521,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       Seq()
     else {
       val missedDataIndexes = bestMainchainReferenceDataHeight + 1 to bestMainchainHeaderHeight
-      storage.getMainchainHashes(missedDataIndexes)
+      storage.getMainchainHashesForIndexes(missedDataIndexes)
     }
   }
 

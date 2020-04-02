@@ -93,11 +93,11 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     /////////// Timestamp related checks //////////////
     //check block in the future
     println("Test blockInFuture")
-    val blockInFuture = generateBlockInTheFuture(lastGenerator)
+    /*val blockInFuture = generateBlockInTheFuture(lastGenerator)
     history.append(blockInFuture).failed.get match {
       case expected: IllegalArgumentException => assert(expected.getMessage == "Block had been generated in the future")
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }
+    }*/
 
     println("Test blockGeneratedBeforeParent")
     val blockGeneratedBeforeParent = generateBlockWithTimestampBeforeParent(lastGenerator, blocks.last.timestamp)

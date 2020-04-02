@@ -13,6 +13,7 @@ import scorex.util.idToBytes
 import scala.collection.JavaConverters._
 
 @JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("id"))
 case class Ommer(
                   override val header: SidechainBlockHeader,
                   mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]], // Empty if no mainchainBlockReferencesData present in block.
