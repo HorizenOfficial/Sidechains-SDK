@@ -25,11 +25,8 @@ object MainchainBackwardTransferCertificateOutput {
     val amount: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
     currentOffset += 8
 
-    val scriptLength: VarInt = BytesUtils.getVarInt(outputBytes, currentOffset)
-    currentOffset += scriptLength.size()
-
-    val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + 32))
-    currentOffset += scriptLength.value().intValue()
+    val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + 20))
+    currentOffset += 20
 
     new MainchainBackwardTransferCertificateOutput(outputBytes.slice(offset, currentOffset), pubKeyHash, amount)
   }

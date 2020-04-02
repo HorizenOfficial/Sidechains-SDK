@@ -278,6 +278,7 @@
 					<include>new_mc_blocks/mc_block_create_3_sidechains</include>
 					<include>new_mc_blocks/mc_block_forward_transfer_2_sidechains</include>
 					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2</include>
 				</includes>
 			</testResource>
 		</testResources>

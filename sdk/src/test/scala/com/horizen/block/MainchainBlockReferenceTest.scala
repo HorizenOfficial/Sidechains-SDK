@@ -468,7 +468,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   @Test
   def blockBackwardTransfer3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_forward_transfer_3_backward_transfer").getLines().next()
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
     //Check for sidechain 1
@@ -484,14 +484,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1))
 
-    assertEquals("Block Hash is different.", "02e4f55eb6caddf3c8c67423ef8f4775bf32b9e4a5ba6cdde3c0ae9d2ee1b754", mcblock1.hashHex)
+    assertEquals("Block Hash is different.", "052245ab070530d3fe1d8a0a2d046a44e6832aa8e18b27abe06ba050b86e15f5", mcblock1.hashHex)
     assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "05c67454a79d2538af806b3f93e1535912092f80061edd036b572720f3222245", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "0df6e04ec862b2ccd54f6c234e33e985f86dd0a28156c16e2d79c19b710bc993", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "bb742377c11e086559b85106879c5bdfe91920c3c76e0adb8e13d6724a6f4f86", BytesUtils.toHexString(mcblock1.header.hashSCMerkleRootsMap))
-    assertEquals("Block creation time is different", 1585220559, mcblock1.header.time)
+    assertEquals("Hash of previous block is different.", "0d1137bc2a9091f467c4bf6aba338e9d6e33063f2c4747ac5a9410b89bddbb9e", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "020b25b78bce05dd1db07a0cfdcf5004060f87df6b70460ad4ed2da0641e7faa", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "322c0573aef56746b906bb2465447c4ac99a6893b941fdf617a250427980694b", BytesUtils.toHexString(mcblock1.header.hashSCMerkleRootsMap))
+    assertEquals("Block creation time is different", 1585805421, mcblock1.header.time)
     assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "000075a2fd1cc118e12822c8db2ef49a36070bdfdb2889d9066c28d903580026", BytesUtils.toHexString(mcblock1.header.nonce))
+    assertEquals("Block nonce is different.", "0000031e3c4a69efb24131bc539edec01d1d478034161273b74808be3bc7003b", BytesUtils.toHexString(mcblock1.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
 
     assertTrue("Block must not contain transaction.", mcblock1.sidechainRelatedAggregatedTransaction.isEmpty)
@@ -513,7 +513,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1))
 
-    assertTrue("Block must contain transaction.", mcblock2.sidechainRelatedAggregatedTransaction.isDefined)
+    assertTrue("Block must not contain transaction.", mcblock2.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock2.backwardTransferCertificate.isDefined)
     assertTrue("Block must contain proof.", mcblock2.mproof.isDefined)
     assertTrue("Block must not contain proof for left neighbor.", mcblock2.proofOfNoData._1.isEmpty)
@@ -532,7 +532,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3))
 
-    assertTrue("Block must not contain transaction.", mcblock3.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain transaction.", mcblock3.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must contain certificate.", mcblock3.backwardTransferCertificate.isDefined)
     assertTrue("Block must contain proof.", mcblock3.mproof.isDefined)
     assertTrue("Block must not contain proof for left neighbor.", mcblock3.proofOfNoData._1.isEmpty)
