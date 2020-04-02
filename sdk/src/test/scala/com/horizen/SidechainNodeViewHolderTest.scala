@@ -1,31 +1,30 @@
 package com.horizen
 
-import akka.actor.{ActorRef, ActorSystem}
-import com.horizen.block.SidechainBlock
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures._
-import com.horizen.transaction.TransactionSerializer
-import org.junit.{Before, Test}
-import org.scalatest.junit.JUnitSuite
-import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 import java.util
+import java.util.{HashMap => JHashMap}
 
+import akka.actor.{ActorRef, ActorSystem}
+import akka.testkit.TestProbe
+import com.horizen.block.SidechainBlock
+import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo, intToConsensusEpochNumber}
+import com.horizen.fixtures._
+import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.MerkleTree
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import scorex.core.consensus.History.ProgressInfo
+import org.scalatest.junit.JUnitSuite
+import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.{ModifierTypeId, VersionTag, idToVersion}
+import scorex.core.consensus.History.ProgressInfo
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
+import scorex.core.{VersionTag, idToVersion}
+import scorex.util.ModifierId
 
 import scala.util.Success
-import org.junit.Assert.{assertEquals, assertTrue, fail}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import akka.testkit.TestProbe
-import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo}
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.MerkleTree
-import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.util.ModifierId
-import com.horizen.consensus.intToConsensusEpochNumber
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
@@ -43,7 +42,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
-  val genesisBlock: SidechainBlock = generateGenesisBlock(sidechainTransactionsCompanion)
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val params: NetworkParams = RegTestParams()
 
   @Before
@@ -74,7 +73,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     var stateNotificationExecuted: Boolean = false
     Mockito.when(state.getCurrentConsensusEpochInfo).thenReturn({
       stateNotificationExecuted = true
-      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("1".getBytes()))
+      val merkleTree = MerkleTree.createMerkleTree(util.Arrays.asList("StringShallBe32LengthOrTestFail.".getBytes()))
       (genesisBlock.id, ConsensusEpochInfo(intToConsensusEpochNumber(0), merkleTree, 0L))
     })
 

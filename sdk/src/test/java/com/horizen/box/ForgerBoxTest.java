@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.ForgerBoxFixture;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.Ed25519;
@@ -38,9 +39,9 @@ public class ForgerBoxTest extends BoxFixtureClass {
 
     @Test
     public void equalsAndHashTest() {
-        ForgerBox left = ForgerBoxGenerator.generateForgerBox(1);
+        ForgerBox left = ForgerBoxFixture.generateForgerBox(1)._1;
         ForgerBox sameAsLeft = getForgerBox(left.proposition(),  left.nonce(), left.value(), left.rewardProposition(), left.vrfPubKey());
-        ForgerBox right = ForgerBoxGenerator.generateForgerBox(2);
+        ForgerBox right = ForgerBoxFixture.generateForgerBox(2)._1;
 
         assertEquals("Forger boxes with same data shall be equals", left, sameAsLeft);
         assertNotEquals("Forger boxes with same data shall be the same", left, right);
@@ -48,7 +49,7 @@ public class ForgerBoxTest extends BoxFixtureClass {
     }
 
     private void checkSerialization(int seed) {
-        ForgerBox initial = ForgerBoxGenerator.generateForgerBox(seed);
+        ForgerBox initial = ForgerBoxFixture.generateForgerBox(seed)._1;
 
         byte[] serialized = initial.bytes();
         ForgerBox parsed = ForgerBox.parseBytes(serialized);

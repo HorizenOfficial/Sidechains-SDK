@@ -205,6 +205,9 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     key,
+                    null,
+                    null,
+                    null,
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()

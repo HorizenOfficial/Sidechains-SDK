@@ -25,7 +25,7 @@ class SidechainBlockTest
 
   @Test
   def testToJson(): Unit = {
-    val sb = generateGenesisBlock(sidechainTransactionsCompanion)
+    val sb = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
@@ -57,6 +57,4 @@ class SidechainBlockTest
     }
 
   }
-
-
 }

@@ -18,9 +18,13 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 
 
+trait SidechainBlockInfoProvider {
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo
+}
 
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
-  extends ScorexLogging {
+  extends SidechainBlockInfoProvider
+  with ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")
@@ -38,10 +42,10 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer(height)
 
-    activeChainBlocksInfo.append((bestBlockId, blockInfoById(bestBlockId).get))
+    activeChainBlocksInfo.append((bestBlockId, blockInfoById(bestBlockId)))
     while (activeChainBlocksInfo.last._2.height > 1) {
       val id = activeChainBlocksInfo.last._2.parentId
-      activeChainBlocksInfo.append((id, blockInfoById(id).get))
+      activeChainBlocksInfo.append((id, blockInfoById(id)))
     }
 
     val orderedChainBlocks = activeChainBlocksInfo.reverse
@@ -68,7 +72,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   def height: Int = heightOf(bestBlockId).getOrElse(0)
 
   def heightOf(blockId: ModifierId): Option[Int] = {
-    blockInfoById(blockId).map(_.height)
+    blockInfoOptionById(blockId).map(_.height)
   }
 
   def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(params.sidechainGenesisBlockId)
@@ -80,7 +84,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def bestBlockInfo: SidechainBlockInfo = {
     require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
-    blockInfoById(bestBlockId).get
+    blockInfoById(bestBlockId)
   }
 
   def blockById(blockId: ModifierId): Option[SidechainBlock] = {
@@ -94,7 +98,13 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     }
   }
 
-  def blockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = {
+  //Block info shall be in history storage, otherwise something going totally wrong
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo = {
+    blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block ${blockId}"))
+  }
+
+  //@TODO rework to return Try() or Either() for getting error description
+  def blockInfoOptionById(blockId: ModifierId): Option[SidechainBlockInfo] = {
     if (activeChain != null && activeChain.contains(blockId))
       return activeChain.blockInfoById(blockId)
 
@@ -109,19 +119,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     }
   }
 
-  def parentBlockId(blockId: ModifierId): Option[ModifierId] = {
-    blockInfoById(blockId) match {
-      case Some(info) => Some(info.parentId)
-      case None => None
-    }
-  }
+  def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)
 
-  def chainScoreFor(blockId: ModifierId): Option[Long] = {
-    blockInfoById(blockId) match {
-      case Some(info) => Some(info.score)
-      case None => None
-    }
-  }
+  def chainScoreFor(blockId: ModifierId): Option[Long] = blockInfoOptionById(blockId).map(_.score)
 
   def isInActiveChain(blockId: ModifierId): Boolean = activeChain.contains(blockId)
 
@@ -187,7 +187,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
-    blockInfoById(blockId) match {
+    blockInfoOptionById(blockId) match {
       case Some(info) => info.semanticValidity
       case None => ModifierSemanticValidity.Absent
     }
@@ -195,7 +195,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
     // if it's not a part of active chain, retrieve previous info from disk storage
-    val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id).get)
+    val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id))
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(

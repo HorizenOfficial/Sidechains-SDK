@@ -15,10 +15,10 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEp
 import scorex.util.ModifierId
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
-import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)

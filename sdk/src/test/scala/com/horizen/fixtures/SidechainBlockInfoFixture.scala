@@ -9,6 +9,7 @@ import scorex.util.{ModifierId, bytesToId}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.Random
 
 trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
@@ -38,8 +39,9 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       1,
       (1L << 32) + 1,
       getRandomModifier(),
+      Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      generateMainchainReferences(Seq(generateMainchainBlockReference()), parent = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
+      generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
       WithdrawalEpochInfo(1, 1)
     )
 
@@ -65,10 +67,11 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       parentSidechainBlockInfo.height + 1,
       parentSidechainBlockInfo.score + (refs.size.toLong << 32) + 1,
       parent,
+      Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      (refs ++ generateMainchainReferences(parent = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
+      (refs ++ generateMainchainReferences(parentOpt = parentData._2)).map(d => byteArrayToMainchainBlockReferenceId(d.hash)),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
-        new SidechainBlock(null, 0L, refs, null, null, null, null),
+        new SidechainBlock(null, 0L, refs, null, null, null, null, null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params)
     )

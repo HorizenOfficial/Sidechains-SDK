@@ -63,14 +63,14 @@ class SidechainJSONBOChecker {
     val unlockersJsonNode = json.get("unlockers").elements().asScala.toList
     assertEquals(transaction.unlockers().size(), unlockersJsonNode.size)
     val unlockers = transaction.unlockers()
-    for (i <- 0 to unlockers.size()-1)
+    for (i <- 0 until unlockers.size())
       assertsOnBoxUnlockerJson(unlockersJsonNode(i), unlockers.get(i))
 
     assertTrue(json.get("newBoxes").isArray)
     val newBoxesJsonNode = json.get("newBoxes").elements().asScala.toList
     assertEquals(transaction.newBoxes().size(), newBoxesJsonNode.size)
     val newBoxes = transaction.newBoxes()
-    for (i <- 0 to newBoxes.size()-1)
+    for (i <- 0 until newBoxes.size())
       assertsOnBoxJson(newBoxesJsonNode(i), newBoxes.get(i).asInstanceOf[Box[_]])
   }
 
@@ -106,21 +106,29 @@ class SidechainJSONBOChecker {
   }
 
   def assertsOnBlockJson(json: JsonNode, block: SidechainBlock): Unit = {
-    assertEquals(7, json.elements().asScala.length)
+    assertEquals(9, json.elements().asScala.length)
     assertTrue(json.get("parentId").isTextual)
     assertTrue(json.get("timestamp").isNumber)
     assertTrue(json.get("mainchainBlocks").isArray)
     assertTrue(json.get("sidechainTransactions").isArray)
-    assertTrue(json.get("forgerPublicKey").isObject)
+    assertTrue(json.get("forgerBox").isObject)
+    assertTrue(json.get("vrfProof").isTextual)
+    assertTrue(json.get("merklePath").isTextual)
+
     assertTrue(json.get("id").isTextual)
 
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)), json.get("parentId").asText())
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.id)), json.get("id").asText())
     assertEquals(block.timestamp.toLong, json.get("timestamp").asLong())
 
-    val forgerPublicKey = json.get("forgerPublicKey")
-    assertEquals(1, forgerPublicKey.elements().asScala.length)
-    assertTrue(forgerPublicKey.get("publicKey").isTextual)
+    val forgerBox = json.get("forgerBox")
+    val forgerBoxElementNames = forgerBox.fieldNames().asScala.toSet
+    assertEquals(7, forgerBoxElementNames.size)
+
+    val forgerBoxExpectedElements = Set("nonce", "id", "rewardProposition", "typeId", "vrfPubKey", "value", "proposition")
+    assertEquals(forgerBoxExpectedElements, forgerBoxElementNames)
+
+
 
     val mainchainBlocks = json.get("mainchainBlocks").elements().asScala.toList
     val sidechainTransactions = json.get("sidechainTransactions").elements().asScala.toList
@@ -128,11 +136,11 @@ class SidechainJSONBOChecker {
     assertEquals(block.sidechainTransactions.size, sidechainTransactions.size)
 
     val mcBlocks = block.mainchainBlocks
-    for (i <- 0 to mcBlocks.size-1)
+    for (i <- mcBlocks.indices)
       assertsOnMainchainBlockReferenceJson(mainchainBlocks(i), mcBlocks(i))
 
     val scTransaction = block.sidechainTransactions
-    for (i <- 0 to mcBlocks.size-1)
+    for (i <- mcBlocks.indices)
       assertsOnTransactionJson(sidechainTransactions(i), scTransaction(i))
   }
 

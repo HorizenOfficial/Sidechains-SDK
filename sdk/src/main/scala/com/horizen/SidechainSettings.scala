@@ -16,9 +16,7 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                mcBlockHeight: Int,
                                powData: String,
                                mcNetwork: String,
-                               withdrawalEpochLength: Int,
-                               consensusSecondsInSlot: Int,
-                               consensusSlotsInEpoch: Int
+                               withdrawalEpochLength: Int
                               )
 
 case class WalletSettings(seed: String,

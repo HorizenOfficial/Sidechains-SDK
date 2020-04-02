@@ -156,24 +156,25 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val aggTx = mcblock.sidechainRelatedAggregatedTransaction.get
     val newBoxes = aggTx.newBoxes()
     assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx.unlockers().size())
-    assertEquals("MC2SCAggTx new boxes size is different", 3, newBoxes.size())
+    assertEquals("MC2SCAggTx new boxes size is different", 3 + 1, //where +1 due hardcoded Forger box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
+      newBoxes.size())
 
-    assertTrue("MC2SCAggTx first box expected to be a RegularBox.", newBoxes.get(0).isInstanceOf[RegularBox])
-    var box = newBoxes.get(0).asInstanceOf[RegularBox]
+    assertTrue("MC2SCAggTx first box expected to be a RegularBox.", newBoxes.get(0 + 1).isInstanceOf[RegularBox]) //where +1 due hardcoded Forer box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
+    var box = newBoxes.get(0 + 1).asInstanceOf[RegularBox] //where +1 due hardcoded Forger box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
     assertEquals("MC2SCAggTx first box value is different", 10000000, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add1")),
       box.proposition())
 
-    assertTrue("MC2SCAggTx second box expected to be a RegularBox.", newBoxes.get(1).isInstanceOf[RegularBox])
-    box = newBoxes.get(1).asInstanceOf[RegularBox]
+    assertTrue("MC2SCAggTx second box expected to be a RegularBox.", newBoxes.get(1 + 1).isInstanceOf[RegularBox]) //where +1 is hardcoded Forer box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
+    box = newBoxes.get(1 + 1).asInstanceOf[RegularBox] //where +1 due hardcoded Forger box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
     assertEquals("MC2SCAggTx first box value is different", 20000000, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add2")),
       box.proposition())
 
-    assertTrue("MC2SCAggTx third box expected to be a RegularBox.", newBoxes.get(2).isInstanceOf[RegularBox])
-    box = newBoxes.get(2).asInstanceOf[RegularBox]
+    assertTrue("MC2SCAggTx third box expected to be a RegularBox.", newBoxes.get(2 + 1).isInstanceOf[RegularBox]) //where +1 is hardcoded Forer box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
+    box = newBoxes.get(2 + 1).asInstanceOf[RegularBox] //where +1 due hardcoded Forger box created in com.horizen.transaction.mainchain.SidechainCreation.getHardcodedGenesisForgerBox
     assertEquals("MC2SCAggTx first box value is different", 30000000, box.value())
     assertEquals("MC2SCAggTx first box proposition is different",
       new PublicKey25519Proposition(BytesUtils.fromHexString("000000000000000000000000000000000000000000000000000000000000add3")),

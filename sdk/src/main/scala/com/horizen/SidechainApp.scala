@@ -97,28 +97,31 @@ class SidechainApp @Inject()
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight,
-      sidechainSettings.genesisData.withdrawalEpochLength
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "testnet" => TestNetParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight,
-      sidechainSettings.genesisData.withdrawalEpochLength
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "mainnet" => MainNetParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight,
-      sidechainSettings.genesisData.withdrawalEpochLength
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

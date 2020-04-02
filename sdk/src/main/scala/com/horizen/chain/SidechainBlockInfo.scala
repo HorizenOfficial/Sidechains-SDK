@@ -5,6 +5,7 @@ import java.util
 import com.horizen.block.SidechainBlock
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import scorex.core.NodeViewModifier
+import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -15,8 +16,9 @@ import scala.collection.mutable.ArrayBuffer
 case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
+                              timestamp: Block.Timestamp,
                               semanticValidity: ModifierSemanticValidity,
-                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId],
+                              mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId], //mainchain block ids
                               withdrawalEpochInfo: WithdrawalEpochInfo,
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
@@ -42,6 +44,7 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     w.putInt(obj.height)
     w.putLong(obj.score)
     w.putBytes(idToBytes(obj.parentId))
+    w.putLong(obj.timestamp)
     w.put(obj.semanticValidity.code)
     w.putInt(obj.mainchainBlockReferenceHashes.size)
     obj.mainchainBlockReferenceHashes.foreach(id => w.putBytes(id.data))
@@ -64,10 +67,11 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val height = r.getInt()
     val score = r.getLong()
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+    val timestamp = r.getLong()
     val semanticValidityCode = r.getByte()
     val mainChainReferences = readMainchainReferencesIds(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
-    SidechainBlockInfo(height, score, parentId, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo)
+    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo)
   }
 }

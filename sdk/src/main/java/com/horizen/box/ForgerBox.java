@@ -2,6 +2,7 @@ package com.horizen.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
@@ -54,7 +55,9 @@ public final class ForgerBox
 
     public static ForgerBox parseBytes(byte[] bytes) {
         long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
-        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, Longs.BYTES, bytes.length));
+
+        int forgerBoxDataOffset = Longs.BYTES;
+        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, bytes.length));
 
         return new ForgerBox(boxData, nonce);
     }

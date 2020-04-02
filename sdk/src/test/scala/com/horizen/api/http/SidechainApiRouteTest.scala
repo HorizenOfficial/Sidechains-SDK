@@ -10,7 +10,7 @@ import akka.http.scaladsl.server.Directives.{path, post, _}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
@@ -19,6 +19,9 @@ import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
 import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
+import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.params.MainNetParams
+import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -29,9 +32,9 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, bytesToId}
@@ -215,7 +218,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   protected def assertsOnSidechainErrorResponseSchema(msg: String, errorCode: String): Unit = {
     mapper.readTree(msg).get("error") match {
-      case error =>
+      case error: JsonNode =>
         assertEquals(1, error.findValues("code").size())
         assertEquals(1, error.findValues("description").size())
         assertEquals(1, error.findValues("detail").size())

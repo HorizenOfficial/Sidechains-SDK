@@ -53,7 +53,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
-  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(new WithdrawalEpochValidator(params), new MainchainPoWValidator(params))
+  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(new WithdrawalEpochValidator(params), new MainchainPoWValidator(params), new ConsensusValidator())
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
@@ -70,7 +70,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (modId: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
       history <- SidechainHistory.genesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
-        historyBlockValidators(params), modId, StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
+        historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
 
       wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
         walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet, genesisBlock, consensusEpochInfo)

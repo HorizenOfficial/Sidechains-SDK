@@ -17,7 +17,7 @@ import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetP
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSerializer}
+import com.horizen.transaction.SidechainCoreTransactionFactory
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
@@ -63,10 +63,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -74,10 +72,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -85,10 +81,8 @@ trait SidechainNodeViewHolderFixture
       genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = sidechainSettings.genesisData.consensusSecondsInSlot,
-      consensusSlotsInEpoch = sidechainSettings.genesisData.consensusSlotsInEpoch
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
