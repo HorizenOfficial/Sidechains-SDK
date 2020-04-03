@@ -513,6 +513,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainHashesForIndexes(indexes)
   }
 
+  // Return Hashes of MainchainHeader that are present in Active chain, but wait for MainchainBlockReferenceData to be synchronized.
+  // Hashes ordered from oldest to MC tip
   def missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = {
     val bestMainchainReferenceDataHeight: Int = getBestMainchainBlockReferenceDataInfo.get.height
     val bestMainchainHeaderHeight: Int = getBestMainchainHeaderInfo.get.height

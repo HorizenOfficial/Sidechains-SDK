@@ -3,8 +3,8 @@
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
-from test_framework.util import assert_equal, fail, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi, sync_blocks, sync_mempools
+from test_framework.util import initialize_chain_clean, start_nodes, \
+    websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks
 from SidechainTestFramework.sc_forging_util import *
 
@@ -46,9 +46,9 @@ Test:
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
     G[220h;220d;] - 0[;;] - 1[221h;221d;]
         \
-            - 2[221'h,222'h;;0[...],1[...]] - 3[223'h;221'd-223'd;] - 4[224'h;224'd;] - 5[;;]
+            - 2[221'h,222'h;;1[...]] - 3[223'h;221'd-223'd;] - 4[224'h;224'd;] - 5[;;]
           \
-            - 6[221''h-225''h;;2[...;0,1],3[...],4[...],5[;;]]
+            - 6[221''h-225''h;;2[...;1],3[...],4[...],5[;;]]
 """
 
 
@@ -85,10 +85,6 @@ class MCSCConnectedNodes(SidechainTestFramework):
     def sc_setup_nodes(self):
         # Start 1 SC node
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
-
-    def sync_mcnodes(self, mc_nodes):
-        sync_blocks(mc_nodes)
-        sync_mempools(mc_nodes)
 
     def run_test(self):
         # Synchronize mc_node1, mc_node2 and mc_node3, then disconnect them.
@@ -130,7 +126,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
 
         # Connect and synchronize MC node 1 to MC node 2
         connect_nodes_bi(self.nodes, 0, 1)
-        self.sync_mcnodes([mc_node1, mc_node2])
+        self.sync_nodes([mc_node1, mc_node2])
         # MC Node 1 should replace mcblock_hash1 Tip with [fork_mcblock_hash1, fork_mcblock_hash2]
         assert_equal(fork_mcblock_hash2, mc_node1.getbestblockhash())
 
