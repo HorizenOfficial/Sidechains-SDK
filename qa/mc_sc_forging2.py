@@ -34,8 +34,8 @@ Test:
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
     G[220h;220d;] - 0[;;] - 1[221h-222h;221d-222d;]
-                                      \
-                                        - 2[221h,222'h,223'h;;1[...]]
+                          \
+                                -   2[221h,222'h,223'h;;1[...]]
 """
 
 
