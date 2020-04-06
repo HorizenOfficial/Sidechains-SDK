@@ -1,8 +1,7 @@
 package com.horizen.chain
 
-import java.util
-
 import com.horizen.block.SidechainBlock
+import com.horizen.proof.{VrfProof, VrfProofSerializer}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block
@@ -20,15 +19,14 @@ case class SidechainBlockInfo(height: Int,
                               semanticValidity: ModifierSemanticValidity,
                               mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId], //mainchain block ids
                               withdrawalEpochInfo: WithdrawalEpochInfo,
+                              vrfProof: VrfProof
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
   override def getParentId: ModifierId = parentId
 
   override type M = SidechainBlockInfo
 
-  override lazy val serializer = SidechainBlockInfoSerializer
-
-  override def hashCode: Int = height.hashCode() + score.hashCode() + semanticValidity.code.toInt + util.Arrays.hashCode(idToBytes(parentId))
+  override lazy val serializer: ScorexSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
 
   override def bytes: Array[Byte] = SidechainBlockInfoSerializer.toBytes(this)
 }
@@ -49,6 +47,7 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     w.putInt(obj.mainchainBlockReferenceHashes.size)
     obj.mainchainBlockReferenceHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
+    VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
   }
 
   private def readMainchainReferencesIds(r: Reader): Seq[MainchainBlockReferenceId] = {
@@ -71,7 +70,8 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val semanticValidityCode = r.getByte()
     val mainChainReferences = readMainchainReferencesIds(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
+    val vrfProof = VrfProofSerializer.getSerializer.parse(r)
 
-    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo)
+    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo, vrfProof)
   }
 }

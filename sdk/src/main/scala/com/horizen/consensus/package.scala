@@ -44,7 +44,7 @@ package object consensus {
 
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
-  def bigIntToConsensusNonce(consensusNonce: BigInteger): ConsensusNonce = ConsensusNonce @@ consensusNonce.toByteArray
+  def byteArrayToConsensusNonce(bytes: Array[Byte]): ConsensusNonce = ConsensusNonce @@ bytes
 
   object VrfMessage extends TaggedType[Array[Byte]]
   type VrfMessage = VrfMessage.Type

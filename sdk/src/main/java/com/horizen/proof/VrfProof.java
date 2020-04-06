@@ -58,4 +58,11 @@ public class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
     public static VrfProof parse(byte[] bytes) {
         return new VrfProof(bytes);
     }
+
+    @Override
+    public String toString() {
+        return "VrfProof{" +
+                "proofBytes=" + Arrays.toString(proofBytes) +
+                '}';
+    }
 }

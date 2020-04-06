@@ -38,7 +38,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
 
         println("try to add incorrect block(s)")
         tryToAddIncorrectBlocks(params, currentHistory, nextGenerator, nextCorrectGenerationRules, rnd)
-
+        println("try to add correct block")
         val correctRes = Try(generateBlock(nextCorrectGenerationRules, nextGenerator, history)) match {
           case Success((gens, generatedBlock)) =>
             val updatedHistory = historyUpdateShallBeSuccessful(currentHistory, generatedBlock)
@@ -63,10 +63,11 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
                                       currentGenerator: SidechainBlocksGenerator,
                                       correctGenerationRules: GenerationRules,
                                       rnd: Random,
-                                      incorrectBlocksCount: Int = 10): Unit = {
+                                      incorrectBlocksCount: Int = 10): Unit = Try {
     (1 to incorrectBlocksCount)
       .foreach{ _ =>
         val incorrectGenerationRules: GenerationRules = CorruptedGenerationRules.corruptGenerationRules(rnd, params, currentGenerator, correctGenerationRules)
+        //println(s"Generated corruption rules are: ${incorrectGenerationRules}")
         currentGenerator
           .tryToGenerateBlockForCurrentSlot(incorrectGenerationRules)
           .map(generationInfo => historyUpdateShallBeFailed(currentHistory,generationInfo.block, incorrectGenerationRules))

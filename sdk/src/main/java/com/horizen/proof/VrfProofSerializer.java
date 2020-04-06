@@ -20,11 +20,13 @@ public class VrfProofSerializer implements ProofSerializer<VrfProof> {
 
     @Override
     public void serialize(VrfProof signature, Writer writer) {
+        writer.putInt(signature.bytes().length);
         writer.putBytes(signature.bytes());
     }
 
     @Override
     public VrfProof parse(Reader reader) {
-        return VrfProof.parse(reader.getBytes(reader.remaining()));
+        int vrfProofLen = reader.getInt();
+        return VrfProof.parse(reader.getBytes(vrfProofLen));
     }
 }

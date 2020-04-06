@@ -100,7 +100,9 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
   def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
-                               timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
+                               timestamp: Option[Block.Timestamp] = None,
+                               vrfProof: VrfProof = VrfGenerator.generateProof(42)
+                              ): SidechainBlockInfo = {
     SidechainBlockInfo(
       1,
       (1L << 32) + 1,
@@ -108,20 +110,13 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       timestamp.getOrElse(Random.nextLong()),
       validity,
       Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
-      WithdrawalEpochInfo(1, 1)
+      WithdrawalEpochInfo(1, 1),
+      vrfProof
     )
   }
 
   def changeBlockInfoValidity(blockInfo: SidechainBlockInfo, validity: ModifierSemanticValidity): SidechainBlockInfo = {
-    SidechainBlockInfo(
-      blockInfo.height,
-      blockInfo.score,
-      blockInfo.parentId,
-      blockInfo.timestamp,
-      validity,
-      blockInfo.mainchainBlockReferenceHashes,
-      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.lastEpochIndex)
-    )
+    blockInfo.copy(semanticValidity = validity)
   }
 
   def generateBlockInfo(block: SidechainBlock,
@@ -137,7 +132,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       block.timestamp,
       validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
+      VrfGenerator.generateProof(parentBlockInfo.height)
     )
   }
 

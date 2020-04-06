@@ -42,7 +42,8 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       Random.nextLong(),
       ModifierSemanticValidity.Valid,
       generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference)).map(id => byteArrayToMainchainBlockReferenceId(id.hash)),
-      WithdrawalEpochInfo(1, 1)
+      WithdrawalEpochInfo(1, 1),
+      VrfGenerator.generateProof(Random.nextLong())
     )
 
   val generatedData =
@@ -73,7 +74,8 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
         new SidechainBlock(null, 0L, refs, null, null, null, null, null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
-        params)
+        params),
+      VrfGenerator.generateProof(Random.nextLong())
     )
 
     (id, (generatedScBlockInfo, findParentMainchainReference(parent)))

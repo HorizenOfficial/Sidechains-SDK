@@ -63,7 +63,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          storage.update(block, calculateGenesisBlockInfo(block)),
+          storage.update(block, SidechainHistory.calculateGenesisBlockInfo(block, params)),
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
@@ -120,18 +120,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
   }
 
-  private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
-    require(isGenesisBlock(block.id), "Passed block is not a genesis block.")
-    SidechainBlockInfo(
-      1,
-      (block.mainchainBlocks.size.toLong << 32) + 1,
-      block.parentId,
-      block.timestamp,
-      ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
-    )
-  }
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
@@ -144,7 +132,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
+      block.vrfProof
     )
   }
 
@@ -465,12 +454,26 @@ object SidechainHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticBlockValidator],
-                                      historyBlockValidators: Seq[HistoryBlockValidator]) : Option[SidechainHistory] = {
+                                      historyBlockValidators: Seq[HistoryBlockValidator]): Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
     else
       None
+  }
+
+  def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
+    require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
+    SidechainBlockInfo(
+      1,
+      (block.mainchainBlocks.size.toLong << 32) + 1,
+      block.parentId,
+      block.timestamp,
+      ModifierSemanticValidity.Unknown,
+      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      WithdrawalEpochInfo(1, block.mainchainBlocks.size), // First Withdrawal epoch value. Note: maybe put to params?
+      block.vrfProof
+    )
   }
 
   //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
@@ -483,9 +486,7 @@ object SidechainHistory
                                       stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty) {
-      val minimalHash = getMinimalHashOptFromBlock(genesisBlock).getOrElse(throw new IllegalStateException("Genesis block without mainchain block references"))
-      val nonceEpochInfo = NonceConsensusEpochInfo(bigIntToConsensusNonce(minimalHash))
-
+      val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlockInfo(calculateGenesisBlockInfo(genesisBlock, params))
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
         .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
     }
