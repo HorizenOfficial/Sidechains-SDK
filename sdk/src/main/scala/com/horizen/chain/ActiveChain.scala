@@ -106,6 +106,16 @@ final class ActiveChain private(sidechainCache: ElementsChain[ModifierId, Sidech
     val actualMainchainReferenceDataParentForNewBlock = getLastMainchainReferenceDataHeaderHashTillHeight(parentHeight)
       .getOrElse(throw new IllegalStateException(s"New best block clear all mainchain references data header hashes"))
 
+    // check MainchainReferenceData correctness against MainchainHeaders
+    val dataHeight: Int = mcRefDataHeightByMcHash(actualMainchainReferenceDataParentForNewBlock).get
+    val headerHeight: Int = mcHeadersHeightByMcHash(actualMainchainParentForNewBlock).get
+    val missedRefDataHeaderHashes: Seq[MainchainHeaderHash] =
+      (dataHeight + 1 to headerHeight).flatMap(h => mcHashByMcHeight(h)) ++ newBestInfo.mainchainHeaderHashes
+    val expectedRefDataHeaderHashes = missedRefDataHeaderHashes.take(newBestInfo.mainchainReferenceDataHeaderHashes.size)
+    if(!expectedRefDataHeaderHashes.equals(newBestInfo.mainchainReferenceDataHeaderHashes))
+      throw new IllegalArgumentException("Try to add inconsistent mainchain reference data")
+
+
     // cut storages
     sidechainCache.cutToId(newBestInfo.parentId)
     mainchainHeadersCache.cutToId(actualMainchainParentForNewBlock)
@@ -175,12 +185,12 @@ object ActiveChain {
     val activeChain = ActiveChain(mainchainCreationBlockHeight)
 
     blocksInfoData.foldLeft((Option(mainchainParentHash), Option(mainchainParentHash))) {
-      case ((mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHash), (id, data)) =>
-        activeChain.addToStorages(id, data, mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHash)
-        (
-          data.mainchainHeaderHashes.lastOption.orElse(mainchainHeaderParentHashOpt),
-          data.mainchainReferenceDataHeaderHashes.lastOption.orElse(mainchainRefDataParentHeaderHash)
-        )
+      case ((mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHashOpt), (id, data)) =>
+        activeChain.addToStorages(id, data, mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHashOpt)
+
+        val newMainchainHeaderParentHashOpt = data.mainchainHeaderHashes.lastOption.orElse(mainchainHeaderParentHashOpt)
+        val newMainchainRefDataParentHeaderHashOpt = data.mainchainReferenceDataHeaderHashes.lastOption.orElse(mainchainRefDataParentHeaderHashOpt)
+        (newMainchainHeaderParentHashOpt, newMainchainRefDataParentHeaderHashOpt)
     }
     activeChain
   }

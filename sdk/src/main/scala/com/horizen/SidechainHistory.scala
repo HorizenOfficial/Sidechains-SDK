@@ -110,12 +110,11 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
     val newScore = calculateChainScore(block, parentBlockInfo.score)
-    if(newScore > currentScore)
-      true
-    else if(newScore < currentScore)
-      false
-    else // equal score -> compare branch length
+    if (newScore == currentScore) {
       (parentBlockInfo.height + 1) > height
+    } else {
+      newScore > currentScore
+    }
   }
 
   // score is a long value

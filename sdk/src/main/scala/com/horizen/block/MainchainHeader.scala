@@ -69,7 +69,7 @@ class MainchainHeader(
     true
   }
 
-  def hasParent(parent: MainchainHeader): Boolean = hashPrevBlock.sameElements(parent.hash)
+  def isParentOf(header: MainchainHeader): Boolean = header.hashPrevBlock.sameElements(hash)
 
   override def hashCode(): Int = java.util.Arrays.hashCode(mainchainHeaderBytes)
 

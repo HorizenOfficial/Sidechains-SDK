@@ -22,23 +22,20 @@ trait OmmersContainer {
       return false
 
     // Verify that included ommers are consistent to header.ommersMerkleRootHash.
-    if (ommers.isEmpty) {
-      if (!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        return false
-      return true
-    }
+    if (ommers.isEmpty)
+      return header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH)
     val calculatedMerkleRootHash = MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
     if (!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
       return false
 
     // Ommers list must be a consistent SidechainBlocks chain.
-    for (i <- 1 until ommers.size) {
-      if (ommers(i).header.parentId != ommers(i - 1).header.id)
-        return false
-    }
     // First Ommer must have the same parent as current SidechainBlock.
-    if (ommers.head.header.parentId != header.parentId)
-      return false
+    ommers.foldLeft(header.parentId) {
+      case (parentId, ommer) =>
+        if (parentId != ommer.header.parentId)
+          return false
+        ommer.header.id
+    }
 
     // Verify that Ommers order is valid in context of OmmersContainer epoch&slot order
     // Last ommer epoch&slot number must be before verified block epoch&slot
@@ -52,22 +49,22 @@ trait OmmersContainer {
 
     // Ommers must reference to MainchainHeaders for different chain than current SidechainBlock does.
     // In our case first Ommer should contain non empty headers seq and it should be different to the same length subseq of current SidechainBlock headers.
-    val firstOmmerHeaders = ommers.head.mainchainHeaders
+    val firstOmmerMainchainHeaders = ommers.head.mainchainHeaders
     if (mainchainHeaders.isEmpty)
       return false
-    if (firstOmmerHeaders.isEmpty || firstOmmerHeaders.equals(mainchainHeaders.take(firstOmmerHeaders.size)))
+    if (firstOmmerMainchainHeaders.isEmpty || firstOmmerMainchainHeaders.equals(mainchainHeaders.take(firstOmmerMainchainHeaders.size)))
       return false
 
 
-    // Verify Ommers mainchainHeaders chain consistency
     val ommersMainchainHeaders: Seq[MainchainHeader] = ommers.flatMap(_.mainchainHeaders)
-    for (i <- 1 until ommersMainchainHeaders.size) {
-      if (!ommersMainchainHeaders(i).hasParent(ommersMainchainHeaders(i - 1)))
-        return false
-    }
+    // Verify the MainchainHeaders are connected, especially between Ommers.
     // Ommers MC chain must follow the same MC parent as Block MC chain does
-    if (!ommersMainchainHeaders.head.hashPrevBlock.sameElements(mainchainHeaders.head.hashPrevBlock))
-      return false
+    ommersMainchainHeaders.foldLeft(mainchainHeaders.head.hashPrevBlock) {
+      case (hashPrevBlock, ommerMainchainHeader) =>
+        if (!ommerMainchainHeader.hashPrevBlock.sameElements(hashPrevBlock))
+          return false
+        ommerMainchainHeader.hash
+    }
 
     // Total number of MainchainHeaders in current SidechainBlock must be greater than ommers total MainchainHeaders amount.
     if (mainchainHeaders.size <= ommersMainchainHeaders.size)

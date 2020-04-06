@@ -118,8 +118,8 @@ class SidechainBlock(
     }
 
     // Check MainchainHeaders order in current block.
-    for(i <- 1 until mainchainHeaders.size) {
-      if(!mainchainHeaders(i).hasParent(mainchainHeaders(i-1)))
+    for(i <- 0 until mainchainHeaders.size - 1) {
+      if(!mainchainHeaders(i).isParentOf(mainchainHeaders(i+1)))
         return false
     }
 

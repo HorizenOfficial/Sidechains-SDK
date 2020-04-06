@@ -78,7 +78,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     var isPreviousEpochOmmer: Boolean = false
     for(ommer <- ommers) {
       val ommerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommer.header.timestamp)
-      // Fork occurs in previous withdrawal epoch
+      // Fork occurs in previous consensus epoch
       if(ommerEpochNumber < ommersContainerEpochNumber) {
         isPreviousEpochOmmer = true
         verifyVrf(history, ommer.header, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)

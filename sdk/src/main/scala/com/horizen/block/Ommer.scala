@@ -44,9 +44,9 @@ case class Ommer(
       if(!mainchainHeader.semanticValidity(params))
         return false
 
-    // Verify that mainchainReferencesHeaders and nextMainchainHeaders lead to consistent MC chain
-    for (i <- 1 until mainchainHeaders.size) {
-      if (!mainchainHeaders(i).hasParent(mainchainHeaders(i-1)))
+    // Verify that MainchainHeaders lead to consistent MC chain
+    for (i <- 0 until mainchainHeaders.size - 1) {
+      if (!mainchainHeaders(i).isParentOf(mainchainHeaders(i+1)))
         return false
     }
 

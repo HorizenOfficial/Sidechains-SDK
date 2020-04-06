@@ -463,7 +463,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
   }
 
   @Test
-  def anotherTest(): Unit = {
+  def addBlockWithMainchainRefDataAfterMainchainHeaders(): Unit = {
     setSeed(testSeed+3)
 
     // Create empty ActiveChain
@@ -495,6 +495,14 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash1), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
 
 
+    // Try to add info with inconsistent MainchainRefData
+    // MainchainRefData headers hashes must be equal to the previously added MainchainHeader hashes on the same height
+    val inconsistentBlockId: ModifierId = getRandomModifier()
+    val inconsistentMcHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val inconsistentBlockInfo = getBlockInfo(blockId2, Seq(), Seq(mcHash2, inconsistentMcHash), 3)
+    addNewBestBlockShallBeFailed(chain, inconsistentBlockId, inconsistentBlockInfo, None)
+
+
     // Add block info with MainchainRefData only
     val blockId3: ModifierId = getRandomModifier()
     val blockInfo3 = getBlockInfo(blockId2, Seq(), Seq(mcHash2, mcHash3), 3)
@@ -519,6 +527,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash6), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
     assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash5), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
 
+
     // Add block with 1 MainchainHeader and 2 MainchainRefData (1 for previous headers and 1 for current one)
     val blockId5: ModifierId = getRandomModifier()
     val mcHash7: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
@@ -529,6 +538,14 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("Different height of MainchainReferenceData expected.", genesisBlockMainchainHeight + 6, chain.heightOfMcReferencesData)
     assertEquals("Different MainchainHeader hash by mc headers height expected.", Some(mcHash7), chain.mcHashByMcHeight(chain.heightOfMcHeaders))
     assertEquals("Different MainchainHeader hash by mc ref data height expected.", Some(mcHash7), chain.mcHashByMcHeight(chain.heightOfMcReferencesData))
+
+
+    // Try to add info with consistent MainchainHeaders, but with inconsistent MainchainRefData
+    // MainchainRefData headers hashes must be equal to the MainchainHeader hashes on the same height
+    val inconsistentBlockId2: ModifierId = getRandomModifier()
+    val mcHash8: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val inconsistentBlockInfo2 = getBlockInfo(blockId5, Seq(mcHash8), Seq(inconsistentMcHash), 6)
+    addNewBestBlockShallBeFailed(chain, inconsistentBlockId2, inconsistentBlockInfo2, Some(mcHash7))
   }
 
   private def getBlockInfo(parentId: ModifierId, headers: Seq[MainchainHeaderHash], refData: Seq[MainchainHeaderHash], height: Int): SidechainBlockInfo = {
