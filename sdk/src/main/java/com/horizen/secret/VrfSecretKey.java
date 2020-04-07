@@ -79,7 +79,7 @@ public class VrfSecretKey implements Secret {
     }
 
     @Override
-    public ProofOfKnowledge sign(byte[] message) {
+    public VrfProof sign(byte[] message) {
         return prove(message);
     }
 
