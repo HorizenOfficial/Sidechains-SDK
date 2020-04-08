@@ -18,7 +18,7 @@ import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.proof.Proof
-import com.horizen.proposition.{VrfPublicKey, _}
+import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.BytesUtils
@@ -199,7 +199,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              VrfPublicKey.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
           )
 
@@ -363,8 +363,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
-            )
+              VrfPublicKey.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
+             )
           )
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
@@ -484,7 +484,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value),
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-        new VrfPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+        VrfPublicKey.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
       )
     )
 

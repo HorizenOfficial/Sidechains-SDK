@@ -6,6 +6,7 @@ import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import com.horizen.proposition.VrfPublicKey;
+import com.horizen.proposition.VrfPublicKeySerializer;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -48,7 +49,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
                 proposition().bytes(),
                 Longs.toByteArray(value()),
                 rewardProposition().bytes(),
-                vrfPublicKey().bytes()
+                vrfPublicKey().serializer().toBytes(vrfPublicKey())
         );
     }
 
@@ -70,7 +71,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parseBytes(Arrays.copyOf(bytes, valueOffset));
         long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, rewardPropositionOffset));
         PublicKey25519Proposition rewardProposition = PublicKey25519Proposition.parseBytes(Arrays.copyOfRange(bytes, rewardPropositionOffset, vrfPubKeyOffset));
-        VrfPublicKey vrfPublicKey = VrfPublicKey.parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
+        VrfPublicKey vrfPublicKey = VrfPublicKeySerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
 
         return new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey);
     }
