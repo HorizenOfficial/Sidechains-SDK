@@ -52,7 +52,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       version = 1,
       parent,
       generateBytes(rnd = rnd),
-      generateBytes(rnd = rnd),
+      new Array[Byte](32),
       timestamp,
       rnd.nextInt(),
       generateBytes(rnd = rnd),
@@ -88,9 +88,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     }
 
 
-    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None)) {
-      override def semanticValidity(params: NetworkParams): Boolean = true
-    }
+    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None))
 
     addNewReference(newReference)
     newReference

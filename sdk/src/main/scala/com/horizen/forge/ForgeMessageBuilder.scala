@@ -78,7 +78,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         case Failure(ex) =>
           // For regtest Forger is allowed to produce next block in case if there is no MC Node connection
           if (params.isInstanceOf[RegTestParams])
-            (bestMainchainHeaderInfo.height, Seq(bestMainchainHeaderInfo.hash))
+            (bestMainchainHeaderInfo.height, Seq())
           else
             throw ex
       }
