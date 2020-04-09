@@ -49,8 +49,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
                 proposition().bytes(),
                 Longs.toByteArray(value()),
                 rewardProposition().bytes(),
-                vrfPublicKey().serializer().toBytes(vrfPublicKey())
-        );
+                vrfPublicKey().bytes());
     }
 
     @Override

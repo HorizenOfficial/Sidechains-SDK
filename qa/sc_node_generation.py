@@ -53,6 +53,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
             "format": True
             #            "format": "true"
         }
+        print j
         request = json.dumps(j)
         response = sender_node.transaction_spendForgingStake(request)
         txid = response["result"]["transaction"]["id"]

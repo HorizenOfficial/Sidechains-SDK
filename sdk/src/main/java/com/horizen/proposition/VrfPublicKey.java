@@ -3,6 +3,8 @@ package com.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
 import com.horizen.vrf.VrfLoader;
