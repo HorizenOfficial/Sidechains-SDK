@@ -14,11 +14,11 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochUtils
 import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
-
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
@@ -31,6 +31,15 @@ class CertificateSubmitter
   extends Actor
   with ScorexLogging
 {
+  sealed trait SubmitResult
+
+  case object SubmitSuccess
+    extends SubmitResult {override def toString: String = "Backward transfer certificate was successfully created."}
+  case class SubmitFailed(ex: Throwable)
+    extends SubmitResult {override def toString: String = s"Backward transfer certificate creation was failed due to ${ex}"}
+
+  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+  type SubmitMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmitResult]
 
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
@@ -41,37 +50,52 @@ class CertificateSubmitter
 
   lazy val mainchainApi = new RpcMainchainApi(settings)
 
-  protected def viewAsync(): Future[SidechainNodeView] = {
-    def f(v: SidechainNodeView) = v
+  protected def submitCertificate(sidechainNodeView: View): SubmitResult = {
+    try {
 
-    (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
-      .mapTo[SidechainNodeView]
-  }
-
-  protected def trySubmitCertificate: Unit = {
-    viewAsync().onComplete {
-      case Success(sidechainNodeView) => {
-        val withdrawalEpochInfo = sidechainNodeView.getNodeState.getWithdrawalEpochInfo
-        if (withdrawalEpochInfo.epoch > 0 &&
-            WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
-          val withdrawalRequests = sidechainNodeView.getNodeState.getWithdrawalRequests(withdrawalEpochInfo.epoch - 1)
-          if (withdrawalRequests.isPresent) {
-            val mcEndEpochBlockHashOpt = sidechainNodeView.getNodeHistory
-              .getMainchainBlockReferenceInfoByMainchainBlockHeight(
-                params.mainchainCreationBlockHeight +
-                  withdrawalEpochInfo.epoch * params.withdrawalEpochLength - 1)
-            mainchainApi.sendCertificate(
-              CertificateRequestCreator.create(
-                withdrawalEpochInfo.epoch - 1,
-                mcEndEpochBlockHashOpt.get().getMainchainBlockReferenceHash,
-                withdrawalRequests.get().asScala,
-                params
-              )
+      val withdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
+      if (withdrawalEpochInfo.epoch > 0 &&
+        WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
+        val withdrawalRequests = sidechainNodeView.state.getWithdrawalRequests(withdrawalEpochInfo.epoch - 1)
+        if (withdrawalRequests.isPresent) {
+          val mcEndEpochBlockHashOpt = sidechainNodeView.history
+            .getMainchainBlockReferenceInfoByMainchainBlockHeight(
+              params.mainchainCreationBlockHeight +
+                withdrawalEpochInfo.epoch * params.withdrawalEpochLength - 1)
+          mainchainApi.sendCertificate(
+            CertificateRequestCreator.create(
+              withdrawalEpochInfo.epoch - 1,
+              mcEndEpochBlockHashOpt.get().getMainchainBlockReferenceHash,
+              withdrawalRequests.get().asScala,
+              params
             )
-          }
+          )
         }
       }
-      case Failure(exception) => log.error("Exception occured durign trying of certificate cretion: " + exception)
+
+      SubmitSuccess
+
+    } catch {
+      case e: Throwable => SubmitFailed(e)
+    }
+  }
+
+  protected def trySubmitCertificate(): Unit = {
+    val submitCertificateFunction: View => SubmitResult = submitCertificate
+
+    val submitMessage: SubmitMessageType =
+      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmitResult](submitCertificateFunction)
+
+    val forgedBlockAsFuture = (sidechainNodeViewHolderRef ? submitMessage).asInstanceOf[Future[SubmitResult]]
+    forgedBlockAsFuture.onComplete{
+      case Success(SubmitSuccess) =>
+        log.info(s"Backward transfer certificate was successfully created.")
+
+      case Success(SubmitFailed(ex)) =>
+        log.info("Forging had been failed." + ex)
+
+      case Failure(ex) =>
+        log.info("Forging had been failed. " + ex)
     }
   }
 
@@ -84,6 +108,7 @@ class CertificateSubmitter
 }
 
 object CertificateSubmitterRef {
+
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
            (implicit ec: ExecutionContext) : Props =
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params))

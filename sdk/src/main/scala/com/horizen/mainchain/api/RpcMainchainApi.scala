@@ -17,7 +17,7 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
       1
   }
 
-  private val clientPath = sidechainSettings.mainchainSettings.path +
+  private val clientPath = sidechainSettings.websocket.zencliCommandLine +
     sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => "-regtest "
     case "testnet" => "-testnet "

@@ -92,7 +92,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     for (certificate <- mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) {
       withdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
-          var isEqual = false
           if (withdrawalRequests.size != certificate.outputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
             for (o <- certificate.outputs)

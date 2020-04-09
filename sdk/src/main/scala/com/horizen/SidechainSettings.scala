@@ -8,7 +8,8 @@ case class WebSocketSettings(
                         address: String,
                         connectionTimeout: FiniteDuration,
                         reconnectionDelay: FiniteDuration,
-                        reconnectionMaxAttempts: Int
+                        reconnectionMaxAttempts: Int,
+                        zencliCommandLine: String
                             )
 
 case class GenesisDataSettings(
@@ -25,15 +26,9 @@ case class WalletSettings(
                         genesisSecrets: Seq[String]
                          )
 
-case class MainchainSettings(
-                              path: String
-                            )
-
-
 case class SidechainSettings(
                         scorexSettings: ScorexSettings,
                         genesisData: GenesisDataSettings,
                         websocket: WebSocketSettings,
                         wallet: WalletSettings,
-                        mainchainSettings: MainchainSettings
                             )

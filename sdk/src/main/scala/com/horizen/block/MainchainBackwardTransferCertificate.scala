@@ -27,10 +27,6 @@ case class MainchainBackwardTransferCertificate
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
 
-  override def bytes: Array[Byte] = {
-    certificateBytes
-  }
-
 }
 
 object MainchainBackwardTransferCertificate {
@@ -92,7 +88,7 @@ object MainchainBackwardTransferCertificateSerializer
   extends ScorexSerializer[MainchainBackwardTransferCertificate]
 {
   override def serialize(certificate: MainchainBackwardTransferCertificate, w: Writer): Unit = {
-    w.putBytes(certificate.bytes)
+    w.putBytes(certificate.certificateBytes)
 }
 
   override def parse(r: Reader): MainchainBackwardTransferCertificate = {

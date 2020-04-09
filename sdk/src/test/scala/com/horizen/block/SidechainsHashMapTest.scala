@@ -5,11 +5,11 @@ import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
-class SidechailHashMapTest extends JUnitSuite {
+class SidechainsHashMapTest extends JUnitSuite {
 
   @Test
   def testaddTransactionOutputs(): Unit = {
-    val shm = new SidechainHashMap()
+    val shm = new SidechainsHashMap()
 
     val scId1 = new ByteArrayWrapper(BytesUtils
       .fromHexString("00000000000000000000000000000000000000000000000000000000deadbeeb"))
@@ -22,9 +22,9 @@ class SidechailHashMapTest extends JUnitSuite {
     shm.addTransactionOutputs(scId3, Seq())
     shm.addTransactionOutputs(scId2, Seq())
 
-    val scids = shm.sidechainHashMap.toSeq.sortWith(_._1 < _._1)
+    val scids = shm.sidechainsHashMap.toSeq.sortWith(_._1 < _._1)
 
-    val mt = shm.getMerkleTree
+    //val mt = shm.getMerkleTree
 
   }
 

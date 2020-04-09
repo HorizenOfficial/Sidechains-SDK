@@ -45,7 +45,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       headerWithNoSerialization.version,
       headerWithNoSerialization.hashPrevBlock,
       headerWithNoSerialization.hashMerkleRoot,
-      headerWithNoSerialization.hashSCMerkleRootsMap,
+      headerWithNoSerialization.hashScTxsCommitment,
       headerWithNoSerialization.time,
       headerWithNoSerialization.bits,
       headerWithNoSerialization.nonce,

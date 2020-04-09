@@ -96,4 +96,20 @@ public class MerklePath {
 
         return new MerklePath(merklePath);
     }
+
+    public boolean isLeftmost() {
+        for(Pair<Byte, byte[]> merkleLeaf: _merklePath) {
+            if (merkleLeaf.getKey() != 1)
+                return false;
+        }
+        return true;
+    }
+
+    public boolean isRightmost() {
+        for(Pair<Byte, byte[]> merkleLeaf: _merklePath) {
+            if (merkleLeaf.getKey() != 0)
+                return false;
+        }
+        return true;
+    }
 }

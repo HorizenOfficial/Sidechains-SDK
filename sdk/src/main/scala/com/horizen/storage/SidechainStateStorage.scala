@@ -128,7 +128,7 @@ class SidechainStateStorage (storage : Storage, sidechainBoxesCompanion: Sidecha
     }
 
     if (containsBackwardTransferCertificate)
-      updateList.add(new JPair(getWithdrawalBlockKey(getWithdrawalEpochInfo.get.epoch - 1),
+      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1),
         version))
 
     storage.update(version,

@@ -19,7 +19,7 @@ trait MainchainHeaderFixture {
       BytesUtils.reverseBytes(Ints.toByteArray(obj.version)),
       BytesUtils.reverseBytes(obj.hashPrevBlock),
       BytesUtils.reverseBytes(obj.hashMerkleRoot),
-      BytesUtils.reverseBytes(obj.hashSCMerkleRootsMap),
+      BytesUtils.reverseBytes(obj.hashScTxsCommitment),
       BytesUtils.reverseBytes(Ints.toByteArray(obj.time)),
       BytesUtils.reverseBytes(Ints.toByteArray(obj.bits)),
       BytesUtils.reverseBytes(obj.nonce),
