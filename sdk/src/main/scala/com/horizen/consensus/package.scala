@@ -3,9 +3,7 @@ package com.horizen
 import java.math.{BigDecimal, BigInteger, MathContext}
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.block.SidechainBlock
-import com.horizen.proof.VrfProof
-import com.horizen.proposition.VrfPublicKey
+import com.horizen.vrf.VrfProofHash
 import scorex.util.ModifierId
 import supertagged.TaggedType
 
@@ -62,8 +60,8 @@ package object consensus {
     new BigInteger(1, bytes)
   }
 
-  def vrfProofCheckAgainstStake(vrfProof: VrfProof, vrfPublicKey: VrfPublicKey, vrfMessage: VrfMessage, actualStake: Long, totalStake: Long): Boolean = {
-    val requiredStakePercentage: BigDecimal = vrfProofToRequiredStakePercentage(vrfProof, vrfPublicKey, vrfMessage)
+  def vrfProofCheckAgainstStake(vrfProofHash: VrfProofHash, actualStake: Long, totalStake: Long): Boolean = {
+    val requiredStakePercentage: BigDecimal = vrfProofHashToRequiredStakePercentage(vrfProofHash)
     val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
 
     requiredStakePercentage.compareTo(actualStakePercentage) match {
@@ -74,15 +72,11 @@ package object consensus {
   }
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
-  def vrfProofToRequiredStakePercentage(vrfProof: VrfProof, vrfPublicKey: VrfPublicKey, message: VrfMessage): BigDecimal = {
-    val hashAsBigDecimal: BigDecimal = new BigDecimal(sha256HashToPositiveBigInteger(vrfProof.proofToVRFHash(vrfPublicKey, message)))
+  def vrfProofHashToRequiredStakePercentage(vrfProofHash: VrfProofHash): BigDecimal = {
+    val hashAsBigDecimal: BigDecimal = new BigDecimal(sha256HashToPositiveBigInteger(vrfProofHash.bytes()))
 
     hashAsBigDecimal
       .remainder(forgerStakePercentPrecision) //got random number from 0 to forgerStakePercentPrecision - 1
       .divide(forgerStakePercentPrecision, stakeConsensusDivideMathContext) //got random number from 0 to 0.(9)
   }
-
-  def getMinimalHashOptFromBlock(block: SidechainBlock): Option[BigInteger] = getMinimalHashOpt(block.mainchainBlocks.map(_.hash))
-
-  def getMinimalHashOpt(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
 }

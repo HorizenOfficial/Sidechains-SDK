@@ -16,6 +16,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.VrfKeyGenerator
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
+import com.horizen.vrf.VrfProofHash
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.bytesToId
@@ -24,7 +25,7 @@ import scala.util.Random
 
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
-  extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerBox, block.vrfProof, block.merklePath, block.signature, companion) {
+  extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerBox, block.vrfProof, block.vrfProofHash, block.merklePath, block.signature, companion) {
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
@@ -43,6 +44,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
            sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VrfProof = null,
+           vrfProofHash: VrfProofHash = null,
            merklePath: MerklePath = null,
            companion: SidechainTransactionsCompanion,
            params: NetworkParams,
@@ -61,6 +63,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.rewardSecret,
       forgingBox,
       firstOrSecond(vrfProof, initialBlock.vrfProof),
+      firstOrSecond(vrfProofHash, initialBlock.vrfProofHash),
       firstOrSecond(merklePath, initialBlock.merklePath),
       firstOrSecond(companion, sidechainTransactionsCompanion),
       params,
@@ -79,7 +82,9 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                             ): SidechainBlock = {
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
-    val vrfProof = vrfKey.prove("Some non random string as input".getBytes)
+    val vrfMessage = "Some non random string as input".getBytes
+    val vrfProof = vrfKey.prove(vrfMessage)
+    val vrfProofHash = vrfProof.proofToVRFHash(vrfKey.publicImage(), vrfMessage)
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     SidechainBlock.create(
@@ -90,6 +95,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.rewardSecret,
       forgerBox,
       vrfProof,
+      vrfProofHash,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
       companion,
       params

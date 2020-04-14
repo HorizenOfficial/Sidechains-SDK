@@ -51,6 +51,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.rewardSecret,
       forgerBox1,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -75,6 +76,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.rewardSecret,
       forgerBox2,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -99,6 +101,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta3.rewardSecret,
       forgerBox3,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -131,6 +134,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta4.rewardSecret,
       forgerBox4,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
@@ -169,6 +173,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.rewardSecret,
       forgerBox1,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -192,6 +197,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.rewardSecret,
       forgerBox2,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -234,6 +240,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta5.rewardSecret,
       forgerBox5,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -283,6 +290,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta8.rewardSecret,
       forgerBox8,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
@@ -343,6 +351,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta11.rewardSecret,
       forgerBox11,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
@@ -366,6 +375,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta12.rewardSecret,
       forgerBox12,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams
@@ -389,6 +399,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta13.rewardSecret,
       forgerBox13,
       VrfGenerator.generateProof(456L),
+      VrfGenerator.generateProofHash(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       mcBlockRefRegTestParams

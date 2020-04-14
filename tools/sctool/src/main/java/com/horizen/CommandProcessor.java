@@ -207,6 +207,7 @@ public class CommandProcessor {
                     key,
                     null,
                     null,
+                     null,
                     null,
                     sidechainTransactionsCompanion,
                     params,

@@ -7,6 +7,7 @@ import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
 import com.horizen.vrf.VrfLoader;
+import com.horizen.vrf.VrfProofHash;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -24,8 +25,9 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
         proofBytes = Arrays.copyOf(proof, proof.length);
     }
 
-    public byte[] proofToVRFHash(VrfPublicKey publicKey, byte[] message) {
-        return VrfLoader.vrfFunctions().vrfProofToVrfHash(publicKey.pubKeyBytes(), message, proofBytes);
+    public VrfProofHash proofToVRFHash(VrfPublicKey publicKey, byte[] message) {
+        byte[] vrfProofBytes = VrfLoader.vrfFunctions().vrfProofToVrfHash(publicKey.pubKeyBytes(), message, proofBytes);
+        return new VrfProofHash(vrfProofBytes);
     }
 
     @Override

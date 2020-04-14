@@ -106,13 +106,14 @@ class SidechainJSONBOChecker {
   }
 
   def assertsOnBlockJson(json: JsonNode, block: SidechainBlock): Unit = {
-    assertEquals(9, json.elements().asScala.length)
+    assertEquals(10, json.elements().asScala.length)
     assertTrue(json.get("parentId").isTextual)
     assertTrue(json.get("timestamp").isNumber)
     assertTrue(json.get("mainchainBlocks").isArray)
     assertTrue(json.get("sidechainTransactions").isArray)
     assertTrue(json.get("forgerBox").isObject)
     assertTrue(json.get("vrfProof").isObject)
+    assertTrue(json.get("vrfProofHash").isObject)
     assertTrue(json.get("merklePath").isTextual)
 
     assertTrue(json.get("id").isTextual)

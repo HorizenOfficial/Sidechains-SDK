@@ -6,6 +6,7 @@ import com.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, Stak
 import com.horizen.utils._
 import com.horizen.consensus._
 import com.horizen.proof.VrfProof
+import com.horizen.vrf.VrfProofHash
 
 import scala.collection.immutable.TreeMap
 
@@ -24,12 +25,12 @@ class PossibleForgersSet(forgers: Set[PossibleForger]) {
 
   def getNotSpentSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.filter{case (forgingData, possibleForger) => possibleForger.isNotSpent}.keys.to
 
-  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof)] = {
+  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof, VrfProofHash)] = {
     val vrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
     forgingDataToPossibleForger
       .values
       .toStream
-      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map(proof => (forger, proof))} //get eligible forgers
+      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map{case (proof, proofHash) => (forger, proof, proofHash)}} //get eligible forgers
       .headOption
   }
 

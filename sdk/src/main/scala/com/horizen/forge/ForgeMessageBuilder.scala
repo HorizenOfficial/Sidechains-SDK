@@ -10,6 +10,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.MerklePath
+import com.horizen.vrf.VrfProofHash
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -42,19 +43,20 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq()).map(d => (d.forgerBox, d.merklePath))
 
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
-    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof)]
+    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof, VrfProofHash)]
       = forgerBoxMerklePathInfo.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
 
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
-    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof)] =
-      ownedForgingDataView.filter{case(forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof) => vrfProofCheckAgainstStake(vrfProof, forgerBox.vrfPubKey(), vrfMessage, forgerBox.value(), totalStake)}
+    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof, VrfProofHash)] =
+      ownedForgingDataView
+        .filter{case(forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof, vrfProofHash) => vrfProofCheckAgainstStake(vrfProofHash, forgerBox.value(), totalStake)}
 
     val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
     val nextBlockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
     val forgingResult = eligibleForgerOpt
-      .map{case (forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof) =>
-        forgeBlock(nodeView, bestBlockId, nextBlockTimestamp, forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof)}
+      .map{case (forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof, vrfProofHash) =>
+        forgeBlock(nodeView, bestBlockId, nextBlockTimestamp, forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof, vrfProofHash)}
       .getOrElse(SkipSlot)
 
     log.info(s"Forge result is: ${forgingResult}")
@@ -65,7 +67,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     for {
       rewardPrivateKey <- wallet.secret(forgerBox.rewardProposition()).asInstanceOf[Option[PrivateKey25519]]
       vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
-    } yield (forgerBox, merklePath, rewardPrivateKey, vrfSecret, vrfSecret.prove(vrfMessage))
+      vrfProof <- Some(vrfSecret.prove(vrfMessage))
+    } yield (forgerBox, merklePath, rewardPrivateKey, vrfSecret, vrfProof, vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage))
   }
 
 
@@ -88,7 +91,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                            merklePath: MerklePath,
                            forgerBoxRewardPrivateKey: PrivateKey25519,
                            vrfSecret: VrfSecretKey,
-                           vrfProof: VrfProof): ForgeResult = {
+                           vrfProof: VrfProof,
+                           vrfProofHash: VrfProofHash
+                          ): ForgeResult = {
     var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
@@ -115,6 +120,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                                       forgerBoxRewardPrivateKey,
                                                       forgerBox,
                                                       vrfProof,
+                                                      vrfProofHash,
                                                       merklePath,
                                                       companion,
                                                       params)

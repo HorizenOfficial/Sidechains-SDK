@@ -31,6 +31,8 @@ public class VrfFunctionsImpl implements VrfFunctions {
         for (int i = 0; i < decoded.length; i++) {
             decoded[i] = (byte) (decoded[i] ^ publicKey[0]);
         }
+        //System.out.println("check message: " + ByteUtils.toHexString(messageBytes) + " by proof:" + ByteUtils.toHexString(proofBytes) + " by public key: " +ByteUtils.toHexString(publicKey));
+
         return Arrays.equals(messageWithCorrectLength, decoded);
     }
 
@@ -59,6 +61,8 @@ public class VrfFunctionsImpl implements VrfFunctions {
         for (int i = 0; i < proofBytes.length; ++i) {
             proofBytes[i] = (byte) (proofBytes[i] ^ secretKey[0]);
         }
+
+        //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
         return proofBytes;
     }
 }

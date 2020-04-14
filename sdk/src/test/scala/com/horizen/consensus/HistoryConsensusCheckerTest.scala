@@ -78,7 +78,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
   def testManySeeds(): Unit = {
     val seed = 9084
 
-    (50 to 50).foreach{index =>
+    (50 to 65).foreach{index =>
       println(s"SEED IS ${index}")
       testWithSeed(index + seed)
     }
