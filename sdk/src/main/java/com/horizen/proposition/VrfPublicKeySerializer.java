@@ -20,7 +20,8 @@ public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKe
 
     @Override
     public void serialize(VrfPublicKey proposition, Writer writer) {
-        writer.putBytes(proposition.bytes());
+        byte [] propositionBytes = proposition.bytes();
+        writer.putBytes(propositionBytes);
     }
 
     @Override

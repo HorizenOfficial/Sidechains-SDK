@@ -16,8 +16,6 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.{Failure, Success}
 
-case class ForgerDataWithSecrets(forgerBox: ForgerBox, merklePath: MerklePath, forgerBoxRewardPrivateKey: PrivateKey25519, vrfSecret: VrfSecretKey)
-
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
                           val params: NetworkParams) extends ScorexLogging with TimeToEpochSlotConverter {
@@ -53,10 +51,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
-    val nextBockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
+    val nextBlockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
     val forgingResult = eligibleForgerOpt
       .map{case (forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof) =>
-        forgeBlock(nodeView, bestBlockId, nextBockTimestamp, forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof)}
+        forgeBlock(nodeView, bestBlockId, nextBlockTimestamp, forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof)}
       .getOrElse(SkipSlot)
 
     log.info(s"Forge result is: ${forgingResult}")

@@ -9,12 +9,10 @@ import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
-import static com.horizen.secret.SecretsIdsEnum.CustomPrivateKey;
-
 public class CustomPrivateKey implements Secret
 {
     public static final int KEY_LENGTH = 128;
-    public static final byte SECRET_TYPE_ID = CustomPrivateKey.id();
+    public static final byte SECRET_TYPE_ID = 1;
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;
