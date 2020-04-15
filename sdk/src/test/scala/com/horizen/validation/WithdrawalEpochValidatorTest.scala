@@ -205,7 +205,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
-        WithdrawalEpochInfo(1, withdrawalEpochLength), VrfGenerator.generateProof(0)
+        WithdrawalEpochInfo(1, withdrawalEpochLength), VrfGenerator.generateProof(0), VrfGenerator.generateProofHash(0)
       ))
     })
     assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
@@ -214,7 +214,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     // Test 3: valid block - no MC block references, parent is in the middle of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
-        WithdrawalEpochInfo(1, withdrawalEpochLength / 2), VrfGenerator.generateProof(1)
+        WithdrawalEpochInfo(1, withdrawalEpochLength / 2), VrfGenerator.generateProof(1), VrfGenerator.generateProofHash(1)
       ))
     })
     assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
@@ -223,7 +223,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     // Test 4: valid block - no MC block references, parent is at the beginning of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
-        WithdrawalEpochInfo(1, 0), VrfGenerator.generateProof(2)
+        WithdrawalEpochInfo(1, 0), VrfGenerator.generateProof(2), VrfGenerator.generateProofHash(2)
       ))
     })
     assertTrue("Sidechain block with no MCBlock references expected to be valid.", validator.validate(block, history).isSuccess)
@@ -249,7 +249,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3),// lead to the middle index -> no epoch switch
-        VrfGenerator.generateProof(3)
+        VrfGenerator.generateProof(3), VrfGenerator.generateProofHash(3)
       ))
     })
     assertTrue("Sidechain block with MCBlock references that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -259,7 +259,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2), // lead to the last epoch index -> no epoch switch
-        VrfGenerator.generateProof(4)
+        VrfGenerator.generateProof(4), VrfGenerator.generateProofHash(4)
       ))
     })
     assertTrue("Sidechain block with MCBlock references that lead to the finish of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -269,7 +269,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1), // lead to the switching of the epoch
-        VrfGenerator.generateProof(5)
+        VrfGenerator.generateProof(5), VrfGenerator.generateProofHash(5)
       ))
     })
     assertTrue("Sidechain block with MCBlock references that lead to epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
@@ -299,7 +299,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3), // lead to the middle index -> no epoch switch
-        VrfGenerator.generateProof(5)
+        VrfGenerator.generateProof(5), VrfGenerator.generateProofHash(5)
       ))
     })
     assertTrue("Sidechain block with SC transactions and MCBlock references that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -309,7 +309,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2), // lead to the last epoch index -> no epoch switch
-        VrfGenerator.generateProof(6)
+        VrfGenerator.generateProof(6), VrfGenerator.generateProofHash(6)
       ))
     })
     assertTrue("Sidechain block with SC transactions and MCBlock references that lead to the finish of the epoch expected to be invalid.", validator.validate(block, history).isFailure)
@@ -323,7 +323,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1), // lead to the switching of the epoch
-        VrfGenerator.generateProof(7)
+        VrfGenerator.generateProof(7), VrfGenerator.generateProofHash(7)
       ))
     })
     assertTrue("Sidechain block with SC transactions and MCBlock references that lead to the epoch switching expected to be invalid.", validator.validate(block, history).isFailure)

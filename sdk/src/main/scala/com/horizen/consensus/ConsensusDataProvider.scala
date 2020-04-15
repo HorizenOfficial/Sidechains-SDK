@@ -6,6 +6,8 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.proof.VrfProof
 import com.horizen.storage.SidechainBlockInfoProvider
 import com.horizen.utils.Utils
+import com.horizen.vrf.VrfProofHash
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
@@ -71,9 +73,10 @@ trait ConsensusDataProvider {
   private def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId, lastBlockInfoInEpoch: SidechainBlockInfo): NonceConsensusEpochInfo = {
     val previousEpoch = getPreviousConsensusEpochIdForBlock(lastBlockIdInEpoch, storage.blockInfoById(lastBlockIdInEpoch))
 
-    val allVrfOutputsWithSlots = foldEpochRight[ListBuffer[(VrfProof, ConsensusSlotNumber)]](ListBuffer(), lastBlockIdInEpoch, lastBlockInfoInEpoch) {
+    val allVrfOutputsWithSlots =
+      foldEpochRight[ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)]](ListBuffer(), lastBlockIdInEpoch, lastBlockInfoInEpoch) {
       (blockId, blockInfo, accumulator) =>
-        (blockInfo.vrfProof, timeStampToSlotNumber(blockInfo.timestamp)) +=: accumulator
+        (blockInfo.vrfProof, blockInfo.vrfProofHash, timeStampToSlotNumber(blockInfo.timestamp)) +=: accumulator
     }.toList
 
     //Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
@@ -83,9 +86,10 @@ trait ConsensusDataProvider {
     val eligibleSlotsRange = (quietSlotsNumber to params.consensusSlotsInEpoch - quietSlotsNumber)
     val eligibleForNonceCalculation =
       allVrfOutputsWithSlots
-        .withFilter{case (_, slot) => eligibleSlotsRange.contains(slot)}
-        .map{case (proof, _) => proof.bytes()}
+        .withFilter{case (_, _, slot) => eligibleSlotsRange.contains(slot)}
+        .map{case (proof,proofHash,  _) => ByteUtils.concatenate(proof.bytes(), proofHash.bytes())}
 
+    //According to https://eprint.iacr.org/2017/573.pdf p.26
     val previousNonce = consensusDataStorage.getNonceConsensusEpochInfo(previousEpoch).getOrElse(calculateNonceForEpoch(previousEpoch)).bytes
     val currentEpochNumberBytes = Ints.toByteArray(timeStampToEpochNumber(lastBlockInfoInEpoch.timestamp))
 
@@ -149,6 +153,6 @@ trait ConsensusDataProvider {
 
 object ConsensusDataProvider {
   def calculateNonceForGenesisBlockInfo(genesisBlockInfo: SidechainBlockInfo): NonceConsensusEpochInfo = {
-    NonceConsensusEpochInfo(ConsensusNonce(genesisBlockInfo.vrfProof.bytes()))
+    NonceConsensusEpochInfo(ConsensusNonce(Utils.doubleSHA256Hash(genesisBlockInfo.vrfProofHash.bytes())))
   }
 }

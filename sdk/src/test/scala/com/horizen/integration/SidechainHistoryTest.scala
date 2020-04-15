@@ -44,7 +44,8 @@ class SidechainHistoryTest extends JUnitSuite
     genesisMainchainBlockHash = Some(genesisBlock.mainchainBlocks.head.hash),
     validity = ModifierSemanticValidity.Valid,
     timestamp = Some(genesisBlock.timestamp),
-    genesisBlock.vrfProof
+    genesisBlock.vrfProof,
+    genesisBlock.vrfProofHash
   )
   var params: NetworkParams = _
 
@@ -121,7 +122,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB2.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(), WithdrawalEpochInfo(1, 1), blockB2.vrfProof), history.bestBlockInfo)
+      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(), WithdrawalEpochInfo(1, 1), blockB2.vrfProof, blockB2.vrfProofHash), history.bestBlockInfo)
 
 
     // Test 2: append block after current tip (not after genesis)
@@ -145,7 +146,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB3.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1), blockB3.vrfProof), history.bestBlockInfo)
+      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1), blockB3.vrfProof, blockB3.vrfProofHash), history.bestBlockInfo)
 
 
     // At the moment we have an active chain G1 -> B2 -> B3,

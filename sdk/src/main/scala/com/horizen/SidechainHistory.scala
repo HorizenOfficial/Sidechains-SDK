@@ -133,7 +133,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      block.vrfProof
+      block.vrfProof,
+      block.vrfProofHash
     )
   }
 
@@ -472,7 +473,8 @@ object SidechainHistory
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlocks.size), // First Withdrawal epoch value. Note: maybe put to params?
-      block.vrfProof
+      block.vrfProof,
+      block.vrfProofHash
     )
   }
 

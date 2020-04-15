@@ -375,7 +375,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           tipNewValidity,
           activeChainBlockInfoList.last.mainchainBlockReferenceHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo,
-          activeChainBlockInfoList.last.vrfProof
+          activeChainBlockInfoList.last.vrfProof,
+          activeChainBlockInfoList.last.vrfProofHash
         ).bytes)
     ))
 
@@ -392,7 +393,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkTipNewValidity,
           forkChainBlockInfoList.last.mainchainBlockReferenceHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo,
-          forkChainBlockInfoList.last.vrfProof
+          forkChainBlockInfoList.last.vrfProof,
+          forkChainBlockInfoList.last.vrfProofHash
         ).bytes)
     ))
 
@@ -443,7 +445,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update best block exception")
 
     val newBestBlock = forkChainBlockList.head
-    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2), newBestBlock.vrfProof)
+    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2), newBestBlock.vrfProof, newBestBlock.vrfProofHash)
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(
       new ByteArrayWrapper(Array.fill(32)(-1: Byte)),

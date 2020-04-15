@@ -107,7 +107,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
   def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
-                               vrfProof: VrfProof = VrfGenerator.generateProof(42)
+                               vrfProof: VrfProof = VrfGenerator.generateProof(42),
+                               vrfProofHash: VrfProofHash = VrfGenerator.generateProofHash(34)
                               ): SidechainBlockInfo = {
     SidechainBlockInfo(
       1,
@@ -117,7 +118,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       validity,
       Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
       WithdrawalEpochInfo(1, 1),
-      vrfProof
+      vrfProof,
+      vrfProofHash
     )
   }
 
@@ -139,7 +141,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      VrfGenerator.generateProof(parentBlockInfo.height)
+      VrfGenerator.generateProof(parentBlockInfo.height),
+      VrfGenerator.generateProofHash(parentBlockInfo.timestamp)
     )
   }
 

@@ -22,6 +22,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils._
 import com.horizen.vrf._
 import com.horizen.{SidechainHistory, utils}
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.block.Block
 import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
@@ -139,7 +140,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       nextEpochNumber = nextEpochNumber,
       nextBlockNonceEpochId = nextBlockNonceEpochId,
       nextBlockStakeEpochId = nextBlockStakeEpochId,
-      allEligibleVrfOutputs = if (eligibleSlotsRange.contains(usedSlot)) allEligibleVrfOutputs :+ newBlock.vrfProof.bytes() else allEligibleVrfOutputs,
+      allEligibleVrfOutputs =
+        if (eligibleSlotsRange.contains(usedSlot)) allEligibleVrfOutputs :+ ByteUtils.concatenate(newBlock.vrfProof.bytes(), newBlock.vrfProofHash.bytes()) else allEligibleVrfOutputs,
       previousEpochId = previousEpochId,
       rnd = rnd
     )
