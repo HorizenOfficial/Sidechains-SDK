@@ -26,7 +26,6 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   private val onSyntacticallyFailedModifier: Receive = {
     case SyntacticallyFailedModification(mod, exception) =>
-      deliveryTracker.setUnknown(mod.id)
       exception match {
         case _: BlockInFutureException =>
           // When next time NodeViewSynchronizer.processInv will be emitted for mod.id it will be processed again.
