@@ -17,7 +17,7 @@ import com.horizen.transaction._
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.network.message.MessageSpec
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
+import scorex.core.network.PeerFeature
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
@@ -38,6 +38,7 @@ import com.google.inject._
 import com.google.inject.name.Named
 import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.proof.ProofSerializer
 import com.horizen.utils.BytesUtils
 
@@ -178,12 +179,8 @@ class SidechainApp @Inject()
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
-      SidechainBlock, SidechainHistory, SidechainMemoryPool]
-      (networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-        modifierSerializers
-      ))
+    actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

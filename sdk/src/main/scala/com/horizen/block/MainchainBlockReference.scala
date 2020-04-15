@@ -51,8 +51,9 @@ case class MainchainBlockReference(
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
+  // TODO: change return type to Try[Unit]
   def semanticValidity(params: NetworkParams): Boolean = {
-    if (header == null || !header.semanticValidity(params))
+    if (header == null || header.semanticValidity(params).isFailure)
       return false
 
     if(data == null || !data.headerHash.sameElements(header.hash))

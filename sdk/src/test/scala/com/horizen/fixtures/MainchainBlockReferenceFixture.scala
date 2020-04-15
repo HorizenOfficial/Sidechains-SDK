@@ -10,6 +10,7 @@ import com.horizen.utils._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.{Success, Try}
 
 trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   def setSeed(seed: Long): Unit = util.Random.setSeed(seed)
@@ -71,7 +72,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
           headerWithNoSerialization.solution) {
             val h = hashData
             override lazy val hash: Array[Byte] = h
-            override def semanticValidity(params: NetworkParams): Boolean = true
+            override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
         }
       case None => new MainchainHeader(
         mainchainHeaderToBytes(headerWithNoSerialization),
@@ -83,7 +84,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
         headerWithNoSerialization.bits,
         headerWithNoSerialization.nonce,
         headerWithNoSerialization.solution) {
-          override def semanticValidity(params: NetworkParams): Boolean = true
+          override def semanticValidity(params: NetworkParams):  Try[Unit] = Success()
       }
     }
 
