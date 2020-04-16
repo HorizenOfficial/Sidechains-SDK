@@ -17,6 +17,7 @@ import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
+import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -442,6 +443,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     transaction
   }
 
+  /*
+    All the methods in SidechainHistory and NodeHistory, that work with MainchainBlockReferences,
+    MainchainHeaders, MainchainBlockReferenceData itself or any information about them,
+    are designed to work with ActiveChain data only.
+    In a Sidechain we are not interested in Mainchain data form Sidechain forks.
+   */
   override def getMainchainCreationBlockHeight: Int = params.mainchainCreationBlockHeight
 
   override def getBestMainchainBlockReferenceInfo: JOptional[MainchainBlockReferenceInfo] = {
@@ -481,19 +488,19 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   def getMainchainHashesLocator: Seq[MainchainHeaderHash] = {
     val firstMainchainHeaderHeight: Int = getMainchainCreationBlockHeight
 
-    var indexes: Seq[Int] = Seq()
+    val indexes: ListBuffer[Int] = ListBuffer()
     var step: Int = 1
     var index: Int = storage.getBestMainchainHeaderInfo.get.height
 
     while (index > firstMainchainHeaderHeight) {
-      indexes = indexes :+ index
+      indexes.append(index)
       // Push top 10 indexes first, then back off exponentially.
       if (indexes.size >= 10)
         step *= 2
       index -= step
     }
     // Push the genesis mc ref index.
-    indexes = indexes :+ firstMainchainHeaderHeight
+    indexes.append(firstMainchainHeaderHeight)
 
     storage.getMainchainHashesForIndexes(indexes)
   }
@@ -502,10 +509,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   // best - the most recent hash, last - the oldest hash
   def getMainchainHashes(last: Array[Byte], best: Array[Byte]): Seq[MainchainHeaderHash] = {
     val bestHeight = storage.getMainchainHeaderInfoByHash(best)
-      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash ${best} not found."))
+      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash $best not found."))
       .height
     val lastHeight = storage.getMainchainHeaderInfoByHash(last)
-      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash ${last} not found."))
+      .getOrElse(throw new IllegalArgumentException(s"MainchainHeader hash $last not found."))
       .height
     require(bestHeight >= lastHeight, "Best hash must lead to the higher MainchainHeader than the last one.")
 

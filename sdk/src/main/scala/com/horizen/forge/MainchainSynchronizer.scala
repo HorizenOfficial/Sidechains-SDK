@@ -13,7 +13,7 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
   // Get divergent mainchain suffix between SC Node and MC Node
   // Return last common header with height + divergent suffix
   def getMainchainDivergentSuffix(history: SidechainHistory, limit: Int): Try[(Int, Seq[MainchainHeaderHash])] = Try {
-    val (_: Int, commonHashHex: String) = getMainchainCommonPointInfo(history).get
+    val (_: Int, commonHashHex: String) = getMainchainCommonBlockHashAndHeight(history).get
     mainchainNodeChannel.getNewBlockHashes(Seq(commonHashHex), limit) match {
       case Success((height, hashes)) => (height, hashes.map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex))))
       case Failure(ex) => throw ex
@@ -21,24 +21,22 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
   }
 
   // Return common block height and hash as a hex string.
-  def getMainchainCommonPointInfo(history: SidechainHistory): Try[(Int, String)] = Try {
+  def getMainchainCommonBlockHashAndHeight(history: SidechainHistory): Try[(Int, String)] = Try {
     val locatorHashes: Seq[String] = history.getMainchainHashesLocator.map(baw => BytesUtils.toHexString(baw.data))
-    val (commonHeight, commonHashHex) = mainchainNodeChannel.getNewBlockHashes(locatorHashes, 1) match {
-      case Success((height, hashes)) => (height, hashes.head)
-      case Failure(ex) => throw ex
-    }
+    val (commonHeight, commonHashHex) = mainchainNodeChannel.getBestCommonPoint(locatorHashes).get
+    val commonHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(commonHashHex))
 
-    if(commonHeight == history.getBestMainchainHeaderInfo.get.height) {
+    if(commonHash == history.getBestMainchainHeaderInfo.get.hash) {
       // No orphan mainchain blocks -> return result as is
       (commonHeight, commonHashHex)
     } else {
       // Orphan mainchain blocks present
       // Check if there is more recent common block, that was not a part of locatorHashes
       val commonHashLocatorIndex: Int = locatorHashes.indexOf(commonHashHex)
-      val commonHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(commonHashHex))
-      val lastUnknownHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(locatorHashes(commonHashLocatorIndex - 1)))
-      // Get the list of MainchainHeader Hashes between last unknown point and previously found common point. Order them from newest to oldest.
-      val locator: Seq[String] = history.getMainchainHashes(commonHash, lastUnknownHash).map(baw => BytesUtils.toHexString(baw.data)).reverse
+      val firstUnknownHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(locatorHashes(commonHashLocatorIndex - 1)))
+      // Get the list of MainchainHeader Hashes between previously found common point and first unknown point.
+      // Order them from newest to oldest as locator.
+      val locator: Seq[String] = history.getMainchainHashes(commonHash, firstUnknownHash).map(baw => BytesUtils.toHexString(baw.data)).reverse
 
       mainchainNodeChannel.getNewBlockHashes(locator, 1) match {
         case Success((height, hashes)) => (height, hashes.head)

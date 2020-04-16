@@ -77,17 +77,17 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
     // Collect MainchainHeaders with corresponding MainchainReferenceData into MainchainReferences and verify them.
     verifiedBlock.mainchainBlockReferencesData.zip(missedMainchainReferenceDataHeaderHashesInfo).foldLeft(verifiedBlock){
       case (lastRetrievedBlock, (referenceData, (mainchainHeaderHash, containingBlockId))) =>
-        val block: SidechainBlock = containingBlockId match {
+        val blockWithMainchainHeader: SidechainBlock = containingBlockId match {
           case lastRetrievedBlock.id => lastRetrievedBlock  // not to extract from Storage full SidechainBlock again
           case verifiedBlock.id => verifiedBlock // it means that both header and data are present inside verified block
-          case id => history.getBlockById(containingBlockId).get // todo: implement scala method, that return block itself or exception, rename current one.
+          case id => history.getBlockById(id).get
         }
 
-        val mainchainHeader: MainchainHeader = block.mainchainHeaders.find(header => header.hash.sameElements(mainchainHeaderHash.data)).get
+        val mainchainHeader: MainchainHeader = blockWithMainchainHeader.mainchainHeaders.find(header => header.hash.sameElements(mainchainHeaderHash.data)).get
         val reference: MainchainBlockReference = MainchainBlockReference(mainchainHeader, referenceData)
         if(!reference.semanticValidity(params))
           throw new IllegalArgumentException(s"Block contains MainchainBlockReferenceData with header hash ${BytesUtils.toHexString(referenceData.headerHash)} that leads to semantically invalid MainchainBlockReference.")
-        block
+        blockWithMainchainHeader
     }
   }
 }

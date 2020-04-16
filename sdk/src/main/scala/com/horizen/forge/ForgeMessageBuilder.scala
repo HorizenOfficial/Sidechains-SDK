@@ -134,21 +134,21 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
     // Get all needed MainchainBlockReferences from MC Node
-    val allMainchainHashes: Seq[MainchainHeaderHash] = (branchPointInfo.referenceDataToInclude ++ branchPointInfo.headersToInclude).distinct
+    val mainchainHashesToRetrieve: Seq[MainchainHeaderHash] = (branchPointInfo.referenceDataToInclude ++ branchPointInfo.headersToInclude).distinct
     val mainchainBlockReferences: Seq[MainchainBlockReference] =
-      mainchainSynchronizer.getMainchainBlockReferences(view.history, allMainchainHashes) match {
+      mainchainSynchronizer.getMainchainBlockReferences(view.history, mainchainHashesToRetrieve) match {
         case Success(references) => references
         case Failure(ex) => return ForgeFailed(ex)
       }
 
     // Extract proper MainchainReferenceData
     val mainchainReferenceData: Seq[MainchainBlockReferenceData] =
-      mainchainBlockReferences.filter(ref => branchPointInfo.referenceDataToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
+      mainchainBlockReferences.withFilter(ref => branchPointInfo.referenceDataToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
       .map(_.data)
 
     // Extract proper MainchainHeaders
     val mainchainHeaders: Seq[MainchainHeader] =
-      mainchainBlockReferences.filter(ref => branchPointInfo.headersToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
+      mainchainBlockReferences.withFilter(ref => branchPointInfo.headersToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
         .map(_.header)
 
     // Get transactions if possible

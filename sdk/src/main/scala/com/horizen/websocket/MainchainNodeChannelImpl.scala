@@ -3,7 +3,7 @@ import com.horizen.block.MainchainBlockReference
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.{Await, Future}
 
 
@@ -64,6 +64,13 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
     val response: NewBlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
     (response.height, response.hashes)
+  }
+
+  override def getBestCommonPoint(locatorHashes: Seq[String]): Try[(Int, String)] = {
+    getNewBlockHashes(locatorHashes, 1) match {
+      case Success((height, hashes)) => Success(height, hashes.head)
+      case Failure(ex) => throw ex
+    }
   }
 
   override def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit] = {
