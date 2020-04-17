@@ -1,14 +1,25 @@
 package com.horizen.api.http
 
+import com.horizen.consensus.ConsensusEpochAndSlot
+import com.horizen.forge.ForgingInfo
+import scorex.util.ModifierId
+
+import scala.collection.mutable
+import scala.util.{Failure, Try}
+
 class SidechainApiMockConfiguration {
 
   private var should_nodeViewHolder_LocallyGeneratedSecret_reply: Boolean = true
   private var should_history_getBlockById_return_value: Boolean = true
   private var should_history_getBlockIdByHeight_return_value: Boolean = true
   private var should_history_getCurrentHeight_return_value = true
-  private var should_forger_TryGetBlockTemplate_reply = true
   private var should_blockActor_SubmitSidechainBlock_reply = true
   private var should_blockActor_GenerateSidechainBlocks_reply = true
+  var should_blockActor_StopForging_reply: Boolean = true
+  var should_blockActor_StartForging_reply: Boolean = true
+  var should_blockActor_ForgingInfo_reply: Try[ForgingInfo] = Failure(new NullPointerException)
+
+  val blockActor_ForgingEpochAndSlot_reply: mutable.Map[ConsensusEpochAndSlot, Try[ModifierId]] = mutable.Map[ConsensusEpochAndSlot, Try[ModifierId]]()
   private var should_peerManager_GetAllPeers_reply: Boolean = true
   private var should_networkController_GetConnectedPeers_reply = true
   private var should_peerManager_GetBlacklistedPeers_reply = true
@@ -38,10 +49,6 @@ class SidechainApiMockConfiguration {
   def getShould_history_getCurrentHeight_return_value(): Boolean = should_history_getCurrentHeight_return_value
 
   def setShould_history_getCurrentHeight_return_value(value: Boolean): Unit = should_history_getCurrentHeight_return_value = value
-
-  def getShould_forger_TryGetBlockTemplate_reply(): Boolean = should_forger_TryGetBlockTemplate_reply
-
-  def setShould_forger_TryGetBlockTemplate_reply(value: Boolean): Unit = should_forger_TryGetBlockTemplate_reply = value
 
   def getShould_blockActor_SubmitSidechainBlock_reply(): Boolean = should_blockActor_SubmitSidechainBlock_reply
 

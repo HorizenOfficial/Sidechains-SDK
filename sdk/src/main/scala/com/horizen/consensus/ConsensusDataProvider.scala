@@ -32,6 +32,8 @@ trait ConsensusDataProvider {
   def getFullConsensusEpochInfoForNextBlock(currentBlockId: ModifierId, nextBlockConsensusEpochNumber: ConsensusEpochNumber): FullConsensusEpochInfo = {
     val currentBlockInfo = storage.blockInfoById(currentBlockId)
     val currentBlockEpochNumber: ConsensusEpochNumber = timeStampToEpochNumber(currentBlockInfo.timestamp)
+    require(currentBlockEpochNumber <= nextBlockConsensusEpochNumber)
+
     val currentBlockIsLastInEpoch = nextBlockConsensusEpochNumber > currentBlockEpochNumber
 
     if (currentBlockIsLastInEpoch) {
@@ -83,7 +85,7 @@ trait ConsensusDataProvider {
     //all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety
     // https://eprint.iacr.org/2017/573.pdf p.23
     val quietSlotsNumber = params.consensusSlotsInEpoch / 3
-    val eligibleSlotsRange = (quietSlotsNumber to params.consensusSlotsInEpoch - quietSlotsNumber)
+    val eligibleSlotsRange = ((quietSlotsNumber + 1) until (params.consensusSlotsInEpoch - quietSlotsNumber))
     val eligibleForNonceCalculation =
       allVrfOutputsWithSlots
         .withFilter{case (_, _, slot) => eligibleSlotsRange.contains(slot)}

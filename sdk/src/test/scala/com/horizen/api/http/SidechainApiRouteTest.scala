@@ -14,8 +14,10 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurren
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
 import com.horizen.forge.Forger
+import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
@@ -161,7 +163,26 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case Forger.ReceivableMessages.StopForging =>
+        case Forger.ReceivableMessages.StopForging => {
+          if (sidechainApiMockConfiguration.should_blockActor_StopForging_reply) {
+            sender ! Success()
+          }
+          else {
+            sender ! Failure(new IllegalStateException("Stop forging error"))
+          }
+        }
+        case Forger.ReceivableMessages.StartForging => {
+          if (sidechainApiMockConfiguration.should_blockActor_StartForging_reply) {
+            sender ! Success()
+          }
+          else {
+            sender ! Failure(new IllegalStateException("Start forging error"))
+          }
+        }
+
+        case Forger.ReceivableMessages.GetForgingInfo => {
+          sender ! sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply
+        }
       }
       TestActor.KeepRunning
     }
@@ -172,6 +193,13 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
+        case TryForgeNextBlockForEpochAndSlot(epoch, slot) => {
+          sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.get(ConsensusEpochAndSlot(epoch, slot)) match {
+            case Some(blockIdTry) => sender ! Future[Try[ModifierId]]{blockIdTry}
+            case None => sender ! Failure(new RuntimeException("Forge is failed"))
+          }
+        }
+
         case SubmitSidechainBlock(b) =>
           if (sidechainApiMockConfiguration.getShould_blockActor_SubmitSidechainBlock_reply()) sender ! Future[Try[ModifierId]](Try(genesisBlock.id))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for submit the block.")))
