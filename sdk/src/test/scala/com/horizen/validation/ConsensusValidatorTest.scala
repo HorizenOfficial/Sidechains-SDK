@@ -84,14 +84,14 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     history.append(blockGeneratedBeforeParent).failed.get match {
       case expected: IllegalArgumentException => assert(expected.getMessage == "Block had been generated before parent block had been generated")
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }*/
+    }
 
     val blockWithTheSameSlotAsParent = generateBlockForTheSameSlot(generators)
     history.append(blockWithTheSameSlotAsParent).failed.get match {
       case expected: IllegalArgumentException => assert(expected.getMessage == "Block absolute slot number is equal or less than parent block")
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
-    /*
+
     val blockGeneratedWithSkippedEpoch = generateBlockWithSkippedEpoch(lastGenerator, blocks.last.timestamp, slotLengthInSeconds * epochSizeInSlots)
     history.append(blockGeneratedWithSkippedEpoch).failed.get match {
       case expected: IllegalStateException => assert(expected.getMessage == "Whole epoch had been skipped")

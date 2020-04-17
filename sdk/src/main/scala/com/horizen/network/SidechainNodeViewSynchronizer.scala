@@ -36,7 +36,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
           val peerOpt = deliveryTracker.peerInfo(mod.id)
           deliveryTracker.setUnknown(mod.id)
           peerOpt.foreach(penalizeMisbehavingPeer)
-        case _ => // InvalidDataException, SidechainBlockHeaderInvalidException and all other exceptions
+        case _ => // InvalidBlockException, InvalidSidechainBlockHeaderException and all other exceptions
           // Ban both mod.id and peer
           deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
       }

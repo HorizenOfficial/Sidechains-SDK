@@ -51,7 +51,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     // Note: In future inside snarks id calculation will be different
     @JsonProperty("id")
     @Override
-    public final String id() {
+    public String id() {
         ByteArrayOutputStream proofsStream = new ByteArrayOutputStream();
         for(BoxUnlocker<P> u : unlockers()) {
             byte[] proofBytes = u.boxKey().bytes();

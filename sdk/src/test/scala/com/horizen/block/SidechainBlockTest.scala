@@ -171,7 +171,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockHeaderInvalidException], e.getClass)
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
     }
 
 
@@ -200,7 +200,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
     // No Txs in body, but SidechainBlockHeader Hash expected
@@ -213,7 +213,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
 
@@ -236,7 +236,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
     // No Ref data in body, but SidechainBlockHeader Hash expected
@@ -249,7 +249,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
 
@@ -272,7 +272,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
     // No headers in body, but SidechainBlockHeader Hash expected
@@ -285,7 +285,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
 
@@ -296,7 +296,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInvalidDataException], e.getClass)
+          classOf[InvalidSidechainBlockDataException], e.getClass)
     }
 
 
@@ -334,13 +334,13 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[MainchainHeaderInvalidException], e.getClass)
+          classOf[InvalidMainchainHeaderException], e.getClass)
     }
   }
 
   @Test
   def ommersContainerValidation(): Unit = {
-    // In this test verifyOmmers() method of OmmersContainer is tested
+    // In this test verifyOmmersSeqData() method of OmmersContainer is tested
     // The same check both for Block and Ommer classes
 
     val ommers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
@@ -396,7 +396,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
     // No Ommers in body, but SidechainBlockHeader Hash expected
@@ -409,7 +409,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
     // Another ommers list of the same length
@@ -429,7 +429,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
 
@@ -446,7 +446,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -461,7 +461,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -472,7 +472,7 @@ class SidechainBlockTest
       ommer1.mainchainHeaders,
       ommer1.ommers
     ) {
-      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new OmmerInvalidDataException("Invalid data."))
+      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new InvalidOmmerDataException("Invalid data."))
     }
     invalidBlock = createBlock(
       timestamp = 123666L,
@@ -484,7 +484,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -499,7 +499,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
 
 
@@ -511,8 +511,8 @@ class SidechainBlockTest
       ommer1.mainchainHeaders,
       ommer1.ommers
     ) {
-      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new OmmerInvalidDataException("Invalid data."))
-      override def verifyDataConsistency(): Try[Unit] = Failure(new OmmerInconsistentDataException("Invalid data."))
+      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new InvalidOmmerDataException("Invalid data."))
+      override def verifyDataConsistency(): Try[Unit] = Failure(new InconsistentOmmerDataException("Invalid data."))
     }
     invalidBlock = createBlock(
       timestamp = 123666L,
@@ -524,7 +524,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
 
 
@@ -547,7 +547,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
     // Second Ommer duplicate MainchainHeader from first Ommer
@@ -567,7 +567,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
     // Second Ommer MainchainHeader not connected to last MainchainHeader of first Ommer
@@ -587,7 +587,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -602,7 +602,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
     invalidBlock = createBlock(
@@ -615,7 +615,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
     invalidBlock = createBlock(
@@ -628,7 +628,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -649,7 +649,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockInconsistentDataException], e.getClass)
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
     }
 
 
@@ -669,7 +669,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -706,7 +706,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
 
     // Test 13: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
@@ -732,7 +732,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -754,7 +754,7 @@ class SidechainBlockTest
         jFail("SidechainBlock expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
   }
 

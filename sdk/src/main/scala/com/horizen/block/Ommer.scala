@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, MerkleTree, Utils}
-import com.horizen.validation.{OmmerInconsistentDataException, OmmerInvalidDataException, SidechainBlockInvalidDataException}
+import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException, InvalidSidechainBlockDataException}
 import io.iohk.iodb.ByteArrayWrapper
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -30,7 +30,7 @@ case class Ommer(
     // Verify that Ommers' mainchainReferencesHeaders, ReferencesData and nextMainchainHeaders root hashes are consistent to sidechainBlockHeader.mainchainMerkleRootHash.
     if(mainchainHeaders.isEmpty && mainchainReferencesDataMerkleRootHashOption.isEmpty) {
       if(!header.mainchainMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Mainchain data.")
+        throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Mainchain data.")
     } else {
       // Calculate Merkle root hashes of mainchainBlockReferences Data
       val mainchainReferencesDataMerkleRootHash = mainchainReferencesDataMerkleRootHashOption.getOrElse(Utils.ZEROS_HASH)
@@ -42,7 +42,7 @@ case class Ommer(
         val merkleTree = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava)
         // Check that MerkleTree was not mutated.
         if(merkleTree.isMutated)
-          throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} MainchainHeaders lead to mutated MerkleTree.")
+          throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} MainchainHeaders lead to mutated MerkleTree.")
         merkleTree.rootHash()
       }
 
@@ -54,21 +54,21 @@ case class Ommer(
 
       // Compare final hash with the one stored in SidechainBlockHeader
       if (!header.mainchainMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Mainchain data.")
+        throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Mainchain data.")
     }
 
     if(ommers.isEmpty) {
       if(!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Subommers.")
+        throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Subommers.")
     } else {
       val merkleTree = MerkleTree.createMerkleTree(ommers.map(_.id).asJava)
       val calculatedMerkleRootHash = merkleTree.rootHash()
       if(!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Ommers.")
+        throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} contains inconsistent Ommers.")
 
       // Check that MerkleTree was not mutated.
       if(merkleTree.isMutated)
-        throw new OmmerInconsistentDataException(s"Ommer ${BytesUtils.toHexString(id)} Ommers lead to mutated MerkleTree.")
+        throw new InconsistentOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} Ommers lead to mutated MerkleTree.")
     }
 
     // Check sub ommers data consistency
@@ -82,10 +82,10 @@ case class Ommer(
 
   def verifyData(params: NetworkParams): Try[Unit] = Try {
     // Check that header is valid.
-    // Even if we got non-critical error like SidechainBlockTimestampInFutureException, change it to critical one.
+    // Even if we got non-critical error like SidechainBlockSlotInFutureException, change it to critical one.
     header.semanticValidity(params) match {
       case Success(_) =>
-      case Failure(e) => throw new OmmerInvalidDataException(s"Ommer ${BytesUtils.toHexString(id)} data is invalid: ${e.getMessage}")
+      case Failure(e) => throw new InvalidOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} data is invalid: ${e.getMessage}")
     }
 
     // Verify that each MainchainHeader is semantically valid
@@ -93,17 +93,17 @@ case class Ommer(
     for(mainchainHeader <- mainchainHeaders) {
       mainchainHeader.semanticValidity(params) match {
         case Success(_) =>
-        case Failure(e) => throw new OmmerInvalidDataException(s"Ommer ${BytesUtils.toHexString(id)} data is invalid: ${e.getMessage}")
+        case Failure(e) => throw new InvalidOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} data is invalid: ${e.getMessage}")
       }
     }
 
     // Verify that MainchainHeaders lead to consistent MC chain
     for(i <- 0 until mainchainHeaders.size - 1) {
       if(!mainchainHeaders(i).isParentOf(mainchainHeaders(i+1)))
-        throw new OmmerInvalidDataException(s"Ommer ${BytesUtils.toHexString(id)} MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
+        throw new InvalidOmmerDataException(s"Ommer ${BytesUtils.toHexString(id)} MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
-    verifyOmmers(params) match {
+    verifyOmmersSeqData(params) match {
       case Success(_) =>
       case Failure(e) => throw e
     }
@@ -128,7 +128,7 @@ case class Ommer(
 object Ommer {
   def toOmmer(block: SidechainBlock): Ommer = {
     val mainchainReferencesDataMerkleRootHashOption: Option[Array[Byte]] = {
-      val referencesDataHashes: Seq[Array[Byte]] = block.mainchainBlockReferencesData.map(_.hash)
+      val referencesDataHashes: Seq[Array[Byte]] = block.mainchainBlockReferencesData.map(_.headerHash)
       if (referencesDataHashes.isEmpty)
         None
       else

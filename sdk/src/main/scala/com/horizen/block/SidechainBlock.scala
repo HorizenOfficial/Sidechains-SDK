@@ -10,7 +10,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
-import com.horizen.validation.{SidechainBlockInconsistentDataException, SidechainBlockInvalidDataException}
+import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import com.horizen.vrf.VRFProof
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
@@ -70,31 +70,31 @@ class SidechainBlock(
     // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
     if(sidechainTransactions.isEmpty) {
       if(!header.sidechainTransactionsMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent SidechainTransactions.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent SidechainTransactions.")
     } else {
       val merkleTree = MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava)
       val calculatedMerkleRootHash = merkleTree.rootHash()
       if(!header.sidechainTransactionsMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent SidechainTransactions.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent SidechainTransactions.")
 
       // Check that MerkleTree was not mutated.
       if(merkleTree.isMutated)
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id SidechainTransactions lead to mutated MerkleTree.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id SidechainTransactions lead to mutated MerkleTree.")
     }
 
     // Verify that included mainchainBlockReferencesData and MainchainHeaders are consistent to header.mainchainMerkleRootHash.
     if(mainchainHeaders.isEmpty && mainchainBlockReferencesData.isEmpty) {
       if(!header.mainchainMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent Mainchain data.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent Mainchain data.")
     } else {
       // Calculate Merkle root hashes of mainchainBlockReferences Data
       val mainchainReferencesDataMerkleRootHash = if (mainchainBlockReferencesData.isEmpty)
         Utils.ZEROS_HASH
       else {
-        val merkleTree = MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.hash).asJava)
+        val merkleTree = MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.headerHash).asJava)
         // Check that MerkleTree was not mutated.
         if(merkleTree.isMutated)
-          throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id MainchainBlockReferencesData leads to mutated MerkleTree.")
+          throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id MainchainBlockReferencesData leads to mutated MerkleTree.")
         merkleTree.rootHash()
       }
 
@@ -105,7 +105,7 @@ class SidechainBlock(
         val merkleTree = MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava)
         // Check that MerkleTree was not mutated.
         if(merkleTree.isMutated)
-          throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id MainchainHeaders lead to mutated MerkleTree.")
+          throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id MainchainHeaders lead to mutated MerkleTree.")
         merkleTree.rootHash()
       }
 
@@ -116,23 +116,23 @@ class SidechainBlock(
       ).rootHash()
 
       if (!header.mainchainMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent Mainchain data.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent Mainchain data.")
     }
 
 
     // Verify that included ommers are consistent to header.ommersMerkleRootHash
     if(ommers.isEmpty) {
       if(!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent Ommers.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent Ommers.")
     } else {
       val merkleTree = MerkleTree.createMerkleTree(ommers.map(_.id).asJava)
       val calculatedMerkleRootHash = merkleTree.rootHash()
       if(!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id contains inconsistent Ommers.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id contains inconsistent Ommers.")
 
       // Check that MerkleTree was not mutated.
       if(merkleTree.isMutated)
-        throw new SidechainBlockInconsistentDataException(s"SidechainBlock $id Ommers lead to mutated MerkleTree.")
+        throw new InconsistentSidechainBlockDataException(s"SidechainBlock $id Ommers lead to mutated MerkleTree.")
     }
 
     // Check ommers data consistency
@@ -159,20 +159,20 @@ class SidechainBlock(
     }
 
     if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
-      throw new SidechainBlockInvalidDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
+      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
     if(mainchainBlockReferencesData.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER)
-      throw new SidechainBlockInvalidDataException(s"SidechainBlock $id MainchainBlockReferenceData amount exceeds the limit.")
+      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainBlockReferenceData amount exceeds the limit.")
 
     // Check Block size
     val blockSize: Int = bytes.length
     if(blockSize > SidechainBlock.MAX_BLOCK_SIZE)
-      throw new SidechainBlockInvalidDataException(s"SidechainBlock $id size exceeds the limit.")
+      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id size exceeds the limit.")
 
 
     // Check MainchainHeaders order in current block.
     for(i <- 0 until mainchainHeaders.size - 1) {
       if(!mainchainHeaders(i).isParentOf(mainchainHeaders(i+1)))
-        throw new SidechainBlockInvalidDataException(s"SidechainBlock $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
+        throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
     // Check that MainchainHeaders are valid.
@@ -184,7 +184,7 @@ class SidechainBlock(
     }
 
     // Check Ommers
-    verifyOmmers(params) match {
+    verifyOmmersSeqData(params) match {
       case Success(_) =>
       case Failure(e) => throw e
     }
@@ -297,7 +297,7 @@ object SidechainBlock extends ScorexEncoding {
       val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferencesData.isEmpty)
         Utils.ZEROS_HASH
       else
-        MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.hash).asJava).rootHash()
+        MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.headerHash).asJava).rootHash()
 
       // Calculate Merkle root hash of MainchainHeaders
       val mainchainHeadersMerkleRootHash = if(mainchainHeaders.isEmpty)

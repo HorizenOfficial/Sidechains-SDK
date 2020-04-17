@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.consensus.TimeToEpochSlotConverterUtils
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.validation.OmmerInvalidDataException
+import com.horizen.validation.InvalidOmmerDataException
 
 import scala.util.{Failure, Success, Try}
 
@@ -16,10 +16,10 @@ trait OmmersContainer {
 
   def score: Long = 1L + ommers.map(_.score).sum
 
-  protected def verifyOmmers(params: NetworkParams): Try[Unit] = Try {
+  protected def verifyOmmersSeqData(params: NetworkParams): Try[Unit] = Try {
     // Verify ommers score consistency to SidechainBlockHeader
     if (ommers.map(_.score).sum != header.ommersCumulativeScore)
-      throw new OmmerInvalidDataException(s"SidechainBlockHeader ommers cumulative score is different to the actual Ommers score.")
+      throw new InvalidOmmerDataException(s"SidechainBlockHeader ommers cumulative score is different to the actual Ommers score.")
 
     // Return in case if there no Ommers
     if(ommers.isEmpty)
@@ -30,7 +30,7 @@ trait OmmersContainer {
     ommers.foldLeft(header.parentId) {
       case (parentId, ommer) =>
         if (parentId != ommer.header.parentId)
-          throw new OmmerInvalidDataException(s"OmmerContainer Ommers contain not consistent SidechainBlockHeaders chain.")
+          throw new InvalidOmmerDataException(s"OmmerContainer Ommers contain not consistent SidechainBlockHeaders chain.")
         ommer.header.id
     }
 
@@ -41,16 +41,16 @@ trait OmmersContainer {
     val absoluteSlots = timestamps.map(t => converter.timeStampToAbsoluteSlotNumber(t))
     for(i <- 1 until absoluteSlots.size) {
       if(absoluteSlots(i) <= absoluteSlots(i-1))
-        throw new OmmerInvalidDataException(s"OmmerContainer Ommers slots are not consistent.")
+        throw new InvalidOmmerDataException(s"OmmerContainer Ommers slots are not consistent.")
     }
 
     // Ommers must reference to MainchainHeaders for different chain than current SidechainBlock does.
     // In our case first Ommer should contain non empty headers seq and it should be different to the same length subseq of current SidechainBlock headers.
     val firstOmmerMainchainHeaders = ommers.head.mainchainHeaders
     if (mainchainHeaders.size < firstOmmerMainchainHeaders.size)
-      throw new OmmerInvalidDataException(s"OmmerContainer first ommer contains more MainchainHeaders than container.")
+      throw new InvalidOmmerDataException(s"OmmerContainer first ommer contains more MainchainHeaders than container.")
     if (firstOmmerMainchainHeaders.isEmpty || firstOmmerMainchainHeaders.equals(mainchainHeaders.take(firstOmmerMainchainHeaders.size)))
-      throw new OmmerInvalidDataException(s"OmmerContainer Ommers don't lead to the orphaned MainchainHeader chain.")
+      throw new InvalidOmmerDataException(s"OmmerContainer Ommers don't lead to the orphaned MainchainHeader chain.")
 
 
     val ommersMainchainHeaders: Seq[MainchainHeader] = ommers.flatMap(_.mainchainHeaders)
@@ -59,13 +59,13 @@ trait OmmersContainer {
     ommersMainchainHeaders.foldLeft(mainchainHeaders.head.hashPrevBlock) {
       case (hashPrevBlock, ommerMainchainHeader) =>
         if (!ommerMainchainHeader.hashPrevBlock.sameElements(hashPrevBlock))
-          throw new OmmerInvalidDataException(s"OmmerContainer Ommers contains not consistent MainchainHeader chain.")
+          throw new InvalidOmmerDataException(s"OmmerContainer Ommers contains not consistent MainchainHeader chain.")
         ommerMainchainHeader.hash
     }
 
     // Total number of MainchainHeaders in current SidechainBlock must be greater than ommers total MainchainHeaders amount.
     if (mainchainHeaders.size <= ommersMainchainHeaders.size)
-      throw new OmmerInvalidDataException(s"OmmerContainer contains less MainchainHeader than in Ommers.")
+      throw new InvalidOmmerDataException(s"OmmerContainer contains less MainchainHeader than in Ommers.")
 
     // Verify that each Ommer contains valid data.
     for (ommer <- ommers) {

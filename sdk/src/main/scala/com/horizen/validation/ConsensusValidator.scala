@@ -62,7 +62,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
     if(history.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp) > history.timeStampToAbsoluteSlotNumber(Instant.now.getEpochSecond))
-      throw new SidechainBlockTimestampInFutureException("Block had been generated in the future")
+      throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
   private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,

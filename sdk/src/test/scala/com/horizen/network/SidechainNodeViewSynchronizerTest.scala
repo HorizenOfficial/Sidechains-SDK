@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.validation.{BlockInFutureException, InconsistentDataException, InvalidDataException, SidechainBlockHeaderInvalidException}
+import com.horizen.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
@@ -94,17 +94,17 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       Some(peer)
     })
 
-    // Test on SidechainBlockHeaderInvalidException
-    val sidechainBlockHeaderInvalidException = new SidechainBlockHeaderInvalidException("block header invalid exception")
+    // Test on InvalidSidechainBlockHeaderException
+    val sidechainBlockHeaderInvalidException = new InvalidSidechainBlockHeaderException("block header invalid exception")
     nodeViewSynchronizerRef ! SyntacticallyFailedModification(block, sidechainBlockHeaderInvalidException)
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
     // Check that block was set to Invalid -> ban
     assertTrue("Delivery tracker expected to set block id as Invalid.", setInvalidExecuted)
 
-    // Test on InvalidDataException
+    // Test on InvalidBlockException
     setInvalidExecuted = false
-    val invalidDataException = new InvalidDataException("invalid data exception")
+    val invalidDataException = new InvalidBlockException("invalid data exception")
     nodeViewSynchronizerRef ! SyntacticallyFailedModification(block, invalidDataException)
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]

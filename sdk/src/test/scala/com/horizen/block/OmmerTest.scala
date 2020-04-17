@@ -7,7 +7,7 @@ import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixt
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
 import com.horizen.proof.Signature25519
 import com.horizen.utils.BytesUtils
-import com.horizen.validation.{OmmerInconsistentDataException, OmmerInvalidDataException}
+import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VRFKeyGenerator
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
@@ -52,7 +52,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -99,7 +99,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -114,7 +114,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -129,14 +129,14 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
         jFail(s"Ommer expected to have invalid data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data verification.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -148,7 +148,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -162,7 +162,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -178,7 +178,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -191,7 +191,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have inconsistent data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data consistency verification.",
-          classOf[OmmerInconsistentDataException], e.getClass)
+          classOf[InconsistentOmmerDataException], e.getClass)
     }
     invalidOmmer.verifyData(params) match {
       case Success(_) =>
@@ -211,7 +211,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have invalid data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data verification.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
 
 
@@ -239,7 +239,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
         jFail(s"Ommer expected to have invalid data.")
       case Failure(e) =>
         assertEquals("Different exception type expected during data verification.",
-          classOf[OmmerInvalidDataException], e.getClass)
+          classOf[InvalidOmmerDataException], e.getClass)
     }
   }
 

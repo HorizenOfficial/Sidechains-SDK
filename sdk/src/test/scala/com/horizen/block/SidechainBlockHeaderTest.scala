@@ -5,7 +5,7 @@ import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxGenerationMetadata, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.BytesUtils
-import com.horizen.validation.SidechainBlockHeaderInvalidException
+import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -92,7 +92,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
         jFail("Unsigned header expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockHeaderInvalidException], e.getClass)
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
     }
 
 
@@ -104,7 +104,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
         jFail("Header with wrong signature expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockHeaderInvalidException], e.getClass)
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
     }
 
 
@@ -126,7 +126,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
         jFail("Signed header with negative timestamp expected to be semantically Invalid.")
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
-          classOf[SidechainBlockHeaderInvalidException], e.getClass)
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
     }
   }
 }

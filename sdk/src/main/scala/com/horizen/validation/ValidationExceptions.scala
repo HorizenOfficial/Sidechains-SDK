@@ -17,7 +17,7 @@ package com.horizen.validation
 class BlockInFutureException(message: String = "", cause: Option[Throwable] = None)
   extends Exception(message, cause.orNull)
 
-class SidechainBlockTimestampInFutureException(message: String = "", cause: Option[Throwable] = None)
+class SidechainBlockSlotInFutureException(message: String = "", cause: Option[Throwable] = None)
   extends BlockInFutureException(message, cause)
 
 class MainchainHeaderTimestampInFutureException(message: String = "", cause: Option[Throwable] = None)
@@ -30,34 +30,39 @@ class MainchainHeaderTimestampInFutureException(message: String = "", cause: Opt
 class InconsistentDataException(message: String = "", cause: Option[Throwable] = None)
   extends Exception(message, cause.orNull)
 
-class SidechainBlockInconsistentDataException(message: String = "", cause: Option[Throwable] = None)
+// SidechainBlock data is inconsistent to its SidechainBlockHeader
+class InconsistentSidechainBlockDataException(message: String = "", cause: Option[Throwable] = None)
   extends InconsistentDataException(message, cause)
 
-// Ommers data inconsistent to SidechainBlockHeader
-class OmmerInconsistentDataException(message: String = "", cause: Option[Throwable] = None)
+// Ommers data inconsistent to Ommer's SidechainBlockHeader
+class InconsistentOmmerDataException(message: String = "", cause: Option[Throwable] = None)
   extends InconsistentDataException(message, cause)
 
+// MainchainBlockReferenceData data inconsistent to MainchainBlockReference's MainchainHeader
+class InconsistentMainchainBlockReferenceDataException(message: String = "", cause: Option[Throwable] = None)
+  extends InconsistentDataException(message, cause)
+
+
+// SidechainBlock is invalid.
+// Action: ban both modifier and sender.
+class InvalidBlockException(message: String = "", cause: Option[Throwable] = None)
+  extends Exception(message, cause.orNull)
 
 // SidechainBlockHeader is invalid itself.
-// Action: ban both modifier and sender.
-class SidechainBlockHeaderInvalidException(message: String = "", cause: Option[Throwable] = None)
-  extends Exception(message, cause.orNull)
-
-
-// SidechainBlock data is invalid.
-// It means, that the full block is invalid.
-// Action: ban both modifier and sender.
-class InvalidDataException(message: String = "", cause: Option[Throwable] = None)
-  extends Exception(message, cause.orNull)
+class InvalidSidechainBlockHeaderException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)
 
 // SidechainBlock data corresponds to Header but is invalid.
-class SidechainBlockInvalidDataException(message: String = "", cause: Option[Throwable] = None)
-  extends InvalidDataException(message, cause)
+class InvalidSidechainBlockDataException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)
 
 // Ommer data is invalid.
-class OmmerInvalidDataException(message: String = "", cause: Option[Throwable] = None)
-  extends InvalidDataException(message, cause)
+class InvalidOmmerDataException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)
 
 // MainchainHeader is invalid
-class MainchainHeaderInvalidException(message: String = "", cause: Option[Throwable] = None)
-  extends InvalidDataException(message, cause)
+class InvalidMainchainHeaderException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)
+
+class InvalidMainchainDataException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)

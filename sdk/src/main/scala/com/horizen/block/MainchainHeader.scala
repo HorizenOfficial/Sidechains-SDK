@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils}
-import com.horizen.validation.{MainchainHeaderInvalidException, MainchainHeaderTimestampInFutureException}
+import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
@@ -53,17 +53,17 @@ class MainchainHeader(
       || nonce == null || nonce.length != 32
       || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
       || time <= 0)
-      throw new MainchainHeaderInvalidException("MainchainHeader contains null or out of bound fields.")
+      throw new InvalidMainchainHeaderException("MainchainHeader contains null or out of bound fields.")
 
     if (!ProofOfWorkVerifier.checkProofOfWork(this, params))
-      throw new MainchainHeaderInvalidException(s"MainchainHeader $hashHex PoW is invalid.")
+      throw new InvalidMainchainHeaderException(s"MainchainHeader $hashHex PoW is invalid.")
 
     // check equihash for header bytes without solution part
     if (!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
       mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
       solution)
     )
-      throw new MainchainHeaderInvalidException(s"MainchainHeader $hashHex Equihash solution is invalid.")
+      throw new InvalidMainchainHeaderException(s"MainchainHeader $hashHex Equihash solution is invalid.")
 
     // Check if timestamp is not too far in the future
     if (time > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen

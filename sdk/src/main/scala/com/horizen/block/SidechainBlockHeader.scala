@@ -1,17 +1,14 @@
 package com.horizen.block
 
-import java.time.Instant
-
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes, Ints, Longs}
+import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.consensus.TimeToEpochSlotConverterUtils
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
-import com.horizen.validation.{SidechainBlockHeaderInvalidException, SidechainBlockTimestampInFutureException}
+import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.{VRFProof, VRFProofSerializer}
 import scorex.core.block.Block
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -66,13 +63,13 @@ case class SidechainBlockHeader(
       || ommersMerkleRootHash.length != 32
       || ommersCumulativeScore < 0
       || timestamp <= 0)
-      throw new SidechainBlockHeaderInvalidException(s"SidechainBlockHeader $id contains out of bound fields.")
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id contains out of bound fields.")
 
     if(version != SidechainBlock.BLOCK_VERSION)
-      throw new SidechainBlockHeaderInvalidException(s"SidechainBlock $id version $version is invalid.")
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
     // check, that signature is valid
     if(!signature.isValid(forgerBox.rewardProposition(), messageToSign))
-      throw new SidechainBlockHeaderInvalidException(s"SidechainBlockHeader $id signature is invalid.")
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
   }
 }
 
