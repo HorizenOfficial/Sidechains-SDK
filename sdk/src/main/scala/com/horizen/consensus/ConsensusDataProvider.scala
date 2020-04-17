@@ -71,14 +71,17 @@ trait ConsensusDataProvider {
   }
 
   private def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId, lastBlockInfoInEpoch: SidechainBlockInfo): NonceConsensusEpochInfo = {
-    val allVrfOutputsWithSlots =
+    val allVrfOutputsWithSlots: List[(VrfProof, VrfProofHash, ConsensusSlotNumber)] =
       foldEpochRight[ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)]](ListBuffer(), lastBlockIdInEpoch, lastBlockInfoInEpoch) {
-      (blockId, blockInfo, accumulator) =>
+      (_, blockInfo, accumulator) =>
         (blockInfo.vrfProof, blockInfo.vrfProofHash, timeStampToSlotNumber(blockInfo.timestamp)) +=: accumulator
-    }.toList
+    }.to
 
-    //Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
-    //all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety
+    // Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
+    // all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety.
+    // (The “quiet” periods before and after this central block of slots that sets the nonce will
+    // ensure that the stake distribution, determined at the beginning of the epoch, is stable, and likewise
+    // that the nonce is stable before the next epoch begins.)
     // https://eprint.iacr.org/2017/573.pdf p.23
     val quietSlotsNumber = params.consensusSlotsInEpoch / 3
     val eligibleSlotsRange = (quietSlotsNumber to params.consensusSlotsInEpoch - quietSlotsNumber)
@@ -87,8 +90,8 @@ trait ConsensusDataProvider {
         .withFilter{case (_, _, slot) => eligibleSlotsRange.contains(slot)}
         .map{case (proof,proofHash,  _) => ByteUtils.concatenate(proof.bytes(), proofHash.bytes())}
 
-    val previousEpoch: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInEpoch, lastBlockInfoInEpoch)
     //According to https://eprint.iacr.org/2017/573.pdf p.26
+    val previousEpoch: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInEpoch, lastBlockInfoInEpoch)
     val previousNonce = consensusDataStorage.getNonceConsensusEpochInfo(previousEpoch).getOrElse(calculateNonceForEpoch(previousEpoch)).bytes
     val currentEpochNumberBytes = Ints.toByteArray(timeStampToEpochNumber(lastBlockInfoInEpoch.timestamp))
 
