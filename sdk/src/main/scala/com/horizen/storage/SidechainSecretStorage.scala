@@ -3,21 +3,16 @@ package com.horizen.storage
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.SidechainTypes
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.companion.SidechainSecretsCompanion
+import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
-import scala.util.Try
 import scala.collection.JavaConverters._
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.secret._
-import com.horizen.proposition._
-import com.horizen.utils.ByteArrayWrapper
-import scorex.crypto.hash.Blake2b256
-
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
-class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
+class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
   with ScorexLogging
 {
@@ -27,51 +22,34 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainSecretsCompanion != null, "SidechainSecretsCompanion must be NOT NULL.")
 
-  private val _secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
+  private val secrets = new mutable.LinkedHashMap[ByteArrayWrapper, SidechainTypes#SCS]()
 
   loadSecrets()
 
-  def calculateKey(proposition: SidechainTypes#SCP) : ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
+  def calculateKey(proposition: SidechainTypes#SCP): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
+
+  private def loadSecrets(): Unit = {
+    secrets.clear()
+
+    val storageData = storage.getAll.asScala
+    storageData.view
+      .map(keyToSecretBytes => keyToSecretBytes.getValue.data)
+      .map(secretBytes => sidechainSecretsCompanion.parseBytes(secretBytes))
+      .foreach(secret => secrets.put(calculateKey(secret.publicImage()), secret))
   }
 
-  private def loadSecrets() : Unit = {
-    _secrets.clear()
-    for (s <- storage.getAll.asScala) {
-      val secret = sidechainSecretsCompanion.parseBytesTry(s.getValue.data)
-      if (secret.isSuccess)
-        _secrets.put(calculateKey(secret.get.publicImage()), secret.get)
-      else
-        throw new RuntimeException("Error while secret key parsing.")
-    }
-  }
+  def get (proposition: SidechainTypes#SCP): Option[SidechainTypes#SCS] = secrets.get(calculateKey(proposition))
 
-  def get (proposition : SidechainTypes#SCP) : Option[SidechainTypes#SCS] = {
-    _secrets.get(calculateKey(proposition))
-  }
+  def get (propositions: List[SidechainTypes#SCP]): List[SidechainTypes#SCS] = propositions.flatMap(p => secrets.get(calculateKey(p)))
 
-  def get (propositions : List[SidechainTypes#SCP]) : List[SidechainTypes#SCS] = {
-    val secretList = new ListBuffer[SidechainTypes#SCS]()
+  def getAll: List[SidechainTypes#SCS] = secrets.values.toList
 
-    for (p <- propositions) {
-      val s = _secrets.get(calculateKey(p))
-      if (s.isDefined)
-        secretList.append(s.get)
-    }
-
-    secretList.toList
-  }
-
-  def getAll : List[SidechainTypes#SCS] = {
-    _secrets.values.toList
-  }
-
-  def add (secret : SidechainTypes#SCS) : Try[SidechainSecretStorage] = Try {
+  def add (secret: SidechainTypes#SCS): Try[SidechainSecretStorage] = Try {
     require(secret != null, "Secret must be NOT NULL.")
     val version = new Array[Byte](32)
     val key = calculateKey(secret.publicImage())
 
-    require(!_secrets.contains(key), "Key already exists - " + secret)
+    require(!secrets.contains(key), "Key already exists - " + secret)
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
@@ -81,12 +59,12 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
 
-    _secrets.put(key, secret)
+    secrets.put(key, secret)
 
     this
   }
 
-  def add (secretList : List[SidechainTypes#SCS]) : Try[SidechainSecretStorage] = Try {
+  def add (secretList: List[SidechainTypes#SCS]): Try[SidechainSecretStorage] = Try {
     require(!secretList.contains(null), "Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
     val version = new Array[Byte](32)
@@ -95,8 +73,8 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
     for (s <- secretList) {
       val key = calculateKey(s.publicImage())
-      require(!_secrets.contains(key), "Key already exists - " + s)
-      _secrets.put(key, s)
+      require(!secrets.contains(key), "Key already exists - " + s)
+      secrets.put(key, s)
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](key,
         new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
     }
@@ -108,7 +86,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
     this
   }
 
-  def remove (proposition : SidechainTypes#SCP) : Try[SidechainSecretStorage] = Try {
+  def remove (proposition: SidechainTypes#SCP): Try[SidechainSecretStorage] = Try {
     require(proposition != null, "Proposition must be NOT NULL.")
     val version = new Array[Byte](32)
     val key = calculateKey(proposition)
@@ -119,12 +97,12 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
 
-    _secrets.remove(key)
+    secrets.remove(key)
 
     this
   }
 
-  def remove (propositionList : List[SidechainTypes#SCP]) : Try[SidechainSecretStorage] = Try {
+  def remove (propositionList: List[SidechainTypes#SCP]): Try[SidechainSecretStorage] = Try {
     require(!propositionList.contains(null), "Proposition must be NOT NULL.")
     val removeList = new JArrayList[ByteArrayWrapper]()
     val version = new Array[Byte](32)
@@ -133,7 +111,7 @@ class SidechainSecretStorage(storage : Storage, sidechainSecretsCompanion: Sidec
 
     for (p <- propositionList) {
       val key = calculateKey(p)
-      _secrets.remove(key)
+      secrets.remove(key)
       removeList.add(key)
     }
 

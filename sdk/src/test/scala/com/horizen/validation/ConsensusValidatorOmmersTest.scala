@@ -5,7 +5,7 @@ import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.consensus._
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import org.junit.Assert.{assertEquals, fail => jFail}
+import org.junit.Assert.{assertEquals, assertArrayEquals, fail => jFail}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
@@ -23,7 +23,7 @@ class ConsensusValidatorOmmersTest
 
   val consensusValidator = new ConsensusValidator {
     // always successful
-    override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {}
+    override def verifyVrfProofAndHash(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {}
     // always successful
     override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {}
   }
@@ -54,13 +54,21 @@ class ConsensusValidatorOmmersTest
   def sameEpochOmmersValidation(): Unit = {
     // Mock history
     val history = mockHistory()
+
     // Mock other data
-    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
-    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(currentEpochNonceBytes)
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
+
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(previousEpochNonceBytes)
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
 
     // Test 1: Valid Ommers in correct order from the same epoch as VerifiedBlock
     // Mock ommers
-    var ommers: Seq[Ommer] = Seq(
+    val ommers: Seq[Ommer] = Seq(
       getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)),
       getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 8))
     )
@@ -74,8 +82,10 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val currentEpochConsensusValidator = new ConsensusValidator {
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
-        assertEquals("Different nonceInfo expected", currentFullConsensusEpochInfo.nonceConsensusEpochInfo, nonceInfo)
+      override def verifyVrfProofAndHash(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
+        val slot = history.timeStampToSlotNumber(header.timestamp)
+        val expectedVrfMessage = buildVrfMessage(slot, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        assertArrayEquals("Different vrf message expected", expectedVrfMessage, message)
       }
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -83,7 +93,7 @@ class ConsensusValidatorOmmersTest
     }
 
     Try {
-      consensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+      currentEpochConsensusValidator.verifyOmmers(verifiedBlock, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
     } match {
       case Success(_) =>
       case Failure(e) => throw e //jFail("Block with no ommers expected to be Valid.")
@@ -94,7 +104,7 @@ class ConsensusValidatorOmmersTest
     val fbException = new Exception("ForgerBoxException")
     val forgerBoxFailConsensusValidator = new ConsensusValidator {
       // always successful
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {}
+      override def verifyVrfProofAndHash(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {}
       // always fail
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = throw fbException
     }
@@ -111,7 +121,7 @@ class ConsensusValidatorOmmersTest
     val vrfException = new Exception("VRFException")
     val vrfFailConsensusValidator = new ConsensusValidator {
       // always successful
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = throw vrfException
+      override def verifyVrfProofAndHash(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = throw vrfException
       // always fail
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {}
     }
@@ -129,8 +139,16 @@ class ConsensusValidatorOmmersTest
     val verifiedBlockId: ModifierId = getRandomBlockId(1000L)
 
     // Mock other data
-    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
-    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(currentEpochNonceBytes)
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
+
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(previousEpochNonceBytes)
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
+
     // Mock history
     val history = mockHistory()
 
@@ -143,7 +161,7 @@ class ConsensusValidatorOmmersTest
 
     // Mock block with ommers
     val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
-    var verifiedBlock: SidechainBlock = mock[SidechainBlock]
+    val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     Mockito.when(verifiedBlock.id).thenReturn(verifiedBlockId)
     val header = mock[SidechainBlockHeader]
     Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
@@ -151,8 +169,10 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val previousEpochConsensusValidator = new ConsensusValidator {
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
-        assertEquals("Different nonceInfo expected", previousFullConsensusEpochInfo.nonceConsensusEpochInfo, nonceInfo)
+      override def verifyVrfProofAndHash(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
+        val slot = history.timeStampToSlotNumber(header.timestamp)
+        val expectedVrfMessage = buildVrfMessage(slot, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        assertArrayEquals("Different vrf message expected", expectedVrfMessage, message)
       }
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -173,8 +193,16 @@ class ConsensusValidatorOmmersTest
     val verifiedBlockId: ModifierId = getRandomBlockId(1000L)
 
     // Mock other data
-    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
-    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo], mock[NonceConsensusEpochInfo])
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(currentEpochNonceBytes)
+    val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
+
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    scala.util.Random.nextBytes(previousEpochNonceBytes)
+    val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
+      NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
+
     // Mock history
     val history = mockHistory()
 
@@ -187,7 +215,7 @@ class ConsensusValidatorOmmersTest
 
     // Mock block with ommers
     val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
-    var verifiedBlock: SidechainBlock = mock[SidechainBlock]
+    val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     Mockito.when(verifiedBlock.id).thenReturn(verifiedBlockId)
     val header = mock[SidechainBlockHeader]
     Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)

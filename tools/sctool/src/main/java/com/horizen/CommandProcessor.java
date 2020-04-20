@@ -16,17 +16,18 @@ import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
+import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.secret.PrivateKey25519Serializer;
+import com.horizen.secret.VrfSecretKey;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
-import com.horizen.vrf.VRFProof;
-import com.horizen.vrf.VRFSecretKey;
+import com.horizen.vrf.VrfProofHash;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -208,8 +209,9 @@ public class CommandProcessor {
             ForgerBox forgerBox = SidechainCreation.getHardcodedGenesisForgerBox();
             PrivateKey25519 forgerSecret = SidechainCreation.genesisSecret;
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
-            VRFSecretKey vrfSecret = SidechainCreation.genesisVrfPair._1();
-            VRFProof vrfProof  = vrfSecret.prove(vrfMessage);
+            VrfSecretKey vrfSecret = SidechainCreation.vrfGenesisSecretKey;
+            VrfProof vrfProof  = vrfSecret.prove(vrfMessage);
+            VrfProofHash vrfProofHash = vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage);
             MerklePath mp = new MerklePath(new ArrayList<>());
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
@@ -222,6 +224,7 @@ public class CommandProcessor {
                     forgerSecret,
                     forgerBox,
                     vrfProof,
+                    vrfProofHash,
                     mp,
                     sidechainTransactionsCompanion,
                     params,

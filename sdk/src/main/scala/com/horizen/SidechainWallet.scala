@@ -9,7 +9,7 @@ import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.proposition.Proposition
-import com.horizen.secret.{PrivateKey25519, Secret}
+import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import scorex.util.ModifierId
@@ -17,7 +17,6 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import scorex.core.VersionTag
 import com.horizen.utils._
-import com.horizen.vrf.{VRFPublicKey, VRFSecretKey}
 
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -42,7 +41,6 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-case class ForgerDataWithSecrets(forgerBox: ForgerBox, merklePath: MerklePath, forgerBoxRewardPrivateKey: PrivateKey25519, vrfSecret: VRFSecretKey)
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
@@ -61,13 +59,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   override type NVCT = SidechainWallet
 
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
-
-  //@TODO Shall be changed ASAP as VRFSecret will be reimplemented as standard com.horizen.secret.Secret, shall be processed via addSecret()
-  val vrfSecretMap = new mutable.HashMap[VRFPublicKey, VRFSecretKey]()
-
-  //remove it as well after fix SidechainCreation
-  addSecret(SidechainCreation.genesisSecret)
-  vrfSecretMap.put(SidechainCreation.genesisVrfPair._2, SidechainCreation.genesisVrfPair._1)
 
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
@@ -229,7 +220,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  def getForgingDataWithSecrets(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerDataWithSecrets]] = {
+  def getForgerBoxMerklePathInfoOpt(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
@@ -238,21 +229,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
-    val forgerBoxesWithMerklePathOpt =
-      forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
-
-    forgerBoxesWithMerklePathOpt.map(_.flatMap(tryToAddSecrets))
+    forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
-
-  private def tryToAddSecrets(forgerBoxMerklePathInfo: ForgerBoxMerklePathInfo): Option[ForgerDataWithSecrets] = {
-    val forgerBox = forgerBoxMerklePathInfo.forgerBox
-
-    for {
-      forgerBoxSecret <- secretByPublicKey(forgerBox.rewardProposition()).asScala.map(_.asInstanceOf[PrivateKey25519])
-      vrfSecret <- vrfSecretMap.get(forgerBox.vrfPubKey())
-    } yield ForgerDataWithSecrets(forgerBox, forgerBoxMerklePathInfo.merklePath, forgerBoxSecret, vrfSecret)
-  }
-
 }
 
 object SidechainWallet
@@ -281,6 +259,9 @@ object SidechainWallet
 
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
+      //remove it as well after fix SidechainCreation
+      genesisWallet.addSecret(SidechainCreation.genesisSecret)
+      genesisWallet.addSecret(SidechainCreation.vrfGenesisSecretKey)
       genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else

@@ -60,15 +60,16 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
 
-//      Uncomment and run if you want to update regression data.
-        /*
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
-            out.write(BytesUtils.toHexString(transaction.bytes()));
-            out.close();
-        } catch (Throwable e) {
+        // Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
+                out.write(BytesUtils.toHexString(transaction.bytes()));
+                out.close();
+            }
+            catch (Throwable e) {
+            }
         }
-        */
     }
 
     @Test
@@ -90,6 +91,7 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
     @Test
     public void regressionTest() {
         byte[] bytes;
+
         try {
             ClassLoader classLoader = getClass().getClassLoader();
             FileReader file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile());
@@ -107,9 +109,9 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         RegularTransaction parsedTransaction = t.get();
         // Note: RegularTransaction creation process hide signing part inside, so we can not properly "freeze" the signatures
         // See implementation of SidechainCoreTransaction for correct behaviour.
-        //assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
-        assertArrayEquals("Transaction is different to origin.", transaction.messageToSign(), parsedTransaction.messageToSign());
-        assertEquals("Transaction is different to origin.", transaction.fee(), parsedTransaction.fee());
-        assertEquals("Transaction is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
+        //assertEquals("Transaction id is different to origin.", transaction.id(), parsedTransaction.id());
+        assertArrayEquals("Transaction messageToSign is different to origin.", transaction.messageToSign(), parsedTransaction.messageToSign());
+        assertEquals("Transaction fee is different to origin.", transaction.fee(), parsedTransaction.fee());
+        assertEquals("Transaction timestamp is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
     }
 }

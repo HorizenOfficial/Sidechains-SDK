@@ -1,13 +1,17 @@
 package com.horizen.consensus
 
-import java.math.BigInteger
-
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.params.NetworkParamsUtils
+import com.horizen.params.{NetworkParams, NetworkParamsUtils}
+import com.horizen.proof.VrfProof
 import com.horizen.storage.SidechainBlockInfoProvider
+import com.horizen.utils.Utils
+import com.horizen.vrf.VrfProofHash
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 
 trait ConsensusDataProvider {
   this: TimeToEpochSlotConverter
@@ -15,13 +19,14 @@ trait ConsensusDataProvider {
     with ScorexLogging {
     val storage: SidechainBlockInfoProvider
     val consensusDataStorage: ConsensusDataStorage
+    val params: NetworkParams
   } =>
 
   def getFullConsensusEpochInfoForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): FullConsensusEpochInfo = {
     log.debug(s"Requested FullConsensusEpochInfo for ${blockId} block id")
 
     val previousEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
-    getFullConsensusEpochInfoByPreviousEpochId(previousEpochId)
+    getFullConsensusEpochInfoByEpochId(previousEpochId)
   }
 
   def getFullConsensusEpochInfoForNextBlock(currentBlockId: ModifierId, nextBlockConsensusEpochNumber: ConsensusEpochNumber): FullConsensusEpochInfo = {
@@ -31,18 +36,18 @@ trait ConsensusDataProvider {
 
     if (currentBlockIsLastInEpoch) {
       //if block is last in epoch then consensus epochId is equals to blockId
-      getFullConsensusEpochInfoByPreviousEpochId(blockIdToEpochId(currentBlockId))
+      getFullConsensusEpochInfoByEpochId(blockIdToEpochId(currentBlockId))
     }
     else {
       getFullConsensusEpochInfoForBlock(currentBlockId, currentBlockInfo)
     }
   }
 
-  def getFullConsensusEpochInfoByPreviousEpochId(previousEpochId: ConsensusEpochId): FullConsensusEpochInfo = {
-    val nonceEpochInfo: NonceConsensusEpochInfo = consensusDataStorage.getNonceConsensusEpochInfo(previousEpochId).getOrElse(calculateNonceForEpoch(previousEpochId))
+  def getFullConsensusEpochInfoByEpochId(epochId: ConsensusEpochId): FullConsensusEpochInfo = {
+    val nonceEpochInfo: NonceConsensusEpochInfo = consensusDataStorage.getNonceConsensusEpochInfo(epochId).getOrElse(calculateNonceForEpoch(epochId))
 
 
-    val lastBlockIdInPreviousEpoch = lastBlockIdInEpochId(previousEpochId)
+    val lastBlockIdInPreviousEpoch = lastBlockIdInEpochId(epochId)
     val prePreviousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInPreviousEpoch, storage.blockInfoById(lastBlockIdInPreviousEpoch))
     val stakeEpochInfo: StakeConsensusEpochInfo =
       consensusDataStorage
@@ -52,26 +57,51 @@ trait ConsensusDataProvider {
     FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)
   }
 
+  //Check possible stack buffer overflow situations
   def calculateNonceForEpoch(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
     val lastBlockIdInEpoch: ModifierId = lastBlockIdInEpochId(epochId)
     val lastBlockInfoInEpoch: SidechainBlockInfo = storage.blockInfoById(lastBlockIdInEpoch)
 
-    val nonceOpt: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
-      (blockId: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
-        {
-          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainReferenceDataHeaderHashes.map(_.data))
-          (minimalHashForCurrentBlockOpt, accumulator) match {
-            case (None, _) => accumulator
-            case (minimalHashOpt, None) => minimalHashOpt
-            case (Some(a), Some(b)) => Option(a.min(b))
-        }
-      }
+    if (isGenesisBlock(lastBlockIdInEpoch)) {
+      ConsensusDataProvider.calculateNonceForGenesisBlockInfo(lastBlockInfoInEpoch)
     }
-
-    require(nonceOpt.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
-
-    NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceOpt.get))
+    else {
+      calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch, lastBlockInfoInEpoch)
+    }
   }
+
+  private def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId, lastBlockInfoInEpoch: SidechainBlockInfo): NonceConsensusEpochInfo = {
+    val allVrfOutputsWithSlots: List[(VrfProof, VrfProofHash, ConsensusSlotNumber)] =
+      foldEpochRight[ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)]](ListBuffer(), lastBlockIdInEpoch, lastBlockInfoInEpoch) {
+      (_, blockInfo, accumulator) =>
+        (blockInfo.vrfProof, blockInfo.vrfProofHash, timeStampToSlotNumber(blockInfo.timestamp)) +=: accumulator
+    }.to
+
+    // Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
+    // all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety.
+    // (The “quiet” periods before and after this central block of slots that sets the nonce will
+    // ensure that the stake distribution, determined at the beginning of the epoch, is stable, and likewise
+    // that the nonce is stable before the next epoch begins.)
+    // https://eprint.iacr.org/2017/573.pdf p.23
+    val quietSlotsNumber = params.consensusSlotsInEpoch / 3
+    val eligibleSlotsRange = (quietSlotsNumber to params.consensusSlotsInEpoch - quietSlotsNumber)
+    val eligibleForNonceCalculation =
+      allVrfOutputsWithSlots
+        .withFilter{case (_, _, slot) => eligibleSlotsRange.contains(slot)}
+        .map{case (proof,proofHash,  _) => ByteUtils.concatenate(proof.bytes(), proofHash.bytes())}
+
+    //According to https://eprint.iacr.org/2017/573.pdf p.26
+    val previousEpoch: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInEpoch, lastBlockInfoInEpoch)
+    val previousNonce = consensusDataStorage.getNonceConsensusEpochInfo(previousEpoch).getOrElse(calculateNonceForEpoch(previousEpoch)).bytes
+    val currentEpochNumberBytes = Ints.toByteArray(timeStampToEpochNumber(lastBlockInfoInEpoch.timestamp))
+
+    val allNonceBytesAsList = previousNonce :: currentEpochNumberBytes :: eligibleForNonceCalculation
+    val newNonce = Utils.doubleSHA256Hash(Bytes.concat(allNonceBytesAsList:_*)) // :_* -- converts list to varargs
+
+    NonceConsensusEpochInfo(byteArrayToConsensusNonce(newNonce))
+  }
+
+
 
   /**
    * @return Return last block in previous epoch, for genesis block last block of previous epoch is genesis block itself
@@ -120,5 +150,11 @@ trait ConsensusDataProvider {
 
     val epochNumber = timeStampToEpochNumber(blockInfo.timestamp)
     foldEpochIteration(accumulator, blockId, blockInfo, epochNumber)(op)
+  }
+}
+
+object ConsensusDataProvider {
+  def calculateNonceForGenesisBlockInfo(genesisBlockInfo: SidechainBlockInfo): NonceConsensusEpochInfo = {
+    NonceConsensusEpochInfo(ConsensusNonce(Utils.doubleSHA256Hash(genesisBlockInfo.vrfProofHash.bytes())))
   }
 }

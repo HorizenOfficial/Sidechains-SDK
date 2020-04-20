@@ -6,10 +6,10 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.proof.{Signature25519, Signature25519Serializer}
+import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
-import com.horizen.vrf.{VRFProof, VRFProofSerializer}
+import com.horizen.vrf.VrfProofHash
 import scorex.core.block.Block
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
@@ -25,7 +25,8 @@ case class SidechainBlockHeader(
                                  timestamp: Block.Timestamp,
                                  forgerBox: ForgerBox,
                                  @JsonSerialize(using = classOf[MerklePathSerializer]) forgerBoxMerklePath: MerklePath,
-                                 @JsonSerialize(using = classOf[VRFProofSerializer]) vrfProof: VRFProof,
+                                 vrfProof: VrfProof,
+                                 vrfProofHash: VrfProofHash,
                                  sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                  mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                  ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
@@ -46,6 +47,7 @@ case class SidechainBlockHeader(
       Longs.toByteArray(timestamp),
       forgerBox.id(),
       vrfProof.bytes, // TO DO: is it ok or define vrfProof.id() ?
+      vrfProofHash.bytes(),
       forgerBoxMerklePath.bytes(), // TO DO: is it ok?
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
@@ -56,6 +58,7 @@ case class SidechainBlockHeader(
 
   def semanticValidity(): Boolean = {
     if(parentId == null || parentId.length != 64
+      || vrfProof == null || vrfProofHash == null || forgerBoxMerklePath == null
       || sidechainTransactionsMerkleRootHash == null || sidechainTransactionsMerkleRootHash.length != 32
       || mainchainMerkleRootHash == null || mainchainMerkleRootHash.length != 32
       || ommersMerkleRootHash == null || ommersMerkleRootHash.length != 32 || ommersCumulativeScore < 0
@@ -96,6 +99,10 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     w.putInt(vrfProofBytes.length)
     w.putBytes(vrfProofBytes)
 
+    val vrfProofHashBytes = obj.vrfProofHash.bytes()
+    w.putInt(vrfProofHashBytes.length)
+    w.putBytes(vrfProofHashBytes)
+
     w.putBytes(obj.sidechainTransactionsMerkleRootHash)
 
     w.putBytes(obj.mainchainMerkleRootHash)
@@ -123,7 +130,10 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     val forgerBoxMerklePath: MerklePath = MerklePath.parseBytes(r.getBytes(forgerBoxMerklePathBytesLength))
 
     val vrfProofBytesLength: Int = r.getInt()
-    val vrfProof: VRFProof = VRFProof.parseBytes(r.getBytes(vrfProofBytesLength))
+    val vrfProof: VrfProof = VrfProof.parse(r.getBytes(vrfProofBytesLength))
+
+    val vrfProofHashBytesLength: Int = r.getInt()
+    val vrfProofHash: VrfProofHash = VrfProofHash.parse(r.getBytes(vrfProofHashBytesLength))
 
     val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
@@ -143,6 +153,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
       forgerBox,
       forgerBoxMerklePath,
       vrfProof,
+      vrfProofHash,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,

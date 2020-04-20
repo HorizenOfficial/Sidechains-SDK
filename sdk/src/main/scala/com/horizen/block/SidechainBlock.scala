@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
-import com.horizen.vrf.VRFProof
+import com.horizen.vrf.VrfProofHash
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
@@ -149,7 +149,8 @@ object SidechainBlock extends ScorexEncoding {
              ommers: Seq[Ommer],
              ownerPrivateKey: PrivateKey25519,
              forgerBox: ForgerBox,
-             vrfProof: VRFProof,
+             vrfProof: VrfProof,
+             vrfProofHash: VrfProofHash,
              forgerBoxMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
@@ -162,6 +163,7 @@ object SidechainBlock extends ScorexEncoding {
     require(ownerPrivateKey != null)
     require(forgerBox != null)
     require(vrfProof != null)
+    require(vrfProofHash != null)
     require(forgerBoxMerklePath != null)
     require(forgerBoxMerklePath.bytes().length > 0)
     require(ownerPrivateKey.publicImage() == forgerBox.rewardProposition())
@@ -181,6 +183,7 @@ object SidechainBlock extends ScorexEncoding {
           forgerBox,
           forgerBoxMerklePath,
           vrfProof,
+          vrfProofHash,
           sidechainTransactionsMerkleRootHash,
           mainchainMerkleRootHash,
           ommersMerkleRootHash,
@@ -199,6 +202,7 @@ object SidechainBlock extends ScorexEncoding {
       forgerBox,
       forgerBoxMerklePath,
       vrfProof,
+      vrfProofHash,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,

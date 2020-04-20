@@ -1,6 +1,5 @@
 package com.horizen.validation
 
-import java.math.BigInteger
 import java.time.Instant
 import java.util.Random
 
@@ -150,6 +149,12 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
+    println("Test blockGeneratedWithIncorrectVrfProofHash")
+    val blockGeneratedWithIncorrectVrfProofHash = generateBlockWithIncorrectVrfProofHash(lastGenerator)
+    history.append(blockGeneratedWithIncorrectVrfProofHash).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == s"Vrf proof hash is corrupted for block ${blockGeneratedWithIncorrectVrfProofHash.id}")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
 
     /////////// Forger box verification /////////////////
     println("Test blockGeneratedWithIncorrectForgerBoxRewardProposition")
@@ -214,7 +219,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   def generateBlockWithIncorrectNonce(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val corruptedRules = generationRules.copy(corruption = generationRules.corruption.copy(consensusNonceShift =  BigInteger.valueOf(42)))
+    val corruptedRules = generationRules.copy(corruption = generationRules.corruption.copy(consensusNonceShift =  42))
     generateBlock(corruptedRules, generator)._2
 
   }
@@ -244,6 +249,13 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
     val corruptedRules =
       generationRules.copy(corruption = generationRules.corruption.copy(forcedVrfProof = Some(VrfGenerator.generateProof(rnd.nextLong()))))
+    generateBlock(corruptedRules, generator)._2
+  }
+
+  def generateBlockWithIncorrectVrfProofHash(generator: SidechainBlocksGenerator): SidechainBlock = {
+    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
+    val corruptedRules =
+      generationRules.copy(corruption = generationRules.corruption.copy(forcedVrfProofHash = Some(VrfGenerator.generateProofHash(rnd.nextLong()))))
     generateBlock(corruptedRules, generator)._2
   }
 

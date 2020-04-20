@@ -197,7 +197,9 @@ class MainchainBlockReferenceValidatorTest
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochInfo(0, 0)
+      WithdrawalEpochInfo(0, 0),
+      null,
+      null
     )
   }
 }

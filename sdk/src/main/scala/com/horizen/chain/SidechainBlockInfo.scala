@@ -1,9 +1,9 @@
 package com.horizen.chain
 
-import java.util
-
 import com.horizen.block.SidechainBlock
+import com.horizen.proof.{VrfProof, VrfProofSerializer}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.vrf.{VrfProofHash, VrfProofHashSerializer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
@@ -21,15 +21,15 @@ case class SidechainBlockInfo(height: Int,
                               mainchainHeaderHashes: Seq[MainchainHeaderHash],
                               mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash],
                               withdrawalEpochInfo: WithdrawalEpochInfo,
+                              vrfProof: VrfProof,
+                              vrfProofHash: VrfProofHash
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
   override def getParentId: ModifierId = parentId
 
   override type M = SidechainBlockInfo
 
-  override lazy val serializer = SidechainBlockInfoSerializer
-
-  override def hashCode: Int = height.hashCode() + score.hashCode() + semanticValidity.code.toInt + util.Arrays.hashCode(idToBytes(parentId))
+  override lazy val serializer: ScorexSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
 
   override def bytes: Array[Byte] = SidechainBlockInfoSerializer.toBytes(this)
 }
@@ -56,6 +56,10 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     w.putInt(obj.mainchainReferenceDataHeaderHashes.size)
     obj.mainchainReferenceDataHeaderHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
+
+    w.putInt(obj.vrfProof.bytes().length)
+    VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
+    VrfProofHashSerializer.getSerializer.serialize(obj.vrfProofHash, w)
   }
 
   private def readMainchainHeadersHashes(r: Reader): Seq[MainchainHeaderHash] = {
@@ -80,7 +84,11 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
+    val proofLength = r.getInt()
+    val vrfProof = VrfProofSerializer.getSerializer.parseBytes(r.getBytes(proofLength))
+
+    val vrfProofHash = VrfProofHashSerializer.getSerializer.parse(r)
     SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode),
-      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo)
+      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfProof, vrfProofHash)
   }
 }

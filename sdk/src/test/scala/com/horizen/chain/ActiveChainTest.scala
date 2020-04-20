@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import java.io.{PrintWriter, StringWriter}
 
-import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
@@ -11,7 +11,7 @@ import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.ModifierId
 
 import scala.collection.breakOut
-import scala.util.Try
+import scala.util.{Random, Try}
 
 class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
   var testSeed: Long = 92830932726517L
@@ -540,7 +540,9 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
       ModifierSemanticValidity.Unknown,
       headers,
       refData,
-      WithdrawalEpochInfo(0, height)
+      WithdrawalEpochInfo(0, height),
+      VrfGenerator.generateProof(1L),
+      VrfGenerator.generateProofHash(1L)
     )
   }
 

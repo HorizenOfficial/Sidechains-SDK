@@ -5,21 +5,26 @@ import java.util.Random
 import com.horizen.box.ForgerBox
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.consensus._
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.vrf.{VRFKeyGenerator, VRFProof, VRFSecretKey}
+import com.horizen.proof.VrfProof
+import com.horizen.proposition.VrfPublicKey
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
+import com.horizen.vrf.VrfProofHash
 
 
-case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VRFSecretKey) {
+case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VrfSecretKey) {
   /**
    * @return VrfProof in case if can be forger
    */
-  def canBeForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[VRFProof] = {
+  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfProofHash)] = {
+    val vrfProof = vrfSecret.prove(vrfMessage)
+    val vrfProofHash = vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage)
+
     val checker = (stakeCheck _).tupled.andThen(additionalCheck)
-    Some(vrfSecret.prove(vrfMessage)).filter(checker(_, totalStake))
+    Some((vrfProof, vrfProofHash)).filter{case (vrfProof, vrfProofHash) => checker(vrfProofHash, totalStake)}
   }
 
-  private def stakeCheck(proof: VRFProof, totalStake: Long): Boolean = {
-    vrfProofCheckAgainstStake(forgerBox.value(), proof, totalStake)
+  private def stakeCheck(vrfProofHash: VrfProofHash, totalStake: Long): Boolean = {
+    vrfProofCheckAgainstStake(vrfProofHash, forgerBox.value(), totalStake)
   }
 
   val forgerId: Array[Byte] = forgerBox.id()
@@ -46,7 +51,8 @@ case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfS
 object SidechainForgingData {
   def generate(rnd: Random, value: Long): SidechainForgingData = {
     val key: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(rnd.nextLong().toString.getBytes)
-    val (vrfSecretKey, vrfPublicKey) = VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes())
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes())
+    val vrfPublicKey: VrfPublicKey = vrfSecretKey.publicImage();
     val forgerBox = new ForgerBoxData(key.publicImage(), value, key.publicImage(), vrfPublicKey).getBox(rnd.nextLong())
 
     SidechainForgingData(key, forgerBox, vrfSecretKey)

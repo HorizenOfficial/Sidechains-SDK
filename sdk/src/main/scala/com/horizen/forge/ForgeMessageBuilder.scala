@@ -1,21 +1,24 @@
 package com.horizen.forge
 
+
 import com.horizen.block._
-import com.horizen.box.NoncedBox
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
+import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.proof.VrfProof
 import com.horizen.proposition.Proposition
+import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.vrf.VRFProof
-import com.horizen.{ForgerDataWithSecrets, _}
+import com.horizen.utils.MerklePath
+import com.horizen.vrf.VrfProofHash
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 import com.horizen.chain._
 
 import scala.util.{Failure, Success, Try}
-
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
@@ -33,37 +36,38 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       forgeMessage
   }
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(view: View): ForgeResult = {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(nodeView: View): ForgeResult = {
     log.info(s"Try to forge block for epoch ${nextConsensusEpochNumber} with slot ${nextConsensusSlotNumber}")
-    val branchPointInfo: BranchPointInfo = getBranchPointInfo(view.history) match {
+    val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
       case Success(info) => info
       case Failure(ex) => return ForgeFailed(ex)
     }
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo = view.history.blockInfoById(parentBlockId)
-    val parentBlockEpochAndSlot = timestampToEpochAndSlot(parentBlockInfo.timestamp)
+    val parentBlockInfo = nodeView.history.blockInfoById(parentBlockId)
+    val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForNextBlock(parentBlockId, nextConsensusEpochNumber)
+    val sidechainWallet =  nodeView.vault
+
+    checkEpochAndSlotForgability(parentBlockInfo.timestamp, nextConsensusEpochNumber, nextConsensusSlotNumber)
+
+    val forgerBoxMerklePathInfo: Seq[(ForgerBox, MerklePath)]
+    = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq()).map(d => (d.forgerBox, d.merklePath))
+
+    val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
+    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof, VrfProofHash)]
+    = forgerBoxMerklePathInfo.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
+
+    val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
+    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfSecretKey, VrfProof, VrfProofHash)] =
+      ownedForgingDataView
+        .filter{case(forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof, vrfProofHash) => vrfProofCheckAgainstStake(vrfProofHash, forgerBox.value(), totalStake)}
+
+    val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
     val nextBlockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
-    if(parentBlockEpochAndSlot >= nextBlockEpochAndSlot) {
-      ForgeFailed(new IllegalArgumentException (s"Try to forge block with epochAndSlot ${nextBlockEpochAndSlot} but current best block epochAndSlot are: ${parentBlockEpochAndSlot}"))
-    }
-
-    if ((nextConsensusEpochNumber - timeStampToEpochNumber(parentBlockInfo.timestamp)) > 1) log.warn("Forging is not possible: whole consensus epoch(s) are missed")
-
-    val consensusInfo: FullConsensusEpochInfo = view.history.getFullConsensusEpochInfoForNextBlock(parentBlockId, nextConsensusEpochNumber)
-    val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
-    val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
-    val availableForgersDataWithSecret: Seq[ForgerDataWithSecrets] = view.vault.getForgingDataWithSecrets(nextConsensusEpochNumber).getOrElse(Seq())
-
-    val forgingDataOpt: Option[(ForgerDataWithSecrets, VRFProof)] = availableForgersDataWithSecret
-      .toStream
-      .map(forgerDataWithSecrets => (forgerDataWithSecrets, forgerDataWithSecrets.vrfSecret.prove(vrfMessage))) //get secrets thus filter forger boxes not owned by node
-      .find{case (forgerDataWithSecrets, vrfProof) => vrfProofCheckAgainstStake(forgerDataWithSecrets.forgerBox.value(), vrfProof, totalStake)} //check our forger boxes against stake
-
-    val forgingResult = forgingDataOpt
-                                      .map{case (forgerDataWithSecrets, vrfProof) => forgeBlock(view, nextBlockTimestamp, branchPointInfo, forgerDataWithSecrets, vrfProof)}
-                                      .getOrElse(SkipSlot)
+    val forgingResult = eligibleForgerOpt
+      .map{case (forgerBox, merklePath, privateKey25519, vrfSecretKey, vrfProof, vrfProofHash) =>
+        forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgerBox, merklePath, privateKey25519, vrfProof, vrfProofHash)}
+      .getOrElse(SkipSlot)
 
     log.info(s"Forge result is: ${forgingResult}")
     forgingResult
@@ -126,7 +130,35 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
   }
 
-  protected def forgeBlock(view: View, timestamp: Long, branchPointInfo: BranchPointInfo, forgerDataWithSecrets: ForgerDataWithSecrets, vrfProof: VRFProof): ForgeResult = {
+  private def getSecretsAndProof(wallet: SidechainWallet, vrfMessage: VrfMessage, forgerBox: ForgerBox, merklePath: MerklePath) = {
+    for {
+      rewardPrivateKey <- wallet.secret(forgerBox.rewardProposition()).asInstanceOf[Option[PrivateKey25519]]
+      vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
+      vrfProof <- Some(vrfSecret.prove(vrfMessage))
+    } yield (forgerBox, merklePath, rewardPrivateKey, vrfSecret, vrfProof, vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage))
+  }
+
+
+  private def checkEpochAndSlotForgability(bestBlockTimestamp: Long, checkedEpochNumber: ConsensusEpochNumber, checkedSlotNumber: ConsensusSlotNumber): Unit = {
+    val bestBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(bestBlockTimestamp)
+    val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(checkedEpochNumber, checkedSlotNumber)
+    if(bestBlockEpochAndSlot >= nextBlockEpochAndSlot) {
+      ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot ${nextBlockEpochAndSlot} which are equal or less than best block epochAndSlot: ${bestBlockEpochAndSlot}"))
+    }
+
+    if ((checkedEpochNumber - timeStampToEpochNumber(bestBlockTimestamp)) > 1) {
+      ForgeFailed(new IllegalArgumentException ("Forging is not possible: whole consensus epoch(s) are missed"))
+    }
+  }
+
+  protected def forgeBlock(view: View,
+                           timestamp: Long,
+                           branchPointInfo: BranchPointInfo,
+                           forgerBox: ForgerBox,
+                           merklePath: MerklePath,
+                           forgerBoxRewardPrivateKey: PrivateKey25519,
+                           vrfProof: VrfProof,
+                           vrfProofHash: VrfProofHash): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = view.history.blockInfoById(branchPointInfo.branchPointId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -177,10 +209,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       transactions,
       mainchainHeaders,
       ommers,
-      forgerDataWithSecrets.forgerBoxRewardPrivateKey,
-      forgerDataWithSecrets.forgerBox,
+      forgerBoxRewardPrivateKey,
+      forgerBox,
       vrfProof,
-      forgerDataWithSecrets.merklePath,
+      vrfProofHash,
+      merklePath,
       companion,
       params)
 

@@ -594,7 +594,7 @@ class SidechainWalletTest
     assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
   }
 
-  //@Test
+  @Test
   def testGetForgingBoxMerklePath(): Unit = {
     val mockedWalletBoxStorage: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
@@ -630,21 +630,19 @@ class SidechainWalletTest
         Some(storedMerklePathSeq)
       })
 
-    var forgingBoxMerklePathInfoSeq: Seq[ForgerDataWithSecrets] = sidechainWallet.getForgingDataWithSecrets(secondEpoch).get
+    var forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(secondEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
-
 
     // Test 2: third epoch info - should request for the first epoch from storage
     val thirdEpoch = ConsensusEpochNumber @@ 3
     expectedEpochInfo = ConsensusEpochNumber @@ 1
-    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingDataWithSecrets(thirdEpoch).get
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(thirdEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
-
 
     // Test 3: fifth epoch info - should request for the third epoch from storage
     val fifthEpoch = ConsensusEpochNumber @@ 5
     expectedEpochInfo = ConsensusEpochNumber @@ 3
-    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingDataWithSecrets(fifthEpoch).get
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(fifthEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
   }
 
