@@ -76,8 +76,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
-
-    // TODO: maybe final as well?
+    
     @Override
     public byte[] messageToSign() {
         ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
