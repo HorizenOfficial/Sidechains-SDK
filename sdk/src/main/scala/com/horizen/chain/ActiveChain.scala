@@ -107,10 +107,10 @@ final class ActiveChain private(sidechainCache: ElementsChain[ModifierId, Sidech
       .getOrElse(throw new IllegalStateException(s"New best block clear all mainchain references data header hashes"))
 
     // check MainchainReferenceData correctness against MainchainHeaders
-    val dataHeight: Int = mcRefDataHeightByMcHash(actualMainchainReferenceDataParentForNewBlock).get
-    val headerHeight: Int = mcHeadersHeightByMcHash(actualMainchainParentForNewBlock).get
+    val mcDataHeight: Int = mcRefDataHeightByMcHash(actualMainchainReferenceDataParentForNewBlock).get
+    val mcHeaderHeight: Int = mcHeadersHeightByMcHash(actualMainchainParentForNewBlock).get
     val missedRefDataHeaderHashes: Seq[MainchainHeaderHash] =
-      (dataHeight + 1 to headerHeight).flatMap(h => mcHashByMcHeight(h)) ++ newBestInfo.mainchainHeaderHashes
+      (mcDataHeight + 1 to mcHeaderHeight).flatMap(h => mcHashByMcHeight(h)) ++ newBestInfo.mainchainHeaderHashes
     val expectedRefDataHeaderHashes = missedRefDataHeaderHashes.take(newBestInfo.mainchainReferenceDataHeaderHashes.size)
     if(!expectedRefDataHeaderHashes.equals(newBestInfo.mainchainReferenceDataHeaderHashes))
       throw new IllegalArgumentException("Try to add inconsistent mainchain reference data")

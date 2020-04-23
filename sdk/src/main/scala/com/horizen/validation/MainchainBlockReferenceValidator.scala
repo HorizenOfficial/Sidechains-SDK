@@ -78,6 +78,10 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
     // Collect MainchainHeaders with corresponding MainchainReferenceData into MainchainReferences and verify them.
     verifiedBlock.mainchainBlockReferencesData.zip(missedMainchainReferenceDataHeaderHashesInfo).foldLeft(verifiedBlock){
       case (lastRetrievedBlock, (referenceData, (mainchainHeaderHash, containingBlockId))) =>
+        // Check that header hash and data hash are the same.
+        if(!referenceData.headerHash.sameElements(mainchainHeaderHash.data))
+          throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
+
         val blockWithMainchainHeader: SidechainBlock = containingBlockId match {
           case lastRetrievedBlock.id => lastRetrievedBlock  // not to extract from Storage full SidechainBlock again
           case verifiedBlock.id => verifiedBlock // it means that both header and data are present inside verified block

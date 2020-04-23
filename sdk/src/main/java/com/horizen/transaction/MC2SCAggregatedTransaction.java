@@ -70,7 +70,7 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public List<Box<Proposition>> newBoxes() {
+    public synchronized List<Box<Proposition>> newBoxes() {
         if (newBoxes == null) {
             newBoxes = new ArrayList<>();
             for(SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs) {
@@ -106,7 +106,7 @@ public final class MC2SCAggregatedTransaction
     }
 
     @JsonProperty("mc2scTransactionsMerkleRootHash")
-    public byte[] mc2scMerkleRootHash() {
+    public synchronized byte[] mc2scMerkleRootHash() {
         if(mc2scTransactionsMerkleRootHash == null) {
             ArrayList<byte[]> hashes = new ArrayList<>();
             for (SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs)

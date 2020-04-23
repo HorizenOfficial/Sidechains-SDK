@@ -62,11 +62,11 @@ case class MainchainBlockReference(
         throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData is inconsistent to MainchainHeader")
     }
     else {
-      if (data.sidechainsMerkleRootsMap.isEmpty)
-        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData SCMap is inconsistent to MainchainHeader hashSCMerkleRootsMap.")
+      val sidechainsMerkleRootsMap = data.sidechainsMerkleRootsMap.getOrElse(
+        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData SCMap is inconsistent to MainchainHeader hashSCMerkleRootsMap."))
 
       // verify SCMap Merkle root hash equals to one in the header.
-      val SCSeq = data.sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+      val SCSeq = sidechainsMerkleRootsMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
       val merkleTreeLeaves = SCSeq.map(pair => {
         BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
             Bytes.concat(
@@ -81,25 +81,26 @@ case class MainchainBlockReference(
       if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} SCMap root hash is inconsistent to MainchainHeader hashSCMerkleRootsMap.")
 
-      val sidechainMerkleRootHash = data.sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
+      val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get(new ByteArrayWrapper(params.sidechainId))
       if (sidechainMerkleRootHash.isEmpty) {
         // there is no related outputs for current Sidechain, AggTx expected to be not defined.
         if(data.sidechainRelatedAggregatedTransaction.nonEmpty)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
       } else {
-        if (data.sidechainRelatedAggregatedTransaction.isEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
+        val sidechainRelatedAggregatedTransaction = data.sidechainRelatedAggregatedTransaction.getOrElse(
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash."))
+
 
         // verify AggTx
-        val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(data.sidechainRelatedAggregatedTransaction.get
-          .mc2scTransactionsOutputs().asScala.map(_.hash()).asJava)
+        val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(
+          sidechainRelatedAggregatedTransaction.mc2scTransactionsOutputs().asScala.map(_.hash()).asJava)
 
         if(mc2scTransactionsOutputsMerkleTree.isMutated)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx outputs leads to mutated MerkleTree.")
         if(!util.Arrays.equals(sidechainMerkleRootHash.get, mc2scTransactionsOutputsMerkleTree.rootHash()))
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
 
-        if (!data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
+        if (!sidechainRelatedAggregatedTransaction.semanticValidity())
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
       }
     }
