@@ -70,9 +70,11 @@ trait ConsensusDataProvider {
     }
   }
 
-  private def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId, lastBlockInfoInEpoch: SidechainBlockInfo): NonceConsensusEpochInfo = {
+  private[horizen] def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId,
+                                                        lastBlockInfoInEpoch: SidechainBlockInfo,
+                                                        acc: ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)] = ListBuffer()): NonceConsensusEpochInfo = {
     val allVrfOutputsWithSlots: List[(VrfProof, VrfProofHash, ConsensusSlotNumber)] =
-      foldEpochRight[ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)]](ListBuffer(), lastBlockIdInEpoch, lastBlockInfoInEpoch) {
+      foldEpochRight[ListBuffer[(VrfProof, VrfProofHash, ConsensusSlotNumber)]](acc, lastBlockIdInEpoch, lastBlockInfoInEpoch) {
       (_, blockInfo, accumulator) =>
         (blockInfo.vrfProof, blockInfo.vrfProofHash, timeStampToSlotNumber(blockInfo.timestamp)) +=: accumulator
     }.to
