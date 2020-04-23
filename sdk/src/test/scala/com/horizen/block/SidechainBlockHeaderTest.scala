@@ -1,17 +1,21 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import java.time.Instant
 
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxGenerationMetadata, SidechainBlockFixture}
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.BytesUtils
+import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
+import scala.util.{Failure, Success}
+
 class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with SidechainBlockFixture {
 
   val header: SidechainBlockHeader = createUnsignedBlockHeader(123L)._1
+  val params: NetworkParams = MainNetParams()
 
   @Test
   def serialization(): Unit = {
@@ -81,35 +85,48 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
   def semanticValidity(): Unit = {
     val (baseUnsignedHeader: SidechainBlockHeader, forgerMetadata: ForgerBoxGenerationMetadata) = createUnsignedBlockHeader(433L)
 
+
     // Test 1: unsigned header must be not semantically valid
-    assertFalse("Unsigned header expected to be semantically Invalid.", baseUnsignedHeader.semanticValidity())
+    baseUnsignedHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Unsigned header expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
+    }
+
 
     // Test 2: signed header with invalid signature must be not semantically valid
     val invalidSignature = forgerMetadata.rewardSecret.sign("different_message".getBytes())
     val invalidSignedHeader = baseUnsignedHeader.copy(signature = invalidSignature)
-    assertFalse("Header with wrong signature expected to be semantically Invalid.", invalidSignedHeader.semanticValidity())
+    invalidSignedHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Header with wrong signature expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
+    }
 
-    // Test 3: signed header must be not semantically valid
+
+    // Test 3: signed header must be semantically valid
     val validSignature = forgerMetadata.rewardSecret.sign(baseUnsignedHeader.messageToSign)
     val validSignedHeader = baseUnsignedHeader.copy(signature = validSignature)
-    assertTrue("Signed header expected to be semantically Valid.", validSignedHeader.semanticValidity())
+    validSignedHeader.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Signed header expected to be semantically valid, instead exception: ${e.getMessage}")
+    }
+
 
     // Test 4: invalid timestamp < 0
     var header = baseUnsignedHeader.copy(timestamp = -1L)
     var headerSignature = forgerMetadata.rewardSecret.sign(header.messageToSign)
     var signedHeader = header.copy(signature = headerSignature)
-    assertFalse("Signed header with negative timestamp expected to be semantically Invalid.", signedHeader.semanticValidity())
-
-    // Test 5: invalid timestamp from future to far
-    header = baseUnsignedHeader.copy(timestamp = Instant.now.getEpochSecond + 2 * 60 * 60 + 1)
-    headerSignature = forgerMetadata.rewardSecret.sign(header.messageToSign)
-    signedHeader = header.copy(signature = headerSignature)
-    assertFalse("Signed header with timestamp from far future expected to be semantically Invalid.", signedHeader.semanticValidity())
-
-    // Test 6: valid timestamp from acceptable future (<= 2*60*60)
-    header = baseUnsignedHeader.copy(timestamp = Instant.now.getEpochSecond + 2 * 60 * 60)
-    headerSignature = forgerMetadata.rewardSecret.sign(header.messageToSign)
-    signedHeader = header.copy(signature = headerSignature)
-    assertTrue("Signed header with timestamp from nearest future expected to be semantically Valid.", signedHeader.semanticValidity())
+    signedHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Signed header with negative timestamp expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
+    }
   }
 }

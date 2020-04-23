@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import java.util
+import java.util.List
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
@@ -15,6 +16,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarIn
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.google.common.primitives.Bytes
+import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
 import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
@@ -38,37 +40,33 @@ case class MainchainBlockReference(
   extends BytesSerializable
 {
 
-  // MainchainBlockReference Id must depend on the whole MainchainBlockReference content
-  // Note: In future inside snarks id calculation will be different
-  lazy val id: Array[Byte] = {
-    Blake2b256(Bytes.concat(
-      header.hash,
-      data.hash
-    ))
-  }
-
   override type M = MainchainBlockReference
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
-  def semanticValidity(params: NetworkParams): Boolean = {
-    if (header == null || !header.semanticValidity(params))
-      return false
+  def semanticValidity(params: NetworkParams): Try[Unit] = Try {
+    // Check that header is valid.
+    header.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => throw e
+    }
 
-    if(data == null || !data.headerHash.sameElements(header.hash))
-      return false
+    // Check that header hash and data hash are the same.
+    if(!data.headerHash.sameElements(header.hash))
+      throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
 
+    // Check Data consistency to Data header hash.
     if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
       // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
       if (data.sidechainsMerkleRootsMap.isDefined || data.sidechainRelatedAggregatedTransaction.isDefined)
-        return false
+        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData is inconsistent to MainchainHeader")
     }
     else {
-      if (data.sidechainsMerkleRootsMap.isEmpty)
-        return false
+      val sidechainsMerkleRootsMap = data.sidechainsMerkleRootsMap.getOrElse(
+        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData SCMap is inconsistent to MainchainHeader hashSCMerkleRootsMap."))
 
       // verify SCMap Merkle root hash equals to one in the header.
-      val SCSeq = data.sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
+      val SCSeq = sidechainsMerkleRootsMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
       val merkleTreeLeaves = SCSeq.map(pair => {
         BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
             Bytes.concat(
@@ -78,33 +76,33 @@ case class MainchainBlockReference(
         ))
       }).toList.asJava
       val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
+      if(merkleTree.isMutated)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} SCMap leads to mutated MerkleTree.")
       if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
-        return false
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} SCMap root hash is inconsistent to MainchainHeader hashSCMerkleRootsMap.")
 
-      val sidechainMerkleRootHash = data.sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
+      val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get(new ByteArrayWrapper(params.sidechainId))
       if (sidechainMerkleRootHash.isEmpty) {
         // there is no related outputs for current Sidechain, AggTx expected to be not defined.
-        return data.sidechainRelatedAggregatedTransaction.isEmpty
+        if(data.sidechainRelatedAggregatedTransaction.nonEmpty)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
       } else {
-        if (data.sidechainRelatedAggregatedTransaction.isEmpty)
-          return false
+        val sidechainRelatedAggregatedTransaction = data.sidechainRelatedAggregatedTransaction.getOrElse(
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash."))
+
 
         // verify AggTx
-        if (!util.Arrays.equals(sidechainMerkleRootHash.get, data.sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
-          || !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
-          return false
+        val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(
+          sidechainRelatedAggregatedTransaction.mc2scTransactionsOutputs().asScala.map(_.hash()).asJava)
+
+        if(mc2scTransactionsOutputsMerkleTree.isMutated)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx outputs leads to mutated MerkleTree.")
+        if(!util.Arrays.equals(sidechainMerkleRootHash.get, mc2scTransactionsOutputsMerkleTree.rootHash()))
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
+
+        if (!sidechainRelatedAggregatedTransaction.semanticValidity())
+          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
       }
-    }
-
-    true
-  }
-
-  override def hashCode(): Int = java.util.Arrays.hashCode(id)
-
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case ref: MainchainBlockReference => id.sameElements(ref.id)
-      case _ => false
     }
   }
 }
@@ -134,7 +132,7 @@ object MainchainBlockReference {
             for (tx <- mainchainTxs) {
               sidechainRelatedTransactionsOutputs.addAll(getSidechainRelatedTransactionsOutputs(tx, id).asJava)
             }
-            aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
+            aggregatedTransactionsMap.put(id, new MC2SCAggregatedTransaction(sidechainRelatedTransactionsOutputs, header.time))
           }
 
           val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
@@ -153,10 +151,8 @@ object MainchainBlockReference {
     if(tryBlock.isFailure)
       tryBlock
     else {
-      if(!tryBlock.get.semanticValidity(params))
-        throw new Exception("Mainchain Block bytes were parsed, but lead to semantically invalid data.")
-      else
-        tryBlock
+      tryBlock.get.semanticValidity(params).get
+      tryBlock
     }
   }
 

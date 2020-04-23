@@ -1,14 +1,14 @@
 package com.horizen.block
 
-import java.time.Instant
-
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes, Ints, Longs}
+import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
+import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
+import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.{VRFProof, VRFProofSerializer}
 import scorex.core.block.Block
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -16,6 +16,8 @@ import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
+
+import scala.util.Try
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
@@ -54,24 +56,20 @@ case class SidechainBlockHeader(
     )
   }
 
-  def semanticValidity(): Boolean = {
-    if(parentId == null || parentId.length != 64
-      || sidechainTransactionsMerkleRootHash == null || sidechainTransactionsMerkleRootHash.length != 32
-      || mainchainMerkleRootHash == null || mainchainMerkleRootHash.length != 32
-      || ommersMerkleRootHash == null || ommersMerkleRootHash.length != 32 || ommersCumulativeScore < 0
-      || forgerBox == null || signature == null)
-      return false
+  def semanticValidity(params: NetworkParams): Try[Unit] = Try {
+    if(parentId.length != 64
+      || sidechainTransactionsMerkleRootHash.length != 32
+      || mainchainMerkleRootHash.length != 32
+      || ommersMerkleRootHash.length != 32
+      || ommersCumulativeScore < 0
+      || timestamp <= 0)
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id contains out of bound fields.")
 
-    // TODO: do we need to allow Blocks from nearest future as in MC for Ouroboros?
-    // Check if timestamp is valid and not too far in the future
-    if(timestamp <= 0 || timestamp > Instant.now.getEpochSecond + 2 * 60 * 60) // 2 * 60 * 60 like in Horizen MC
-      return false
-
+    if(version != SidechainBlock.BLOCK_VERSION)
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
     // check, that signature is valid
     if(!signature.isValid(forgerBox.rewardProposition(), messageToSign))
-      return false
-
-    true
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
   }
 }
 

@@ -7,6 +7,7 @@ import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixt
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
 import com.horizen.proof.Signature25519
 import com.horizen.utils.BytesUtils
+import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VRFKeyGenerator
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
@@ -14,6 +15,7 @@ import org.scalatest.junit.JUnitSuite
 import scorex.util.ModifierId
 
 import scala.io.Source
+import scala.util.{Failure, Success}
 
 class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFixture {
 
@@ -31,14 +33,31 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   def semanticValidity(): Unit = {
     // Test 1: ommer with valid SidechainBlockHeader and no headers&ommers at all must be valid
     // Create Block with no MainchainBlockReferencesData and MainchainHeaders
-    var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
+    var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false)
     var ommer: Ommer = Ommer.toOmmer(block)
-    assertTrue("Ommer expected to be semantically Valid.", ommer.semanticValidity(params))
+    ommer.verifyDataConsistency() match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have consistent data, instead exception: ${e.getMessage}")
+    }
+    ommer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 2: ommers with valid SidechainBlockHeader, without mc block references data but with defined RefDataHash must be invalid
     var invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = Some(new Array[Byte](32)))
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 3: ommer with valid SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders must be valid
@@ -63,47 +82,137 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     ).get
 
     ommer = Ommer.toOmmer(block)
-    assertTrue("Ommer expected to be semantically Valid.", ommer.semanticValidity(params))
+    ommer.verifyDataConsistency() match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have consistent data, instead exception: ${e.getMessage}")
+    }
+    ommer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 4: ommer with valid SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders, but missed RefDataHash must be invalid
     invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = None)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 5: ommer with SidechainBlockHeader, MainchainBlockReferencesData and MainchainHeaders, but invalid RefDataHash must be invalid
     invalidOmmer = ommer.copy(mainchainReferencesDataMerkleRootHashOption = Some(new Array[Byte](32)))
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 6: ommer with valid SidechainBlockHeader and non consistent chain of MainchainHeaders must be invalid
     invalidOmmer = ommer.copy(mainchainHeaders = Seq(mcBlockRef1.header, mcBlockRef3.header, mcBlockRef4.header))
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have invalid data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data verification.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 7: ommer with valid SidechainBlockHeader but with inconsistent MainchainHeaders must be invalid
     // Without first MainchainHeaders
     invalidOmmer = ommer.copy(mainchainHeaders = ommer.mainchainHeaders.tail)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
     // With one more MainchainHeader in the end
     invalidOmmer = ommer.copy(mainchainHeaders = ommer.mainchainHeaders :+ mcBlockRef3.header)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 8: ommer with valid SidechainBlockHeader that expects MainchainHeaders, but no data in ommer must be invalid
     // With no MainchainHeaders at all
     invalidOmmer = ommer.copy(mainchainHeaders = Seq())
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
     // With no MainchainBlockReferencesData and MainchainHeaders at all
     invalidOmmer = ommer.copy(mainchainHeaders = Seq(), mainchainReferencesDataMerkleRootHashOption = None)
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have inconsistent data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data consistency verification.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have valid data, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 9: ommer with semantically invalid SidechainBlockHeader must be invalid
     // Broke block header signature
     invalidOmmer = ommer.copy(header = block.header.copy(signature = new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))))
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have consistent data, instead exception: ${e.getMessage}")
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have invalid data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data verification.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 10: ommer with valid SidechainBlockHeader, but broken mcHeader
@@ -121,29 +230,53 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     )
 
     invalidOmmer = ommer.copy(mainchainHeaders = Seq(invalidMcHeader1, mcBlockRef2.header))
-    assertFalse("Ommer expected to be semantically Invalid.", invalidOmmer.semanticValidity(params))
+    invalidOmmer.verifyDataConsistency() match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Ommer expected to have consistent data, instead exception: ${e.getMessage}")
+    }
+    invalidOmmer.verifyData(params) match {
+      case Success(_) =>
+        jFail(s"Ommer expected to have invalid data.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during data verification.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
   }
 
   @Test
   def compare(): Unit = {
-    val block1: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
+    val block1: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false)
     val ommer1: Ommer = Ommer.toOmmer(block1)
 
     // Test 1: Compare different ommers:
-    val block2: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 555L, timestampOpt = Some(10000L), includeReference = false)
+    val block2: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 555L, timestampOpt = Some(100000L), includeReference = false)
     val ommer2: Ommer = Ommer.toOmmer(block2)
     assertNotEquals("Ommers expected to be different", ommer1.hashCode(), ommer2.hashCode())
     assertNotEquals("Ommers expected to be different", ommer1, ommer2)
 
 
     // Test 2: Compare equal ommers:
-    val block3: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
+    val block3: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false)
     val ommer3: Ommer = Ommer.toOmmer(block3)
     assertEquals("Ommers expected to be equal", ommer1.hashCode(), ommer3.hashCode())
     assertEquals("Ommers expected to be equal", ommer1, ommer3)
 
 
-    // Test 3: Compare with different class object
+    // Test 3: Compare equal ommers with MC data:
+    val block4: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 666L, timestampOpt = Some(100000L), includeReference = true)
+    val ommer4: Ommer = Ommer.toOmmer(block4)
+    val ommer5: Ommer = ommer4.copy()
+    assertEquals("Ommers expected to be equal", ommer4.hashCode(), ommer5.hashCode())
+    assertEquals("Ommers expected to be equal", ommer4, ommer5)
+
+
+    // Test 4: Compare different ommers with MC data:
+    val ommer6: Ommer = ommer4.copy(mainchainHeaders = Seq())
+    assertEquals("Ommers expected to be equal", ommer4.hashCode(), ommer6.hashCode())
+    assertNotEquals("Ommers expected to be different", ommer4, ommer6)
+
+
+    // Test 5: Compare with different class object
     val diffObject: Int = 1
     assertFalse("Object expected to be different", ommer1.equals(diffObject))
   }
@@ -151,7 +284,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   @Test
   def serialization(): Unit = {
     // Test 1: Ommer with SidechainBlockHeader and no MainchainBlockReferencesData and MainchainHeaders
-    var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(10000L), includeReference = false)
+    var block: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, basicSeed = 444L, timestampOpt = Some(100000L), includeReference = false)
     var ommer: Ommer = Ommer.toOmmer(block)
     var bytes = ommer.bytes
 
@@ -210,6 +343,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     assertEquals("Ommer ommers seq is different", ommer.ommers, serializedOmmer.ommers)
     assertArrayEquals("Ommer id is different", ommer.id, serializedOmmer.id)
     assertEquals("Ommer is different", ommer, serializedOmmer)
+
 
     // Test 3: try to deserialize broken bytes.
     assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes).isFailure)

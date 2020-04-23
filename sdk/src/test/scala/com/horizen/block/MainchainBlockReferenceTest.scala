@@ -4,13 +4,13 @@ import com.google.common.primitives.Ints
 import com.horizen.box.RegularBox
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import com.horizen.proposition.PublicKey25519Proposition
 
 import scala.io.Source
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class MainchainBlockReferenceTest extends JUnitSuite {
 
@@ -41,7 +41,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "1c2abb60", BytesUtils.toHexString(Ints.toByteArray(block.get.header.bits)))
     assertEquals("Block nonce is different.", "00000000000000000000000000030000000000009921008000000000c7cf0410", BytesUtils.toHexString(block.get.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, block.get.header.solution.length)
-    assertTrue("Block expected to be semantically valid", block.get.semanticValidity(params))
+    block.get.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
 
 
 
@@ -63,7 +66,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "1c1bbecc", BytesUtils.toHexString(Ints.toByteArray(block.get.header.bits)))
     assertEquals("Block nonce is different.", "0000000000000000000000000019000000000000751d00600000000000000000", BytesUtils.toHexString(block.get.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, block.get.header.solution.length)
-    assertTrue("Block expected to be semantically valid", block.get.semanticValidity(params))
+    block.get.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
 
 
     // Test 3: Block #273173
@@ -84,7 +90,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "1d010d77", BytesUtils.toHexString(Ints.toByteArray(block.get.header.bits)))
     assertEquals("Block nonce is different.", "000000000000000000000000cfcbffd9de586ff80e928e9b83e86c3c8c580000", BytesUtils.toHexString(block.get.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, block.get.header.solution.length)
-    assertTrue("Block expected to be semantically valid", block.get.semanticValidity(params))
+    block.get.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
   }
 
   @Test
@@ -110,7 +119,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "1f6c7b5d", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
     assertEquals("Block nonce is different.", "0000cefd46238a6721302931021ee4b444e54c55adad68229872877b49c10012", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
-    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
+    mcblock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
 
 
     assertFalse("New Block occurred without SC mentioned inside, SCMap expected to be undefined.",
@@ -141,7 +153,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "200f0f03", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
     assertEquals("Block nonce is different.", "00008838e18206aa16b8c4a62321248207bfd0687bb0cd39e8e10da28684002a", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
-    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
+    mcblock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
 
 
     assertTrue("New Block occurred, SCMap expected to be defined.", mcblock.data.sidechainsMerkleRootsMap.isDefined)
@@ -208,7 +223,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
     assertEquals("Block nonce is different.", "0000e2812ac29d6651d39bf27aa6e23d85b4783842c3511ea45f72ff875a0009", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
-    assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params))
+    mcblock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
+    }
 
 
     assertTrue("New Block occurred, SCMap expected to be defined.", mcblock.data.sidechainsMerkleRootsMap.isDefined)

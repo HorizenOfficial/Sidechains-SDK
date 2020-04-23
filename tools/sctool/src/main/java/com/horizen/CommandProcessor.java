@@ -211,10 +211,13 @@ public class CommandProcessor {
             VRFSecretKey vrfSecret = SidechainCreation.genesisVrfPair._1();
             VRFProof vrfProof  = vrfSecret.prove(vrfMessage);
             MerklePath mp = new MerklePath(new ArrayList<>());
+            // Set genesis block timestamp to not to have block in future exception during STF tests.
+            // TODO: timestamp should be a hidden parameter during SC bootstrapping and must be used by STF
+            Long timestamp = System.currentTimeMillis() / 1000 - (params.consensusSlotsInEpoch() / 2 * params.consensusSecondsInSlot());
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
-                    System.currentTimeMillis() / 1000,
+                    timestamp,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.data())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),

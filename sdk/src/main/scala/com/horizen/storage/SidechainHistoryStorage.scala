@@ -129,11 +129,11 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def activeChainAfter(blockId: ModifierId): Seq[ModifierId] = activeChain.chainAfter(blockId)
 
-  def getMainchainHeaderContainingBlock(mainchainHeaderHash: Array[Byte]): Option[SidechainBlock] = {
+  def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: Array[Byte]): Option[SidechainBlock] = {
     activeChain.idByMcHeader(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)
   }
 
-  def getMainchainReferenceDataContainingBlock(mainchainHeaderHash: Array[Byte]): Option[SidechainBlock] = {
+  def getSidechainBlockContainingMainchainReferenceData(mainchainHeaderHash: Array[Byte]): Option[SidechainBlock] = {
     activeChain.idByMcReferenceData(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)
   }
 
@@ -145,19 +145,17 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeader] = {
-    val sidechainBlock: Option[SidechainBlock] = getMainchainHeaderContainingBlock(mainchainHeaderHash)
+    val sidechainBlock: Option[SidechainBlock] = getSidechainBlockContainingMainchainHeader(mainchainHeaderHash)
     sidechainBlock.flatMap(_.mainchainHeaders.find(header => mainchainHeaderHash.sameElements(header.hash)))
   }
 
   def getMainchainReferenceDataByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceData] = {
-    val sidechainBlock: Option[SidechainBlock] = getMainchainReferenceDataContainingBlock(mainchainHeaderHash)
+    val sidechainBlock: Option[SidechainBlock] = getSidechainBlockContainingMainchainReferenceData(mainchainHeaderHash)
     sidechainBlock.flatMap(_.mainchainBlockReferencesData.find(data => mainchainHeaderHash.sameElements(data.headerHash)))
   }
 
   def getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainHeight: Int): Option[MainchainBlockReferenceInfo] = {
-    for {
-      mcHash <- activeChain.mcHashByMcHeight(mainchainHeight)
-    } yield getMainchainBlockReferenceInfoByHash(mcHash).get
+    activeChain.mcHashByMcHeight(mainchainHeight).flatMap(hash => getMainchainBlockReferenceInfoByHash(hash))
   }
 
   def getBestMainchainBlockReferenceInfo: Option[MainchainBlockReferenceInfo] = {

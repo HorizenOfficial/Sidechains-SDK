@@ -6,12 +6,13 @@ import com.google.common.primitives.Ints
 import com.horizen.fixtures.MainchainHeaderFixture
 import com.horizen.params.MainNetParams
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 import scala.io.Source
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
 
@@ -40,7 +41,10 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     assertEquals("PoW bits is different.", "1c6e36cd", BytesUtils.toHexString(Ints.toByteArray(header.get.bits)))
     assertEquals("Nonce is different.", "00000000000000000000000000000000000000000000000000112231e1ed0000", BytesUtils.toHexString(header.get.nonce))
     assertEquals("Equihash solution length is wrong.", params.EquihashSolutionLength, header.get.solution.length)
-    assertTrue("Header expected to be semantically valid", header.get.semanticValidity(params))
+    header.get.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Header expected to be semantically valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 2: Header for Block #503014
@@ -59,49 +63,74 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     assertEquals("PoW bits is different.", "1c19e23e", BytesUtils.toHexString(Ints.toByteArray(header.get.bits)))
     assertEquals("Nonce is different.", "399f2d410000000000000000000000000000000000000000388626f4a1130010", BytesUtils.toHexString(header.get.nonce))
     assertEquals("Equihash solution length is wrong.", params.EquihashSolutionLength, header.get.solution.length)
-    assertTrue("Header expected to be semantically valid", header.get.semanticValidity(params))
+    header.get.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Header expected to be semantically valid, instead exception: ${e.getMessage}")
+    }
   }
 
   @Test
   def MainchainHeaderTest_SemanticValidityTest(): Unit = {
     val mcHeaderHex = Source.fromResource("mcheader300001").getLines().next()
     val mcHeaderBytes = BytesUtils.fromHexString(mcHeaderHex)
-    var tmpHeaderBytes: Array[Byte] = null
 
 
     // Test 1: valid header without changes
-    var header: Try[MainchainHeader] = MainchainHeader.create(mcHeaderBytes, 0)
-    assertTrue("Header expected to be parsed.", header.isSuccess)
-    assertTrue("Header expected to be semantically valid.", header.get.semanticValidity(params))
+    val header: MainchainHeader = MainchainHeader.create(mcHeaderBytes, 0).get
+    header.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"Header expected to be semantically valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 2: change time to negative value
-    tmpHeaderBytes = changeTime(mcHeaderBytes, -10)
-    header = MainchainHeader.create(tmpHeaderBytes, 0)
-    assertTrue("Header expected to be parsed.", header.isSuccess)
-    assertFalse("Header expected to be NOT semantically valid.", header.get.semanticValidity(params))
+    var invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
+      header.hashSCMerkleRootsMap, -10, header.bits, header.nonce, header.solution)
+    invalidHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Header expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidMainchainHeaderException], e.getClass)
+    }
 
 
     // Test 3: change time to one 2 hours and 1 second far in future
-    tmpHeaderBytes = changeTime(mcHeaderBytes, (Instant.now.getEpochSecond + 2 * 60 * 60 + 1).toInt)
-    header = MainchainHeader.create(tmpHeaderBytes, 0)
-    assertTrue("Header expected to be parsed.", header.isSuccess)
-    assertFalse("Header expected to be NOT semantically valid.", header.get.semanticValidity(params))
+    invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
+      header.hashSCMerkleRootsMap, (Instant.now.getEpochSecond + 2 * 60 * 60 + 1).toInt, header.bits, header.nonce, header.solution)
+    invalidHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Header expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[MainchainHeaderTimestampInFutureException], e.getClass)
+    }
 
     // Test 4: brake PoW
     // TO DO: maybe add more tests related to PoW, see ProofOfWorkVerifierTest
-    tmpHeaderBytes = changeBits(mcHeaderBytes, BytesUtils.getInt(BytesUtils.fromHexString("1c21c09e"), 0))
-    header = MainchainHeader.create(tmpHeaderBytes, 0)
-    assertTrue("Header expected to be parsed.", header.isSuccess)
-    assertFalse("Header expected to be NOT semantically valid.", header.get.semanticValidity(params))
+    invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
+      header.hashSCMerkleRootsMap, header.time, BytesUtils.getInt(BytesUtils.fromHexString("1c21c09e"), 0), header.nonce, header.solution)
+    invalidHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Header expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidMainchainHeaderException], e.getClass)
+    }
 
     // Test 5: break Equihash Solution
     // TO DO: add more tests related to solution
-    tmpHeaderBytes = mcHeaderBytes.clone()
+    val brokenSolution: Array[Byte] = header.solution.clone()
     val brokenBytes: Array[Byte] = BytesUtils.fromHexString("abcd")
-    System.arraycopy(brokenBytes, 0, tmpHeaderBytes, tmpHeaderBytes.length - brokenBytes.length, brokenBytes.length)
-    header = MainchainHeader.create(tmpHeaderBytes, 0)
-    assertTrue("Header expected to be parsed.", header.isSuccess)
-    assertFalse("Header expected to be NOT semantically valid.", header.get.semanticValidity(params))
+    System.arraycopy(brokenBytes, 0, brokenSolution, brokenSolution.length - brokenBytes.length, brokenBytes.length)
+    invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
+      header.hashSCMerkleRootsMap, header.time, header.bits, header.nonce, brokenSolution)
+    invalidHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Header expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidMainchainHeaderException], e.getClass)
+    }
   }
 }

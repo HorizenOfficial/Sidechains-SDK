@@ -27,7 +27,7 @@ import com.horizen.websocket._
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
+import scorex.core.network.PeerFeature
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
@@ -39,6 +39,7 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Try
+import com.horizen.network.SidechainNodeViewSynchronizer
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -176,12 +177,8 @@ class SidechainApp @Inject()
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
-      SidechainBlock, SidechainHistory, SidechainMemoryPool]
-      (networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-        modifierSerializers
-      ))
+    actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

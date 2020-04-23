@@ -2,15 +2,12 @@ package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.Bytes
 import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils}
+import com.horizen.utils.ByteArrayWrapper
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.crypto.hash.Blake2b256
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 @JsonView(Array(classOf[Views.Default]))
@@ -26,35 +23,11 @@ case class MainchainBlockReferenceData(
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
 
-  lazy val hash: Array[Byte] = {
-    val sidechainsMerkleRootsMapRootHash: Array[Byte] = sidechainsMerkleRootsMap match {
-      case Some(mrMap) =>
-        val SCSeq = mrMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-        val merkleTreeLeaves = SCSeq.map(pair => {
-          BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
-            Bytes.concat(
-              BytesUtils.reverseBytes(pair._1.data),
-              BytesUtils.reverseBytes(pair._2)
-            )
-          ))
-        }).toList.asJava
-        val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
-        merkleTree.rootHash()
-      case None => Utils.ZEROS_HASH
-    }
-
-    Blake2b256(Bytes.concat(
-      headerHash,
-      sidechainRelatedAggregatedTransaction.map(tx => BytesUtils.fromHexString(tx.id())).getOrElse(Utils.ZEROS_HASH),
-      sidechainsMerkleRootsMapRootHash
-    ))
-  }
-
-  override def hashCode(): Int = java.util.Arrays.hashCode(hash)
+  override def hashCode(): Int = java.util.Arrays.hashCode(headerHash)
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case data: MainchainBlockReferenceData => hash.sameElements(data.hash)
+      case data: MainchainBlockReferenceData => bytes.sameElements(data.bytes)
       case _ => false
     }
   }

@@ -14,6 +14,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.BytesUtils
+import com.horizen.validation._
 import com.horizen.vrf.VRFKeyGenerator
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
@@ -21,6 +22,7 @@ import org.scalatest.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 class SidechainBlockTest
   extends JUnitSuite
@@ -153,7 +155,10 @@ class SidechainBlockTest
   def semanticValidity(): Unit = {
     // Test1: SidechainBlock with no Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers must to be valid.
     var validBlock = createBlock()
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test2: SidechainBlock with invalid SidechainBlockHeader must to be invalid.
@@ -161,7 +166,13 @@ class SidechainBlockTest
       validBlock,
       headerOpt = Some(validBlock.header.copy(signature = new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))))
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
+    }
 
 
     // Test 3: SidechainBlock with semantically valid SidechainBlockHeader, and consistent SidechainTransaction must be valid.
@@ -170,7 +181,10 @@ class SidechainBlockTest
         generateRegularTransaction(random, 123001L, 1, 4)
       )
     )
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 4: SidechainBlock with semantically valid SidechainBlockHeader, but NOT consistent SidechainTransaction must be invalid.
@@ -181,19 +195,34 @@ class SidechainBlockTest
         generateRegularTransaction(random, 123000L, 2, 3)
       ))
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
     // No Txs in body, but SidechainBlockHeader Hash expected
     invalidBlock = invalidateBlock(
       validBlock,
       sidechainTransactionsOpt = Some(Seq()) // No txs
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 5: SidechainBlock with semantically valid SidechainBlockHeader, and consistent MainchainBlockReferencesData seq must be valid.
     validBlock = createBlock(mainchainBlockReferencesData = Seq(mcBlockRef1.data, mcBlockRef2.data))
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 6: SidechainBlock with semantically valid SidechainBlockHeader, but inconsistent MainchainBlockReferencesData must be invalid.
@@ -202,19 +231,34 @@ class SidechainBlockTest
       validBlock,
       mainchainBlockReferencesDataOpt = Some(Seq(mcBlockRef2.data)) // first was removed
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
     // No Ref data in body, but SidechainBlockHeader Hash expected
     invalidBlock = invalidateBlock(
       validBlock,
       mainchainBlockReferencesDataOpt = Some(Seq()) // no mc ref data
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 7: SidechainBlock with semantically valid SidechainBlockHeader, and consistent MainchainHeader seq must be valid.
     validBlock = createBlock(mainchainHeaders = Seq(mcBlockRef1.header, mcBlockRef2.header))
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 8: SidechainBlock with semantically valid SidechainBlockHeader, but inconsistent MainchainHeader must be invalid.
@@ -223,19 +267,37 @@ class SidechainBlockTest
       validBlock,
       mainchainHeadersOpt = Some(Seq(mcBlockRef2.header)) // first was removed
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
     // No headers in body, but SidechainBlockHeader Hash expected
     invalidBlock = invalidateBlock(
       validBlock,
       mainchainHeadersOpt = Some(Seq()) // no headers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 9: SidechainBlock with MainchainHeaders in a wrong order must be invalid
     invalidBlock = createBlock(mainchainHeaders = Seq(mcBlockRef1.header, mcBlockRef2.header, mcBlockRef4.header))
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 10: SidechainBlock with 2 Txs, 2 MainchainBlockReferencesData, 2 MainchainHeader must be valid
@@ -247,7 +309,10 @@ class SidechainBlockTest
       mainchainBlockReferencesData = Seq(mcBlockRef1.data, mcBlockRef2.data),
       mainchainHeaders = Seq(mcBlockRef2.header, mcBlockRef3.header)
     )
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
     // Test 11: SidechainBlock with semantically invalid MainchainHeader must be invalid
@@ -264,12 +329,18 @@ class SidechainBlockTest
     )
 
     invalidBlock = createBlock(mainchainHeaders = Seq(mcBlockRef1.header, mcBlockRef2.header, invalidMcHeader3))
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidMainchainHeaderException], e.getClass)
+    }
   }
 
   @Test
   def ommersContainerValidation(): Unit = {
-    // In this test verifyOmmers() method of OmmersContainer is tested
+    // In this test verifyOmmersSeqData() method of OmmersContainer is tested
     // The same check both for Block and Ommer classes
 
     val ommers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
@@ -293,7 +364,10 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers = ommers
     )
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    validBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
     var anotherOmmers = generateOmmersSeq(parentId, 122444L,
       Seq(
@@ -306,7 +380,10 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers = anotherOmmers
     )
-    assertTrue("SidechainBlock expected to be semantically Valid.", anotherValidBlock.semanticValidity(params))
+    anotherValidBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
     // Test 2: SidechainBlock with semantically valid SidechainBlockHeader, but NOT consistent Ommers must be invalid.
     // 1 Ommer is missed -> list is not consistent to SidechainBlockHeader
@@ -314,14 +391,26 @@ class SidechainBlockTest
       validBlock,
       ommersOpt = Some(Seq(ommer1, ommer2)) // ommer3 removed
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
     // No Ommers in body, but SidechainBlockHeader Hash expected
     invalidBlock = invalidateBlock(
       validBlock,
       ommersOpt = Some(Seq()) // No Ommers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
     // Another ommers list of the same length
     anotherOmmers = generateOmmersSeq(parentId, 122444L,
@@ -335,7 +424,13 @@ class SidechainBlockTest
       validBlock,
       ommersOpt = Some(anotherOmmers) // Different ommers of the same length as origin
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 3: SidechainBlock parent is different to first Ommer parent -> must be invalid.
@@ -346,7 +441,13 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers = ommers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 4: SidechainBlock Ommers sidechain headers are not ordered -> must be invalid.
@@ -355,28 +456,80 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers =  Seq(ommer1, ommer3) // ommer2 is missed
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
-    // Test 5: SidechainBlock contains semantically invalid Ommer -> must be invalid
-    val invalidOmmer1 = new Ommer(
+    // Test 5.1: SidechainBlock contains Ommer with invalid data -> must be invalid
+    var invalidOmmer1 = new Ommer(
       ommer1.header,
       ommer1.mainchainReferencesDataMerkleRootHashOption,
       ommer1.mainchainHeaders,
       ommer1.ommers
     ) {
-      override def semanticValidity(params: NetworkParams): Boolean = false
+      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new InvalidOmmerDataException("Invalid data."))
     }
     invalidBlock = createBlock(
       timestamp = 123666L,
       mainchainHeaders = forkMainchainHeaders,
       ommers =  Seq(invalidOmmer1, ommer2, ommer3)
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
-    // Test 6: SidechainBlock with not consistent Ommers mc headers -> must be invalid
-    // First Ommer has no mc headers at all
+    // Test 5.2: SidechainBlock contains Ommer with inconsistent data -> must be invalid
+    invalidBlock = createBlock(
+      timestamp = 123666L,
+      mainchainHeaders = forkMainchainHeaders,
+      ommers =  Seq(ommer1.copy(mainchainHeaders = Seq()), ommer2, ommer3)
+    )
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+
+
+    // Test 5.3: SidechainBlock contains Ommer with both inconsistent and invalid data -> must be invalid
+    // Note: Inconsistent Data Exception must be emitted.
+    invalidOmmer1 = new Ommer(
+      ommer1.header,
+      ommer1.mainchainReferencesDataMerkleRootHashOption,
+      ommer1.mainchainHeaders,
+      ommer1.ommers
+    ) {
+      override def verifyData(params: NetworkParams): Try[Unit] = Failure(new InvalidOmmerDataException("Invalid data."))
+      override def verifyDataConsistency(): Try[Unit] = Failure(new InconsistentOmmerDataException("Invalid data."))
+    }
+    invalidBlock = createBlock(
+      timestamp = 123666L,
+      mainchainHeaders = forkMainchainHeaders,
+      ommers =  Seq(invalidOmmer1, ommer2, ommer3)
+    )
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+
+
+    // Test 6: SidechainBlock with not consistent Ommers mc headers chain -> must be invalid
+    // First Ommer is invalid, it has no mc headers at all
     var invalidOmmers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(), Seq()),
@@ -389,7 +542,13 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers =  invalidOmmers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
     // Second Ommer duplicate MainchainHeader from first Ommer
     invalidOmmers = generateOmmersSeq(parentId, 122444L,
@@ -403,7 +562,13 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers =  invalidOmmers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
     // Second Ommer MainchainHeader not connected to last MainchainHeader of first Ommer
     invalidOmmers = generateOmmersSeq(parentId, 122444L,
@@ -417,7 +582,13 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers =  invalidOmmers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 7: SidechainBlock with less or equal headers than in Ommers must be invalid.
@@ -426,21 +597,39 @@ class SidechainBlockTest
       mainchainHeaders = Seq(), // no headers
       ommers = ommers // 4 headers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
     invalidBlock = createBlock(
       timestamp = 123666L,
       mainchainHeaders = Seq(forkMainchainHeaders.head), // 1 header
       ommers = ommers // 4 headers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
     invalidBlock = createBlock(
       timestamp = 123666L,
       mainchainHeaders = forkMainchainHeaders.take(4), // 4 headers
       ommers = ommers // 4 headers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 8: SidechainBlock contains NO Ommers and SidechainBlockHeader.ommersCumulativeScore = 0, but ommersMerkleRootHash not equal to default
@@ -455,7 +644,13 @@ class SidechainBlockTest
       validBlock,
       headerOpt = Some(signedModifiedHeader)
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentSidechainBlockDataException], e.getClass)
+    }
 
 
     // Test 9: SidechainBlock MC headers follows different parent than Ommers MC headers -> must be invalid
@@ -469,7 +664,13 @@ class SidechainBlockTest
       mainchainHeaders = inconsistentForkMainchainHeaders, // first header parent is different to first ommer mc header parent
       ommers = ommers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
     // Test 11: SidechainBlock contains valid Ommer with valid sub Ommers must be valid
@@ -482,15 +683,33 @@ class SidechainBlockTest
     val ommerWithOmmers = Ommer.toOmmer(validBlockWithOmmers)
     val forkOfForkMainchainHeaders = mockForkMainchainHeaders(forkMainchainHeaders, basicSeed = 100L)
 
-    validBlock = createBlock(
+    invalidBlock = createBlock(
       timestamp = 123888L,
       mainchainHeaders = forkOfForkMainchainHeaders,
       ommers = Seq(ommerWithOmmers)
     )
-    assertTrue("SidechainBlock expected to be semantically Valid.", validBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => jFail(s"SidechainBlock expected to be semantically Valid, instead exception: ${e.getMessage}")
+    }
 
 
-    // Test 12: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
+    // Test 12: SidechainBlock contains Ommer with sub Ommer with inconsistent data:
+    val ommerWithOmmersWithInconsistentData = Ommer.toOmmer(validBlockWithOmmers).copy(mainchainHeaders = Seq())
+    invalidBlock = createBlock(
+      timestamp = 123888L,
+      mainchainHeaders = forkOfForkMainchainHeaders,
+      ommers = Seq(ommerWithOmmersWithInconsistentData)
+    )
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InconsistentOmmerDataException], e.getClass)
+    }
+
+    // Test 13: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
     val slotOmmer1: Ommer = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef2.header))
@@ -508,9 +727,16 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers = Seq(slotOmmer1, slotOmmer2)
     )
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
 
 
-    // Test 13: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
+    // Test 14: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
     invalidOmmers = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef2.header)), // timestamp  = 122444L
@@ -523,7 +749,13 @@ class SidechainBlockTest
       mainchainHeaders = forkMainchainHeaders,
       ommers = invalidOmmers
     )
-    assertFalse("SidechainBlock expected to be semantically Invalid.", invalidBlock.semanticValidity(params))
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidOmmerDataException], e.getClass)
+    }
   }
 
 
@@ -554,7 +786,7 @@ class SidechainBlockTest
         val h: Array[Byte] = nextParent // Just a hack for lazy vals
         override lazy val hash: Array[Byte] = h
 
-        override def semanticValidity(params: NetworkParams): Boolean = true
+        override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
       }
     })
   }

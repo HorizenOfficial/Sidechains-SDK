@@ -3,10 +3,8 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
-import com.horizen.utils.BytesUtils
 import scorex.util.ModifierId
-
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 
 class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlockValidator {
@@ -19,14 +17,16 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
 
   private def validateGenesisBlock(verifiedBlock: SidechainBlock): Unit = {
     if(verifiedBlock.mainchainHeaders.size != 1)
-      throw new IllegalArgumentException(s"Genesis block expect to contain only 1 MainchainHeader, instead contains ${verifiedBlock.mainchainHeaders.size}.")
+      throw new InvalidMainchainDataException(s"Genesis block expect to contain only 1 MainchainHeader, instead contains ${verifiedBlock.mainchainHeaders.size}.")
 
     if(verifiedBlock.mainchainBlockReferencesData.size != 1)
-      throw new IllegalArgumentException(s"Genesis block expect to contain only 1 MainchainBlockReferenceData, instead contains ${verifiedBlock.mainchainBlockReferencesData.size}.")
+      throw new InvalidMainchainDataException(s"Genesis block expect to contain only 1 MainchainBlockReferenceData, instead contains ${verifiedBlock.mainchainBlockReferencesData.size}.")
 
     val reference: MainchainBlockReference = MainchainBlockReference(verifiedBlock.mainchainHeaders.head, verifiedBlock.mainchainBlockReferencesData.head)
-    if(!reference.semanticValidity(params))
-      throw new IllegalArgumentException("Genesis block contains semantically invalid MainchainBlockReference.")
+    reference.semanticValidity(params) match {
+      case Success(_) =>
+      case Failure(e) => throw e
+    }
   }
 
   // Note: We relay on the fact that previous blocks MainchainBlockReferenceData was checked.
@@ -72,11 +72,15 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
 
     // Block MainchainBlockReferencesData number must be not greater, then missed ones till verified block
     if(verifiedBlock.mainchainBlockReferencesData.size > missedMainchainReferenceDataHeaderHashesInfo.size)
-      throw new IllegalArgumentException("Block contains more MainchainBlockReferenceData, than expected in the chain.")
+      throw new InvalidMainchainDataException("Block contains more MainchainBlockReferenceData, than expected in the chain.")
 
     // Collect MainchainHeaders with corresponding MainchainReferenceData into MainchainReferences and verify them.
     verifiedBlock.mainchainBlockReferencesData.zip(missedMainchainReferenceDataHeaderHashesInfo).foldLeft(verifiedBlock){
       case (lastRetrievedBlock, (referenceData, (mainchainHeaderHash, containingBlockId))) =>
+        // Check that header hash and data hash are the same.
+        if(!referenceData.headerHash.sameElements(mainchainHeaderHash.data))
+          throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
+
         val blockWithMainchainHeader: SidechainBlock = containingBlockId match {
           case lastRetrievedBlock.id => lastRetrievedBlock  // not to extract from Storage full SidechainBlock again
           case verifiedBlock.id => verifiedBlock // it means that both header and data are present inside verified block
@@ -85,8 +89,10 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
 
         val mainchainHeader: MainchainHeader = blockWithMainchainHeader.mainchainHeaders.find(header => header.hash.sameElements(mainchainHeaderHash.data)).get
         val reference: MainchainBlockReference = MainchainBlockReference(mainchainHeader, referenceData)
-        if(!reference.semanticValidity(params))
-          throw new IllegalArgumentException(s"Block contains MainchainBlockReferenceData with header hash ${BytesUtils.toHexString(referenceData.headerHash)} that leads to semantically invalid MainchainBlockReference.")
+        reference.semanticValidity(params) match {
+          case Success(_) =>
+          case Failure(e) => throw e
+        }
         blockWithMainchainHeader
     }
   }

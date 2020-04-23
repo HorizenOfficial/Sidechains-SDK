@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.consensus.TimeToEpochSlotConverterUtils
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.utils.{MerkleTree, Utils}
+import com.horizen.validation.InvalidOmmerDataException
 
-import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 trait OmmersContainer {
@@ -16,29 +16,23 @@ trait OmmersContainer {
 
   def score: Long = 1L + ommers.map(_.score).sum
 
-  protected def verifyOmmers(params: NetworkParams): Boolean = {
+  protected def verifyOmmersSeqData(params: NetworkParams): Try[Unit] = Try {
     // Verify ommers score consistency to SidechainBlockHeader
     if (ommers.map(_.score).sum != header.ommersCumulativeScore)
-      return false
+      throw new InvalidOmmerDataException(s"SidechainBlockHeader ommers cumulative score is different to the actual Ommers score.")
 
-    // Verify that included ommers are consistent to header.ommersMerkleRootHash.
-    if (ommers.isEmpty) {
-      if (!header.ommersMerkleRootHash.sameElements(Utils.ZEROS_HASH))
-        return false
-      return true
-    }
-    val calculatedMerkleRootHash = MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
-    if (!header.ommersMerkleRootHash.sameElements(calculatedMerkleRootHash))
-      return false
+    // Return in case if there no Ommers
+    if(ommers.isEmpty)
+      return Success()
 
     // Ommers list must be a consistent SidechainBlocks chain.
-    for (i <- 1 until ommers.size) {
-      if (ommers(i).header.parentId != ommers(i - 1).header.id)
-        return false
-    }
     // First Ommer must have the same parent as current SidechainBlock.
-    if (ommers.head.header.parentId != header.parentId)
-      return false
+    ommers.foldLeft(header.parentId) {
+      case (parentId, ommer) =>
+        if (parentId != ommer.header.parentId)
+          throw new InvalidOmmerDataException(s"OmmerContainer Ommers contain not consistent SidechainBlockHeaders chain.")
+        ommer.header.id
+    }
 
     // Verify that Ommers order is valid in context of OmmersContainer epoch&slot order
     // Last ommer epoch&slot number must be before verified block epoch&slot
@@ -47,37 +41,38 @@ trait OmmersContainer {
     val absoluteSlots = timestamps.map(t => converter.timeStampToAbsoluteSlotNumber(t))
     for(i <- 1 until absoluteSlots.size) {
       if(absoluteSlots(i) <= absoluteSlots(i-1))
-        return false
+        throw new InvalidOmmerDataException(s"OmmerContainer Ommers slots are not consistent.")
     }
 
     // Ommers must reference to MainchainHeaders for different chain than current SidechainBlock does.
     // In our case first Ommer should contain non empty headers seq and it should be different to the same length subseq of current SidechainBlock headers.
-    val firstOmmerHeaders = ommers.head.mainchainHeaders
-    if (mainchainHeaders.isEmpty)
-      return false
-    if (firstOmmerHeaders.isEmpty || firstOmmerHeaders.equals(mainchainHeaders.take(firstOmmerHeaders.size)))
-      return false
+    val firstOmmerMainchainHeaders = ommers.head.mainchainHeaders
+    if (mainchainHeaders.size < firstOmmerMainchainHeaders.size)
+      throw new InvalidOmmerDataException(s"OmmerContainer first ommer contains more MainchainHeaders than container.")
+    if (firstOmmerMainchainHeaders.isEmpty || firstOmmerMainchainHeaders.equals(mainchainHeaders.take(firstOmmerMainchainHeaders.size)))
+      throw new InvalidOmmerDataException(s"OmmerContainer Ommers don't lead to the orphaned MainchainHeader chain.")
 
 
-    // Verify Ommers mainchainHeaders chain consistency
     val ommersMainchainHeaders: Seq[MainchainHeader] = ommers.flatMap(_.mainchainHeaders)
-    for (i <- 1 until ommersMainchainHeaders.size) {
-      if (!ommersMainchainHeaders(i).hasParent(ommersMainchainHeaders(i - 1)))
-        return false
-    }
+    // Verify the MainchainHeaders are connected, especially between Ommers.
     // Ommers MC chain must follow the same MC parent as Block MC chain does
-    if (!ommersMainchainHeaders.head.hashPrevBlock.sameElements(mainchainHeaders.head.hashPrevBlock))
-      return false
+    ommersMainchainHeaders.foldLeft(mainchainHeaders.head.hashPrevBlock) {
+      case (hashPrevBlock, ommerMainchainHeader) =>
+        if (!ommerMainchainHeader.hashPrevBlock.sameElements(hashPrevBlock))
+          throw new InvalidOmmerDataException(s"OmmerContainer Ommers contains not consistent MainchainHeader chain.")
+        ommerMainchainHeader.hash
+    }
 
     // Total number of MainchainHeaders in current SidechainBlock must be greater than ommers total MainchainHeaders amount.
     if (mainchainHeaders.size <= ommersMainchainHeaders.size)
-      return false
+      throw new InvalidOmmerDataException(s"OmmerContainer contains less MainchainHeader than in Ommers.")
 
-    // Verify that each Ommer is semantically valid
-    for (ommer <- ommers)
-      if (!ommer.semanticValidity(params))
-        return false
-
-    true
+    // Verify that each Ommer contains valid data.
+    for (ommer <- ommers) {
+      ommer.verifyData(params) match {
+        case Success(_) =>
+        case Failure(e) => throw e
+      }
+    }
   }
 }

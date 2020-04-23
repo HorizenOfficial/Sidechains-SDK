@@ -20,12 +20,12 @@ import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
   extends SidechainBlock(block.header, block.sidechainTransactions, block.mainchainBlockReferencesData, block.mainchainHeaders, block.ommers, companion) {
-  override def semanticValidity(params: NetworkParams): Boolean = false
+  override def semanticValidity(params: NetworkParams): Try[Unit] = Failure(new Exception("exception"))
 }
 
 object SidechainBlockFixture extends MainchainBlockReferenceFixture with CompanionsFixture {

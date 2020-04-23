@@ -13,10 +13,16 @@ import scorex.util.{ModifierId, bytesToId}
 import org.junit.Assert.{assertEquals, fail => jFail}
 import java.util.{Optional => JOptional}
 
-import com.horizen.utils.WithdrawalEpochInfo
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
+import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import scorex.core.consensus.ModifierSemanticValidity
 
-import scala.util.{Failure, Success}
+import scala.collection.mutable
+import scala.util.{Failure, Random, Success}
+
 
 class MainchainBlockReferenceValidatorTest
   extends JUnitSuite
@@ -41,39 +47,51 @@ class MainchainBlockReferenceValidatorTest
     val validBlock: SidechainBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(ref1.header), Seq(ref1.data))
     validator.validate(validBlock, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("Genesis block with 1 MainchainHeader and 1 MainchainReferenceData for it expected to be valid.")
+      case Failure(e) => jFail(s"Genesis block with 1 MainchainHeader and 1 MainchainReferenceData for it expected to be valid, instead: ${e.getMessage}")
     }
 
 
     // Test 2: Sidechain block with 2 MainchainHeader and 1 MainchainReferenceData
     var invalidBlock: SidechainBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(ref1.header, ref2.header), Seq(ref1.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("Genesis block with multiple MainchainHeaders expected to be invalid.")
+      case Success(_) =>
+        jFail("Genesis block with multiple MainchainHeaders expected to be invalid.")
       case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
 
 
     // Test 3: Sidechain block with 1 MainchainHeader and 2 MainchainReferenceData
     invalidBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(ref1.header), Seq(ref1.data, ref2.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("Genesis block with multiple MainchainReferenceData expected to be invalid.")
+      case Success(_) =>
+        jFail("Genesis block with multiple MainchainReferenceData expected to be invalid.")
       case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
 
 
     // Test 4: Sidechain block with 1 MainchainHeader and 1 MainchainReferenceData, that headerHash is different to Header hash
     invalidBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(ref1.header), Seq(ref2.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("Genesis block with MainchainHeader and not corresponding MainchainReferenceData expected to be invalid.")
+      case Success(_) =>
+        jFail("Genesis block with MainchainHeader and not corresponding MainchainReferenceData expected to be invalid.")
       case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
 
 
     // Test 5: Sidechain block with no MainchainHeader and no MainchainReferenceData
     invalidBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(), Seq())
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("Genesis block with no MainchainHeaders and MainchainReferenceData expected to be invalid.")
+      case Success(_) =>
+        jFail("Genesis block with no MainchainHeaders and MainchainReferenceData expected to be invalid.")
       case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
   }
 
@@ -118,63 +136,105 @@ class MainchainBlockReferenceValidatorTest
     // Test 1: validate block with MainchainHeaders only
     validator.validate(block1, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("SidechainBlock with 2 MainchainHeaders and no MainchainReferenceData expected to be valid.")
+      case Failure(e) => jFail(s"SidechainBlock with 2 MainchainHeaders and no MainchainReferenceData expected to be valid, instead ${e.getMessage}.")
     }
 
 
     // Test 2: validate block with multiple MainchainHeaders and 1 MainchainReferenceData, which MainchainHeader was specified in previous block
     validator.validate(block2, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("SidechainBlock with 3 MainchainHeaders and MainchainReferenceData for previous block MainchainHeader expected to be valid.")
+      case Failure(e) => jFail("SidechainBlock with 3 MainchainHeaders and MainchainReferenceData for previous block MainchainHeader expected to be valid, instead ${e.getMessage}.")
     }
 
 
     // Test 3: validate block 2 MainchainReferenceData, which MainchainHeaders were specified in previous blocks (different)
     validator.validate(block3, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("SidechainBlock with 2 MainchainReferenceData, which MainchainHeaders were specified in previous blocks, expected to be valid.")
+      case Failure(e) => jFail("SidechainBlock with 2 MainchainReferenceData, which MainchainHeaders were specified in previous blocks, expected to be valid, instead ${e.getMessage}.")
     }
 
 
     // Test 4: validate block with 1 MainchainHeader and 1 MainchainReferenceData, which MainchainHeader was specified in block in the past (not previous).
     validator.validate(block4, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("SidechainBlock with1 MainchainHeader and 1 MainchainReferenceData, which MainchainHeader was specified in block in the past, expected to be valid.")
+      case Failure(e) => jFail("SidechainBlock with1 MainchainHeader and 1 MainchainReferenceData, which MainchainHeader was specified in block in the past, expected to be valid, instead ${e.getMessage}.")
     }
 
 
     // Test 5: validate block with 1 MainchainHeader and 3 MainchainReferenceData, which MainchainHeader was specified in current block and blocks in the past.
     validator.validate(block5, history) match {
       case Success(_) =>
-      case Failure(e) => jFail("SidechainBlock with 1 MainchainHeader and 3 MainchainReferenceData, which MainchainHeader was specified in current block and blocks in the past, expected to be valid.")
+      case Failure(e) => jFail("SidechainBlock with 1 MainchainHeader and 3 MainchainReferenceData, which MainchainHeader was specified in current block and blocks in the past, expected to be valid, instead ${e.getMessage}.")
     }
 
 
     // Test 6: validate block, that leads to more MainchainReferenceData than MainchainHeaders in the chain.
     var invalidBlock: SidechainBlock = mockBlock(getRandomModifier(), block5.id, Seq(), Seq(ref9.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
-      case Failure(_) =>
+      case Success(_) =>
+        jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
     // Same case, but with looking into history as well
     invalidBlock = mockBlock(getRandomModifier(), block1.id, Seq(), Seq(ref2.data, ref3.data, ref4.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
-      case Failure(_) =>
+      case Success(_) =>
+        jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
 
 
-    // Test 7: validate block, that contains inconsistent MainchainReferenceData to MainchainHeader in it.
+    // Test 7: validate block, that contains different MainchainReferenceData header hash and MainchainHeader hash in it.
     invalidBlock = mockBlock(getRandomModifier(), block5.id, Seq(ref9.header), Seq(ref10.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("SidechainBlock, that contains inconsistent MainchainReferenceData to MainchainHeader in it, expected to be Invalid.")
-      case Failure(_) =>
+      case Success(_) =>
+        jFail("SidechainBlock, that contains inconsistent MainchainReferenceData to MainchainHeader in it, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
     }
     // Same case, but with looking into history as well
     invalidBlock = mockBlock(getRandomModifier(), block4.id, Seq(ref8.header), Seq(ref6.data, ref8.data, ref8.data))
     validator.validate(invalidBlock, history) match {
-      case Success(_) => jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
-      case Failure(_) =>
+      case Success(_) =>
+        jFail("SidechainBlock, that leads to more MainchainReferenceData than MainchainHeaders in the chain, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InvalidMainchainDataException], e.getClass)
+    }
+
+
+    // Test 8: validate block, that contains MainchainReferenceData with SCMap data inconsistent to header hashSCMerkleRootsMap.
+    val randomHash: Array[Byte] = new Array[Byte](32)
+    Random.nextBytes(randomHash)
+    val invalidSCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = mutable.Map((new ByteArrayWrapper(randomHash), randomHash))
+    var ref9MutatedData: MainchainBlockReferenceData = MainchainBlockReferenceData(ref9.data.headerHash, None, Some(invalidSCMap))
+    invalidBlock = mockBlock(getRandomModifier(), block5.id, Seq(ref9.header), Seq(ref9MutatedData))
+    validator.validate(invalidBlock, history) match {
+      case Success(_) =>
+        jFail("SidechainBlock, that contains inconsistent MainchainReferenceData SCMap to MainchainHeader hashSCMerkleRootsMap, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InconsistentMainchainBlockReferenceDataException], e.getClass)
+    }
+
+
+    // Test 9: validate block, that contains MainchainReferenceData with AggTx data inconsistent to SCMap.
+    val mockedOutput = mock[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]
+    Mockito.when(mockedOutput.hash()).thenReturn(randomHash)
+    val aggTx: MC2SCAggregatedTransaction = new MC2SCAggregatedTransaction(java.util.Arrays.asList(mockedOutput), 10000L)
+    ref9MutatedData = MainchainBlockReferenceData(ref9.data.headerHash, Some(aggTx), None)
+    invalidBlock = mockBlock(getRandomModifier(), block5.id, Seq(ref9.header), Seq(ref9MutatedData))
+    validator.validate(invalidBlock, history) match {
+      case Success(_) =>
+        jFail("SidechainBlock, that contains inconsistent MainchainReferenceData SCMap to MainchainHeader hashSCMerkleRootsMap, expected to be Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during validation.",
+          classOf[InconsistentMainchainBlockReferenceDataException], e.getClass)
     }
   }
 

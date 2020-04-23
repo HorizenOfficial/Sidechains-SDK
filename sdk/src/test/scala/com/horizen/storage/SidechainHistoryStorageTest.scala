@@ -63,7 +63,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // Check MainchainHeaders
     blocks(blockIndex).mainchainHeaders.foreach { case mainchainHeader =>
       assertEquals("Storage must return correct sidechain block by mainchain header hash",
-        blocks(blockIndex).id, historyStorage.getMainchainHeaderContainingBlock(mainchainHeader.hash).get.id)
+        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainHeader(mainchainHeader.hash).get.id)
 
       assertArrayEquals("Storage must return correct mainchain header by mainchain header hash",
         mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(mainchainHeader.hash).get.mainchainHeaderBytes)
@@ -72,10 +72,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     // Check MainchainBlockReferenceData
     blocks(blockIndex).mainchainBlockReferencesData.foreach { case mainchainReferenceData =>
       assertEquals("Storage must return correct sidechain block by mainchain reference data header hash",
-        blocks(blockIndex).id, historyStorage.getMainchainReferenceDataContainingBlock(mainchainReferenceData.headerHash).get.id)
+        blocks(blockIndex).id, historyStorage.getSidechainBlockContainingMainchainReferenceData(mainchainReferenceData.headerHash).get.id)
 
-      assertArrayEquals("Storage must return correct mainchain data by mainchain reference data header hash",
-        mainchainReferenceData.hash, historyStorage.getMainchainReferenceDataByHash(mainchainReferenceData.headerHash).get.hash)
+      assertEquals("Storage must return correct mainchain data by mainchain reference data header hash",
+        mainchainReferenceData, historyStorage.getMainchainReferenceDataByHash(mainchainReferenceData.headerHash).get)
     }
 
     val mainchainLength = blocks.take(blockIndex).map(b => b.mainchainBlockReferencesData.length).sum + params.mainchainCreationBlockHeight
