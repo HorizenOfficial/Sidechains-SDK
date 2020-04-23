@@ -272,6 +272,7 @@
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
 					<include>mcblock473173</include>
 					<include>withdrawalrequestbox_hex</include>
+                    <include>nonce_calculation_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>
                     <include>boxmerklepathinfo_hex</include>
                     <include>sidechaincoretransaction_hex</include>
