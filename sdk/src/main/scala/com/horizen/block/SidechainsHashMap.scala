@@ -11,6 +11,40 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Try
 
+object MerkleTreeUtils {
+
+  //returns count of leves on the lowest level of full binary tree
+  def getFullSize(leavesCount: Int): Int = {
+    var i = 1
+    while (i < leavesCount)
+      i *= 2
+    i
+  }
+
+  //returns height of binary tree for specified count of leaves
+  def getTreeHeight(leavesCount: Int): Int = {
+    var size = getFullSize(leavesCount)
+    var treeHeight = 1
+    while (size > 1) {
+      treeHeight += 1
+      size /= 2
+    }
+
+    treeHeight
+  }
+
+  def getPaddingCount(treeHeight: Int, level: Int): Int = {
+    var currentLevel = level
+    var paddingCount = 1
+    while (currentLevel < treeHeight) {
+      currentLevel += 1
+      paddingCount *= 2
+    }
+    paddingCount
+  }
+
+}
+
 class SidechainHashList
 {
   private val transactionHash: mutable.ListBuffer[Array[Byte]] = new mutable.ListBuffer[Array[Byte]]()
@@ -57,7 +91,7 @@ class SidechainHashList
     val mkr = new ByteArrayWrapper(getSidechainHash(sidechainId))
     val leafIndex = merkleTree.leaves().asScala.map(l => new ByteArrayWrapper(l)).lastIndexOf(mkr)
     NeighbourProof(sidechainId, getTxsHash, withdrawalCertificateHash.getOrElse(SidechainHashList.MAGIC_SC_STRING),
-      leafIndex, merkleTree.getMerklePathForLeaf(leafIndex))
+      merkleTree.getMerklePathForLeaf(leafIndex))
   }
 }
 
@@ -122,7 +156,7 @@ class SidechainsHashMap
     }
   }
 
-  private def getMerkleTree: MerkleTree = {
+  private[block] def getMerkleTree: MerkleTree = {
     val merkleTreeLeaves = sidechainsHashMap.toSeq.sortWith(_._1 < _._1)
       .map(pair => {
         getSidechainHash(pair._1)
@@ -131,18 +165,29 @@ class SidechainsHashMap
     MerkleTree.createMerkleTree(merkleTreeLeaves.asJava)
   }
 
-  private def getFullMerkleTree: MerkleTree = {
+  private[block] def getFullMerkleTree: MerkleTree = {
     var merkleTreeLeaves = sidechainsHashMap.toSeq.sortWith(_._1 < _._1)
       .map(pair => {
         getSidechainHash(pair._1)
       })
 
-    var fullMktSize = 2
-    while (fullMktSize < merkleTreeLeaves.size)
-      fullMktSize *= 2
+    val fullMerkleTreeSize = MerkleTreeUtils.getFullSize(merkleTreeLeaves.size)
+    val fullMerkleTreeHeight = MerkleTreeUtils.getTreeHeight(merkleTreeLeaves.size)
 
-    while (merkleTreeLeaves.size < fullMktSize)
-      merkleTreeLeaves = merkleTreeLeaves :+ merkleTreeLeaves.last
+    while (merkleTreeLeaves.size < fullMerkleTreeSize) {
+      var currentLevel = fullMerkleTreeHeight
+      var paddingCount = 0
+      var currentLevelLeavesCount = merkleTreeLeaves.size
+      while (currentLevel > 1 && paddingCount == 0) {
+        if (currentLevelLeavesCount %2 == 1) {
+          paddingCount = MerkleTreeUtils.getPaddingCount(fullMerkleTreeHeight, currentLevel)
+        } else {
+          currentLevel -= 1
+          currentLevelLeavesCount /= 2
+        }
+      }
+      merkleTreeLeaves = merkleTreeLeaves ++ merkleTreeLeaves.slice(merkleTreeLeaves.size - paddingCount, merkleTreeLeaves.size)
+    }
 
     MerkleTree.createMerkleTree(merkleTreeLeaves.asJava)
   }
@@ -151,18 +196,18 @@ class SidechainsHashMap
     getMerkleTree.rootHash()
   }
 
-  def getMerklePath(sidechaiId: ByteArrayWrapper): Option[MerklePath] = {
-    sidechainsHashMap.get(sidechaiId) match {
+  def getMerklePath(sidechainId: ByteArrayWrapper): Option[MerklePath] = {
+    sidechainsHashMap.get(sidechainId) match {
       case Some(shl) =>
         val mkt = getMerkleTree
-        val mkr = new ByteArrayWrapper(getSidechainHash(sidechaiId))
+        val mkr = new ByteArrayWrapper(getSidechainHash(sidechainId))
         val leafIndex = mkt.leaves().asScala.map(l => new ByteArrayWrapper(l)).indexOf(mkr)
         Some(mkt.getMerklePathForLeaf(leafIndex))
       case None => None
     }
   }
 
-  def getNeighborProofs(sidechainId: ByteArrayWrapper): (Option[NeighbourProof], Option[NeighbourProof]) = {
+  def getNeighbourProofs(sidechainId: ByteArrayWrapper): (Option[NeighbourProof], Option[NeighbourProof]) = {
     val scl: Seq[ByteArrayWrapper] = sidechainsHashMap.get(sidechainId) match {
       case Some(s) => sidechainsHashMap.map(_._1).toSeq.sortWith(_ < _)
       case None => (sidechainsHashMap.map(_._1).toSeq :+ sidechainId).sortWith(_ < _)
@@ -170,7 +215,7 @@ class SidechainsHashMap
 
     val merkleTree = getMerkleTree
 
-    val rightNeighborOption = Try(scl(scl.indexOf(sidechainId) + 1))
+    val rightNeighbourOption = Try(scl(scl.indexOf(sidechainId) + 1))
       .toOption match {
       case Some(schId) => sidechainsHashMap.get(schId) match {
         case Some(schhl) => Some(schhl.getNeighbourProof(schId.data, merkleTree))
@@ -178,16 +223,28 @@ class SidechainsHashMap
       }
       case None => None
     }
-    val leftNeighborOption = Try(scl(scl.indexOf(sidechainId) - 1))
+    val leftNeighbourOption = Try(scl(scl.indexOf(sidechainId) - 1))
       .toOption match {
       case Some(schId) => sidechainsHashMap.get(schId) match {
-        case Some(schhl) if rightNeighborOption.isDefined => Some(schhl.getNeighbourProof(schId.data, merkleTree))
-        case Some(schhl) if rightNeighborOption.isEmpty => Some(schhl.getNeighbourProof(schId.data, getFullMerkleTree))
+        case Some(schhl) if rightNeighbourOption.isDefined => Some(schhl.getNeighbourProof(schId.data, merkleTree))
+        case Some(schhl) if rightNeighbourOption.isEmpty => Some(schhl.getNeighbourProof(schId.data, getFullMerkleTree))
         case None => None
       }
       case None => None
     }
-    (leftNeighborOption, rightNeighborOption)
+    (leftNeighbourOption, rightNeighbourOption)
+  }
+
+  //for tests
+  private[block] def addTransactionHashes(sidechainId: ByteArrayWrapper,
+                                          transactionHashSeq: Seq[Array[Byte]]): Unit = {
+    sidechainsHashMap.get(sidechainId) match {
+      case Some(shl) => shl.addTransactionHash(transactionHashSeq)
+      case None =>
+        val shl = new SidechainHashList()
+        shl.addTransactionHash(transactionHashSeq)
+        sidechainsHashMap.put(sidechainId, shl)
+    }
   }
 
 }

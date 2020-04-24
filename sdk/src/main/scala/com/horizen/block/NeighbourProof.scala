@@ -12,7 +12,6 @@ case class NeighbourProof
 (sidechainId: Array[Byte],
  txsHash: Array[Byte],
  wcertHash: Array[Byte],
- leafIndex: Int,
  @JsonProperty("merklePath")
  @JsonSerialize(using = classOf[JsonMerklePathSerializer])
  merklePath: MerklePath
@@ -33,7 +32,6 @@ object NeighbourProofSerializer extends ScorexSerializer[NeighbourProof] {
     w.putBytes(proof.txsHash)
     w.putInt(proof.wcertHash.length)
     w.putBytes(proof.wcertHash)
-    w.putInt(proof.leafIndex)
     w.putInt(proof.merklePath.bytes().length)
     w.putBytes(proof.merklePath.bytes())
   }
@@ -49,11 +47,9 @@ object NeighbourProofSerializer extends ScorexSerializer[NeighbourProof] {
     val wcertHashSize = r.getInt()
     val wcertHash = r.getBytes(wcertHashSize)
 
-    val leafIndex = r.getInt()
-
     val merklePathSize = r.getInt()
     val merklePath = MerklePath.parseBytes(r.getBytes(merklePathSize))
 
-    NeighbourProof(sidechainId, txsHash, wcertHash, leafIndex, merklePath)
+    NeighbourProof(sidechainId, txsHash, wcertHash, merklePath)
   }
 }

@@ -8,6 +8,4 @@ import java.util.List;
 
 public interface SidechainStateReader {
     Optional<Box> getClosedBox(byte[] boxId);
-    WithdrawalEpochInfo getWithdrawalEpochInfo();
-    Optional<List<WithdrawalRequestBox>> getWithdrawalRequests(Integer epoch);
 }

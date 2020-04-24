@@ -56,8 +56,8 @@ class CertificateSubmitter
       val withdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
       if (withdrawalEpochInfo.epoch > 0 &&
         WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
-        val withdrawalRequests = sidechainNodeView.state.getWithdrawalRequests(withdrawalEpochInfo.epoch - 1)
-        if (withdrawalRequests.isPresent) {
+        val withdrawalRequests = sidechainNodeView.state.unprocessedWithdrawalRequests(withdrawalEpochInfo.epoch - 1)
+        if (withdrawalRequests.isDefined) {
           val mcEndEpochBlockHashOpt = sidechainNodeView.history
             .getMainchainBlockReferenceInfoByMainchainBlockHeight(
               params.mainchainCreationBlockHeight +
@@ -66,7 +66,7 @@ class CertificateSubmitter
             CertificateRequestCreator.create(
               withdrawalEpochInfo.epoch - 1,
               mcEndEpochBlockHashOpt.get().getMainchainBlockReferenceHash,
-              withdrawalRequests.get().asScala,
+              withdrawalRequests.get,
               params
             )
           )
@@ -92,10 +92,10 @@ class CertificateSubmitter
         log.info(s"Backward transfer certificate was successfully created.")
 
       case Success(SubmitFailed(ex)) =>
-        log.info("Forging had been failed." + ex)
+        log.info("Creation of backward transfer certificate had been failed." + ex)
 
       case Failure(ex) =>
-        log.info("Forging had been failed. " + ex)
+        log.info("Creation of backward transfer certificate had been failed. " + ex)
     }
   }
 

@@ -112,4 +112,14 @@ public class MerklePath {
         }
         return true;
     }
+
+    public int leafIndex() {
+        int index = 0;
+        for (int i = _merklePath.size() - 1; i >= 0; i--) {
+            index = index<<1;
+            if (_merklePath.get(i).getKey() == 0)
+                index ++;
+        }
+        return index;
+    }
 }

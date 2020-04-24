@@ -60,18 +60,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     }
   }
 
-  def withdrawalRequests(epoch: Int): Option[Seq[WithdrawalRequestBox]] = {
+  def withdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(epoch)
+  }
+
+  def unprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
     stateStorage.getUnprocessedWithdrawalRequests(epoch)
   }
 
-  override def getWithdrawalRequests(epoch: Integer): JOptional[JList[WithdrawalRequestBox]] = {
-    stateStorage.getUnprocessedWithdrawalRequests(epoch) match {
-      case Some(requests) => JOptional.of(requests.asJava)
-      case None => JOptional.empty()
-    }
-  }
-
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
+  def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
 
@@ -90,7 +87,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, para
     //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
     //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
     for (certificate <- mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) {
-      withdrawalRequests(certificate.epochNumber) match {
+      unprocessedWithdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
           if (withdrawalRequests.size != certificate.outputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))

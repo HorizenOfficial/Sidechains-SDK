@@ -29,10 +29,6 @@ import scala.collection.mutable
 // Transaction counter  positive integer (number of transactions in block)      1-9 bytes
 // Transactions         the (non empty) list of transactions                    depends on <Transaction counter>
 
-case class MProof
-  (
-  )
-
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash", "hashHex"))
 class MainchainBlockReference(
@@ -79,7 +75,7 @@ class MainchainBlockReference(
         if (sidechainRelatedAggregatedTransaction.isEmpty && backwardTransferCertificate.isEmpty)
           return false
 
-        //Check for empty neighbor proofs
+        //Check for empty neighbour proofs
         if (proofOfNoData._1.isDefined || proofOfNoData._2.isDefined)
           return false
 
@@ -106,16 +102,16 @@ class MainchainBlockReference(
         if (proofOfNoData._1.isEmpty && proofOfNoData._2.isEmpty)
           return false
 
-        //Check if there are no sidechains between neighbors
+        //Check if there are no sidechains between neighbours
         if (proofOfNoData._1.isDefined && proofOfNoData._2.isDefined &&
-          proofOfNoData._2.get.leafIndex - 1 != proofOfNoData._1.get.leafIndex)
+          proofOfNoData._2.get.merklePath.leafIndex() - 1 != proofOfNoData._1.get.merklePath.leafIndex())
           return false
 
-        //Check if there is only right neighbor it must be leftmost in sidechain merkle tree
+        //Check if there is only right neighbour it must be leftmost in sidechain merkle tree
         if (proofOfNoData._1.isEmpty && !proofOfNoData._2.get.merklePath.isLeftmost)
           return false
 
-        //Check if there is only left neighbor it must be rightmost in sidechain merkle tree
+        //Check if there is only left neighbour it must be rightmost in sidechain merkle tree
         if (proofOfNoData._2.isEmpty && !proofOfNoData._1.get.merklePath.isRightmost)
           return false
 
@@ -186,11 +182,11 @@ object MainchainBlockReference {
         if (scIds.isEmpty)
           Success(new MainchainBlockReference(header, None, None, (None, None), None))
         else {
-          if (scIds.exists(c => util.Arrays.equals(c.data, params.sidechainId)))
+          if (scIds.contains(sidechainId))
             Success(new MainchainBlockReference(header, mc2scTransaction, sidechainHashMap.getMerklePath(sidechainId), (None, None), certificate))
           else
             Success(new MainchainBlockReference(header, mc2scTransaction, None,
-              sidechainHashMap.getNeighborProofs(sidechainId), certificate))
+              sidechainHashMap.getNeighbourProofs(sidechainId), certificate))
         }
       case Failure(e) =>
         Failure(e)

@@ -9,12 +9,9 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
   extends MainchainApi
 {
 
-  private lazy val os = {
+  private lazy val isOsWindows = {
     val osname = System.getProperty("os.name", "generic").toLowerCase()
-    if (osname.contains("win"))
-      0
-    else
-      1
+    osname.contains("win")
   }
 
   private val clientPath = sidechainSettings.websocket.zencliCommandLine +
@@ -33,7 +30,7 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
   }
 
   private def encloseJsonParameter(parameter: String): String = {
-    if (os == 0)
+    if (isOsWindows)
       "\"" + parameter.replace("\"", "\\\"") + "\""
     else
       "'" + parameter + "'"
