@@ -121,4 +121,30 @@ public class MerklePath {
         }
         return true;
     }
+
+    public boolean isLeftmost() {
+        for(Pair<Byte, byte[]> merkleLeaf: merklePath) {
+            if (merkleLeaf.getKey() != 1)
+                return false;
+        }
+        return true;
+    }
+
+    public boolean isRightmost() {
+        for(Pair<Byte, byte[]> merkleLeaf: merklePath) {
+            if (merkleLeaf.getKey() != 0)
+                return false;
+        }
+        return true;
+    }
+
+    public int leafIndex() {
+        int index = 0;
+        for (int i = merklePath.size() - 1; i >= 0; i--) {
+            index = index<<1;
+            if (merklePath.get(i).getKey() == 0)
+                index ++;
+        }
+        return index;
+    }
 }

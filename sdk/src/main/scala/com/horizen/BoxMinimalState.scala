@@ -1,5 +1,6 @@
 package com.horizen
 
+import com.horizen.block.MainchainBackwardTransferCertificate
 import com.horizen.box.Box
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.proposition.Proposition
@@ -22,7 +23,7 @@ trait BoxMinimalState[P <: Proposition,
 
   def changes(mod: M): Try[BoxStateChanges[P, BX]]
 
-  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo, consensusEpoch: ConsensusEpochNumber): Try[BMS]
+  def applyChanges(changes: BoxStateChanges[P, BX], newVersion: VersionTag, withdrawalEpochInfo: WithdrawalEpochInfo, containsBackwardTransferCertificate: Boolean, consensusEpoch: ConsensusEpochNumber): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

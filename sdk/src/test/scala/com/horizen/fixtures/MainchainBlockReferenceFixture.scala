@@ -58,13 +58,13 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       headerWithNoSerialization.version,
       headerWithNoSerialization.hashPrevBlock,
       headerWithNoSerialization.hashMerkleRoot,
-      headerWithNoSerialization.hashSCMerkleRootsMap,
+      headerWithNoSerialization.hashScTxsCommitment,
       headerWithNoSerialization.time,
       headerWithNoSerialization.bits,
       headerWithNoSerialization.nonce,
       headerWithNoSerialization.solution)
 
-    val newReference = new MainchainBlockReference(header, None, None) {
+    val newReference = new MainchainBlockReference(header, None, None, (None, None), None) {
       override def semanticValidity(params: NetworkParams): Boolean = true
 
       override lazy val hash: Array[Byte] = blockHash match {

@@ -9,6 +9,7 @@ import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 import scala.collection.JavaConverters._
 import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
+import com.horizen.box.{Box, BoxSerializer, CertifierRightBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
@@ -17,6 +18,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -114,6 +116,7 @@ class SidechainStateTest
       boxList.toSet,
       Set(),
       Seq[WithdrawalRequestBox](),
+      false,
       forgingStakesToAppendSeq,
       initialConsensusEpoch
     )

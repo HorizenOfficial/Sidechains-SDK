@@ -1,9 +1,14 @@
 package com.horizen.storage
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util
+
+import com.google.common.primitives.Bytes
+import com.google.common.primitives.Longs
+import java.util.{Arrays, ArrayList => JArrayList, List => JList}
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.SidechainTypes
+import com.horizen.block.MainchainBackwardTransferCertificate
 import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
@@ -39,6 +44,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
+  private[horizen] def getWithdrawalBlockKey(epoch: Int) : ByteArrayWrapper = {
+    calculateKey(("Withdrawal block - " + epoch).getBytes)
+  }
+
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
@@ -69,17 +78,25 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getWithdrawalRequests(epoch: Int): JList[WithdrawalRequestBox] = { // Do we need to return JList here?
-    storage.get(getWithdrawalRequestsKey(epoch)).asScala match {
-      case Some(baw) =>
-        withdrawalRequestSerializer.parseBytesTry(baw.data) match {
-          case Success(withdrawalRequests) => withdrawalRequests
+  def getWithdrawalRequests(epoch: Int) : Seq[WithdrawalRequestBox] = {
+    storage.get(getWithdrawalRequestsKey(epoch)) match {
+      case v if v.isPresent =>
+        withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
+          case Success(withdrawalRequests) => withdrawalRequests.asScala
           case Failure(exception) =>
             log.error("Error while withdrawal requests parsing.", exception)
-            new JArrayList[WithdrawalRequestBox]()
+            Seq[WithdrawalRequestBox]()
         }
-      case _ => new JArrayList[WithdrawalRequestBox]()
+      case _ => Seq[WithdrawalRequestBox]()
     }
+  }
+
+  def getUnprocessedWithdrawalRequests(epoch: Int) : Option[Seq[WithdrawalRequestBox]] = {
+    storage.get(getWithdrawalBlockKey(epoch)) match {
+      case v if v.isPresent => None
+      case _ => Some(getWithdrawalRequests(epoch))
+    }
+
   }
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
@@ -130,6 +147,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxUpdateList: Set[SidechainTypes#SCB],
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
+             containsBackwardTransferCertificate: Boolean,
              forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
              consensusEpoch: ConsensusEpochNumber): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
@@ -158,13 +176,16 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     if (withdrawalRequestAppendSeq.nonEmpty) {
-      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch)
-
-      withdrawalRequestList.addAll(withdrawalRequestAppendSeq.asJava)
+      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch) ++ withdrawalRequestAppendSeq
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
-        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
+        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList.asJava))))
+
     }
+
+    if (containsBackwardTransferCertificate)
+      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1),
+        version))
 
     // Update Consensus related data
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)

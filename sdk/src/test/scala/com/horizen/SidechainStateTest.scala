@@ -8,6 +8,7 @@ import com.horizen.utils.{Pair => JPair}
 import com.horizen.block.SidechainBlock
 import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
+import com.horizen.box.RegularBox
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
@@ -89,7 +90,7 @@ class SidechainStateTest
   }
 
   @Test
-  def testStateless(): Unit = {
+  def testStateless() : Unit = {
     var exceptionThrown = false
 
     // Set base Secrets data
@@ -213,6 +214,7 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
+      ArgumentMatchers.any[Boolean](),
       ArgumentMatchers.any[Seq[ForgingStakeInfo]](),
       ArgumentMatchers.any[ConsensusEpochNumber]()))
       .thenAnswer( answer => {

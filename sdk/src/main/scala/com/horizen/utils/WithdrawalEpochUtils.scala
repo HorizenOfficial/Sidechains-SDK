@@ -22,4 +22,8 @@ object WithdrawalEpochUtils {
 
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
+
+  def canSubmitCertificate(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    withdrawalEpochInfo.lastEpochIndex < params.withdrawalEpochLength / 5
+  }
 }

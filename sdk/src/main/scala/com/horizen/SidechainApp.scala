@@ -39,6 +39,13 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
+import com.google.inject.Inject
+import com.google.inject.name.Named
+import com.horizen.utils.BytesUtils
+import com.google.inject.Inject
+import com.google.inject.name.Named
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.utils.BytesUtils
 import scala.util.Try
 
 class SidechainApp @Inject()
@@ -181,6 +188,7 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
+  val certificateSubmitter : ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
@@ -217,7 +225,6 @@ class SidechainApp @Inject()
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, params)
-
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
