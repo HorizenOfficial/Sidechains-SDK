@@ -1,8 +1,6 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.NoncedBox
@@ -15,7 +13,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
+import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}

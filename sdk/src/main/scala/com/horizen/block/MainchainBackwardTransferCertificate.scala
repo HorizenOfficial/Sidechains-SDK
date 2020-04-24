@@ -10,6 +10,8 @@ case class MainchainBackwardTransferCertificate
    sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   previousEndEpochBlockHash: Array[Byte] = Array(),
+   proof: Array[Byte] = Array(),
    totalAmount: Long,
    fee: Long,
    transactionOutputs: Seq[MainchainTransactionOutput],
@@ -74,7 +76,7 @@ object MainchainBackwardTransferCertificate {
     currentOffset += 32
 
     new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
+      sidechainId, epochNumber, endEpochBlockHash, Array(), Array(), totalAmount, fee, transactionOutputs, outputs)
 
   }
 }

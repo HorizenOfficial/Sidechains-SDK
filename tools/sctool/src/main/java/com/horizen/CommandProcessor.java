@@ -271,11 +271,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720);
+                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720, null, 0, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720);
+                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720 );
+                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
         }
         return null;
 

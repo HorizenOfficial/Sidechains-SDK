@@ -5,6 +5,8 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.BytesUtils
 import java.math.BigInteger
 import java.time.Instant
+
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock}
 import com.horizen.box.ForgerBox
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
 import com.horizen.proof.{Signature25519, VrfProof}

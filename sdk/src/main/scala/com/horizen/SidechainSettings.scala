@@ -9,19 +9,35 @@ case class WebSocketSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
                              reconnectionMaxAttempts: Int,
-                             zencliCommandLine: String)
+                             zencliCommandLine: String
+                            )
 
 case class GenesisDataSettings(scGenesisBlockHex: String,
                                scId: String,
                                mcBlockHeight: Int,
                                powData: String,
                                mcNetwork: String,
-                               withdrawalEpochLength: Int)
+                               withdrawalEpochLength: Int
+                              )
+
+case class BackwardTransferSettings(submitterIsEnabled: Boolean,
+                                    backwardTransferPublicKeys: Seq[String],
+                                    backwardTransferThreshold: Int,
+                                    backwardTransferSecrets: Seq[String],
+                                    provingKeyFilePath: String
+                                   )
 
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])
 
-case class SidechainSettings(scorexSettings: ScorexSettings,
-                             genesisData: GenesisDataSettings,
-                             websocket: WebSocketSettings,
-                             wallet: WalletSettings)
+case class MainchainSettings(
+                              path: String
+                            )
+
+case class SidechainSettings(
+                        scorexSettings: ScorexSettings,
+                        genesisData: GenesisDataSettings,
+                        websocket: WebSocketSettings,
+                        backwardTransferSettings: BackwardTransferSettings,
+                        wallet: WalletSettings
+                            )

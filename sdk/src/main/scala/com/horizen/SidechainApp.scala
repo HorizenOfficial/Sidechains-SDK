@@ -5,9 +5,9 @@ import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject._
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
+import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -18,7 +18,8 @@ import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
-import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
+import com.horizen.proposition.{SchnorrPublicKey, SchnorrPublicKeySerializer}
+import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretKeySerializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -42,6 +43,7 @@ import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
 
 import scala.util.Try
+
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -93,7 +95,11 @@ class SidechainApp @Inject()
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+
+  val schnorrPublicKeys: Seq[SchnorrPublicKey] = sidechainSettings.backwardTransferSettings.backwardTransferPublicKeys
+    .map(bytes => SchnorrPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -104,8 +110,12 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
+
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
@@ -113,8 +123,12 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
+
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
@@ -122,7 +136,10 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -157,7 +174,12 @@ class SidechainApp @Inject()
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+
+    for(secretSchnorr <- sidechainSettings.backwardTransferSettings.backwardTransferSecrets)
+      sidechainSecretStorage.add(SchnorrSecretKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
+
+
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
@@ -173,7 +195,9 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  val certificateSubmitter : ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  if (sidechainSettings.backwardTransferSettings.submitterIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  }
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
@@ -262,4 +286,6 @@ class SidechainApp @Inject()
     binder.install(new FactoryModuleBuilder()
       .build(classOf[SidechainCoreTransactionFactory]))
   }
+
+  actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

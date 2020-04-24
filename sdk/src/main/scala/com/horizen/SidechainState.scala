@@ -2,7 +2,9 @@ package com.horizen
 
 import java.util
 import java.util.{Optional => JOptional}
-import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
+
+import com.horizen.backwardtransfer.BackwardTransferLoader
+import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
@@ -97,6 +99,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   r.value().equals(o.amount)
                 }))
               throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+              if (!BackwardTransferLoader.schnorrFunctions.verifyProof(withdrawalRequests.asJava, params.schnorrPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, certificate.previousEndEpochBlockHash, params.backwardTransferThreshold, 0, certificate.proof, params.provingKeyFilePath)) {
+                throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
+              }
+
         case None =>
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
@@ -288,9 +294,9 @@ object SidechainState
       None
   }
 
-  private[horizen] def genesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
-                                    applicationState: ApplicationState,
-                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
+  private[horizen] def createGenesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
+                                          applicationState: ApplicationState,
+                                          genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
       new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)

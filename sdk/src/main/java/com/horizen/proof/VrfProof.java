@@ -19,7 +19,7 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     private final byte[] proofBytes;
 
     public VrfProof(byte[] proof) {
-        Objects.requireNonNull(proof, "Public key can't be null");
+        Objects.requireNonNull(proof, "Vrf proof can't be null");
 
         proofBytes = Arrays.copyOf(proof, proof.length);
     }

@@ -12,7 +12,7 @@ import com.horizen.consensus._
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrPublicKey, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
@@ -491,6 +491,9 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
+      override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq()
+      override val backwardTransferThreshold: Int = 0
+      override val provingKeyFilePath: String = ""
     }
   }
 

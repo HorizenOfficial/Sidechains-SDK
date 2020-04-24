@@ -2,24 +2,21 @@ package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.proof.SchnorrSignature;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.vrf.VrfLoader;
-import com.horizen.proof.VrfProof;
-import com.horizen.proposition.VrfPublicKey;
+import com.horizen.proposition.SchnorrPublicKey;
+import com.horizen.backwardtransfer.BackwardTransferLoader;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
+import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
-public class VrfSecretKey implements Secret {
-    public static final byte SECRET_TYPE_ID = VrfPrivateKeySecretId.id();
-    private static final VrfSecretKeySerializer SERIALIZER = VrfSecretKeySerializer.getSerializer();
-
+public class SchnorrSecretKey implements Secret {
     private final byte[] secretBytes;
     private final byte[] publicBytes;
 
-    public VrfSecretKey(byte[] secretKey, byte[] publicKey) {
+    public SchnorrSecretKey(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
@@ -35,19 +32,15 @@ public class VrfSecretKey implements Secret {
         return publicBytes;
     }
 
-    public VrfProof prove(byte[] message) {
-        return new VrfProof(VrfLoader.vrfFunctions().createVrfProof(getSecretBytes(), getPublicBytes(), message));
-    }
-
     @Override
     public byte secretTypeId() {
-        return VrfPrivateKeySecretId.id();
+        return SchnorrSecretKeyId.id();
     }
 
     @Override
-    public VrfPublicKey publicImage() {
+    public SchnorrPublicKey publicImage() {
         byte[] publicKey = Arrays.copyOf(publicBytes, publicBytes.length);
-        return new VrfPublicKey(publicKey);
+        return new SchnorrPublicKey(publicKey);
     }
 
     @Override
@@ -56,7 +49,7 @@ public class VrfSecretKey implements Secret {
         return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
     }
 
-    public static VrfSecretKey parse(byte[] bytes) {
+    public static SchnorrSecretKey parse(byte[] bytes) {
         int secretKeyOffset = Ints.BYTES;
         int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
         int publicKeyOffset = secretKeyOffset + secretKeyLength;
@@ -64,12 +57,12 @@ public class VrfSecretKey implements Secret {
         byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
         byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
 
-        return new VrfSecretKey(secretKey, publicKey);
+        return new SchnorrSecretKey(secretKey, publicKey);
     }
 
     @Override
     public SecretSerializer serializer() {
-        return VrfSecretKeySerializer.getSerializer();
+        return SchnorrSecretKeySerializer.getSerializer();
     }
 
     @Override
@@ -78,15 +71,15 @@ public class VrfSecretKey implements Secret {
     }
 
     @Override
-    public VrfProof sign(byte[] message) {
-        return prove(message);
+    public SchnorrSignature sign(byte[] message) {
+        return new SchnorrSignature(BackwardTransferLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        VrfSecretKey that = (VrfSecretKey) o;
+        SchnorrSecretKey that = (SchnorrSecretKey) o;
         return Arrays.equals(secretBytes, that.secretBytes) &&
                 Arrays.equals(publicBytes, that.publicBytes);
     }

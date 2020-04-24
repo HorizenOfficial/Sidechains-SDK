@@ -1,6 +1,7 @@
 package com.horizen.params
 import java.math.BigInteger
 
+import com.horizen.proposition.SchnorrPublicKey
 import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
@@ -14,7 +15,10 @@ case class RegTestParams(
                           override val withdrawalEpochLength: Int = 100,
                           override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
                           override val consensusSecondsInSlot: Int = 120,
-                          override val consensusSlotsInEpoch: Int = 720
+                          override val consensusSlotsInEpoch: Int = 720,
+                          override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq(),
+                          override val backwardTransferThreshold: Int = 0,
+                          override val provingKeyFilePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

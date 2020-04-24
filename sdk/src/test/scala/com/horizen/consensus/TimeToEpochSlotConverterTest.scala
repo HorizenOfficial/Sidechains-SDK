@@ -3,6 +3,7 @@ package com.horizen.consensus
 import java.math.BigInteger
 
 import com.horizen.params.NetworkParams
+import com.horizen.proposition.SchnorrPublicKey
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -29,6 +30,9 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowMaxAdjustDown: Int = 32 // 32% adjustment down
     override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
+    override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq()
+    override val backwardTransferThreshold: Int = 0
+    override val provingKeyFilePath: String = ""
   }
 
   class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,

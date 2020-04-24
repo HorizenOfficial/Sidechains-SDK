@@ -70,14 +70,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- SidechainState.genesisState(stateStorage, params, applicationState, genesisBlock)
+      state <- SidechainState.createGenesisState(stateStorage, params, applicationState, genesisBlock)
 
       (modId: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
-      history <- SidechainHistory.genesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
+      history <- SidechainHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgersBoxIds.rootHash(), consensusEpochInfo.forgersStake))
 
-      wallet <- SidechainWallet.genesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+      wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
         walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet, genesisBlock, consensusEpochInfo)
 
       pool <- Success(SidechainMemoryPool.emptyPool)
