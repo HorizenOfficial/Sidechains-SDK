@@ -2,7 +2,7 @@ package com.horizen.block
 
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.scalatest.junit.JUnitSuite
 
 import scala.io.Source
@@ -127,6 +127,7 @@ class MainchainTransactionTest extends JUnitSuite {
     assertEquals("Forward Transfer amount is different.", 303000000L, ft.amount)
   }
 
+  @Ignore
   @Test
   def tx_vminus4_sc_creation_with_ft(): Unit = {
     val hex : String = Source.fromResource("mctx_v-4_sc_creation").getLines().next()

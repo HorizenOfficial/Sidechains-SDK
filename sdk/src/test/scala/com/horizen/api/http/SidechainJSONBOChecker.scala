@@ -171,7 +171,7 @@ class SidechainJSONBOChecker {
     assertEquals(BytesUtils.fromHexString(json.get("mainchainHeaderBytes").asText()), header.mainchainHeaderBytes)
     assertEquals(BytesUtils.fromHexString(json.get("hashPrevBlock").asText()), header.hashPrevBlock)
     assertEquals(BytesUtils.fromHexString(json.get("hashMerkleRoot").asText()), header.hashMerkleRoot)
-    assertEquals(BytesUtils.fromHexString(json.get("hashSCMerkleRootsMap").asText()), header.hashSCMerkleRootsMap)
+    assertEquals(BytesUtils.fromHexString(json.get("hashSCMerkleRootsMap").asText()), header.hashScTxsCommitment)
     assertEquals(BytesUtils.fromHexString(json.get("nonce").asText()), header.nonce)
     assertEquals(BytesUtils.fromHexString(json.get("solution").asText()), header.solution)
 

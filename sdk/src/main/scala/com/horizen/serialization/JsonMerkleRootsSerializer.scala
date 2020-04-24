@@ -21,4 +21,4 @@ class JsonMerkleRootsSerializer extends databind.JsonSerializer[Option[Map[ByteA
   }
 }
 
-private case class Pair(key : String, value : String)
+//private case class Pair(key : String, value : String)

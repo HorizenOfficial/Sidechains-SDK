@@ -231,10 +231,6 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
-
-  def backwardTransferKeysVerify(Schnorr): Unit = {
-
-  }
 }
 
 object SidechainWallet

@@ -2,35 +2,32 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.MainchainBlockReference
-import com.horizen.box._
-import com.horizen.utils.{Pair => JPair}
-import com.horizen.block.SidechainBlock
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.box.{RegularBox, _}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.box.RegularBox
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.SidechainStateStorage
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
-import org.junit._
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
+import org.junit._
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.mockito.{ArgumentMatchers, Mockito}
 import scorex.core.{bytesToId, bytesToVersion}
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Success}
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
+import scala.util.{Random, Success}
 
-
+@Ignore
 class SidechainStateTest
   extends JUnitSuite
     with SecretFixture

@@ -5,6 +5,7 @@ import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
 import com.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.proposition.SchnorrPublicKey
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
@@ -178,6 +179,9 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val withdrawalEpochLength: Int = 100
       override val consensusSecondsInSlot: Int = 120
       override val consensusSlotsInEpoch: Int = 720
+      override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq()
+      override val backwardTransferThreshold: Int = 0
+      override val poseidonRootHash: Array[Byte] = Array()
     }
 
 

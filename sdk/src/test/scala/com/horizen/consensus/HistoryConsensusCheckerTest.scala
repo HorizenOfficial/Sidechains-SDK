@@ -5,13 +5,13 @@ import java.util.Random
 import com.horizen.SidechainHistory
 import com.horizen.fixtures.sidechainblock.generation._
 import com.horizen.params.{NetworkParams, TestNetParams}
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.scalatest.junit.JUnitSuite
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
-
+@Ignore
 class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecker {
 
   def testWithSeed(testSeed: Int): Unit = {

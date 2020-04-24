@@ -9,22 +9,20 @@ import akka.util.Timeout
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.fixtures.SidechainNodeViewHolderFixture
 import com.horizen.node.SidechainNodeView
-import org.scalatest.{BeforeAndAfterAll, FunSuiteLike}
+import org.scalatest.{BeforeAndAfterAll, FunSuiteLike, _}
 
 import scala.concurrent._
 import scala.concurrent.duration._
-import org.scalatest._
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
 
-
-@RunWith(classOf[JUnitRunner])
+@Ignore
+//@RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderTest extends Suites(
   new SidechainNodeViewHolderTest1,
   new SidechainNodeViewHolderTest2
 )
 
-@RunWith(classOf[JUnitRunner])
+@Ignore
+//@RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderTest1
   extends TestKit(ActorSystem("testsystem"))
   with FunSuiteLike
@@ -54,7 +52,8 @@ class SidechainNodeViewHolderTest1
 
 }
 
-@RunWith(classOf[JUnitRunner])
+@Ignore
+//@RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderTest2
   extends TestKit(ActorSystem("testSystem"))
   with FeatureSpecLike

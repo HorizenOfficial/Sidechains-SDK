@@ -9,12 +9,13 @@ import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgerBoxCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.TestNetParams
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.scalatest.junit.JUnitSuite
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+@Ignore
 class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   var rnd = new Random(42)
   val maximumAvailableShift = 2

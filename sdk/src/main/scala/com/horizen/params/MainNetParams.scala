@@ -17,7 +17,7 @@ case class MainNetParams(
                      override val consensusSecondsInSlot: Int = 120,
                      override val consensusSlotsInEpoch: Int = 720,
                      override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq(),
-                     override val backwardTransferThreshold: Int,
+                     override val backwardTransferThreshold: Int = 0,
                      override val poseidonRootHash: Array[Byte] = Array(),
                         ) extends NetworkParams {
   override val EquihashN: Int = 200

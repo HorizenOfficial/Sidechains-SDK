@@ -14,7 +14,7 @@ import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert.assertTrue
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
@@ -23,6 +23,7 @@ import scorex.util.{ModifierId, bytesToId}
 
 import scala.io.Source
 
+@Ignore
 class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with TransactionFixture with CompanionsFixture{
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion

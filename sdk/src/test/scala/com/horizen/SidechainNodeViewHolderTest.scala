@@ -11,7 +11,7 @@ import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.MerkleTree
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import scorex.core.NodeViewHolder.DownloadRequest
@@ -23,6 +23,7 @@ import scorex.util.ModifierId
 
 import scala.util.Success
 
+@Ignore
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
