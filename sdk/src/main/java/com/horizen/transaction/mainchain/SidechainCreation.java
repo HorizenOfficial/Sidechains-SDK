@@ -95,4 +95,6 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         return forgerBoxData.getBox(nonce);
     }
 
+    public static byte[] poseidonHashRoot = new byte[96];
+
 }

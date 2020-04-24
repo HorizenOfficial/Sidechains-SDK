@@ -263,9 +263,9 @@ object SidechainState
       None
   }
 
-  private[horizen] def genesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
-                                    applicationState: ApplicationState,
-                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
+  private[horizen] def createGenesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
+                                          applicationState: ApplicationState,
+                                          genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
       new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)

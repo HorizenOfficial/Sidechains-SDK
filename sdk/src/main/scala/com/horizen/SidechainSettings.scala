@@ -19,6 +19,12 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                withdrawalEpochLength: Int
                               )
 
+case class BackwardTransfer(backwardTransferPublicKeys: Seq[String],
+                            backwardTransferThreshold: Int,
+                            backwardTransferSecrets: Seq[String],
+                            poseidonRootHash: String
+                           )
+
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String]
                          )
@@ -27,5 +33,6 @@ case class WalletSettings(seed: String,
 case class SidechainSettings(scorexSettings: ScorexSettings,
                              genesisData: GenesisDataSettings,
                              websocket: WebSocketSettings,
+                             backwardTransfer: BackwardTransfer,
                              wallet: WalletSettings
                             )

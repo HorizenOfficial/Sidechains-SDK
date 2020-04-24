@@ -8,6 +8,7 @@ import com.horizen.box.{Box, ForgerBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.storage._
@@ -230,6 +231,10 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
+
+  def backwardTransferKeysVerify(Schnorr): Unit = {
+
+  }
 }
 
 object SidechainWallet
@@ -247,14 +252,16 @@ object SidechainWallet
       None
   }
 
-  private[horizen] def genesisWallet(seed: Array[Byte],
-                                     walletBoxStorage: SidechainWalletBoxStorage,
-                                     secretStorage: SidechainSecretStorage,
-                                     walletTransactionStorage: SidechainWalletTransactionStorage,
-                                     forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-                                     applicationWallet: ApplicationWallet,
-                                     genesisBlock: SidechainBlock,
-                                     consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
+  private[horizen] def createGenesisWallet(seed: Array[Byte],
+                                           walletBoxStorage: SidechainWalletBoxStorage,
+                                           secretStorage: SidechainSecretStorage,
+                                           walletTransactionStorage: SidechainWalletTransactionStorage,
+                                           forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                           applicationWallet: ApplicationWallet,
+                                           genesisBlock: SidechainBlock,
+                                           consensusEpochInfo: ConsensusEpochInfo,
+                                           params: NetworkParams
+                                    ) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)

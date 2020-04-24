@@ -17,7 +17,8 @@ import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
-import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
+import com.horizen.proposition.{SchnorrPublicKey, SchnorrPublicKeySerializer}
+import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretKeySerializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -50,6 +51,7 @@ class SidechainApp @Inject()
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
    @Named("SecretStorage") val secretStorage: Storage,
+   @Named("backwardTransfer") val backwardTransfer: BackwardTransfer,
    @Named("WalletBoxStorage") val walletBoxStorage: Storage,
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
@@ -92,6 +94,11 @@ class SidechainApp @Inject()
     )
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
+  val schnorrPublicKeys: Seq[SchnorrPublicKey] = sidechainSettings.backwardTransfer.backwardTransferPublicKeys
+    .map(bytes => SchnorrPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+
+  val poseidonRootHash: Array[Byte] = BytesUtils.fromHexString(sidechainSettings.backwardTransfer.poseidonRootHash)
+
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -101,7 +108,8 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys
     )
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -154,6 +162,9 @@ class SidechainApp @Inject()
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+
+    for(secretSchnorr <- sidechainSettings.backwardTransfer.backwardTransferSecrets)
+      sidechainSecretStorage.add(SchnorrSecretKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(

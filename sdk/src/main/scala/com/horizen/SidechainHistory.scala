@@ -479,13 +479,13 @@ object SidechainHistory
   }
 
   //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
-  private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
-                                      consensusDataStorage: ConsensusDataStorage,
-                                      params: NetworkParams,
-                                      genesisBlock: SidechainBlock,
-                                      semanticBlockValidators: Seq[SemanticBlockValidator],
-                                      historyBlockValidators: Seq[HistoryBlockValidator],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
+  private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
+                                            consensusDataStorage: ConsensusDataStorage,
+                                            params: NetworkParams,
+                                            genesisBlock: SidechainBlock,
+                                            semanticBlockValidators: Seq[SemanticBlockValidator],
+                                            historyBlockValidators: Seq[HistoryBlockValidator],
+                                            stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlockInfo(calculateGenesisBlockInfo(genesisBlock, params))
