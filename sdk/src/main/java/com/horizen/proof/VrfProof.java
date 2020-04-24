@@ -7,13 +7,13 @@ import com.horizen.vrf.VrfLoader;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.proof.CoreProofsIdsEnum.VrfProof;
+import static com.horizen.proof.CoreProofsIdsEnum.VrfProofId;
 
 public class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
     private final byte[] proofBytes;
 
     public VrfProof(byte[] proof) {
-        Objects.requireNonNull(proof, "Public key can't be null");
+        Objects.requireNonNull(proof, "Vrf proof can't be null");
 
         proofBytes = Arrays.copyOf(proof, proof.length);
     }
@@ -39,7 +39,7 @@ public class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
 
     @Override
     public byte proofTypeId() {
-        return VrfProof.id();
+        return VrfProofId.id();
     }
 
     @Override

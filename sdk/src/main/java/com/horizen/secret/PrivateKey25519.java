@@ -10,13 +10,13 @@ import com.horizen.utils.Ed25519;
 
 import java.util.Arrays;
 
-import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519Secret;
+import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
 
 
 public final class PrivateKey25519 implements Secret
 {
     public static final int KEY_LENGTH = Ed25519.keyLength();
-    public static final byte SECRET_TYPE_ID = PrivateKey25519Secret.id();
+    public static final byte SECRET_TYPE_ID = PrivateKey25519SecretId.id();
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;

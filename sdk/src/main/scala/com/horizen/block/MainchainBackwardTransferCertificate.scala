@@ -1,11 +1,8 @@
 package com.horizen.block
 
-import com.google.common.primitives.{Bytes, Ints, Longs}
-import com.horizen.utils.{BytesUtils, ListSerializer, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-
-import scala.collection.JavaConverters._
 
 case class MainchainBackwardTransferCertificate
   (certificateBytes: Array[Byte],
@@ -13,6 +10,8 @@ case class MainchainBackwardTransferCertificate
    sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   previousEndEpochBlockHash: Array[Byte] = Array(),
+   proof: Array[Byte] = Array(),
    totalAmount: Long,
    fee: Long,
    transactionOutputs: Seq[MainchainTransactionOutput],
@@ -78,7 +77,7 @@ object MainchainBackwardTransferCertificate {
     currentOffset += 32
 
     new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
+      sidechainId, epochNumber, endEpochBlockHash, Array(), Array(), totalAmount, fee, transactionOutputs, outputs)
 
   }
 

@@ -474,13 +474,13 @@ object SidechainHistory
   }
 
   //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
-  private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
-                                      consensusDataStorage: ConsensusDataStorage,
-                                      params: NetworkParams,
-                                      genesisBlock: SidechainBlock,
-                                      semanticBlockValidators: Seq[SemanticBlockValidator],
-                                      historyBlockValidators: Seq[HistoryBlockValidator],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
+  private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
+                                            consensusDataStorage: ConsensusDataStorage,
+                                            params: NetworkParams,
+                                            genesisBlock: SidechainBlock,
+                                            semanticBlockValidators: Seq[SemanticBlockValidator],
+                                            historyBlockValidators: Seq[HistoryBlockValidator],
+                                            stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty) {
       val minimalHash = getMinimalHashOptFromBlock(genesisBlock).getOrElse(throw new IllegalStateException("Genesis block without mainchain block references"))
