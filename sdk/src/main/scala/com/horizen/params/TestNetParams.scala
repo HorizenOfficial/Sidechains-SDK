@@ -18,7 +18,8 @@ case class TestNetParams(
                           override val consensusSlotsInEpoch: Int = 720,
                           override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq(),
                           override val backwardTransferThreshold: Int = 0,
-                          override val poseidonRootHash: Array[Byte] = Array()
+                          override val poseidonRootHash: Array[Byte] = Array(),
+                          override val provingKeyFilePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

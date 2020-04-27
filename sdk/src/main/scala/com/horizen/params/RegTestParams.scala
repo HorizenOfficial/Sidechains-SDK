@@ -19,6 +19,7 @@ case class RegTestParams(
                           override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq(),
                           override val backwardTransferThreshold: Int = 0,
                           override val poseidonRootHash: Array[Byte] = Array(),
+                          override val provingKeyFilePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

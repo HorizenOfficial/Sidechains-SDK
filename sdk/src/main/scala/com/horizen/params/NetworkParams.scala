@@ -33,6 +33,7 @@ trait NetworkParams {
   val schnorrPublicKeys: Seq[SchnorrPublicKey]
   val backwardTransferThreshold: Int
   val poseidonRootHash: Array[Byte]
+  val provingKeyFilePath: String
 
   val maxHistoryRewritingLength: Int = 100
 

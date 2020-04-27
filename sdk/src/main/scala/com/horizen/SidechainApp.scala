@@ -5,13 +5,14 @@ import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject._
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
+import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.box.data.NoncedBoxDataSerializer
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
@@ -39,14 +40,8 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
-import com.google.inject.Inject
-import com.google.inject.name.Named
-import com.horizen.utils.BytesUtils
-import com.google.inject.Inject
-import com.google.inject.name.Named
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.utils.BytesUtils
 import scala.util.Try
+
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -58,7 +53,6 @@ class SidechainApp @Inject()
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
    @Named("SecretStorage") val secretStorage: Storage,
-   @Named("backwardTransfer") val backwardTransfer: BackwardTransfer,
    @Named("WalletBoxStorage") val walletBoxStorage: Storage,
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
@@ -99,6 +93,7 @@ class SidechainApp @Inject()
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
   val schnorrPublicKeys: Seq[SchnorrPublicKey] = sidechainSettings.backwardTransfer.backwardTransferPublicKeys
@@ -111,12 +106,15 @@ class SidechainApp @Inject()
     case "regtest" => RegTestParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.headOption.map(_.hash).getOrElse(Array()),
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = schnorrPublicKeys
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
+      poseidonRootHash = poseidonRootHash,
+      provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -125,7 +123,11 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
+      poseidonRootHash = poseidonRootHash,
+      provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -134,7 +136,11 @@ class SidechainApp @Inject()
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      schnorrPublicKeys = schnorrPublicKeys,
+      backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
+      poseidonRootHash = poseidonRootHash,
+      provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -174,6 +180,8 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(SchnorrSecretKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
+
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -188,7 +196,9 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  val certificateSubmitter : ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  if (sidechainSettings.backwardTransfer.backwardTransferIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  }
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
@@ -281,4 +291,6 @@ class SidechainApp @Inject()
     binder.install(new FactoryModuleBuilder()
       .build(classOf[SidechainCoreTransactionFactory]))
   }
+
+  actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

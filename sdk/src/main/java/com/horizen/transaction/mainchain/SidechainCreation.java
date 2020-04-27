@@ -55,7 +55,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {
-
+        return new SidechainCreation(null, null , 0);
+        /*
         int offset = 0;
 
         int sidechainCreationSize = BytesUtils.getInt(bytes, offset);
@@ -71,7 +72,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         offset += 32;
 
         int idx = BytesUtils.getInt(bytes, offset);
-        return new SidechainCreation(output, txHash, idx);
+        return new SidechainCreation(output, txHash, idx);*/
     }
 
     @Override

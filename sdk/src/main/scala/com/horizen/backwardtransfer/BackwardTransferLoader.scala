@@ -1,8 +1,8 @@
-package com.horizen.schnorr
+package com.horizen.backwardtransfer
 
 import scala.util.Try
 
-object SchnorrLoader {
+object BackwardTransferLoader {
   lazy val schnorrFunctions: BackwardTransferFunctions = loadClass("com.horizen.schnorr.SchnorrFunctionsImpl")
 
   private def loadClass(className: String): BackwardTransferFunctions = {

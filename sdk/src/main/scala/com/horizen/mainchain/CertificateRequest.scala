@@ -26,10 +26,12 @@ case class WithdrawalRequest
 }
 
 @JsonView(Array(classOf[Views.Default]))
-case class CertificateRequest
-  (sidechainId: Array[Byte],
+case class CertificateRequest(
+   sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   previousEpochEndBlockHash: Array[Byte],
+   proofBytes: Array[Byte],
    withdrawalRequests: Seq[WithdrawalRequest],
    subtractFeeFromAmount: Boolean = false,
    fee: Double = 0.00001)
@@ -54,10 +56,19 @@ object CertificateRequestCreator {
 
   val ZEN_COINS_DIVIDOR = 100000000
 
-  def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
+  def create(epochNumber: Int,
+             endEpochBlockHash: Array[Byte],
+             previousEpochEndBlockHash: Array[Byte],
+             proofBytes: Array[Byte],
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              params: NetworkParams) : CertificateRequest = {
-    CertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
+
+    CertificateRequest(
+      params.sidechainId,
+      epochNumber,
+      endEpochBlockHash,
+      previousEpochEndBlockHash,
+      proofBytes,
       withdrawalRequestBoxes.map(wrb => WithdrawalRequest(wrb.proposition().bytes(), wrb.value().toDouble/ZEN_COINS_DIVIDOR)))
   }
 }

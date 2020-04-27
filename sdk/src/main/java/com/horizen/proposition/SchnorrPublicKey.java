@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.SchnorrSignature;
-import com.horizen.schnorr.SchnorrLoader;
+import com.horizen.backwardtransfer.BackwardTransferLoader;
 import com.horizen.secret.SchnorrSecretKey;
 import com.horizen.serialization.Views;
 
@@ -23,7 +23,7 @@ public class SchnorrPublicKey implements ProofOfKnowledgeProposition<SchnorrSecr
     }
 
     public boolean verify(byte[] message, SchnorrSignature signature) {
-        return SchnorrLoader.schnorrFunctions().verifyMessage(message, pubKeyBytes(), signature.bytes());
+        return BackwardTransferLoader.schnorrFunctions().verifyMessage(message, pubKeyBytes(), signature.bytes());
     }
 
 

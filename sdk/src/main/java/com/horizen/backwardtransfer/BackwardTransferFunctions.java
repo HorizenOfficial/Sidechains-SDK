@@ -1,4 +1,4 @@
-package com.horizen.schnorr;
+package com.horizen.backwardtransfer;
 
 import com.horizen.box.WithdrawalRequestBox;
 
@@ -31,4 +31,7 @@ public interface BackwardTransferFunctions {
     //provingKey shall be generated during SC creation (how to generate it?)
     byte[] createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
                        List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKey);
+
+    Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
+                        long threshold, long quality, byte[] proof, String provingKey);
 }

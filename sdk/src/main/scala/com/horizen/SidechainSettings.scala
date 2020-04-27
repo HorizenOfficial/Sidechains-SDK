@@ -21,10 +21,12 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                withdrawalEpochLength: Int
                               )
 
-case class BackwardTransfer(backwardTransferPublicKeys: Seq[String],
+case class BackwardTransfer(backwardTransferIsEnabled: Boolean,
+                            backwardTransferPublicKeys: Seq[String],
                             backwardTransferThreshold: Int,
                             backwardTransferSecrets: Seq[String],
-                            poseidonRootHash: String
+                            poseidonRootHash: String,
+                            provingKeyFilePath: String
                            )
 
 case class WalletSettings(seed: String,

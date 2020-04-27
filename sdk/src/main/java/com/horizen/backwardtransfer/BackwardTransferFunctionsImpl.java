@@ -1,16 +1,13 @@
-package com.horizen.schnorr;
+package com.horizen.backwardtransfer;
 
 import com.horizen.box.WithdrawalRequestBox;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 
 public class BackwardTransferFunctionsImpl implements BackwardTransferFunctions {
-
     @Override
     public EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed) {
         EnumMap<KeyType, byte[]> keys = new EnumMap<>(KeyType.class);
@@ -46,5 +43,10 @@ public class BackwardTransferFunctionsImpl implements BackwardTransferFunctions 
     @Override
     public byte[] createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKey) {
         return new byte[32];
+    }
+
+    @Override
+    public Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long threshold, long quality, byte[] proof, String provingKey) {
+        return null;
     }
 }
