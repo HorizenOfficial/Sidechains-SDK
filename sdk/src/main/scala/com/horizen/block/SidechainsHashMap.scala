@@ -11,40 +11,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Try
 
-object MerkleTreeUtils {
-
-  //returns count of leves on the lowest level of full binary tree
-  def getFullSize(leavesCount: Int): Int = {
-    var i = 1
-    while (i < leavesCount)
-      i *= 2
-    i
-  }
-
-  //returns height of binary tree for specified count of leaves
-  def getTreeHeight(leavesCount: Int): Int = {
-    var size = getFullSize(leavesCount)
-    var treeHeight = 1
-    while (size > 1) {
-      treeHeight += 1
-      size /= 2
-    }
-
-    treeHeight
-  }
-
-  def getPaddingCount(treeHeight: Int, level: Int): Int = {
-    var currentLevel = level
-    var paddingCount = 1
-    while (currentLevel < treeHeight) {
-      currentLevel += 1
-      paddingCount *= 2
-    }
-    paddingCount
-  }
-
-}
-
 class SidechainHashList
 {
   private val transactionHash: mutable.ListBuffer[Array[Byte]] = new mutable.ListBuffer[Array[Byte]]()
@@ -165,33 +131,6 @@ class SidechainsHashMap
     MerkleTree.createMerkleTree(merkleTreeLeaves.asJava)
   }
 
-  private[block] def getFullMerkleTree: MerkleTree = {
-    var merkleTreeLeaves = sidechainsHashMap.toSeq.sortWith(_._1 < _._1)
-      .map(pair => {
-        getSidechainHash(pair._1)
-      })
-
-    val fullMerkleTreeSize = MerkleTreeUtils.getFullSize(merkleTreeLeaves.size)
-    val fullMerkleTreeHeight = MerkleTreeUtils.getTreeHeight(merkleTreeLeaves.size)
-
-    while (merkleTreeLeaves.size < fullMerkleTreeSize) {
-      var currentLevel = fullMerkleTreeHeight
-      var paddingCount = 0
-      var currentLevelLeavesCount = merkleTreeLeaves.size
-      while (currentLevel > 1 && paddingCount == 0) {
-        if (currentLevelLeavesCount %2 == 1) {
-          paddingCount = MerkleTreeUtils.getPaddingCount(fullMerkleTreeHeight, currentLevel)
-        } else {
-          currentLevel -= 1
-          currentLevelLeavesCount /= 2
-        }
-      }
-      merkleTreeLeaves = merkleTreeLeaves ++ merkleTreeLeaves.slice(merkleTreeLeaves.size - paddingCount, merkleTreeLeaves.size)
-    }
-
-    MerkleTree.createMerkleTree(merkleTreeLeaves.asJava)
-  }
-
   def getMerkleRoot: Array[Byte] = {
     getMerkleTree.rootHash()
   }
@@ -226,8 +165,7 @@ class SidechainsHashMap
     val leftNeighbourOption = Try(scl(scl.indexOf(sidechainId) - 1))
       .toOption match {
       case Some(schId) => sidechainsHashMap.get(schId) match {
-        case Some(schhl) if rightNeighbourOption.isDefined => Some(schhl.getNeighbourProof(schId.data, merkleTree))
-        case Some(schhl) if rightNeighbourOption.isEmpty => Some(schhl.getNeighbourProof(schId.data, getFullMerkleTree))
+        case Some(schhl) => Some(schhl.getNeighbourProof(schId.data, merkleTree))
         case None => None
       }
       case None => None

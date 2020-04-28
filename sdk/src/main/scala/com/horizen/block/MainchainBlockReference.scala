@@ -112,7 +112,8 @@ class MainchainBlockReference(
           return false
 
         //Check if there is only left neighbour it must be rightmost in sidechain merkle tree
-        if (proofOfNoData._2.isEmpty && !proofOfNoData._1.get.merklePath.isRightmost)
+        if (proofOfNoData._2.isEmpty &&
+            !proofOfNoData._1.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(proofOfNoData._1.get)))
           return false
 
         proofOfNoData._1 match {

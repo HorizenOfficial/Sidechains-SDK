@@ -72,9 +72,6 @@ class SidechainsHashMapTest extends JUnitSuite {
     })
 
     val merkleTree = shm.getMerkleTree
-    val fullMerkleTree = shm.getFullMerkleTree
-
-    assertTrue("Root hashes must be the same.", util.Arrays.equals(merkleTree.rootHash(), fullMerkleTree.rootHash()))
 
     val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
 
@@ -112,7 +109,8 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
-    assertTrue("Left neighbour must be rightmost", lProof3.get.merklePath.isRightmost)
+    assertTrue("Left neighbour must be rightmost",
+      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
         lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
@@ -136,9 +134,6 @@ class SidechainsHashMapTest extends JUnitSuite {
     })
 
     val merkleTree = shm.getMerkleTree
-    val fullMerkleTree = shm.getFullMerkleTree
-
-    assertTrue("Root hashes must be the same.", util.Arrays.equals(merkleTree.rootHash(), fullMerkleTree.rootHash()))
 
     val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
 
@@ -176,7 +171,8 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
-    assertTrue("Left neighbour must be rightmost", lProof3.get.merklePath.isRightmost)
+    assertTrue("Left neighbour must be rightmost",
+      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
         lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
@@ -200,9 +196,6 @@ class SidechainsHashMapTest extends JUnitSuite {
     })
 
     val merkleTree = shm.getMerkleTree
-    val fullMerkleTree = shm.getFullMerkleTree
-
-    assertTrue("Root hashes must be the same.", util.Arrays.equals(merkleTree.rootHash(), fullMerkleTree.rootHash()))
 
     val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
 
@@ -240,7 +233,8 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
-    assertTrue("Left neighbour must be rightmost", lProof3.get.merklePath.isRightmost)
+    assertTrue("Left neighbour must be rightmost",
+      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
         lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
