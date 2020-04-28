@@ -9,7 +9,7 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof, VrfProofJsonSerializer}
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
@@ -34,7 +34,7 @@ class SidechainBlock (
                        val mainchainBlocks : Seq[MainchainBlockReference],
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                        val forgerBox: ForgerBox,
-                       @JsonSerialize(using = classOf[VrfProofJsonSerializer]) val vrfProof: VrfProof,
+                       val vrfProof: VrfProof,
                        @JsonSerialize(using = classOf[MerklePathSerializer]) val merklePath: MerklePath,
                        val signature: Signature25519,
                        companion: SidechainTransactionsCompanion)

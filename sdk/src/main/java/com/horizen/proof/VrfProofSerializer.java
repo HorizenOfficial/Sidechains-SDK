@@ -19,8 +19,8 @@ public class VrfProofSerializer implements ProofSerializer<VrfProof> {
     }
 
     @Override
-    public void serialize(VrfProof signature, Writer writer) {
-        writer.putBytes(signature.bytes());
+    public void serialize(VrfProof proof, Writer writer) {
+        writer.putBytes(proof.bytes());
     }
 
     @Override

@@ -53,6 +53,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
             "format": True
             #            "format": "true"
         }
+        print j
         request = json.dumps(j)
         response = sender_node.transaction_spendForgingStake(request)
         txid = response["result"]["transaction"]["id"]
@@ -125,7 +126,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         sc_node_0_first_forger_box = self.sc_nodes[0].wallet_allBoxes(boxes_request_on_forger_boxes)["result"]["boxes"][0]
         sc_node_0_first_forger_box_id = sc_node_0_first_forger_box["id"]
         sc_node_0_first_forger_box_pub_key = sc_node_0_first_forger_box["proposition"]["publicKey"]
-        sc_node_0_first_forger_box_vrf_pub_key = sc_node_0_first_forger_box["vrfPubKey"]
+        sc_node_0_first_forger_box_vrf_pub_key = sc_node_0_first_forger_box["vrfPubKey"]["publicKey"]
 
         print ("Found forger box with id {forgerBxId} for node 0".format(forgerBxId = sc_node_0_first_forger_box_id))
         print("-->SC Node 0 sends to SC Node 1 address {0}, {1} coins with fee {2} coins...".format(str(scnode1address), sc_amount, sc_fee))
