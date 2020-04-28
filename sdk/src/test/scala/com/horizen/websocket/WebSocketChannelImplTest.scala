@@ -37,7 +37,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 1,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -87,7 +88,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 1,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -130,7 +132,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 1,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -173,7 +176,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 1,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -221,7 +225,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
       reconnectionMaxAttempts = 1,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -300,7 +305,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
       reconnectionMaxAttempts = 3,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -364,7 +370,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 3,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -408,7 +415,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 3,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -476,7 +484,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
       reconnectionMaxAttempts = 2,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -529,7 +538,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
       reconnectionMaxAttempts = 3,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -578,7 +588,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
       reconnectionMaxAttempts = 3,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 
@@ -647,7 +658,8 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
       reconnectionMaxAttempts = 2,
-      zencliCommandLine = "")
+      zencliCommandLine = ""
+    )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
 

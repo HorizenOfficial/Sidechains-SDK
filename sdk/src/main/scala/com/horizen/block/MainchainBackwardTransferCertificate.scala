@@ -15,6 +15,7 @@ case class MainchainBackwardTransferCertificate
    endEpochBlockHash: Array[Byte],
    totalAmount: Long,
    fee: Long,
+   transactionOutputs: Seq[MainchainTransactionOutput],
    outputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
@@ -25,10 +26,6 @@ case class MainchainBackwardTransferCertificate
   def size: Int = certificateBytes.length
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
-
-  override def bytes: Array[Byte] = {
-    certificateBytes
-  }
 
 }
 
@@ -55,6 +52,17 @@ object MainchainBackwardTransferCertificate {
     val fee: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
+    val transactionOutputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    currentOffset += transactionOutputCount.size()
+
+    var transactionOutputs: Seq[MainchainTransactionOutput] = Seq[MainchainTransactionOutput]()
+
+    while(transactionOutputs.size < transactionOutputCount.value()) {
+      val o: MainchainTransactionOutput = MainchainTransactionOutput.parse(certificateBytes, currentOffset)
+      transactionOutputs = transactionOutputs :+ o
+      currentOffset += o.size
+    }
+
     val outputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += outputCount.size()
 
@@ -66,16 +74,11 @@ object MainchainBackwardTransferCertificate {
       currentOffset += o.size
     }
 
-    val ccoutCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
-    currentOffset += ccoutCount.size()
-
-    // We don't need to parse vbt_ccout array, because each vbt_ccout entry is an empty object
-
     val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, outputs)
+      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
 
   }
 
@@ -85,7 +88,7 @@ object MainchainBackwardTransferCertificateSerializer
   extends ScorexSerializer[MainchainBackwardTransferCertificate]
 {
   override def serialize(certificate: MainchainBackwardTransferCertificate, w: Writer): Unit = {
-    w.putBytes(certificate.bytes)
+    w.putBytes(certificate.certificateBytes)
 }
 
   override def parse(r: Reader): MainchainBackwardTransferCertificate = {

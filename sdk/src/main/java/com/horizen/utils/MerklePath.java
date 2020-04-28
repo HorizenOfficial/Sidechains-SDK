@@ -121,4 +121,40 @@ public class MerklePath {
         }
         return true;
     }
+
+    public boolean isLeftmost() {
+        for(Pair<Byte, byte[]> merkleLeaf: merklePath) {
+            if (merkleLeaf.getKey() != 1)
+                return false;
+        }
+        return true;
+    }
+
+    public boolean isRightmost(byte[] leaf) {
+        byte[] currentNode = leaf;
+        for(Pair<Byte, byte[]> neighbour : merklePath) {
+            if(neighbour.getKey() == (byte)0) {
+                // left neighbour
+                // concatenate neighbour value LEFT to currentNode
+                currentNode = BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(neighbour.getValue()), BytesUtils.reverseBytes(currentNode)));
+            } else {
+                // right neighbour
+                // if not equal, merkle path doesn't lead to the rightmost leaf.
+                if(!Arrays.equals(currentNode, neighbour.getValue()))
+                    return false;
+                // concatenate neighbour value RIGHT to currentNode
+                currentNode = BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(currentNode), BytesUtils.reverseBytes(neighbour.getValue())));
+            }
+        }
+        return true;
+    }
+    public int leafIndex() {
+        int index = 0;
+        for (int i = merklePath.size() - 1; i >= 0; i--) {
+            index = index<<1;
+            if (merklePath.get(i).getKey() == 0)
+                index ++;
+        }
+        return index;
+    }
 }
