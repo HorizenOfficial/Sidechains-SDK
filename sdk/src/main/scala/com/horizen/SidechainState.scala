@@ -1,8 +1,9 @@
 package com.horizen
 
+import java.util
 import java.util.{List => JList, Optional => JOptional}
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
@@ -18,6 +19,7 @@ import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, 
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
@@ -61,12 +63,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     }
   }
 
-  def withdrawalRequests(epoch: Int): List[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch).asScala.toList
+  def withdrawalRequests(epoch: Int): Option[Seq[WithdrawalRequestBox]] = {
+    stateStorage.getUnprocessedWithdrawalRequests(epoch)
   }
 
-  override def getWithdrawalRequests(epoch: Integer): JList[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch)
+  override def getWithdrawalRequests(epoch: Integer): JOptional[JList[WithdrawalRequestBox]] = {
+    stateStorage.getUnprocessedWithdrawalRequests(epoch) match {
+      case Some(requests) => JOptional.of(requests.asJava)
+      case None => JOptional.empty()
+    }
+  }
+
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
+    stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
 
   // Note: aggregate New boxes and spent boxes for Block
@@ -79,6 +88,27 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
       s"${version} expected")
     mod.transactions.foreach(tx => validate(tx).get)
+
+    //Check content of the backward transfer certificate if it exists
+    //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
+    //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
+    for (certificate <- mod.mainchainBlocks.flatMap(_.backwardTransferCertificate)) {
+      withdrawalRequests(certificate.epochNumber) match {
+        case Some(withdrawalRequests) =>
+          var isEqual = false
+          if (withdrawalRequests.size != certificate.outputs.size)
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+            for (o <- certificate.outputs)
+              if (!withdrawalRequests.exists(r => {
+                util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
+                  r.value().equals(o.amount)
+                }))
+              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+        case None =>
+          throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
+      }
+    }
+
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
@@ -135,7 +165,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
           cs,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          timeStampToEpochNumber(mod.timestamp)
+          timeStampToEpochNumber(mod.timestamp),
+          mod.mainchainBlocks.flatMap(_.backwardTransferCertificate).nonEmpty
         )
       })
     }
@@ -150,7 +181,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB],
                             newVersion: VersionTag,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
-                            consensusEpoch: ConsensusEpochNumber): Try[SidechainState] = Try {
+                            consensusEpoch: ConsensusEpochNumber,
+                            containsBackwardTransferCertificate: Boolean): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this,
       version.data,
@@ -165,7 +197,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
           .map(box => ForgingStakeInfo(box.id(), box.value()))
 
         new SidechainState(
-          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet, withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch).get,
+          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate,
+            boxIdsToRemoveSet, withdrawalRequestsToAppend,
+            forgingStakesToAppend, consensusEpoch, containsBackwardTransferCertificate).get,
           params,
           newVersion,
           appState

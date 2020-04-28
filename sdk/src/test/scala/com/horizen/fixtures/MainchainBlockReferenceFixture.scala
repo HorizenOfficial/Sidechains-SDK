@@ -26,6 +26,8 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   private val initialMainchainBlockReferenceHeader = new MainchainHeader(generateBytes(),
     -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
     new Array[Byte](0), new Array[Byte](0))
+  private val initialMainchainBlockReference =
+    new MainchainBlockReference(initialMainchainBlockReferenceHeader, None, None, (None, None), None)
   private var lastGeneratedHash: ByteArrayWrapper = initialMainchainBlockReferenceHeader.hash
 
 
@@ -64,7 +66,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       headerWithNoSerialization.nonce,
       headerWithNoSerialization.solution)
 
-    val newReference = new MainchainBlockReference(header, None, None) {
+    val newReference = new MainchainBlockReference(header, None, None, (None, None), None) {
       override def semanticValidity(params: NetworkParams): Boolean = true
 
       override lazy val hash: Array[Byte] = blockHash match {
@@ -77,19 +79,27 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     newReference
   }
 
+
+  def generateDummyMainchainBlockReference(): MainchainBlockReference = {
+      val mainchainHeaderBytes: Array[Byte] = new Array[Byte](16)
+      util.Random.nextBytes(mainchainHeaderBytes)
+      val header = new MainchainHeader(mainchainHeaderBytes, 1, null, null, null, 0, util.Random.nextInt(), null, null)
+      new MainchainBlockReference(header, None, None, (None, None), None)
+  }
+
   @tailrec
   final def generateMainchainReferences(generated: Seq[MainchainBlockReference] = Seq(),
                                         parentOpt: Option[ByteArrayWrapper] = None,
                                         rnd: Random = new Random(),
                                         timestamp: Int = Instant.now.getEpochSecond.toInt
                                        ): Seq[MainchainBlockReference] = {
-      if (rnd.nextBoolean && generated.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
-        val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
-        val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
-        generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
-      }
-      else {
-        generated
-      }
+    if (rnd.nextBoolean && generated.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
+      val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
+      val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
+      generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
+    }
+    else {
+      generated
+    }
   }
 }

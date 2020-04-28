@@ -58,7 +58,7 @@ class SidechainStateStorageTest
 
     // Test insert operation (empty storage).
     assertTrue("Update(insert) must be successful.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(), Seq(), consensusEpoch).isSuccess)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, (bList1 ++ bList2).toSet, Set(), Seq(), Seq(), consensusEpoch, false).isSuccess)
 
     assertEquals("Version in storage must be - " + version1,
       version1, sidechainStateStorage.lastVersionId.get)
@@ -76,7 +76,7 @@ class SidechainStateStorageTest
     val boxIdsToRemoveSet: Set[ByteArrayWrapper] = Set(new ByteArrayWrapper(bList1.head.id()), new ByteArrayWrapper(bList2.head.id()))
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(),
-        boxIdsToRemoveSet, Seq(), Seq(), consensusEpoch).isSuccess)
+        boxIdsToRemoveSet, Seq(), Seq(), consensusEpoch, false).isSuccess)
 
     assertEquals("Version in storage must be - " + version2,
       version2, sidechainStateStorage.lastVersionId.get)
@@ -126,7 +126,7 @@ class SidechainStateStorageTest
     val mod1Version = getVersion
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, withdrawalEpochInfo, forgerBoxList.toSet, Set(), Seq(),
-        forgingStakesToAppendSeq, consensusEpoch
+        forgingStakesToAppendSeq, consensusEpoch, false
       ).isSuccess
     )
 
@@ -150,7 +150,7 @@ class SidechainStateStorageTest
     val boxIdsToRemoveSet: Set[ByteArrayWrapper] = Set(new ByteArrayWrapper(forgerBoxList.head.id()))
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(mod2Version, withdrawalEpochInfo, Set(),
-        boxIdsToRemoveSet, Seq(), Seq(), consensusEpoch).isSuccess)
+        boxIdsToRemoveSet, Seq(), Seq(), consensusEpoch, false).isSuccess)
 
     assertEquals("Version in storage must be - " + mod2Version,
       mod2Version, sidechainStateStorage.lastVersionId.get)
@@ -175,7 +175,7 @@ class SidechainStateStorageTest
     // Test updating consensus epoch
     val mod3Version = getVersion
     assertTrue("Update consensus epoch must be successful.",
-      sidechainStateStorage.update(mod3Version, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), nextConsensusEpoch).isSuccess)
+      sidechainStateStorage.update(mod3Version, withdrawalEpochInfo, Set(), Set(), Seq(), Seq(), nextConsensusEpoch, false).isSuccess)
     assertEquals("Different consensus epoch expected.", nextConsensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
 
 
@@ -213,7 +213,7 @@ class SidechainStateStorageTest
     val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(0, 1)
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList,
-        Seq(), consensusEpoch
+        Seq(), consensusEpoch, false
       ).isSuccess
     )
 
@@ -229,7 +229,7 @@ class SidechainStateStorageTest
       assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
     }
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
-      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
 
 
     // Test append withdrawals to existing withdrawal epoch
@@ -239,7 +239,7 @@ class SidechainStateStorageTest
     val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(0, 2)
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), newWithdrawalRequestsList,
-        Seq(), consensusEpoch
+        Seq(), consensusEpoch, false
       ).isSuccess
     )
 
@@ -255,7 +255,7 @@ class SidechainStateStorageTest
       assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
     }
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
-      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
 
 
     // Test rollback operation
@@ -270,7 +270,7 @@ class SidechainStateStorageTest
     assertEquals("Different WithdrawalEpoch info expected to be stored.",
       mod1WithdrawalEpochInfo, sidechainStateStorage.getWithdrawalEpochInfo.get)
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
-      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch).asScala)
+      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
   }
 
   @Test
@@ -286,6 +286,6 @@ class SidechainStateStorageTest
 
     //Try to remove non-existent item
     assertFalse("Remove operation of non-existent item must not throw exception.",
-      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(b => new ByteArrayWrapper(b.id())), Seq(), Seq(), intToConsensusEpochNumber(0)).isFailure)
+      sidechainStateStorage.update(version1, withdrawalEpochInfo, Set(), bList1.map(b => new ByteArrayWrapper(b.id())), Seq(), Seq(), intToConsensusEpochNumber(0), false).isFailure)
   }
 }

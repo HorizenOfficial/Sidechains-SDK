@@ -1,0 +1,937 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.horizen:Sidechains-SDK:jar:0.1-SNAPSHOT
+[WARNING] 'build.plugins.plugin.version' for org.scala-tools:maven-scala-plugin is missing. @ line 203, column 12
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Sidechains-SDK                                                     [jar]
+[INFO] Sidechains-SDK-simpleapp                                           [jar]
+[INFO] Sidechains-SDK-ScBootstrappingTools                                [jar]
+[INFO] Sidechains                                                         [pom]
+[INFO] 
+[INFO] ---------------------< com.horizen:Sidechains-SDK >---------------------
+[INFO] Building Sidechains-SDK 0.1-SNAPSHOT                               [1/4]
+[INFO] --------------------------------[ jar ]---------------------------------
+Downloading from central: https://repo.maven.apache.org/maven2/org/scalacheck/scalacheck_2.12/maven-metadata.xml
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/org/scalacheck/scalacheck_2.12/maven-metadata.xml
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/org/scalacheck/scalacheck_2.12/maven-metadata.xml
+Progress (1): 635 B                   Downloaded from central: https://repo.maven.apache.org/maven2/org/scalacheck/scalacheck_2.12/maven-metadata.xml (635 B at 1.1 kB/s)
+Progress (1): 633/663 BProgress (1): 663 B                       Downloaded from spring-plugin-repo: https://repo.spring.io/plugins-release/org/scalacheck/scalacheck_2.12/maven-metadata.xml (663 B at 330 B/s)
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK ---
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:compile (compile-scala-sources) @ Sidechains-SDK ---
+[INFO] Checking for multiple versions of scala
+[INFO] artifact org.scalacheck:scalacheck_2.12: checking for updates from scala-tools.org
+[INFO] artifact org.scalacheck:scalacheck_2.12: checking for updates from spring-plugin-repo
+[INFO] artifact org.scalacheck:scalacheck_2.12: checking for updates from central
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  io.circe:circe-core_2.12:0.9.0 requires scala version: 2.12.4
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\main\java:-1: info: compiling
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\main\scala:-1: info: compiling
+[INFO] Compiling 230 source files to D:\Repositories\Sidechains-SDK\sdk\target\classes at 1586253296990
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\SidechainNodeViewHolder.scala:90: warning: non-variable type argument com.horizen.secret.Secret in type pattern com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[com.horizen.secret.Secret] is unchecked since it is eliminated by erasure
+[INFO]     case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
+[INFO]                                                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:61: warning: match may not be exhaustive.
+[INFO] It would fail on the following input: None
+[INFO]       eventHandlersPool.get(eventType) match {
+[INFO]                            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\main\scala\com\horizen\websocket\WebSocketCommunicationClient.scala:149: warning: match may not be exhaustive.
+[INFO] It would fail on the following input: None
+[INFO]     requestsPool.remove(requestId) match {
+[INFO]                        ^
+[WARNING] warning: there was one deprecation warning
+[WARNING] warning: there were 5 deprecation warnings (since 2.11.0)
+[WARNING] warning: there were 6 deprecation warnings in total; re-run with -deprecation for details
+[WARNING] warning: there were 6 feature warnings; re-run with -feature for details
+[WARNING] 7 warnings found
+[INFO] prepare-compile in 0 s
+[INFO] compile in 20 s
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ Sidechains-SDK ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 116 source files to D:\Repositories\Sidechains-SDK\sdk\target\classes
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/main/java/com/horizen/proposition/Proposition.java: Some input files use unchecked or unsafe operations.
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/main/java/com/horizen/proposition/Proposition.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- maven-scala-plugin:2.15.2:testCompile (compile-scala-tests) @ Sidechains-SDK ---
+[INFO] Checking for multiple versions of scala
+[WARNING]  Expected all dependencies to require Scala version: 2.12.8
+[WARNING]  com.horizen:Sidechains-SDK:0.1-SNAPSHOT requires scala version: 2.12.8
+[WARNING]  io.circe:circe-core_2.12:0.9.0 requires scala version: 2.12.4
+[WARNING] Multiple versions of scala libraries detected!
+[INFO] includes = [**/*.java,**/*.scala,]
+[INFO] excludes = []
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\test\java:-1: info: compiling
+[INFO] D:\Repositories\Sidechains-SDK\sdk\src\test\scala:-1: info: compiling
+[INFO] Compiling 143 source files to D:\Repositories\Sidechains-SDK\sdk\target\test-classes at 1586253320015
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:351: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]               case _ => fail()
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:469: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]               case _ => fail()
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:42: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block id doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:49: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block parentId doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\block\SidechainBlockTest.scala:56: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Block timestamp doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:60: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction id doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:68: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction fee doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:76: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction timestamp doesn't not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:85: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]         case _ => fail("Transaction unlockers in json have invalid format.")
+[INFO]              ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:88: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction unlockers do not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:97: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]         case _ => fail("Transaction newBoxes in json have invalid format.")
+[INFO]              ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\transaction\RegularTransactionScalaTest.scala:100: warning: This catches all Throwables. If this is really intended, use `case _ : Throwable` to clear this warning.
+[INFO]       case _ => fail("Transaction new boxes do not found in json.")
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\ApplicationApiRouteTest.scala:28: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\ApplicationApiRouteTest.scala:36: warning: unreachable code due to variable pattern 'result' on line 28
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\ApplicationApiRouteTest.scala:36: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:83: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:86: warning: unreachable code due to variable pattern 'result' on line 83
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:86: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:104: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:107: warning: unreachable code due to variable pattern 'result' on line 104
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:107: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:149: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:152: warning: unreachable code due to variable pattern 'result' on line 149
+[INFO]           case _ => fail("Serialization failed for object MainchainBlockResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:152: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object MainchainBlockResponse")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:173: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]       case result =>
+[INFO]            ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:186: warning: unreachable code due to variable pattern 'result' on line 173
+[INFO]       case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\MainchainBlockApiRouteTest.scala:186: warning: unreachable code
+[INFO]       case _ => fail("Serialization failed for object MainchainApiResponse")
+[INFO]                     ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:68: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:73: warning: unreachable code due to variable pattern 'result' on line 68
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:73: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:122: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:132: warning: unreachable code due to variable pattern 'result' on line 122
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:132: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:165: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:168: warning: unreachable code due to variable pattern 'result' on line 165
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:168: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:185: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:191: warning: unreachable code due to variable pattern 'result' on line 185
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainBlockApiRouteTest.scala:191: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:42: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:66: warning: unreachable code due to variable pattern 'result' on line 42
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:66: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:83: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:100: warning: unreachable code due to variable pattern 'result' on line 83
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:100: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:118: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:122: warning: unreachable code due to variable pattern 'result' on line 118
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:122: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:138: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:144: warning: unreachable code due to variable pattern 'result' on line 138
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainNodeApiRouteTest.scala:144: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:103: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:110: warning: unreachable code due to variable pattern 'result' on line 103
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:110: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:119: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:126: warning: unreachable code due to variable pattern 'result' on line 119
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:126: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:158: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:162: warning: unreachable code due to variable pattern 'result' on line 158
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:162: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:175: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:179: warning: unreachable code due to variable pattern 'result' on line 175
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:179: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:191: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:195: warning: unreachable code due to variable pattern 'result' on line 191
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:195: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:206: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:210: warning: unreachable code due to variable pattern 'result' on line 206
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:210: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:221: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:225: warning: unreachable code due to variable pattern 'result' on line 221
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:225: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:236: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:240: warning: unreachable code due to variable pattern 'result' on line 236
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:240: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:280: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:284: warning: unreachable code due to variable pattern 'result' on line 280
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:284: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:296: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:300: warning: unreachable code due to variable pattern 'result' on line 296
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:300: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:332: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:336: warning: unreachable code due to variable pattern 'result' on line 332
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:336: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:346: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:353: warning: unreachable code due to variable pattern 'result' on line 346
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:353: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:464: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:471: warning: unreachable code due to variable pattern 'result' on line 464
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainTransactionApiRouteTest.scala:471: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:61: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node =>
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:67: warning: unreachable code due to variable pattern 'node' on line 61
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:67: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:58: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:69: warning: unreachable code due to variable pattern 'result' on line 58
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:69: warning: unreachable code
+[INFO]           case _ => fail("Serialization failed for object SidechainApiResponseBody")
+[INFO]                         ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:88: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]               case node =>
+[INFO]                    ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:91: warning: unreachable code due to variable pattern 'node' on line 88
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:91: warning: unreachable code
+[INFO]               case _ => fail("Result serialization failed")
+[INFO]                             ^
+[WARNING] D:\Repositories\Sidechains-SDK\sdk\src\test\scala\com\horizen\api\http\SidechainWalletApiRouteTest.scala:85: warning: patterns after a variable pattern cannot match (SLS 8.1.1)
+[INFO]           case result =>
+[INFO]                ^
+[WARNING] 122 warnings found
+[INFO] prepare-compile in 0 s
+[INFO] compile in 24 s
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ Sidechains-SDK ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 32 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:testCompile (default-testCompile) @ Sidechains-SDK ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 52 source files to D:\Repositories\Sidechains-SDK\sdk\target\test-classes
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/test/java/com/horizen/customtypes/CustomBoxData.java: Some input files use unchecked or unsafe operations.
+[INFO] /D:/Repositories/Sidechains-SDK/sdk/src/test/java/com/horizen/customtypes/CustomBoxData.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ Sidechains-SDK ---
+[INFO] Surefire report directory: D:\Repositories\Sidechains-SDK\sdk\target\surefire-reports
+
+-------------------------------------------------------
+ T E S T S
+-------------------------------------------------------
+Running com.horizen.actors.SidechainNodeViewHolderTest
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 1.478 sec <<< FAILURE!
+initializationError(com.horizen.actors.SidechainNodeViewHolderTest)  Time elapsed: 0.004 sec  <<< ERROR!
+java.lang.IllegalArgumentException: Input data corrupted.
+	at com.horizen.transaction.mainchain.SidechainCreation.parseBytes(SidechainCreation.java:65)
+	at com.horizen.transaction.mainchain.SidechainCreationSerializer.parse(SidechainCreationSerializer.java:29)
+	at com.horizen.transaction.mainchain.SidechainCreationSerializer.parse(SidechainCreationSerializer.java:6)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.utils.DynamicTypedSerializer.parse(DynamicTypedSerializer.java:77)
+	at com.horizen.utils.DynamicTypedSerializer.parse(DynamicTypedSerializer.java:12)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.utils.ListSerializer.lambda$parse$0(ListSerializer.java:66)
+	at java.util.ArrayList.forEach(ArrayList.java:1257)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:66)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:11)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.transaction.MC2SCAggregatedTransaction.parseBytes(MC2SCAggregatedTransaction.java:168)
+	at com.horizen.transaction.MC2SCAggregatedTransactionSerializer.parse(MC2SCAggregatedTransactionSerializer.java:28)
+	at com.horizen.transaction.MC2SCAggregatedTransactionSerializer.parse(MC2SCAggregatedTransactionSerializer.java:6)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parse(MainchainBlockReference.scala:333)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parse(MainchainBlockReference.scala:298)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at scorex.core.serialization.ScorexSerializer.parseBytes$(ScorexSerializer.scala:34)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parseBytes(MainchainBlockReference.scala:298)
+	at com.horizen.utils.ListSerializer.lambda$parse$0(ListSerializer.java:66)
+	at java.util.ArrayList.forEach(ArrayList.java:1257)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:66)
+	at com.horizen.block.SidechainBlockSerializer.parse(SidechainBlock.scala:245)
+	at com.horizen.block.SidechainBlockSerializer.parse(SidechainBlock.scala:196)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at scorex.core.serialization.ScorexSerializer.parseBytes$(ScorexSerializer.scala:34)
+	at com.horizen.block.SidechainBlockSerializer.parseBytes(SidechainBlock.scala:196)
+	at com.horizen.fixtures.SidechainNodeViewHolderFixture.$init$(SidechainNodeViewHolderFixture.scala:55)
+	at com.horizen.actors.SidechainNodeViewHolderTest1.<init>(SidechainNodeViewHolderTest.scala:29)
+	at com.horizen.actors.SidechainNodeViewHolderTest.<init>(SidechainNodeViewHolderTest.scala:23)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+	at java.lang.Class.newInstance(Class.java:442)
+	at org.scalatest.junit.JUnitRunner.<init>(JUnitRunner.scala:64)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+	at org.junit.internal.builders.AnnotatedBuilder.buildRunner(AnnotatedBuilder.java:104)
+	at org.junit.internal.builders.AnnotatedBuilder.runnerForClass(AnnotatedBuilder.java:86)
+	at org.junit.runners.model.RunnerBuilder.safeRunnerForClass(RunnerBuilder.java:59)
+	at org.junit.internal.builders.AllDefaultPossibilitiesBuilder.runnerForClass(AllDefaultPossibilitiesBuilder.java:26)
+	at org.junit.runners.model.RunnerBuilder.safeRunnerForClass(RunnerBuilder.java:59)
+	at org.junit.internal.requests.ClassRequest.getRunner(ClassRequest.java:33)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:250)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+Running com.horizen.api.http.ApplicationApiRouteTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.415 sec
+Running com.horizen.api.http.MainchainBlockApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.571 sec
+Running com.horizen.api.http.SidechainBlockApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.405 sec
+Running com.horizen.api.http.SidechainNodeApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.518 sec
+Running com.horizen.api.http.SidechainRejectionApiRouteTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.193 sec
+Running com.horizen.api.http.SidechainTransactionApiRouteTest
+HttpResponse(200 OK,List(),HttpEntity.Strict(application/json,{
+  "result" : {
+    "transactionBytes" : "03000000000000001e00000171541164fb00000060566fb9823685f732ab19571b2b867c9ae7ac65989ab6343a31e3cef689cb9ddd43e175d0d298d4641221189277a7fdc53842c4bbae19db8f1dd11052218013d65c0db2418fd87fd11f55c410e86c39fb752de59cfa5a523c552dca012b82b2870000002b025201d5b8ea24a2646dc84a7b8dd50fbf97e2c4f10d12ab48fb6f514cfb380a321959000000000000001e000000ca06820182018201010a5f2f7984744f1799de9794af0429617b92b659f45edcf5cf49d7012077ce01f2dd92aeff50e929750a175aafe9f802b6f087d2144fa9d654e6f06d2de4120a01571088bc5bdcf468830737d3ffcadf171abaf3643700450931823a4d69a5c332a9af77c79ebf3e5ea116f8c2d1e1617278659cf8e6ca547c7a4ad646d530590c01e8e3f217d10c11b23c032220dc4e312d6a33a787c7ab10a7dbc817b67cfc0100700c484b223ef4b1741240476b97eb64c857da1b4a1b0a66b01b75ec66d6be0c"
+  }
+}),HttpProtocol(HTTP/1.1))
+HttpResponse(200 OK,List(),HttpEntity.Strict(application/json,{
+  "error" : {
+    "code" : "0204",
+    "description" : "GenericTransactionError",
+    "detail" : "Total inputs amount is less then total outputs amount."
+  }
+}),HttpProtocol(HTTP/1.1))
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.608 sec
+Running com.horizen.api.http.SidechainWalletApiRouteTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.25 sec
+Running com.horizen.block.EquihashTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.038 sec
+Running com.horizen.block.MainchainBlockReferenceTest
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.215 sec
+Running com.horizen.block.MainchainHeaderTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 sec
+Running com.horizen.block.MainchainTransactionTest
+Tests run: 7, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.037 sec <<< FAILURE!
+tx_vminus4_sc_creation_with_ft(com.horizen.block.MainchainTransactionTest)  Time elapsed: 0.006 sec  <<< FAILURE!
+org.junit.ComparisonFailure: Tx Hash is different. expected:<[9ccbae18b479e071d6064515a79b2c4dc83c0b2723a76f6307992a758afee578]> but was:<[012c4ffd773ede52b5ba743a4030c61547f5a5e600f553ab54f283efb59a732a]>
+	at org.junit.Assert.assertEquals(Assert.java:115)
+	at com.horizen.block.MainchainTransactionTest.tx_vminus4_sc_creation_with_ft(MainchainTransactionTest.scala:140)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+Running com.horizen.block.MainchainTxCertifierLockCrosschainOutputTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 sec
+Running com.horizen.block.MainchainTxForwardTransferCrosschainOutputTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.block.ProofOfWorkVerifierTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.236 sec
+Running com.horizen.block.SidechailHashMapTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.block.SidechainBlockTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.035 sec
+Running com.horizen.box.BoxesTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.CertifierRightBoxScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.CertifierRightBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.CertifierRightBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.box.ForgerBoxSerializationTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.box.ForgerBoxTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 sec
+Running com.horizen.box.RegularBoxScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.box.RegularBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 sec
+Running com.horizen.box.RegularBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 sec
+Running com.horizen.box.WithdrawalRequestBoxSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 sec
+Running com.horizen.box.WithdrawalRequestBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.chain.ActiveChainTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.06 sec
+Running com.horizen.chain.ElementsChainTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 sec
+Running com.horizen.chain.SidechainBlockInfoTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 sec
+Running com.horizen.companion.SidechainBoxesCompanionTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 sec
+Running com.horizen.companion.SidechainSecretsCompanionTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 sec
+Running com.horizen.consensus.HistoryConsensusCheckerTest
+SEED IS 50
+end SidechainBlocksGenerator object
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.032 sec <<< FAILURE!
+testManySeeds(com.horizen.consensus.HistoryConsensusCheckerTest)  Time elapsed: 0.032 sec  <<< ERROR!
+java.lang.ExceptionInInitializerError
+	at com.horizen.consensus.HistoryConsensusCheckerTest.testWithSeed(HistoryConsensusCheckerTest.scala:22)
+	at com.horizen.consensus.HistoryConsensusCheckerTest.$anonfun$testManySeeds$1(HistoryConsensusCheckerTest.scala:82)
+	at scala.collection.immutable.Range.foreach$mVc$sp(Range.scala:158)
+	at com.horizen.consensus.HistoryConsensusCheckerTest.testManySeeds(HistoryConsensusCheckerTest.scala:80)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+Caused by: java.lang.IllegalArgumentException: Input data corrupted.
+	at com.horizen.transaction.mainchain.SidechainCreation.parseBytes(SidechainCreation.java:65)
+	at com.horizen.transaction.mainchain.SidechainCreationSerializer.parse(SidechainCreationSerializer.java:29)
+	at com.horizen.transaction.mainchain.SidechainCreationSerializer.parse(SidechainCreationSerializer.java:6)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.utils.DynamicTypedSerializer.parse(DynamicTypedSerializer.java:77)
+	at com.horizen.utils.DynamicTypedSerializer.parse(DynamicTypedSerializer.java:12)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.utils.ListSerializer.lambda$parse$0(ListSerializer.java:66)
+	at java.util.ArrayList.forEach(ArrayList.java:1257)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:66)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:11)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.transaction.MC2SCAggregatedTransaction.parseBytes(MC2SCAggregatedTransaction.java:168)
+	at com.horizen.transaction.MC2SCAggregatedTransactionSerializer.parse(MC2SCAggregatedTransactionSerializer.java:28)
+	at com.horizen.transaction.MC2SCAggregatedTransactionSerializer.parse(MC2SCAggregatedTransactionSerializer.java:6)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parse(MainchainBlockReference.scala:333)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parse(MainchainBlockReference.scala:298)
+	at scorex.core.serialization.ScorexSerializer.parseBytes(ScorexSerializer.scala:36)
+	at scorex.core.serialization.ScorexSerializer.parseBytes$(ScorexSerializer.scala:34)
+	at com.horizen.block.MainchainBlockReferenceSerializer$.parseBytes(MainchainBlockReference.scala:298)
+	at com.horizen.utils.ListSerializer.lambda$parse$0(ListSerializer.java:66)
+	at java.util.ArrayList.forEach(ArrayList.java:1257)
+	at com.horizen.utils.ListSerializer.parse(ListSerializer.java:66)
+	at com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator$.<init>(SidechainBlocksGenerator.scala:464)
+	at com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator$.<clinit>(SidechainBlocksGenerator.scala)
+	... 33 more
+
+Running com.horizen.consensus.TimeToEpochSlotConverterTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 sec
+Running com.horizen.integration.SidechainHistoryTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.822 sec
+Running com.horizen.integration.SidechainStateTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.088 sec
+Running com.horizen.integration.storage.ForgingBoxesInfoStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 sec
+Running com.horizen.integration.storage.SidechainHistoryStorageTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.031 sec
+Running com.horizen.integration.storage.SidechainSecretStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.07 sec
+Running com.horizen.integration.storage.SidechainStateStorageTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 sec
+Running com.horizen.integration.storage.SidechainWalletBoxStorageTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.043 sec
+Running com.horizen.node.util.MainchainBlockReferenceInfoTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec
+Running com.horizen.proof.Signature25519ScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proof.Signature25519SerializerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proof.Signature25519Test
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.MCPublicKeyHashPropositionTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.MCPublicKeyPropositionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.PublicKey25519PropositionScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.PublicKey25519PropositionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.proposition.PublicKey25519PropositionTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.secret.PrivateKey25519SerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.secret.PrivateKey25519Test
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.SidechainMemoryPoolTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 sec
+Running com.horizen.SidechainNodeViewHolderTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.488 sec
+Running com.horizen.SidechainStateTest
+Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.101 sec <<< FAILURE!
+testStateless(com.horizen.SidechainStateTest)  Time elapsed: 0.023 sec  <<< FAILURE!
+java.lang.AssertionError: Block validation must be successful. But result is - Failure(java.lang.NullPointerException)
+	at org.junit.Assert.fail(Assert.java:88)
+	at org.junit.Assert.assertTrue(Assert.java:41)
+	at com.horizen.SidechainStateTest.testStateless(SidechainStateTest.scala:165)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+Running com.horizen.SidechainSyncInfoTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.028 sec
+Running com.horizen.SidechainWalletTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.175 sec
+Running com.horizen.storage.ForgingBoxesInfoStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 sec
+Running com.horizen.storage.SidechainHistoryStorageTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.086 sec
+Running com.horizen.storage.SidechainSecretStorageTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 sec
+Running com.horizen.storage.SidechainStateStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 sec
+Running com.horizen.storage.SidechainWalletBoxStorageTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 sec
+Running com.horizen.storage.StorageTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 sec
+Running com.horizen.transaction.DefaultTransactionIncompatibilityCheckerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 sec
+Running com.horizen.transaction.RegularTransactionCreatorTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 sec
+Running com.horizen.transaction.RegularTransactionScalaTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec
+Running com.horizen.transaction.RegularTransactionSerializerTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 sec
+Running com.horizen.transaction.RegularTransactionTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 sec
+Running com.horizen.transaction.SidechainCoreTransactionSerializerTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.01 sec
+Running com.horizen.transaction.SidechainCoreTransactionTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.utils.ByteArrayWrapperTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.BytesUtilsTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.Ed25519Test
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 sec
+Running com.horizen.utils.ListSerializerTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 sec
+Running com.horizen.utils.MerklePathTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.MerkleTreeTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.UtilsTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.utils.WithdrawalEpochUtilsTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 sec
+Running com.horizen.validation.ConsensusValidatorTest
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0 sec <<< FAILURE!
+nonGenesisBlockCheck(com.horizen.validation.ConsensusValidatorTest)  Time elapsed: 0 sec  <<< ERROR!
+java.lang.NoClassDefFoundError: Could not initialize class com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator$
+	at com.horizen.validation.ConsensusValidatorTest.createHistoryWithBlocksNoForks(ConsensusValidatorTest.scala:54)
+	at com.horizen.validation.ConsensusValidatorTest.$anonfun$createHistoryWithBlocksNoForksAndPossibleNextForger$1(ConsensusValidatorTest.scala:28)
+	at scala.util.Try$.apply(Try.scala:213)
+	at com.horizen.validation.ConsensusValidatorTest.createHistoryWithBlocksNoForksAndPossibleNextForger(ConsensusValidatorTest.scala:28)
+	at com.horizen.validation.ConsensusValidatorTest.nonGenesisBlockCheck(ConsensusValidatorTest.scala:89)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+Running com.horizen.validation.ForgerBoxMerklePathInfoTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec
+Running com.horizen.validation.WithdrawalEpochValidatorTest
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.025 sec <<< FAILURE!
+blockValidation(com.horizen.validation.WithdrawalEpochValidatorTest)  Time elapsed: 0.02 sec  <<< ERROR!
+java.lang.IllegalArgumentException: Input data corrupted. There are unprocessed 103 bytes.
+	at com.horizen.block.MainchainBlockReference$.$anonfun$parseMainchainBlockBytes$1(MainchainBlockReference.scala:288)
+	at scala.util.Try$.apply(Try.scala:213)
+	at com.horizen.block.MainchainBlockReference$.parseMainchainBlockBytes(MainchainBlockReference.scala:254)
+	at com.horizen.block.MainchainBlockReference$.create(MainchainBlockReference.scala:175)
+	at com.horizen.validation.WithdrawalEpochValidatorTest.blockValidation(WithdrawalEpochValidatorTest.scala:329)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+genesisBlockValidation(com.horizen.validation.WithdrawalEpochValidatorTest)  Time elapsed: 0.005 sec  <<< ERROR!
+java.lang.IllegalArgumentException: Input data corrupted. There are unprocessed 103 bytes.
+	at com.horizen.block.MainchainBlockReference$.$anonfun$parseMainchainBlockBytes$1(MainchainBlockReference.scala:288)
+	at scala.util.Try$.apply(Try.scala:213)
+	at com.horizen.block.MainchainBlockReference$.parseMainchainBlockBytes(MainchainBlockReference.scala:254)
+	at com.horizen.block.MainchainBlockReference$.create(MainchainBlockReference.scala:175)
+	at com.horizen.validation.WithdrawalEpochValidatorTest.genesisBlockValidation(WithdrawalEpochValidatorTest.scala:123)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:252)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:141)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:112)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:189)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:165)
+	at org.apache.maven.surefire.booter.ProviderFactory.invokeProvider(ProviderFactory.java:85)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:115)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:75)
+
+Running com.horizen.WalletBoxSerializerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
+Running com.horizen.WalletBoxTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.horizen.websocket.MainchainNodeChannelImplTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.221 sec
+Running com.horizen.websocket.WebSocketChannelImplTest
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.645 sec
+Running com.horizen.websocket.WebSocketCommunicationClientTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.052 sec
+
+Results :
+
+Failed tests:   tx_vminus4_sc_creation_with_ft(com.horizen.block.MainchainTransactionTest): Tx Hash is different. expected:<[9ccbae18b479e071d6064515a79b2c4dc83c0b2723a76f6307992a758afee578]> but was:<[012c4ffd773ede52b5ba743a4030c61547f5a5e600f553ab54f283efb59a732a]>
+  testStateless(com.horizen.SidechainStateTest): Block validation must be successful. But result is - Failure(java.lang.NullPointerException)
+
+Tests in error: 
+  initializationError(com.horizen.actors.SidechainNodeViewHolderTest): Input data corrupted.
+  testManySeeds(com.horizen.consensus.HistoryConsensusCheckerTest)
+  nonGenesisBlockCheck(com.horizen.validation.ConsensusValidatorTest): Could not initialize class com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator$
+  blockValidation(com.horizen.validation.WithdrawalEpochValidatorTest): Input data corrupted. There are unprocessed 103 bytes.
+  genesisBlockValidation(com.horizen.validation.WithdrawalEpochValidatorTest): Input data corrupted. There are unprocessed 103 bytes.
+
+Tests run: 270, Failures: 2, Errors: 5, Skipped: 3
+
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Sidechains 0.1-SNAPSHOT:
+[INFO] 
+[INFO] Sidechains-SDK ..................................... FAILURE [01:25 min]
+[INFO] Sidechains-SDK-simpleapp ........................... SKIPPED
+[INFO] Sidechains-SDK-ScBootstrappingTools ................ SKIPPED
+[INFO] Sidechains ......................................... SKIPPED
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:25 min
+[INFO] Finished at: 2020-04-07T12:56:17+03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:2.12.4:test (default-test) on project Sidechains-SDK: There are test failures.
+[ERROR] 
+[ERROR] Please refer to D:\Repositories\Sidechains-SDK\sdk\target\surefire-reports for the individual test results.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

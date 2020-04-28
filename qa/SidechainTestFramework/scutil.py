@@ -141,10 +141,18 @@ def generate_secrets(seed, number_of_accounts):
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+
+        params = json.dumps(jsonParameters)
+
         javaPs = subprocess.Popen(["java", "-cp",
                                    "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                    "com.horizen.ScBootstrappingTool",
                                    "generatekey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
+
+        pid = javaPs.pid
+        output = javaPs.stdout.read()
+        print output
+
         scBootstrapOutput = javaPs.communicate()[0]
         secrets.append(json.loads(scBootstrapOutput))
 

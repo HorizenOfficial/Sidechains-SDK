@@ -298,6 +298,10 @@
 					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
 					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
 					<include>sc_node_holder_fixter_settings.conf</include>
+					<include>new_mc_blocks/mc_block_empty_sidechains</include>
+					<include>new_mc_blocks/mc_block_create_3_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_2_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer</include>
 				</includes>
 			</testResource>
 		</testResources>

@@ -4,6 +4,7 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.SidechainTypes
+import com.horizen.block.MainchainBackwardTransferCertificate
 import com.horizen.utils.{Pair => JPair}
 
 import scala.util._
@@ -39,6 +40,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
+  private[horizen] def getWithdrawalBlockKey(epoch: Int) : ByteArrayWrapper = {
+    calculateKey(("Withdrawal block - " + epoch).getBytes)
+  }
+
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
@@ -69,16 +74,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getWithdrawalRequests(epoch: Int): JList[WithdrawalRequestBox] = { // Do we need to return JList here?
-    storage.get(getWithdrawalRequestsKey(epoch)).asScala match {
-      case Some(baw) =>
-        withdrawalRequestSerializer.parseBytesTry(baw.data) match {
-          case Success(withdrawalRequests) => withdrawalRequests
+  def getWithdrawalRequests(epoch: Int) : Seq[WithdrawalRequestBox] = {
+    storage.get(getWithdrawalRequestsKey(epoch)) match {
+      case v if v.isPresent =>
+        withdrawalRequestSerializer.parseBytesTry(v.get().data) match {
+          case Success(withdrawalRequests) => withdrawalRequests.asScala
           case Failure(exception) =>
             log.error("Error while withdrawal requests parsing.", exception)
-            new JArrayList[WithdrawalRequestBox]()
+            Seq[WithdrawalRequestBox]()
         }
-      case _ => new JArrayList[WithdrawalRequestBox]()
+      case _ => Seq[WithdrawalRequestBox]()
+    }
+  }
+
+  def getUnprocessedWithdrawalRequests(epoch: Int) : Option[Seq[WithdrawalRequestBox]] = {
+    storage.get(getWithdrawalBlockKey(epoch)) match {
+      case v if v.isPresent => None
+      case _ => Some(getWithdrawalRequests(epoch))
     }
   }
 
@@ -131,7 +143,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
-             consensusEpoch: ConsensusEpochNumber): Try[SidechainStateStorage] = Try {
+             consensusEpoch: ConsensusEpochNumber,
+             containsBackwardTransferCertificate: Boolean): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -158,12 +171,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
     if (withdrawalRequestAppendSeq.nonEmpty) {
-      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch)
-
-      withdrawalRequestList.addAll(withdrawalRequestAppendSeq.asJava)
+      val withdrawalRequestList = getWithdrawalRequests(withdrawalEpochInfo.epoch) ++ withdrawalRequestAppendSeq
 
       updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch),
-        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList))))
+        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestList.asJava))))
     }
 
     // Update Consensus related data
@@ -175,10 +186,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       forgingStakesInfoKey,
       new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesInfoSeq.asJava))
     ))
+
     updateList.add(new JPair(
       forgingStakesAmountKey,
       new ByteArrayWrapper(Longs.toByteArray(forgingStakesAmount))
     ))
+
+    if (containsBackwardTransferCertificate)
+      updateList.add(new JPair(getWithdrawalBlockKey(getWithdrawalEpochInfo.get.epoch - 1),
+        version))
 
     storage.update(version, updateList, removeList)
 

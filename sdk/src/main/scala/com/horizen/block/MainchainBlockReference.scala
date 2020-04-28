@@ -12,10 +12,10 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, MerklePath, MerkleTree, Utils, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
-import com.google.common.primitives.Bytes
+import com.google.common.primitives.{Bytes, Ints}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -34,9 +34,9 @@ import scala.collection.mutable
 class MainchainBlockReference(
                     val header: MainchainHeader,
                     val sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                    @JsonProperty("merkleRoots")
-                    @JsonSerialize(using = classOf[JsonMerkleRootsSerializer])
-                    val sidechainsMerkleRootsMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]]
+                    val mproof: Option[MerklePath],
+                    val proofOfNoData: (Option[(Array[Byte], MerklePath)], Option[(Array[Byte], MerklePath)]),
+                    val backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
                     )
   extends BytesSerializable
 {
@@ -54,40 +54,62 @@ class MainchainBlockReference(
       return false
 
     if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
-      // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
-      if (sidechainsMerkleRootsMap.isDefined || sidechainRelatedAggregatedTransaction.isDefined)
+      // If there is not SC related outputs in MC block, proofs, AggTx and Certificate expected to be not defined.
+      if (mproof.isDefined ||
+          proofOfNoData._1.isDefined ||
+          proofOfNoData._2.isDefined ||
+          sidechainRelatedAggregatedTransaction.isDefined ||
+          backwardTransferCertificate.isDefined)
         return false
     }
     else {
-      if (sidechainsMerkleRootsMap.isEmpty)
-        return false
 
-      // verify SCMap Merkle root hash equals to one in the header.
-      val SCSeq = sidechainsMerkleRootsMap.get.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-      val merkleTreeLeaves = SCSeq.map(pair => {
-        BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
-            Bytes.concat(
-              BytesUtils.reverseBytes(pair._1.data),
-              BytesUtils.reverseBytes(pair._2)
-            )
-        ))
-      }).toList.asJava
-      val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
-      if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
-        return false
+      //Checks if we have proof
+      if (mproof.isDefined) {
 
-      val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get.get(new ByteArrayWrapper(params.sidechainId))
-      if (sidechainMerkleRootHash.isEmpty) {
-        // there is no related outputs for current Sidechain, AggTx expected to be not defined.
-        return sidechainRelatedAggregatedTransaction.isEmpty
+        //Check for empty transaction and certificate
+        if (sidechainRelatedAggregatedTransaction.isEmpty && backwardTransferCertificate.isEmpty)
+          return false
+
+        val sidechainId = new ByteArrayWrapper(params.sidechainId)
+        val sidechainHashMap = new SidechainHashMap()
+
+        if (sidechainRelatedAggregatedTransaction.isDefined)
+          sidechainHashMap.addTransactionOutputs(sidechainId,
+            sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala)
+
+        if (backwardTransferCertificate.isDefined)
+          sidechainHashMap.addCertificate(backwardTransferCertificate.get)
+
+        val sidechainMerkleRoot = sidechainHashMap.getMerkleRoot(sidechainId)
+
+        if (!util.Arrays.equals(header.hashSCMerkleRootsMap, mproof.get.apply(sidechainMerkleRoot)))
+          return false
+
+        if (sidechainRelatedAggregatedTransaction.nonEmpty &&
+          !sidechainRelatedAggregatedTransaction.get.semanticValidity())
+          return false
+
       } else {
-        if (sidechainRelatedAggregatedTransaction.isEmpty)
+        //If we don't have proofOfNoData
+        if (proofOfNoData._1.isEmpty && proofOfNoData._2.isEmpty)
           return false
 
-        // verify AggTx
-        if (!util.Arrays.equals(sidechainMerkleRootHash.get, sidechainRelatedAggregatedTransaction.get.mc2scMerkleRootHash())
-          || !sidechainRelatedAggregatedTransaction.get.semanticValidity())
-          return false
+        proofOfNoData._1 match {
+          case Some(proof) =>
+            val merkleRoot = proof._2.apply(proof._1)
+            if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleRoot))
+              return false
+          case None =>
+        }
+
+        proofOfNoData._2 match {
+          case Some(proof) =>
+            val merkleRoot = proof._2.apply(proof._1)
+            if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleRoot))
+              return false
+          case None =>
+        }
       }
     }
 
@@ -95,25 +117,28 @@ class MainchainBlockReference(
   }
 }
 
-
 object MainchainBlockReference {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 2048 * 1024 //2048K
+  val SC_CERT_BLOCK_VERSION = 3
 
   def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = { // TO DO: get sidechainId from some params object
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(params.sidechainId.length == 32)
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
-      case Success((header, mainchainTxs)) =>
+      case Success((header, mainchainTxs, certificates)) =>
         // Calculate SCMap and verify it
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
+
+        val sidechaiId = new ByteArrayWrapper(params.sidechainId)
+
+        val sidechainHashMap = new SidechainHashMap()
+
         for (tx <- mainchainTxs)
           scIds = scIds ++ tx.getRelatedSidechains
 
-        if (scIds.isEmpty)
-          Success(new MainchainBlockReference(header, None, None))
-        else {
+        val mc2scTransaction: Option[MC2SCAggregatedTransaction] = if (scIds.nonEmpty) {
           var aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
           for (id <- scIds) {
             var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
@@ -123,18 +148,35 @@ object MainchainBlockReference {
             aggregatedTransactionsMap.put(id, MC2SCAggregatedTransaction.create(sidechainRelatedTransactionsOutputs, header.time))
           }
 
-          val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
-            case (k, v) =>
-              (k, v.mc2scMerkleRootHash())
-          }
+          aggregatedTransactionsMap.foreach( f=>
+            sidechainHashMap.addTransactionOutputs(f._1, f._2.mc2scTransactionsOutputs().asScala))
 
-          val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
+          aggregatedTransactionsMap.get(sidechaiId)
 
-          Success(new MainchainBlockReference(header, mc2scTransaction, Option(SCMap)))
+        } else {
+          None
+        }
+
+        scIds = scIds ++ certificates.map(c => new ByteArrayWrapper(c.sidechainId))
+
+        certificates.foreach(c => sidechainHashMap.addCertificate(c))
+
+        val certificate = certificates.find(c => util.Arrays.equals(c.sidechainId, params.sidechainId))
+
+        if (scIds.isEmpty)
+          Success(new MainchainBlockReference(header, None, None, (None, None), None))
+        else {
+          if (scIds.exists(c => util.Arrays.equals(c.data, params.sidechainId)))
+            Success(new MainchainBlockReference(header, mc2scTransaction, sidechainHashMap.getMerklePath(sidechaiId), (None, None), certificate))
+          else
+            Success(new MainchainBlockReference(header, mc2scTransaction, None,
+              sidechainHashMap.getNeighborsMerklePaths(sidechaiId), certificate))
         }
       case Failure(e) =>
         Failure(e)
     }
+
+
 
     if(tryBlock.isFailure)
       tryBlock
@@ -162,7 +204,8 @@ object MainchainBlockReference {
   }
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
-  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]): Try[(MainchainHeader, Seq[MainchainTransaction])] = Try {
+  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[MainchainBackwardTransferCertificate])] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -175,15 +218,31 @@ object MainchainBlockReference {
         // parse transactions
         var transactions: Seq[MainchainTransaction] = Seq[MainchainTransaction]()
 
-        while(offset < mainchainBlockBytes.length) {
+        while (transactions.size < transactionsCount.value()) {
           val tx: MainchainTransaction = MainchainTransaction.create(mainchainBlockBytes, offset).get
           transactions = transactions :+ tx
           offset += tx.size
         }
-        if(transactions.size != transactionsCount.value())
-          throw new IllegalArgumentException("Input data corrupted. Actual Tx number parsed %d, expected %d".format(transactions.size, transactionsCount.value()))
 
-        (header, transactions)
+        var certificates: Seq[MainchainBackwardTransferCertificate] = Seq[MainchainBackwardTransferCertificate]()
+
+        // Parse certificates only if version is the same as specified and there is bytes to parse.
+        if (header.version == SC_CERT_BLOCK_VERSION) {
+            val certificatesCount: VarInt = BytesUtils.getVarInt(mainchainBlockBytes, offset)
+            offset += certificatesCount.size()
+
+            while (certificates.size < certificatesCount.value()) {
+              val c: MainchainBackwardTransferCertificate = MainchainBackwardTransferCertificate.parse(mainchainBlockBytes, offset)
+              certificates = certificates :+ c
+              offset += c.size
+            }
+        }
+
+        if(offset < mainchainBlockBytes.length)
+          throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - offset))
+
+        (header, transactions, certificates)
+
       case Failure(e) =>
         throw e
     }
@@ -204,17 +263,14 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
         w.putInt(0)
     }
 
-    obj.sidechainsMerkleRootsMap match {
-      case Some(scmap) =>
-        w.putInt(scmap.size * HASH_BYTES_LENGTH * 2)
-        scmap.foreach {
-          case (k, v) =>
-            w.putBytes(k.data)
-            w.putBytes(v)
-        }
-      case _ =>
-        w.putInt(0)
+    obj.backwardTransferCertificate match {
+      case Some(certificate) =>
+        val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
+        w.putInt(cb.length)
+        w.putBytes(cb)
+      case _ => w.putInt(0)
     }
+
   }
 
   override def parse(r: Reader): MainchainBlockReference = {
@@ -233,23 +289,15 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
         None
     }
 
-    val SCMapSize: Int = r.getInt()
+    val certificateSize = r.getInt()
 
-    if(SCMapSize != r.remaining)
-      throw new IllegalArgumentException("Input data corrupted.")
-
-    val SCMap: Option[mutable.Map[ByteArrayWrapper, Array[Byte]]] = {
-      if(SCMapSize > 0) {
-        val scmap = mutable.Map[ByteArrayWrapper, Array[Byte]]()
-        while(r.remaining > 0) {
-          scmap.put(new ByteArrayWrapper(r.getBytes(HASH_BYTES_LENGTH)), r.getBytes(HASH_BYTES_LENGTH))
-        }
-        Some(scmap)
-      }
+    val certificate = {
+      if (certificateSize != 0)
+        Some(MainchainBackwardTransferCertificateSerializer.parseBytes(r.getBytes(certificateSize)))
       else
         None
     }
 
-    new MainchainBlockReference(header, mc2scTx, SCMap)
+    new MainchainBlockReference(header, mc2scTx, None, (None, None), certificate)
   }
 }

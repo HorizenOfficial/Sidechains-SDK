@@ -1,0 +1,123 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------< com.horizen:Sidechains-SDK-ScBootstrappingTools >-----------
+[INFO] Building Sidechains-SDK-ScBootstrappingTools 0.1-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.12/maven-metadata.xml
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/com/typesafe/scala-logging/scala-logging_2.12/maven-metadata.xml
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/com/typesafe/scala-logging/scala-logging_2.12/maven-metadata.xml
+Progress (1): 568 B                   Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/scala-logging/scala-logging_2.12/maven-metadata.xml (568 B at 901 B/s)
+Progress (1): 595 B                   Downloaded from spring-plugin-repo: https://repo.spring.io/plugins-release/com/typesafe/scala-logging/scala-logging_2.12/maven-metadata.xml (595 B at 462 B/s)
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/ch/qos/logback/logback-classic/maven-metadata.xml
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/ch/qos/logback/logback-classic/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/maven-metadata.xml
+Progress (1): 2.2/2.7 kBProgress (1): 2.7 kB                        Downloaded from central: https://repo.maven.apache.org/maven2/ch/qos/logback/logback-classic/maven-metadata.xml (2.7 kB at 21 kB/s)
+Progress (1): 0.6/2.7 kBProgress (1): 2.0/2.7 kBProgress (1): 2.7 kB                        Downloaded from spring-plugin-repo: https://repo.spring.io/plugins-release/ch/qos/logback/logback-classic/maven-metadata.xml (2.7 kB at 6.5 kB/s)
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/org/slf4j/slf4j-api/1.8.0-beta1-SNAPSHOT/maven-metadata.xml
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/org/slf4j/slf4j-api/1.8.0-beta1-SNAPSHOT/maven-metadata.xml
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/org/slf4j/slf4j-api/1.8.0-beta1-SNAPSHOT/slf4j-api-1.8.0-beta1-SNAPSHOT.pom
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/org/slf4j/slf4j-api/1.8.0-beta1-SNAPSHOT/slf4j-api-1.8.0-beta1-SNAPSHOT.pom
+[WARNING] The POM for org.slf4j:slf4j-api:jar:1.8.0-beta1-SNAPSHOT is missing, no dependency information available
+Downloading from scala-tools.org: http://scala-tools.org/repo-releases/com/typesafe/akka/akka-actor_2.12/maven-metadata.xml
+Downloading from central: https://repo.maven.apache.org/maven2/com/typesafe/akka/akka-actor_2.12/maven-metadata.xml
+Downloading from spring-plugin-repo: https://repo.spring.io/plugins-release/com/typesafe/akka/akka-actor_2.12/maven-metadata.xml
+Progress (1): 2.2 kB                    Downloaded from central: https://repo.maven.apache.org/maven2/com/typesafe/akka/akka-actor_2.12/maven-metadata.xml (2.2 kB at 27 kB/s)
+Progress (1): 0.6/2.2 kBProgress (1): 2.0/2.2 kBProgress (1): 2.2 kB                        Downloaded from spring-plugin-repo: https://repo.spring.io/plugins-release/com/typesafe/akka/akka-actor_2.12/maven-metadata.xml (2.2 kB at 2.0 kB/s)
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Deleting D:\Repositories\Sidechains-SDK\tools\sctool\target
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory D:\Repositories\Sidechains-SDK\tools\sctool\src\main\resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.8.0:compile (default-compile) @ Sidechains-SDK-ScBootstrappingTools ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 5 source files to D:\Repositories\Sidechains-SDK\tools\sctool\target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[9,29] cannot find symbol
+  symbol:   class SidechainBoxesDataCompanion
+  location: package com.horizen.companion
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[10,29] cannot find symbol
+  symbol:   class SidechainProofsCompanion
+  location: package com.horizen.companion
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[198,13] cannot find symbol
+  symbol:   class SidechainBoxesDataCompanion
+  location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[198,75] cannot find symbol
+  symbol:   class SidechainBoxesDataCompanion
+  location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[199,13] cannot find symbol
+  symbol:   class SidechainProofsCompanion
+  location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[199,69] cannot find symbol
+  symbol:   class SidechainProofsCompanion
+  location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[202,59] method create in class com.horizen.block.SidechainBlock cannot be applied to given types;
+  required: java.lang.String,long,scala.collection.Seq<com.horizen.block.MainchainBlockReference>,scala.collection.Seq<com.horizen.transaction.SidechainTransaction<com.horizen.proposition.Proposition,com.horizen.box.NoncedBox<com.horizen.proposition.Proposition>>>,com.horizen.secret.PrivateKey25519,com.horizen.companion.SidechainTransactionsCompanion,com.horizen.params.NetworkParams,scala.Option<com.horizen.proof.Signature25519>
+  found: java.lang.String,long,scala.collection.Seq<com.horizen.block.MainchainBlockReference>,scala.collection.Seq<com.horizen.transaction.SidechainTransaction<com.horizen.proposition.Proposition,com.horizen.box.NoncedBox<com.horizen.proposition.Proposition>>>,com.horizen.secret.PrivateKey25519,<nulltype>,<nulltype>,<nulltype>,com.horizen.companion.SidechainTransactionsCompanion,com.horizen.params.NetworkParams,scala.Option<java.lang.Object>
+  reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[271,24] constructor MainNetParams in class com.horizen.params.MainNetParams cannot be applied to given types;
+  required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+  found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+  reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[273,24] constructor TestNetParams in class com.horizen.params.TestNetParams cannot be applied to given types;
+  required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+  found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+  reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[275,24] constructor RegTestParams in class com.horizen.params.RegTestParams cannot be applied to given types;
+  required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+  found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+  reason: actual and formal argument lists differ in length
+[INFO] 10 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.063 s
+[INFO] Finished at: 2020-04-07T12:46:44+03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.8.0:compile (default-compile) on project Sidechains-SDK-ScBootstrappingTools: Compilation failure: Compilation failure: 
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[9,29] cannot find symbol
+[ERROR]   symbol:   class SidechainBoxesDataCompanion
+[ERROR]   location: package com.horizen.companion
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[10,29] cannot find symbol
+[ERROR]   symbol:   class SidechainProofsCompanion
+[ERROR]   location: package com.horizen.companion
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[198,13] cannot find symbol
+[ERROR]   symbol:   class SidechainBoxesDataCompanion
+[ERROR]   location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[198,75] cannot find symbol
+[ERROR]   symbol:   class SidechainBoxesDataCompanion
+[ERROR]   location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[199,13] cannot find symbol
+[ERROR]   symbol:   class SidechainProofsCompanion
+[ERROR]   location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[199,69] cannot find symbol
+[ERROR]   symbol:   class SidechainProofsCompanion
+[ERROR]   location: class com.horizen.CommandProcessor
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[202,59] method create in class com.horizen.block.SidechainBlock cannot be applied to given types;
+[ERROR]   required: java.lang.String,long,scala.collection.Seq<com.horizen.block.MainchainBlockReference>,scala.collection.Seq<com.horizen.transaction.SidechainTransaction<com.horizen.proposition.Proposition,com.horizen.box.NoncedBox<com.horizen.proposition.Proposition>>>,com.horizen.secret.PrivateKey25519,com.horizen.companion.SidechainTransactionsCompanion,com.horizen.params.NetworkParams,scala.Option<com.horizen.proof.Signature25519>
+[ERROR]   found: java.lang.String,long,scala.collection.Seq<com.horizen.block.MainchainBlockReference>,scala.collection.Seq<com.horizen.transaction.SidechainTransaction<com.horizen.proposition.Proposition,com.horizen.box.NoncedBox<com.horizen.proposition.Proposition>>>,com.horizen.secret.PrivateKey25519,<nulltype>,<nulltype>,<nulltype>,com.horizen.companion.SidechainTransactionsCompanion,com.horizen.params.NetworkParams,scala.Option<java.lang.Object>
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[271,24] constructor MainNetParams in class com.horizen.params.MainNetParams cannot be applied to given types;
+[ERROR]   required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+[ERROR]   found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[273,24] constructor TestNetParams in class com.horizen.params.TestNetParams cannot be applied to given types;
+[ERROR]   required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+[ERROR]   found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /D:/Repositories/Sidechains-SDK/tools/sctool/src/main/java/com/horizen/CommandProcessor.java:[275,24] constructor RegTestParams in class com.horizen.params.RegTestParams cannot be applied to given types;
+[ERROR]   required: byte[],java.lang.String,byte[],scala.collection.Seq<scala.Tuple2<java.lang.Object,java.lang.Object>>,int,int
+[ERROR]   found: byte[],<nulltype>,<nulltype>,<nulltype>,int,int,int,int,int
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

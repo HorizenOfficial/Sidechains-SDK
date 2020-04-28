@@ -3,7 +3,7 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBackwardTransferCertificate, MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 import scala.collection.JavaConverters._
@@ -115,7 +115,8 @@ class SidechainStateTest
       Set(),
       Seq[WithdrawalRequestBox](),
       forgingStakesToAppendSeq,
-      initialConsensusEpoch
+      initialConsensusEpoch,
+      false
     )
   }
 
