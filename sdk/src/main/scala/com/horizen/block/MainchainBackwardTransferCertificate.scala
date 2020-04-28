@@ -77,7 +77,7 @@ object MainchainBackwardTransferCertificate {
     currentOffset += 32
 
     new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
+      sidechainId, epochNumber, endEpochBlockHash, Array(), Array(), totalAmount, fee, transactionOutputs, outputs)
 
   }
 

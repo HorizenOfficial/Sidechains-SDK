@@ -182,6 +182,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq()
       override val backwardTransferThreshold: Int = 0
       override val poseidonRootHash: Array[Byte] = Array()
+      override val provingKeyFilePath: String = ""
     }
 
 

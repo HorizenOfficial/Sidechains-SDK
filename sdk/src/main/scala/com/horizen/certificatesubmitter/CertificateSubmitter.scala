@@ -4,14 +4,14 @@ package com.horizen.certificatesubmitter
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen._
+import com.horizen.backwardtransfer.BackwardTransferLoader
 import com.horizen.block.SidechainBlock
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.mainchain.api.RpcMainchainApi
 import com.horizen.mainchain.{CertificateRequest, CertificateRequestCreator}
 import com.horizen.params.NetworkParams
-import com.horizen.backwardtransfer.BackwardTransferLoader
 import com.horizen.utils.WithdrawalEpochUtils
+import com.horizen._
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -92,7 +92,7 @@ class CertificateSubmitter
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Option[Array[Byte]] = {
     val mcHeight = params.mainchainCreationBlockHeight + withdrawalEpochNumber * params.withdrawalEpochLength - 1
-    history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).map(_.getMainchainBlockReferenceHash).asScala
+    history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainBlockReferenceHash)
   }
 
 
@@ -144,7 +144,7 @@ class CertificateSubmitter
 
       val checkAsFuture = (sidechainNodeViewHolderRef ? checkMessage).asInstanceOf[Future[Unit]]
       checkAsFuture.onComplete{
-        case () =>
+        case Success(()) =>
           log.info(s"Backward transfer certificate submitter was successfully started.")
 
         case Failure(ex) =>
