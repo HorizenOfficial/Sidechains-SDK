@@ -25,5 +25,3 @@ class JsonMerklePathOptionSerializer extends databind.JsonSerializer[Option[Merk
     }
   }
 }
-
-case class Pair(key : String, value : String)
