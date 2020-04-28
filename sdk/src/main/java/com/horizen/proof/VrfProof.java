@@ -30,7 +30,7 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
 
     @Override
     public boolean isValid(VrfPublicKey proposition, byte[] message) {
-        return VrfLoader.vrfFunctions().verifyMessage(message, proposition.pubKeyBytes(), proofBytes);
+        return VrfLoader.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
     }
 
     @JsonProperty("vrfProof")

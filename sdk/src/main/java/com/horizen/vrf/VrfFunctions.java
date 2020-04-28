@@ -10,9 +10,9 @@ public interface VrfFunctions {
 
     EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed);
 
-    byte[] createVrfProofForMessage(byte[] secretKey, byte[] publicKey, byte[] message);
+    byte[] createVrfProof(byte[] secretKey, byte[] publicKey, byte[] message);
 
-    boolean verifyMessage(byte[] message, byte[] publicKey, byte[] proofBytes);
+    boolean verifyProof(byte[] message, byte[] publicKey, byte[] proofBytes);
 
     boolean publicKeyIsValid(byte[] publicKey);
 
