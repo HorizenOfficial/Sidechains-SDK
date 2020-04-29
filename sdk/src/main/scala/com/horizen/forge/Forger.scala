@@ -1,7 +1,7 @@
 package com.horizen.forge
 
 import java.time.Instant
-import java.util.concurrent.Executors
+import java.util.{Timer, TimerTask}
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -17,8 +17,8 @@ import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class Forger(settings: SidechainSettings,
@@ -30,19 +30,33 @@ class Forger(settings: SidechainSettings,
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
-  @volatile private var forgingIsActive: Boolean = false
 
-  val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
-  val forgingInitiator: Runnable = () => {
-    while (true) {
-      if (forgingIsActive) {
-        tryToCreateBlockNow()
+  private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
+  private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
+  private var timerOpt: Option[Timer] = None
+
+  private def startTimer(): Unit = {
+    this.timerOpt match {
+      case Some(_) => log.info("Automatically forging already had been started")
+      case None => {
+        val newTimer = new Timer()
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        timerOpt = Some(newTimer)
+        log.info("Automatically forging had been started")
       }
-      Thread.sleep(consensusMillisecondsInSlot)
     }
   }
 
-  ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor).execute(forgingInitiator)
+  private def stopTimer(): Unit = {
+    this.timerOpt match {
+      case Some(timer) => {
+        timer.cancel()
+        log.info("Automatically forging had been stopped")
+        this.timerOpt = None
+      }
+      case None => log.info("Automatically forging had been already stopped")
+    }
+  }
 
   override def receive: Receive = {
     processStartForgingMessage orElse
@@ -56,8 +70,7 @@ class Forger(settings: SidechainSettings,
   protected def processStartForgingMessage: Receive = {
     case StartForging => {
       log.info("Receive StartForging message")
-      forgingIsActive = true
-      tryToCreateBlockNow()
+      startTimer()
       sender() ! Success()
     }
   }
@@ -65,7 +78,7 @@ class Forger(settings: SidechainSettings,
   protected def processStopForgingMessage: Receive = {
     case StopForging => {
       log.info("Receive StopForging message")
-      forgingIsActive = false
+      stopTimer()
       sender() ! Success()
     }
   }
@@ -97,12 +110,12 @@ class Forger(settings: SidechainSettings,
       }
 
       case Success(ForgeFailed(ex)) => {
-        log.info("Forging had been failed")
+        log.error("Forging had been failed")
         respondsToOpt.map(respondsTo => respondsTo ! Failure(ex))
       }
 
       case failure @ Failure(ex) => {
-        log.info("Forging had been failed")
+        log.error("Forging had been failed")
         respondsToOpt.map(respondsTo => respondsTo ! failure)
       }
     }

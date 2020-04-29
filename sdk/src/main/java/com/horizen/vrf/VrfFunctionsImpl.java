@@ -24,7 +24,7 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public boolean verifyMessage(byte[] messageBytes, byte[] publicKey, byte[] proofBytes) {
+    public boolean verifyProof(byte[] messageBytes, byte[] publicKey, byte[] proofBytes) {
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(messageBytes);
 
         byte[] decoded = Arrays.copyOf(proofBytes, proofBytes.length);
@@ -54,7 +54,7 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public byte[] createVrfProofForMessage(byte[] secretKey, byte[] publicKey, byte[] message){
+    public byte[] createVrfProof(byte[] secretKey, byte[] publicKey, byte[] message){
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(message);
 
         byte[] proofBytes = Arrays.copyOf(messageWithCorrectLength, messageWithCorrectLength.length);;

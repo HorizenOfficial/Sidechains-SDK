@@ -33,7 +33,7 @@ public class VrfSecretKey implements Secret {
     }
 
     public VrfProof prove(byte[] message) {
-        return new VrfProof(VrfLoader.vrfFunctions().createVrfProofForMessage(getSecretBytes(), getPublicBytes(), message));
+        return new VrfProof(VrfLoader.vrfFunctions().createVrfProof(getSecretBytes(), getPublicBytes(), message));
     }
 
     @Override
