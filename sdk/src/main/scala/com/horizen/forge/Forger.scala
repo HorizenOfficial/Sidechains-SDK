@@ -31,34 +31,30 @@ class Forger(settings: SidechainSettings,
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
 
-  val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
-  def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
-  var timerOpt: Option[Timer] = None
+  private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
+  private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
+  private var timerOpt: Option[Timer] = None
 
-  def startTimer(): Unit = {
-    this.synchronized{
-      this.timerOpt match {
-        case Some(_) => log.info("Automatically forging already had been started")
-        case None => {
-          val newTimer = new Timer()
-          newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
-          timerOpt = Some(newTimer)
-          log.info("Automatically forging had been started")
-        }
+  private def startTimer(): Unit = {
+    this.timerOpt match {
+      case Some(_) => log.info("Automatically forging already had been started")
+      case None => {
+        val newTimer = new Timer()
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        timerOpt = Some(newTimer)
+        log.info("Automatically forging had been started")
       }
     }
   }
 
-  def stopTimer(): Unit = {
-    this.synchronized{
-      this.timerOpt match {
-        case Some(timer) => {
-          timer.cancel()
-          log.info("Automatically forging had been stopped")
-          this.timerOpt = None
-        }
-        case None => log.info("Automatically forging had been already stopped")
+  private def stopTimer(): Unit = {
+    this.timerOpt match {
+      case Some(timer) => {
+        timer.cancel()
+        log.info("Automatically forging had been stopped")
+        this.timerOpt = None
       }
+      case None => log.info("Automatically forging had been already stopped")
     }
   }
 
