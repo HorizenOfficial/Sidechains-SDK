@@ -99,8 +99,6 @@ class SidechainApp @Inject()
   val schnorrPublicKeys: Seq[SchnorrPublicKey] = sidechainSettings.backwardTransfer.backwardTransferPublicKeys
     .map(bytes => SchnorrPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  val poseidonRootHash: Array[Byte] = BytesUtils.fromHexString(sidechainSettings.backwardTransfer.poseidonRootHash)
-
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -113,7 +111,6 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       schnorrPublicKeys = schnorrPublicKeys,
       backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
-      poseidonRootHash = poseidonRootHash,
       provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
 
@@ -127,7 +124,6 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       schnorrPublicKeys = schnorrPublicKeys,
       backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
-      poseidonRootHash = poseidonRootHash,
       provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
 
@@ -141,7 +137,6 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       schnorrPublicKeys = schnorrPublicKeys,
       backwardTransferThreshold = sidechainSettings.backwardTransfer.backwardTransferThreshold,
-      poseidonRootHash = poseidonRootHash,
       provingKeyFilePath = sidechainSettings.backwardTransfer.provingKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
@@ -198,7 +193,7 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  if (sidechainSettings.backwardTransfer.backwardTransferIsEnabled) {
+  if (sidechainSettings.backwardTransfer.submitterIsEnabled) {
     val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
   }
 

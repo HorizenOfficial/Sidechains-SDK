@@ -15,10 +15,10 @@ public interface BackwardTransferFunctions {
     EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed);
 
     //message is taken form createBackwardTransferMessage
-    byte[] signMessage(byte[] secretKey, byte[] publicKey, byte[] message);
+    byte[] sign(byte[] secretKey, byte[] publicKey, byte[] message);
 
     //looks like is not used at all in SDK
-    boolean verifyMessage(byte[] message, byte[] publicKey, byte[] signatureBytes);
+    boolean verify(byte[] message, byte[] publicKey, byte[] signatureBytes);
 
     //For verifying schnorr public keys
     byte[] generatePoseidonHash(List<byte[]> publicKeysList, long threshold);
@@ -30,7 +30,7 @@ public interface BackwardTransferFunctions {
     //threshold is the same as in generatePoseidonHash
     //provingKey shall be generated during SC creation (how to generate it?)
     byte[] createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
-                       List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKey);
+                       List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKeyPath);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
                         long threshold, long quality, byte[] proof, String provingKey);

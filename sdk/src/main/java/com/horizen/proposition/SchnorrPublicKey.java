@@ -23,7 +23,7 @@ public class SchnorrPublicKey implements ProofOfKnowledgeProposition<SchnorrSecr
     }
 
     public boolean verify(byte[] message, SchnorrSignature signature) {
-        return BackwardTransferLoader.schnorrFunctions().verifyMessage(message, pubKeyBytes(), signature.bytes());
+        return BackwardTransferLoader.schnorrFunctions().verify(message, pubKeyBytes(), signature.bytes());
     }
 
 

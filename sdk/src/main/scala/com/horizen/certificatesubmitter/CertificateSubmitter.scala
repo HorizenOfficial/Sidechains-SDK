@@ -11,6 +11,7 @@ import com.horizen.mainchain.api.RpcMainchainApi
 import com.horizen.mainchain.{CertificateRequest, CertificateRequestCreator}
 import com.horizen.params.NetworkParams
 import com.horizen.backwardtransfer.BackwardTransferLoader
+import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.WithdrawalEpochUtils
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -159,8 +160,10 @@ class CertificateSubmitter
 
     val actualPoseidonRootHash =
       BackwardTransferLoader.schnorrFunctions.generatePoseidonHash(backwardTransferPublicKeys.map(_.bytes()).asJava, params.backwardTransferThreshold)
-    if (actualPoseidonRootHash.deep != params.poseidonRootHash.deep) {
-      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected poseidon root hash ${params.poseidonRootHash.deep} but actual is ${actualPoseidonRootHash.deep}")
+
+    val expectedPoseidonRootHash = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
+    if (actualPoseidonRootHash.deep != expectedPoseidonRootHash.deep) {
+      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected poseidon root hash ${expectedPoseidonRootHash.deep} but actual is ${actualPoseidonRootHash.deep}")
     }
 
     val wallet = sidechainNodeView.vault
@@ -168,6 +171,14 @@ class CertificateSubmitter
     if (actualStoredPrivateKey < params.backwardTransferThreshold) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected private keys size shall be at least ${params.backwardTransferThreshold} but actual is ${actualStoredPrivateKey}")
     }
+  }
+
+  private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
+    val mainchainReference = history
+      .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash)
+      .orElseGet(throw new IllegalStateException("No mainchain creation transaction in history"))
+
+    mainchainReference.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
   }
 
   override def receive: Receive = {

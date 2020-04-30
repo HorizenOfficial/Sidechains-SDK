@@ -31,7 +31,7 @@ public class SchnorrSignature implements ProofOfKnowledge<SchnorrSecretKey, Schn
 
     @Override
     public boolean isValid(SchnorrPublicKey publicKey, byte[] message) {
-        return BackwardTransferLoader.schnorrFunctions().verifyMessage(message, publicKey.pubKeyBytes(), signature);
+        return BackwardTransferLoader.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
     }
 
     @Override

@@ -32,7 +32,6 @@ trait NetworkParams {
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val schnorrPublicKeys: Seq[SchnorrPublicKey]
   val backwardTransferThreshold: Int
-  val poseidonRootHash: Array[Byte]
   val provingKeyFilePath: String
 
   val maxHistoryRewritingLength: Int = 100

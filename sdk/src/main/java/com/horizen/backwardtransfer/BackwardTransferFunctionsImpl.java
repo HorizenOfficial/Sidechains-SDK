@@ -17,12 +17,12 @@ public class BackwardTransferFunctionsImpl implements BackwardTransferFunctions 
     }
 
     @Override
-    public byte[] signMessage(byte[] secretKey, byte[] publicKey, byte[] message) {
+    public byte[] sign(byte[] secretKey, byte[] publicKey, byte[] message) {
         return new byte[32];
     }
 
     @Override
-    public boolean verifyMessage(byte[] message, byte[] publicKey, byte[] signatureBytes) {
+    public boolean verify(byte[] message, byte[] publicKey, byte[] signatureBytes) {
         return true;
     }
 
@@ -41,7 +41,7 @@ public class BackwardTransferFunctionsImpl implements BackwardTransferFunctions 
     }
 
     @Override
-    public byte[] createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKey) {
+    public byte[] createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKeyPath) {
         return new byte[32];
     }
 

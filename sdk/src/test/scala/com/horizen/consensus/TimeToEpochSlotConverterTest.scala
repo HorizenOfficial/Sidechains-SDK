@@ -32,7 +32,6 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val schnorrPublicKeys: Seq[SchnorrPublicKey] = Seq()
     override val backwardTransferThreshold: Int = 0
-    override val poseidonRootHash: Array[Byte] = Array()
     override val provingKeyFilePath: String = ""
   }
 

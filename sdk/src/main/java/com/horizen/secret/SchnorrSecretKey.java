@@ -72,7 +72,7 @@ public class SchnorrSecretKey implements Secret {
 
     @Override
     public SchnorrSignature sign(byte[] message) {
-        return new SchnorrSignature(BackwardTransferLoader.schnorrFunctions().signMessage(getSecretBytes(), getPublicBytes(), message));
+        return new SchnorrSignature(BackwardTransferLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
     }
 
     @Override
