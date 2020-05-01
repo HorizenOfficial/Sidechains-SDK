@@ -127,7 +127,7 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("ommersMerkleRootHash").isTextual)
     assertTrue(headerJson.get("ommersCumulativeScore").isNumber)
     assertTrue(headerJson.get("forgerBox").isObject)
-    assertTrue(headerJson.get("vrfProof").isTextual)
+    assertTrue(headerJson.get("vrfProof").isObject)
     assertTrue(headerJson.get("forgerBoxMerklePath").isTextual)
     assertTrue(headerJson.get("id").isTextual)
     assertTrue(headerJson.get("signature").isObject)

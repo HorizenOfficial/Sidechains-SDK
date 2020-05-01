@@ -5,22 +5,21 @@ import com.horizen.customtypes._
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.proof.Signature25519
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.vrf.VRFPublicKey
+import com.horizen.proposition.{MCPublicKeyHashProposition, VrfPublicKey}
 
 import scala.util.Random
 
 trait SecretFixture {
-  val pkc = PrivateKey25519Creator.getInstance()
+  val pkc: PrivateKey25519Creator = PrivateKey25519Creator.getInstance()
 
-  val pk1 = pkc.generateSecret("seed1".getBytes())
-  val pk2 = pkc.generateSecret("seed2".getBytes())
-  val pk3 = pkc.generateSecret("seed3".getBytes())
-  val pk4 = pkc.generateSecret("seed4".getBytes())
-  val pk5 = pkc.generateSecret("seed5".getBytes())
-  val pk6 = pkc.generateSecret("seed6".getBytes())
+  val pk1: PrivateKey25519 = pkc.generateSecret("seed1".getBytes())
+  val pk2: PrivateKey25519 = pkc.generateSecret("seed2".getBytes())
+  val pk3: PrivateKey25519 = pkc.generateSecret("seed3".getBytes())
+  val pk4: PrivateKey25519 = pkc.generateSecret("seed4".getBytes())
+  val pk5: PrivateKey25519 = pkc.generateSecret("seed5".getBytes())
+  val pk6: PrivateKey25519 = pkc.generateSecret("seed6".getBytes())
 
-  val pk7 = pkc.generateSecret("seed7".getBytes())
+  val pk7: PrivateKey25519 = pkc.generateSecret("seed7".getBytes())
 
   def getPrivateKey25519: PrivateKey25519 = {
     val seed = new Array[Byte](32)
@@ -93,16 +92,12 @@ trait SecretFixture {
     keyList
   }
 
-  def getVRFPublicKey: VRFPublicKey = {
-    val keyHashBytes = new Array[Byte](VRFPublicKey.length)
-    Random.nextBytes(keyHashBytes)
-
-    new VRFPublicKey(keyHashBytes)
+  def getVRFPublicKey: VrfPublicKey = {
+    VrfKeyGenerator.getInstance().generateSecret(Random.nextString(32).getBytes).publicImage()
   }
 
-  def getVRFPublicKey(seed: Long): VRFPublicKey = {
-    Random.setSeed(seed)
-    getVRFPublicKey
+  def getVRFPublicKey(seed: Long): VrfPublicKey = {
+    VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes).publicImage()
   }
 }
 

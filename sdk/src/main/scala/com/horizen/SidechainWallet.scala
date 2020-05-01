@@ -12,6 +12,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
+import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import scorex.core.VersionTag
 import com.horizen.utils._
@@ -19,6 +20,8 @@ import scorex.util.ModifierId
 
 import scala.util.Try
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.compat.java8.OptionConverters._
 
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -37,6 +40,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
   def publicKeys(): Set[P]
 }
+
 
 class SidechainWallet private[horizen] (seed: Array[Byte],
                                         walletBoxStorage: SidechainWalletBoxStorage,
@@ -216,7 +220,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  def getForgingBoxMerklePathInfoSeq(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
+  def getForgerBoxMerklePathInfoOpt(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
@@ -253,9 +257,13 @@ object SidechainWallet
                                      genesisBlock: SidechainBlock,
                                      consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
 
-    if (walletBoxStorage.isEmpty)
-      new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
-        .scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
+    if (walletBoxStorage.isEmpty) {
+      val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
+      //remove it as well after fix SidechainCreation
+      genesisWallet.addSecret(SidechainCreation.genesisSecret)
+      genesisWallet.addSecret(SidechainCreation.vrfGenesisSecretKey)
+      genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
+    }
     else
       throw new RuntimeException("WalletBox storage is not empty!")
   }

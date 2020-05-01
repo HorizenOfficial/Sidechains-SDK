@@ -3,44 +3,43 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 
-import com.horizen.utils.Pair
 import akka.actor.ActorRef
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject._
+import com.google.inject.assistedinject.FactoryModuleBuilder
+import com.google.inject.name.Named
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
+import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.companion._
+import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
+import com.horizen.proof.ProofSerializer
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
+import com.horizen.websocket._
+import scorex.core.api.http.ApiRoute
+import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
 import scorex.core.network.PeerFeature
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
-import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject.assistedinject.FactoryModuleBuilder
-import scorex.core.api.http.ApiRoute
-import scorex.core.app.Application
-import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.websocket._
 import scorex.core.transaction.Transaction
+import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.util.Try
 import scala.collection.immutable.Map
+import scala.collection.mutable
 import scala.io.Source
-import com.google.inject._
-import com.google.inject.name.Named
-import com.horizen.box.data.NoncedBoxDataSerializer
-import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.proof.ProofSerializer
-import com.horizen.utils.BytesUtils
+import scala.util.Try
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -71,8 +70,7 @@ class SidechainApp @Inject()
 
   private val storageList = mutable.ListBuffer[Storage]()
 
-  System.out.println(s"Starting application with settings \n$sidechainSettings")
-  log.debug(s"Starting application with settings \n$sidechainSettings")
+  log.info(s"Starting application with settings \n$sidechainSettings")
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -204,12 +202,12 @@ class SidechainApp @Inject()
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
+  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, params)
 
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
 
   // Init API

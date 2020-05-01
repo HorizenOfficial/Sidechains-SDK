@@ -123,9 +123,10 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "reply at /createSecret" in {
+    "reply at /createVrfSecret" in {
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       // secret is added
-      Post(basePath + "createSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -141,7 +142,34 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)
+      }
+    }
+
+    "reply at /createPrivateKey25519" in {
+      // secret is added
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
+      Post(basePath + "createPrivateKey25519") ~> sidechainWalletApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val fr = mapper.readTree(entityAs[String])
+        fr.get("result") match {
+          case result =>
+            assertEquals(1, result.findValues("proposition").size())
+            assertEquals(1, result.path("proposition").findValues("publicKey").size())
+            result.get("proposition").get("publicKey") match {
+              case node => assertTrue(node.isTextual)
+              case _ => fail("Result serialization failed")
+            }
+          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        }
+      }
+      // secret is not added
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
+      Post(basePath + "createPrivateKey25519") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)
