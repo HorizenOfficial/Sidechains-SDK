@@ -2,11 +2,10 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box._
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.block.SidechainBlock
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -263,8 +262,8 @@ class SidechainStateTest
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
 
-    Mockito.when(mockedBlock.mainchainBlocks)
-      .thenAnswer(answer => Seq[MainchainBlockReference]())
+    Mockito.when(mockedBlock.mainchainBlockReferencesData)
+      .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())).thenReturn(true)

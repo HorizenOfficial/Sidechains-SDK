@@ -59,7 +59,7 @@ trait ConsensusDataProvider {
     val nonceOpt: Option[BigInteger] = foldEpochRight[Option[BigInteger]](None, lastBlockIdInEpoch, lastBlockInfoInEpoch){
       (blockId: ModifierId, blockInfo: SidechainBlockInfo, accumulator: Option[BigInteger]) =>
         {
-          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainBlockReferenceHashes.map(_.data))
+          val minimalHashForCurrentBlockOpt: Option[BigInteger] = getMinimalHashOpt(blockInfo.mainchainReferenceDataHeaderHashes.map(_.data))
           (minimalHashForCurrentBlockOpt, accumulator) match {
             case (None, _) => accumulator
             case (minimalHashOpt, None) => minimalHashOpt
@@ -76,7 +76,7 @@ trait ConsensusDataProvider {
   /**
    * @return Return last block in previous epoch, for genesis block last block of previous epoch is genesis block itself
    */
-  private def getPreviousConsensusEpochIdForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): ConsensusEpochId = {
+  def getPreviousConsensusEpochIdForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): ConsensusEpochId = {
     if (isGenesisBlock(blockId)) {
       blockIdToEpochId(blockId)
     }

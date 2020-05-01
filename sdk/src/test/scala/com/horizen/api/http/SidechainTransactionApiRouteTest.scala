@@ -122,7 +122,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
             assertEquals(memoryPool.size(), result.get("transactionIds").elements().asScala.length)
             val transactionIdsJsonNode = result.get("transactionIds").elements().asScala.toList
             for (i <- 0 to transactionIdsJsonNode.size - 1)
-              assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(memoryPool.get(i).id)), transactionIdsJsonNode(i).asText())
+              assertEquals(memoryPool.get(i).id, transactionIdsJsonNode(i).asText())
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
@@ -131,7 +131,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
     "reply at /findById" in {
       val transactionFound = memoryPool.get(0)
       val transactionIdNotValid = BytesUtils.toHexString("transactionId".getBytes)
-      val transactionIdValid = BytesUtils.toHexString(scorex.util.idToBytes(transactionFound.id))
+      val transactionIdValid = transactionFound.id
       // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
       // searchTransactionInMemoryPool not found
       // searchTransactionInBlockchain not found

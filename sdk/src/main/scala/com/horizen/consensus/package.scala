@@ -82,7 +82,7 @@ package object consensus {
       .divide(forgerStakePercentPrecision, stakeConsensusDivideMathContext) //got random number from 0 to 0.(9)
   }
 
-  def getMinimalHashOptFromBlock(block: SidechainBlock): Option[BigInteger] = getMinimalHashOpt(block.mainchainBlocks.map(_.hash))
+  def getMinimalHashOptFromBlock(block: SidechainBlock): Option[BigInteger] = getMinimalHashOpt(block.mainchainBlockReferencesData.map(_.headerHash))
 
   def getMinimalHashOpt(hashes: Iterable[Array[Byte]]): Option[BigInteger] = hashes.map(sha256HashToPositiveBigInteger).reduceOption(_ min _)
 }

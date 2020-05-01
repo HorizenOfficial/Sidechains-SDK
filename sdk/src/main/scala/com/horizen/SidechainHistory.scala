@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
@@ -78,7 +78,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
           )
         } else {
           // Check if retrieved block is the best one, but from another chain
-          if (isBestBlock(block, parentBlockInfo.score)) {
+          if (isBestBlock(block, parentBlockInfo)) {
             bestForkChanges(block) match { // get info to switch to another chain
               case Success(progInfo) =>
                 (
@@ -107,31 +107,38 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
   }
 
-  def isBestBlock(block: SidechainBlock, parentScore: Long): Boolean = {
+  def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
-    val newScore = calculateChainScore(block, parentScore)
-    newScore > currentScore
+    val newScore = calculateChainScore(block, parentBlockInfo.score)
+    if (newScore == currentScore) {
+      (parentBlockInfo.height + 1) > height
+    } else {
+      newScore > currentScore
+    }
   }
 
-  // score is a long value, where
-  // first 4 bytes contain number of MCBlock references included into blockchain up to passed block (including)
-  // last 4 bytes contain heights of passed block
+  // score is a long value
+  // parentScore is a sum of the length of the chain till parent block and amount of ommers inside the chain
+  // So we should increase chain length by 1 and ommers amount with current block ommers number.
   private def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
+    parentScore + block.score
   }
 
   private def calculateGenesisBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
     require(isGenesisBlock(block.id), "Passed block is not a genesis block.")
     SidechainBlockInfo(
       1,
-      (block.mainchainBlocks.size.toLong << 32) + 1,
+      block.score,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlocks.size) // First Withdrawal epoch value. Note: maybe put to params?
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
+      WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size) // First Withdrawal epoch value. Note: maybe put to params?
     )
   }
+
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
@@ -143,7 +150,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainReferencesFromBlock(block),
+      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
     )
   }
@@ -447,8 +455,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainBlockReferenceInfoByHash(mainchainBlockReferenceHash).asJava
   }
 
-  override def getMainchainBlockReferenceByHash(mainchainBlockReferenceHash: Array[Byte]): JOptional[MainchainBlockReference] = {
-    storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
+  override def getMainchainBlockReferenceByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainBlockReference] = {
+    storage.getMainchainBlockReferenceByHash(mainchainHeaderHash).asJava
+  }
+
+  override def getMainchainHeaderByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainHeader] = {
+    storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 
   def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): SidechainHistory = {
@@ -473,7 +485,6 @@ object SidechainHistory
       None
   }
 
-  //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
