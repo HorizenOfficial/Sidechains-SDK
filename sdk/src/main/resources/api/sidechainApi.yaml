@@ -178,13 +178,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/template:
+  /block/startForging:
     post:
       tags:
         - block
-      summary: find block candidate for being next tip
-      description: Return Sidechain block candidate for being next tip, already signed by Forger
-      operationId: getBlockTemplate
+      summary: Start forging
+      description: Start forging
+      operationId: startForging
       responses:
         '200':
           description: successful operation
@@ -196,10 +196,8 @@ paths:
                   result:
                     type: object
                     properties:
-                      block:
+                      result:
                         type: string
-                      blockInfo:
-                        $ref: '#/components/schemas/SidechainBlock'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -209,24 +207,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/submit:
+  /block/stopForging:
     post:
       tags:
         - block
-      summary: submitBlock
-      description: submitBlock
-      operationId: submitBlock
+      summary: Stop forging
+      description: Stop forging
+      operationId: stopForging
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/generate:
+    post:
+      tags:
+        - block
+      summary: try to generate new block by epoch and slot number
+      description: Returns id of generated sidechain block
+      operationId: generateBlockForEpochNumberAndSlot
       requestBody:
-        description: The sidechain block as array of bytes
         content:
           application/json:
             schema:
               type: object
               required:
-                - blockHex
+                - number
               properties:
-                blockHex:
-                  type: string
+                epochNumber:
+                  description: Epoch number
+                  type: integer
+                  format: int32
+                slotNumber:
+                  description: Slot number
+                  type: integer
+                  format: int32
       responses:
         '200':
           description: successful operation
@@ -249,25 +281,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/generate:
+  /block/forgingInfo:
     post:
       tags:
         - block
-      summary: generate new blocks
-      description: Returns ids of generated sidechain blocks
-      operationId: generateBlocks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - number
-              properties:
-                number:
-                  description: The number of blocks to generate
-                  type: integer
-                  format: int32
+      summary: Get forging info
+      description: Get forging info
+      operationId: getForgingInfo
       responses:
         '200':
           description: successful operation
@@ -279,10 +299,18 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockIds:
-                        type: array
-                        items:
-                          type: string
+                      consensusSecondsInSlot:
+                        type: integer
+                        format: int32
+                      consensusSlotsInEpoch:
+                        type: integer
+                        format: int32
+                      bestEpochNumber:
+                        type: integer
+                        format: int32
+                      bestSlotNumber:
+                        type: integer
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -991,13 +1019,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /wallet/createSecret:
+  /wallet/createPrivateKey25519:
     post:
       tags:
         - wallet
-      summary: new secret
+      summary: new 25519 secret
       description: Create new secret and return corresponding address (public key)
-      operationId: createSecret
+      operationId: createPrivateKey25519
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/createVrfSecret:
+    post:
+      tags:
+        - wallet
+      summary: new Vrf secret
+      description: Create new Vrf secret and return corresponding public key
+      operationId: createVrfSecret
       responses:
         '200':
           description: successful operation

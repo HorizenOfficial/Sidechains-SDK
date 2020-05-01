@@ -451,8 +451,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainBlockReferenceByHash(mainchainBlockReferenceHash).asJava
   }
 
-  def applyStakeConsensusEpochInfo(lastBlockInEpoch: ModifierId, stakeEpochInfo: StakeConsensusEpochInfo): SidechainHistory = {
-    consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), stakeEpochInfo)
+  def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): SidechainHistory = {
+    consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
+
     new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
 }
@@ -480,9 +482,13 @@ object SidechainHistory
                                       historyBlockValidators: Seq[HistoryBlockValidator],
                                       stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
-    if (historyStorage.isEmpty)
+    if (historyStorage.isEmpty) {
+      val minimalHash = getMinimalHashOptFromBlock(genesisBlock).getOrElse(throw new IllegalStateException("Genesis block without mainchain block references"))
+      val nonceEpochInfo = NonceConsensusEpochInfo(bigIntToConsensusNonce(minimalHash))
+
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyStakeConsensusEpochInfo(genesisBlock.id, stakeEpochInfo)
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
+    }
     else
       throw new RuntimeException("History storage is not empty!")
   }

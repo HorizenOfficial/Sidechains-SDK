@@ -2,9 +2,10 @@ package com.horizen.fixtures.sidechainblock.generation
 import java.math.BigInteger
 import java.util.{Random, ArrayList => JArrayList}
 
-import com.horizen.consensus.StakeConsensusEpochInfo
+import com.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.utils._
-import com.horizen.vrf.VRFProof
+import com.horizen.consensus._
+import com.horizen.proof.VrfProof
 
 import scala.collection.immutable.TreeMap
 
@@ -23,7 +24,8 @@ class PossibleForgersSet(forgers: Set[PossibleForger]) {
 
   def getNotSpentSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.filter{case (forgingData, possibleForger) => possibleForger.isNotSpent}.keys.to
 
-  def getEligibleForger(vrfMessage: Array[Byte], totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VRFProof)] = {
+  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof)] = {
+    val vrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
     forgingDataToPossibleForger
       .values
       .toStream

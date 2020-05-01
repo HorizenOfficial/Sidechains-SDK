@@ -196,7 +196,7 @@
 			<artifactId>leveldbjni-all</artifactId>
 			<version>1.18.3</version>
 		</dependency>
-	</dependencies>
+    </dependencies>
 
 	<build>
 		<plugins>

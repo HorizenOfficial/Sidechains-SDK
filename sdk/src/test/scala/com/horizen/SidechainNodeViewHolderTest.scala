@@ -1,17 +1,14 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
 import java.util
-import java.util.{HashMap => JHashMap}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusEpochInfo, StakeConsensusEpochInfo, intToConsensusEpochNumber}
+import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.MerkleTree
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
@@ -79,7 +76,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
 
     var historyNotificationExecuted: Boolean = false
-    Mockito.when(history.applyStakeConsensusEpochInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[StakeConsensusEpochInfo])).thenAnswer(_ => {
+    Mockito.when(history.applyFullConsensusInfo(ArgumentMatchers.any[ModifierId], ArgumentMatchers.any[FullConsensusEpochInfo])).thenAnswer(_ => {
       historyNotificationExecuted = true
       history
     })

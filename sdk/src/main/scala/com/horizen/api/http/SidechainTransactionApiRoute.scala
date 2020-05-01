@@ -1,41 +1,34 @@
 package com.horizen.api.http
 
-import java.{lang, util}
+import java.lang
+import java.util.{Collections, ArrayList => JArrayList, List => JList}
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.{Box, ForgerBox, NoncedBox, RegularBox}
+import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.horizen.SidechainTypes
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.SidechainTransactionErrorResponse._
+import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
+import com.horizen.proof.Proof
 import com.horizen.proposition._
-import com.horizen.secret.PrivateKey25519
-import com.horizen.SidechainTypes
+import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
-import com.horizen.utils.Pair
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-import JacksonSupport._
-import com.fasterxml.jackson.annotation.JsonView
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.horizen.api.http.SidechainTransactionErrorResponse._
-import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
-import com.horizen.serialization.Views
-import java.util.{ArrayList => JArrayList, List => JList}
-import java.util.Collections
-
-import com.horizen.proof.Proof
-
-import scala.util.control.Breaks._
-import com.horizen.vrf.VRFPublicKey
-
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.control.Breaks._
+import scala.util.{Failure, Success, Try}
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
@@ -201,14 +194,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
-          body.forgerOutputs.foreach(element =>
-            outputs.add(new ForgerBoxData(
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
-          )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
           val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
@@ -345,7 +340,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-    * Create and sign a CoreTransaction, specifying inputs and outputs.
+    * Create and sign a CoreTransaction, specifying inputs and outputs, add that transaction to the memory pool
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def spendForgingStake: Route = (post & path("spendForgingStake")) {
@@ -365,14 +360,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
           )
-          body.forgerOutputs.foreach(element =>
-            outputs.add(new ForgerBoxData(
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
-          )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
           val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
@@ -392,11 +389,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
             })
 
-            val transaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
-            if (body.format.getOrElse(false))
-              ApiResponseUtil.toResponse(TransactionDTO(transaction))
-            else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+            val transaction: SidechainCoreTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
+            val txRepresentation: (SidechainTypes#SCBT => SuccessResponse) =
+              if (body.format.getOrElse(false)) {
+                tx => TransactionDTO(tx)
+              } else {
+                tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
+              }
+            validateAndSendTransaction(transaction, txRepresentation)
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -406,15 +406,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT) = {
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val defaultTransactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = {
+    transaction => TransactionIdDTO(transaction.id)
+  }
+
+  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
+                                         transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
     withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
           sidechainTransactionActorRef ? BroadcastTransaction(transaction),
           settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier) {
-          case Success(result) =>
-            ApiResponseUtil.toResponse(TransactionIdDTO(transaction.id))
+          case Success(_) =>
+            ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
           case Failure(exp) =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
             )
@@ -477,14 +483,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
-    forgerBoxDataList.foreach(element =>
-      outputs.add(new ForgerBoxData(
+    forgerBoxDataList.foreach{element =>
+      val forgingBoxToAdd = new ForgerBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value),
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+        VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
       )
-    )
+
+      outputs.add(forgingBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+    }
 
 
     val outputsTotalAmount: Long = outputs.asScala.map(boxData => boxData.value()).sum

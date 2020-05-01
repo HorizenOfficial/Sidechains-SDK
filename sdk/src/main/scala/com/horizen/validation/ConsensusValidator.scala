@@ -4,7 +4,7 @@ import java.time.Instant
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.consensus.{NonceConsensusEpochInfo, _}
+import com.horizen.consensus._
 import scorex.core.block.Block
 import scorex.util.ScorexLogging
 
@@ -39,8 +39,11 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
     val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, blockInfo)
 
-    verifyVrf(history, verifiedBlock, fullConsensusEpochInfo.nonceConsensusEpochInfo)
-    verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
+    val message = buildVrfMessage(slotNumber, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+
+    verifyVrf(history, verifiedBlock, message)
+    verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo, message)
   }
 
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -56,8 +59,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
-  private def verifyVrf(history: SidechainHistory, block: SidechainBlock, nonceInfo: NonceConsensusEpochInfo): Unit = {
-    val message = buildVrfMessage(history.timeStampToSlotNumber(block.timestamp), nonceInfo)
+  private def verifyVrf(history: SidechainHistory, block: SidechainBlock, message: VrfMessage): Unit = {
 
     val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(message, block.vrfProof)
     if(!vrfIsCorrect) {
@@ -66,7 +68,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
+  private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${block.merklePath.bytes().deep.mkString}")
 
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(block.merklePath.apply(block.forgerBox.id()))
@@ -75,7 +77,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new IllegalStateException(s"Forger box merkle path in block ${block.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
     }
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(block.forgerBox.value(), block.vrfProof, stakeConsensusEpochInfo.totalStake)
+    val value = block.forgerBox.value()
+    val vrfPublicKey = block.forgerBox.vrfPubKey()
+
+    val stakeIsEnough = vrfProofCheckAgainstStake(block.vrfProof, vrfPublicKey, message, value, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${block.id} is not enough for to be forger.")

@@ -112,7 +112,7 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("mainchainBlocks").isArray)
     assertTrue(json.get("sidechainTransactions").isArray)
     assertTrue(json.get("forgerBox").isObject)
-    assertTrue(json.get("vrfProof").isTextual)
+    assertTrue(json.get("vrfProof").isObject)
     assertTrue(json.get("merklePath").isTextual)
 
     assertTrue(json.get("id").isTextual)

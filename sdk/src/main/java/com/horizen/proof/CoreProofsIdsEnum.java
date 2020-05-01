@@ -1,7 +1,8 @@
 package com.horizen.proof;
 
 public enum CoreProofsIdsEnum {
-    Signature25519Id((byte)1);
+    Signature25519Id((byte)1),
+    VrfProofId((byte)2);
 
     private final byte id;
 

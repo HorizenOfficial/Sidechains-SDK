@@ -60,15 +60,16 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);
 
-//      Uncomment and run if you want to update regression data.
-        /*
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
-            out.write(BytesUtils.toHexString(transaction.bytes()));
-            out.close();
-        } catch (Throwable e) {
+        // Set to true and run if you want to update regression data.
+        if (false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/regulartransaction_hex"));
+                out.write(BytesUtils.toHexString(transaction.bytes()));
+                out.close();
+            }
+            catch (Throwable e) {
+            }
         }
-        */
     }
 
     @Test
@@ -90,6 +91,7 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
     @Test
     public void regressionTest() {
         byte[] bytes;
+
         try {
             ClassLoader classLoader = getClass().getClassLoader();
             FileReader file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile());
@@ -105,8 +107,8 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         assertTrue("Transaction serialization failed.", t.isSuccess());
 
         RegularTransaction parsedTransaction = t.get();
-        assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
-        assertEquals("Transaction is different to origin.", transaction.fee(), parsedTransaction.fee());
-        assertEquals("Transaction is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
+        assertEquals("Transaction id is different to origin.", transaction.id(), parsedTransaction.id());
+        assertEquals("Transaction fee is different to origin.", transaction.fee(), parsedTransaction.fee());
+        assertEquals("Transaction timestamp is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
     }
 }

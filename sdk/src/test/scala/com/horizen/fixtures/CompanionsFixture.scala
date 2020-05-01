@@ -1,10 +1,11 @@
 package com.horizen.fixtures
 
-import com.horizen.companion.{SidechainBoxesDataCompanion, SidechainProofsCompanion, SidechainTransactionsCompanion}
-import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
 
 import com.horizen.SidechainTypes
+import com.horizen.companion.{SidechainBoxesDataCompanion, SidechainProofsCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.TransactionSerializer
 
 trait CompanionsFixture
@@ -21,6 +22,10 @@ trait CompanionsFixture
     val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
 
     SidechainTransactionsCompanion(customSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
+  }
+
+  def getDefaultSecretCompanion: SidechainSecretsCompanion = {
+    SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
   }
 }
 

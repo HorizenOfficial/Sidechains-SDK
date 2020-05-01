@@ -20,9 +20,27 @@ trait ConsensusDataProvider {
   def getFullConsensusEpochInfoForBlock(blockId: ModifierId, blockInfo: SidechainBlockInfo): FullConsensusEpochInfo = {
     log.debug(s"Requested FullConsensusEpochInfo for ${blockId} block id")
 
-    val previousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
+    val previousEpochId = getPreviousConsensusEpochIdForBlock(blockId, blockInfo)
+    getFullConsensusEpochInfoByPreviousEpochId(previousEpochId)
+  }
 
-    val nonceEpochInfo: NonceConsensusEpochInfo = getNonceConsensusEpochAndUpdateIfNecessary(previousEpochId)
+  def getFullConsensusEpochInfoForNextBlock(currentBlockId: ModifierId, nextBlockConsensusEpochNumber: ConsensusEpochNumber): FullConsensusEpochInfo = {
+    val currentBlockInfo = storage.blockInfoById(currentBlockId)
+    val currentBlockEpochNumber: ConsensusEpochNumber = timeStampToEpochNumber(currentBlockInfo.timestamp)
+    val currentBlockIsLastInEpoch = nextBlockConsensusEpochNumber > currentBlockEpochNumber
+
+    if (currentBlockIsLastInEpoch) {
+      //if block is last in epoch then consensus epochId is equals to blockId
+      getFullConsensusEpochInfoByPreviousEpochId(blockIdToEpochId(currentBlockId))
+    }
+    else {
+      getFullConsensusEpochInfoForBlock(currentBlockId, currentBlockInfo)
+    }
+  }
+
+  def getFullConsensusEpochInfoByPreviousEpochId(previousEpochId: ConsensusEpochId): FullConsensusEpochInfo = {
+    val nonceEpochInfo: NonceConsensusEpochInfo = consensusDataStorage.getNonceConsensusEpochInfo(previousEpochId).getOrElse(calculateNonceForEpoch(previousEpochId))
+
 
     val lastBlockIdInPreviousEpoch = lastBlockIdInEpochId(previousEpochId)
     val prePreviousEpochId: ConsensusEpochId = getPreviousConsensusEpochIdForBlock(lastBlockIdInPreviousEpoch, storage.blockInfoById(lastBlockIdInPreviousEpoch))
@@ -34,15 +52,7 @@ trait ConsensusDataProvider {
     FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)
   }
 
-  private def getNonceConsensusEpochAndUpdateIfNecessary(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
-    consensusDataStorage.getNonceConsensusEpochInfo(epochId).getOrElse{
-      val newNonceInfo: NonceConsensusEpochInfo = calculateNonceForEpoch(epochId)
-      consensusDataStorage.addNonceConsensusEpochInfo(epochId, newNonceInfo)
-      newNonceInfo
-    }
-  }
-
-  private def calculateNonceForEpoch(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
+  def calculateNonceForEpoch(epochId: ConsensusEpochId): NonceConsensusEpochInfo = {
     val lastBlockIdInEpoch: ModifierId = lastBlockIdInEpochId(epochId)
     val lastBlockInfoInEpoch: SidechainBlockInfo = storage.blockInfoById(lastBlockIdInEpoch)
 
@@ -58,7 +68,7 @@ trait ConsensusDataProvider {
       }
     }
 
-    assert(nonceOpt.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
+    require(nonceOpt.isDefined, "No mainchain reference had been found for whole consensus epoch") //crash whole world here?
 
     NonceConsensusEpochInfo(bigIntToConsensusNonce(nonceOpt.get))
   }
