@@ -580,15 +580,6 @@ Parameters:
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
 
-"""
-Utility method to generate sc blocks.
-
-Return the output of the Api REST request /block/generate
-"""
-def sc_generate_blocks(sc_node, number=1):
-    return sc_node.block_generate(number=number)
-
-
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})
 
@@ -613,6 +604,7 @@ def generate_next_block(node, node_name):
 
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
+    #"while" will break if whole epoch no generated block, due changed error code
     while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
         print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)

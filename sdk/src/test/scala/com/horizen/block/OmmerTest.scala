@@ -3,12 +3,11 @@ package com.horizen.block
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockFixture}
+import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams, TestNetParams}
 import com.horizen.proof.Signature25519
 import com.horizen.utils.BytesUtils
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
-import com.horizen.vrf.VRFKeyGenerator
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -64,7 +63,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-    val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
+    val vrfProof = VrfGenerator.generateProof(seed)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
@@ -305,7 +304,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-    val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
+    val vrfProof = VrfGenerator.generateProof(seed)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
@@ -366,7 +365,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-    val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
+    val vrfProof = VrfGenerator.generateProof(seed)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     val block = SidechainBlock.create(
       parentId,

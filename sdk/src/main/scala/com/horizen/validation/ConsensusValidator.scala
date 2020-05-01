@@ -4,7 +4,7 @@ import java.time.Instant
 import com.horizen.SidechainHistory
 import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.consensus.{NonceConsensusEpochInfo, _}
+import com.horizen.consensus._
 import scorex.core.block.Block
 import scorex.util.ScorexLogging
 
@@ -39,8 +39,11 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
     val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, verifiedBlockInfo)
 
-    verifyVrf(history, verifiedBlock.header, fullConsensusEpochInfo.nonceConsensusEpochInfo)
-    verifyForgerBox(verifiedBlock.header, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
+    val message = buildVrfMessage(slotNumber, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+
+    verifyVrf(history, verifiedBlock.header, message)
+    verifyForgerBox(verifiedBlock.header, fullConsensusEpochInfo.stakeConsensusEpochInfo, message)
 
     val previousEpochLastBlockId = lastBlockIdInEpochId(history.getPreviousConsensusEpochIdForBlock(verifiedBlock.id, verifiedBlockInfo))
     val previousFullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(previousEpochLastBlockId, history.blockInfoById(previousEpochLastBlockId))
@@ -87,11 +90,13 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     var isPreviousEpochOmmer: Boolean = false
     for(ommer <- ommers) {
       val ommerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommer.header.timestamp)
+      val ommerSlotNumber: ConsensusSlotNumber = history.timeStampToSlotNumber(ommer.header.timestamp)
       // Fork occurs in previous consensus epoch
       if(ommerEpochNumber < ommersContainerEpochNumber) {
         isPreviousEpochOmmer = true
-        verifyVrf(history, ommer.header, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo)
+        val message = buildVrfMessage(ommerSlotNumber, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        verifyVrf(history, ommer.header, message)
+        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, message)
 
         verifyOmmers(ommer, previousFullConsensusEpochInfo, null, history)
       }
@@ -100,8 +105,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
           // We Have Ommers form different epochs
           throw new IllegalStateException("Ommers from both previous and current ConsensusEpoch are not supported.")
         }
-        verifyVrf(history, ommer.header, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo)
+        val message = buildVrfMessage(ommerSlotNumber, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        verifyVrf(history, ommer.header, message)
+        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, message)
 
         verifyOmmers(ommer, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
       }
@@ -109,8 +115,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
   }
 
-  private[horizen] def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, nonceInfo: NonceConsensusEpochInfo): Unit = {
-    val message = buildVrfMessage(history.timeStampToSlotNumber(header.timestamp), nonceInfo)
+  private[horizen] def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
 
     val vrfIsCorrect = header.forgerBox.vrfPubKey().verify(message, header.vrfProof)
     if(!vrfIsCorrect) {
@@ -119,7 +124,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
+  private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgerBoxMerklePath.bytes().deep.mkString}")
 
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgerBoxMerklePath.apply(header.forgerBox.id()))
@@ -128,7 +133,10 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
     }
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(header.forgerBox.value(), header.vrfProof, stakeConsensusEpochInfo.totalStake)
+    val value = header.forgerBox.value()
+    val vrfPublicKey = header.forgerBox.vrfPubKey()
+
+    val stakeIsEnough = vrfProofCheckAgainstStake(header.vrfProof, vrfPublicKey, message, value, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${header.id} is not enough for to be forger.")

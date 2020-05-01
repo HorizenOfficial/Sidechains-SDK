@@ -38,8 +38,8 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
-import scala.util.Try
 import com.horizen.network.SidechainNodeViewSynchronizer
+import scala.util.Try
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,

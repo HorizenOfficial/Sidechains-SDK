@@ -2,15 +2,13 @@ package com.horizen.box;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.box.data.ForgerBoxDataSerializer;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.vrf.VRFPublicKey;
+import com.horizen.proposition.VrfPublicKey;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
 
@@ -28,13 +26,9 @@ public final class ForgerBox
         return ForgerBoxId.id();
     }
 
-    public VRFPublicKey vrfPubKey() {
-        return boxData.vrfPublicKey();
-    }
-
     @JsonProperty("vrfPubKey")
-    public byte[] vrfPubKeyBytes() {
-        return boxData.vrfPublicKey().bytes();
+    public VrfPublicKey vrfPubKey() {
+        return boxData.vrfPublicKey();
     }
 
     @JsonProperty("rewardProposition")

@@ -5,7 +5,8 @@ import com.google.common.primitives.Longs;
 import com.horizen.box.ForgerBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
-import com.horizen.vrf.VRFPublicKey;
+import com.horizen.proposition.VrfPublicKey;
+import com.horizen.proposition.VrfPublicKeySerializer;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
@@ -15,12 +16,12 @@ import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
 
 public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition rewardProposition;
-    private final VRFPublicKey vrfPublicKey;
+    private final VrfPublicKey vrfPublicKey;
 
     public ForgerBoxData(PublicKey25519Proposition proposition,
                          long value,
                          PublicKey25519Proposition rewardProposition,
-                         VRFPublicKey vrfPublicKey) {
+                         VrfPublicKey vrfPublicKey) {
         super(proposition, value);
         Objects.requireNonNull(rewardProposition, "rewardProposition must be defined");
         Objects.requireNonNull(vrfPublicKey, "vrfPublicKey must be defined");
@@ -33,7 +34,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
         return rewardProposition;
     }
 
-    public  VRFPublicKey vrfPublicKey() {
+    public VrfPublicKey vrfPublicKey() {
         return vrfPublicKey;
     }
 
@@ -48,8 +49,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
                 proposition().bytes(),
                 Longs.toByteArray(value()),
                 rewardProposition().bytes(),
-                vrfPublicKey().bytes()
-        );
+                vrfPublicKey().bytes());
     }
 
     @Override
@@ -70,13 +70,13 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parseBytes(Arrays.copyOf(bytes, valueOffset));
         long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, rewardPropositionOffset));
         PublicKey25519Proposition rewardProposition = PublicKey25519Proposition.parseBytes(Arrays.copyOfRange(bytes, rewardPropositionOffset, vrfPubKeyOffset));
-        VRFPublicKey vrfPublicKey = VRFPublicKey.parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
+        VrfPublicKey vrfPublicKey = VrfPublicKeySerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
 
         return new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey);
     }
 
     @Override
     public byte[] customFieldsHash() {
-        return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().key()));
+        return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().pubKeyBytes()));
     }
 }

@@ -22,7 +22,6 @@ import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.BytesUtils
-import com.horizen.vrf.VRFPublicKey
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -195,14 +194,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
-          body.forgerOutputs.foreach(element =>
-            outputs.add(new ForgerBoxData(
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
-          )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
           val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
@@ -359,14 +360,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
           )
-          body.forgerOutputs.foreach(element =>
-            outputs.add(new ForgerBoxData(
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               new lang.Long(element.value),
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-              new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
-          )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
           val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
@@ -480,14 +483,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
-    forgerBoxDataList.foreach(element =>
-      outputs.add(new ForgerBoxData(
+    forgerBoxDataList.foreach{element =>
+      val forgingBoxToAdd = new ForgerBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         new lang.Long(element.value),
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.rewardKey.getOrElse(element.publicKey))),
-        new VRFPublicKey(BytesUtils.fromHexString(element.vrfPubKey))).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]  // TODO: replace with VRFPublicKeySerializer later
+        VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
       )
-    )
+
+      outputs.add(forgingBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+    }
 
 
     val outputsTotalAmount: Long = outputs.asScala.map(boxData => boxData.value()).sum

@@ -1,12 +1,15 @@
 package com.horizen.datagenerator
 
 import com.horizen.block._
+import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.utils.BytesUtils
+import java.math.BigInteger
+import java.time.Instant
 import com.horizen.box.ForgerBox
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proof.Signature25519
-import com.horizen.utils.BytesUtils
-import com.horizen.vrf.{VRFKeyGenerator, VRFProof}
+import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.consensus._
+import com.horizen.secret.VrfKeyGenerator
 import org.junit.Test
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -25,9 +28,11 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val mcRef: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(mcBlockHex), params).get
     val mainchainBlockReferences = Seq(mcRef)
     val (forgerBox: ForgerBox, forgerMetadata)= ForgerBoxFixture.generateForgerBox(seed)
-    val (secretKey, publicKey) = VRFKeyGenerator.generate(seed.toString.getBytes)
-    val vrfMessage: Array[Byte] = "!SomeVrfMessage1!SomeVrfMessage2".getBytes
-    val vrfProof: VRFProof = secretKey.prove(vrfMessage)
+    val secretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes)
+    val publicKey = secretKey.publicImage()
+    val genesisMessage =
+      buildVrfMessage(intToConsensusSlotNumber(1), NonceConsensusEpochInfo(bigIntToConsensusNonce(BigInteger.valueOf(42))))
+    val vrfProof: VrfProof = secretKey.prove(genesisMessage)
     val merklePath = MerkleTreeFixture.generateRandomMerklePath(seed + 1)
     val companion = getDefaultTransactionsCompanion
 

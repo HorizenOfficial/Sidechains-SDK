@@ -5,11 +5,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, Signature25519Serializer}
+import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
-import com.horizen.vrf.{VRFProof, VRFProofSerializer}
 import scorex.core.block.Block
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
@@ -27,7 +26,7 @@ case class SidechainBlockHeader(
                                  timestamp: Block.Timestamp,
                                  forgerBox: ForgerBox,
                                  @JsonSerialize(using = classOf[MerklePathSerializer]) forgerBoxMerklePath: MerklePath,
-                                 @JsonSerialize(using = classOf[VRFProofSerializer]) vrfProof: VRFProof,
+                                 vrfProof: VrfProof,
                                  sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                  mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                  ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
@@ -121,7 +120,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     val forgerBoxMerklePath: MerklePath = MerklePath.parseBytes(r.getBytes(forgerBoxMerklePathBytesLength))
 
     val vrfProofBytesLength: Int = r.getInt()
-    val vrfProof: VRFProof = VRFProof.parseBytes(r.getBytes(vrfProofBytesLength))
+    val vrfProof: VrfProof = VrfProof.parse(r.getBytes(vrfProofBytesLength))
 
     val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 

@@ -8,7 +8,6 @@ import scorex.util.bytesToId
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.proof.Signature25519
-import com.horizen.vrf.VRFKeyGenerator
 
 trait SidechainBlockHeaderFixture extends BoxFixture {
 
@@ -19,7 +18,7 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
     random.nextBytes(parentId)
 
     val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-    val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
+    val vrfProof = VrfGenerator.generateProof(seed)
 
     val merklePath = new MerklePath(new JArrayList())
 

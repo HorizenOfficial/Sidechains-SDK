@@ -11,8 +11,8 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proof.Signature25519
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
@@ -94,7 +94,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     }
   }
 
-  private def getNextEligibleForgerForCurrentEpoch(generationRules: GenerationRules, endSlot: ConsensusSlotNumber): Option[(PossibleForger, VRFProof, ConsensusSlotNumber)] = {
+  private def getNextEligibleForgerForCurrentEpoch(generationRules: GenerationRules, endSlot: ConsensusSlotNumber): Option[(PossibleForger, VrfProof, ConsensusSlotNumber)] = {
     require(nextFreeSlotNumber <= endSlot + 1)
 
     val nonceAsBigInteger = new BigInteger(consensusDataStorage.getNonceConsensusEpochInfo(nextBlockNonceEpochId).get.consensusNonce)
@@ -107,8 +107,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       .flatMap{currentSlot =>
         val slotWithShift = intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch))
         println(s"Process slot: ${slotWithShift}")
-        val vrfMessage = buildVrfMessage(slotWithShift, consensusNonce)
-        val res = forgersSet.getEligibleForger(vrfMessage, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
+        val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
         if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
         res.map{case(forger, proof) => (forger, proof, intToConsensusSlotNumber(currentSlot))}
       }
@@ -144,7 +143,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     )
   }
 
-  private def generateBlock(possibleForger: PossibleForger, vrfProof: VRFProof, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
+  private def generateBlock(possibleForger: PossibleForger, vrfProof: VrfProof, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
     val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
     val timestamp = generationRules.forcedTimestamp.getOrElse{
       getTimeStampForEpochAndSlot(nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot}
@@ -186,7 +185,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
         possibleForger.merklePathInPrePreviousEpochOpt.get
       }
 
-    val vrfProofInBlock: VRFProof = generationRules.corruption.forcedVrfProof.getOrElse(vrfProof)
+    val vrfProofInBlock: VrfProof = generationRules.corruption.forcedVrfProof.getOrElse(vrfProof)
 
     val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1)
@@ -263,11 +262,13 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       initialForgerBox.rewardProposition()
     }
 
-    val vrfPubKey: VRFPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
-      var corrupted: VRFPublicKey = null
+    val vrfPubKey: VrfPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
+      var corrupted: VrfPublicKey = null
 
       do {
-        corrupted = VRFKeyGenerator.generate(rnd.nextLong().toString.getBytes)._2
+        val corruptedVrfPublicKeyBytes =
+          VrfLoader.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
+        corrupted = new VrfPublicKey(corruptedVrfPublicKeyBytes)
         println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
       } while (corrupted.bytes.deep == initialForgerBox.vrfPubKey().bytes.deep)
       corrupted
@@ -338,9 +339,11 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   val merkleTreeSize: Int = 128
   val txGen: TransactionFixture = new TransactionFixture {}
   val mcRefGen: MainchainBlockReferenceFixture = new MainchainBlockReferenceFixture {}
+  println("end SidechainBlocksGenerator object")
 
   def startSidechain(initialValue: Long, seed: Long, params: NetworkParams): (NetworkParams, SidechainBlock, SidechainBlocksGenerator, SidechainForgingData, FinishedEpochInfo) = {
     require(initialValue == SidechainCreation.initialValue) // in future can add any value here, but currently initial forger box is hardcoded
+    println("startSidechain")
 
     val random: Random = new Random(seed)
 
@@ -385,8 +388,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   private def buildGenesisSidechainForgingData(initialValue: Long, seed: Long): SidechainForgingData = {
     val key = SidechainCreation.genesisSecret
     val forgerBox = SidechainCreation.getHardcodedGenesisForgerBox
-    val genesisVrfSecret: VRFSecretKey = SidechainCreation.genesisVrfPair._1
-    SidechainForgingData(key, forgerBox, genesisVrfSecret)
+    SidechainForgingData(key, forgerBox, SidechainCreation.vrfGenesisSecretKey)
   }
 
   private def buildGenesisMerkleTree(genesisForgerBox: ForgerBox): MerkleTree = {
@@ -396,7 +398,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     MerkleTree.createMerkleTree(initialLeaves.asJava)
   }
 
-  private def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VRFProof, merklePath: MerklePath): SidechainBlock = {
+  private def generateGenesisSidechainBlock(params: NetworkParams, forgingData: SidechainForgingData, vrfProof: VrfProof, merklePath: MerklePath): SidechainBlock = {
     val parentId = bytesToId(new Array[Byte](32))
     val timestamp = if (params.sidechainGenesisBlockTimestamp == 0) {
       Instant.now.getEpochSecond - (params.consensusSecondsInSlot * params.consensusSlotsInEpoch * 100)

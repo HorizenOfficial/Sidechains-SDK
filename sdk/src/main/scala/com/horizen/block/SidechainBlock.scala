@@ -4,14 +4,13 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import com.horizen.vrf.VRFProof
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
@@ -207,7 +206,7 @@ object SidechainBlock extends ScorexEncoding {
              ommers: Seq[Ommer],
              ownerPrivateKey: PrivateKey25519,
              forgerBox: ForgerBox,
-             vrfProof: VRFProof,
+             vrfProof: VrfProof,
              forgerBoxMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
@@ -272,11 +271,6 @@ object SidechainBlock extends ScorexEncoding {
       ommers,
       companion
     )
-
-    // Probably it's a mistake to verify semanticValidity as a last step of creation
-    // It will be verified or during applying or on demand (like in tests)
-    /*if(!block.semanticValidity(params))
-      throw new Exception("Sidechain Block is semantically invalid.")*/
 
     block
   }

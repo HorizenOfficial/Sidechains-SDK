@@ -15,7 +15,6 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
-import com.horizen.vrf.VRFKeyGenerator
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -45,7 +44,7 @@ class SidechainBlockTest
   val seed: Long = 11L
   val parentId: ModifierId = getRandomBlockId(seed)
   val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-  val vrfProof = VRFKeyGenerator.generate(Array.fill(32)(seed.toByte))._1.prove(Array.fill(32)((seed + 1).toByte))
+  val vrfProof = VrfGenerator.generateProof(seed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
