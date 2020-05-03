@@ -6,6 +6,7 @@ import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
 import com.horizen.vrf.VrfLoader;
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -65,7 +66,7 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     @Override
     public String toString() {
         return "VrfPublicKey{" +
-                "publicBytes=" + Arrays.toString(publicBytes) +
+                "publicBytes=" + ByteUtils.toHexString(publicBytes) +
                 '}';
     }
 }

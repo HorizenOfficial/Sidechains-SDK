@@ -3,7 +3,7 @@ package com.horizen.consensus
 import java.security.MessageDigest
 
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.SidechainBlock
+import com.horizen.block.SidechainBlockHeader
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainBlockInfoProvider
@@ -121,11 +121,11 @@ trait ConsensusDataProvider {
     }
   }
 
-  def getVrfProofHashForBlock(block: SidechainBlock): VrfProofHash = {
+  def getVrfProofHashForBlockHeader(block: SidechainBlockHeader): VrfProofHash = {
     //try to get cached value, if no in cache then calculate
     val cachedValue = ConsensusDataProvider.vrfProofHashCache.get(block.id)
     if (cachedValue == null) {
-      val calculatedVrfProofHash = calculateVrfProofHashForBlock(block)
+      val calculatedVrfProofHash = calculateVrfProofHashForBlockHeader(block)
       ConsensusDataProvider.vrfProofHashCache.put(block.id, calculatedVrfProofHash)
       calculatedVrfProofHash
     }
@@ -134,7 +134,7 @@ trait ConsensusDataProvider {
     }
   }
 
-  def calculateVrfProofHashForBlock(block: SidechainBlock): VrfProofHash = {
+  def calculateVrfProofHashForBlockHeader(block: SidechainBlockHeader): VrfProofHash = {
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.timestamp, block.parentId)
     val slotNumber = timeStampToSlotNumber(block.timestamp)
 

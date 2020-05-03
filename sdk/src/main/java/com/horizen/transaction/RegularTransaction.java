@@ -262,4 +262,16 @@ public final class RegularTransaction
         return transaction;
     }
 
+    @Override
+    public String toString() {
+        return "RegularTransaction{" +
+                "inputs=" + inputs +
+                ", outputs=" + outputs +
+                ", signatures=" + signatures +
+                ", fee=" + fee +
+                ", timestamp=" + timestamp +
+                ", newBoxes=" + newBoxes +
+                ", unlockers=" + unlockers +
+                '}';
+    }
 }

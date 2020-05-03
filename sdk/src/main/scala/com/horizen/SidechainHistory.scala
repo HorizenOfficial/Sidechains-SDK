@@ -20,7 +20,6 @@ import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
 
 
 class SidechainHistory private (val storage: SidechainHistoryStorage,
@@ -126,13 +125,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     parentScore + block.score
   }
 
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
+
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
 
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
-    val vrfProofHash = getVrfProofHashForBlock(block)
+    val vrfProofHash = getVrfProofHashForBlockHeader(block.header)
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
