@@ -80,6 +80,9 @@ class MainchainHeader(
       case _ => false
     }
   }
+
+
+  override def toString = s"MainchainHeader($mainchainHeaderBytes, $version, $hashPrevBlock, $hashMerkleRoot, $hashSCMerkleRootsMap, $time, $bits, $nonce, $solution)"
 }
 
 

@@ -1,21 +1,20 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-import java.lang.{Byte => JByte}
-import java.util.{HashMap => JHashMap}
+import java.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
+import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
@@ -33,7 +32,7 @@ class SidechainBlockTest
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
 
-  val random = new scala.util.Random(123L)
+  val random = new java.util.Random(123L)
 
   val params: NetworkParams = MainNetParams()
   val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params).get
@@ -44,7 +43,7 @@ class SidechainBlockTest
   val seed: Long = 11L
   val parentId: ModifierId = getRandomBlockId(seed)
   val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-  val vrfProof = VrfGenerator.generateProof(seed)
+  val vrfProof: VrfProof = VrfGenerator.generateProof(seed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test
@@ -60,8 +59,10 @@ class SidechainBlockTest
         (Seq(mcBlockRef1.data), Seq(mcBlockRef1.header, mcBlockRef2.header)),
         (Seq(), Seq()),
         (Seq(mcBlockRef2.data, mcBlockRef3.data, mcBlockRef4.data), Seq(mcBlockRef3.header, mcBlockRef4.header))
-      )
-    )
+      ),
+      rnd = random
+    ),
+    rnd = random
   )
 
   @Test
@@ -147,7 +148,6 @@ class SidechainBlockTest
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
-    assertEquals("Deserialized Block id is different.", block.id, deserializedBlock.id)
   }
 
   @Test
@@ -768,7 +768,7 @@ class SidechainBlockTest
 
     (headers :+ headers.last).map(h => {
       seed += 1
-      var currentParent = new Array[Byte](32)
+      val currentParent = new Array[Byte](32)
       System.arraycopy(nextParent, 0, currentParent, 0, 32)
       nextParent = getRandomBoxId(seed) // ok for mc headers
       new MainchainHeader(
@@ -796,7 +796,8 @@ class SidechainBlockTest
                           sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
                           mainchainHeaders: Seq[MainchainHeader] = Seq(),
-                          ommers: Seq[Ommer] = Seq()
+                          ommers: Seq[Ommer] = Seq(),
+                          rnd: Random = new Random()
                          ): SidechainBlock = {
     SidechainBlock.create(
       parent,
@@ -808,7 +809,7 @@ class SidechainBlockTest
       forgerMetadata.rewardSecret,
       forgerBox,
       vrfProof,
-      MerkleTreeFixture.generateRandomMerklePath(seed),
+      MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
       sidechainTransactionsCompanion,
       params
     ).get
@@ -831,7 +832,7 @@ class SidechainBlockTest
   }
 
 
-  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])]): Seq[Ommer] = {
+  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])], rnd: Random = new Random()): Seq[Ommer] = {
     var blockSeq: Seq[SidechainBlock] = Seq()
     var currentTimestamp = firstTimestamp
     var currentParent = parent
@@ -841,7 +842,8 @@ class SidechainBlockTest
         parent = currentParent,
         timestamp = currentTimestamp,
         mainchainBlockReferencesData = ommersData(i)._1,
-        mainchainHeaders = ommersData(i)._2
+        mainchainHeaders = ommersData(i)._2,
+        rnd = rnd
       )
 
       currentParent = blockSeq.last.id

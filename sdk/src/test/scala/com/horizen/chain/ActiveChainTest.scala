@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import java.io.{PrintWriter, StringWriter}
 
-import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
@@ -411,7 +411,6 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     setSeed(testSeed)
 
     val chain: ActiveChain = ActiveChain(genesisBlockMainchainHeight)
-    val mainchainData: Seq[MainchainHeaderHash] = Seq()
 
     // Add first element with no mainchain references
     val (firstId: ModifierId, firstData: SidechainBlockInfo, mainchainParent: Option[MainchainHeaderHash]) = getNewDataForParentNoMainchainReferences(getRandomModifier())
@@ -557,7 +556,9 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
       ModifierSemanticValidity.Unknown,
       headers,
       refData,
-      WithdrawalEpochInfo(0, height)
+      WithdrawalEpochInfo(0, height),
+      VrfGenerator.generateProofHash(height),
+      parentId
     )
   }
 

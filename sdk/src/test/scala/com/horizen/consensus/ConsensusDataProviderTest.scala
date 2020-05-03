@@ -62,6 +62,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
       params.sidechainGenesisBlockTimestamp,
       ModifierSemanticValidity.Valid,
       Seq(),
+      Seq(),
       dummyWithdrawalEpochInfo,
       genesisVrfProofHash,
       params.sidechainGenesisBlockId)
@@ -101,7 +102,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfProofHash: VrfProofHash, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
     val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes))
     val blockInfo =
-      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), dummyWithdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
+      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
 
     (newBlockId, blockInfo)
   }
@@ -231,7 +232,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
     // Determinism and calculation tests
     val slotsPresentationForSecondDataProvider: List[List[Int]] = List(
-      slotsPresentationForFirstDataProvider(0), //2 epoch
+      slotsPresentationForFirstDataProvider.head, //2 epoch
       slotsPresentationForFirstDataProvider(1), //3 epoch
       slotsPresentationForFirstDataProvider(2), //4 epoch
       slotsPresentationForFirstDataProvider(3), //5 epoch

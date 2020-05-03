@@ -16,7 +16,7 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
-  var rnd = new Random(20)
+  val rnd = new Random(20)
   val maximumAvailableShift = 2
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):

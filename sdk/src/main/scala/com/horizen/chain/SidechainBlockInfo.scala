@@ -61,7 +61,7 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
   }
 
   private def readMainchainHeadersHashes(r: Reader): Seq[MainchainHeaderHash] = {
-    var references: ArrayBuffer[MainchainHeaderHash] = ArrayBuffer()
+    val references: ArrayBuffer[MainchainHeaderHash] = ArrayBuffer()
     val length = r.getInt()
 
     (0 until length).foreach(_ => {

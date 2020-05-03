@@ -1,13 +1,12 @@
 package com.horizen.fixtures.sidechainblock.generation
 
 import java.math.BigInteger
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.Instant
-import java.util.{Random, List => JList}
+import java.util.Random
 
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, Ommer, SidechainBlock, SidechainBlockHeader}
+import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -24,12 +23,9 @@ import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
 import scorex.core.block.Block
-import scorex.util.serialization.VLQByteBufferReader
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.collection.JavaConverters._
-import java.util.Random
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceSerializer, SidechainBlock, SidechainBlockHeader, Ommer}
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)
@@ -379,7 +375,6 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     val genesisSidechainForgingData: SidechainForgingData = buildGenesisSidechainForgingData(initialValue, seed)
 
     val vrfProof = VrfGenerator.generateProof(seed) //no VRF proof checking for genesis block!
-    val vrfProofHash = VrfGenerator.generateProofHash(seed)
 
     val genesisMerkleTree: MerkleTree = buildGenesisMerkleTree(genesisSidechainForgingData.forgerBox)
     val merklePathForGenesisSidechainForgingData: MerklePath = genesisMerkleTree.getMerklePathForLeaf(0)
@@ -525,9 +520,6 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   }
 
   private val getHardcodedMainchainBlockReferencesWithSidechainCreation: Seq[MainchainBlockReference] = {
-    val mcBlocksSerializer: ListSerializer[MainchainBlockReference] = new ListSerializer[MainchainBlockReference](
-      MainchainBlockReferenceSerializer, SidechainBlock.MAX_MC_BLOCKS_NUMBER)
-
     /* shall we somehow check time leap between mainchain block time creation and genesis sidechain block creation times? */
     /* @TODO sidechain creation mainchain block shall also be generated, not hardcoded */
     // Genesis MC block hex created in regtest from MC branch as/sc_development on 25.03.2020

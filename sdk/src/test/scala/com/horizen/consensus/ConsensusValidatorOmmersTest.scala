@@ -2,15 +2,15 @@ package com.horizen.consensus
 
 import com.horizen.SidechainHistory
 import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader}
-import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.validation.ConsensusValidator
-import org.junit.{Before, Test}
-import org.scalatest.junit.JUnitSuite
+import com.horizen.vrf.VrfProofHash
+import org.junit.Assert.{assertEquals, fail => jFail}
+import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue, assertArrayEquals, fail => jFail}
 import scorex.util.ModifierId
 
 import scala.util.{Failure, Success, Try}
@@ -24,9 +24,9 @@ class ConsensusValidatorOmmersTest
 
   val consensusValidator = new ConsensusValidator {
     // always successful
-    override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {}
+    private[horizen] override def verifyVrfProof(history: SidechainHistory, verifiedBlock: SidechainBlockHeader): Unit = {}
     // always successful
-    override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {}
+    private[horizen] override def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = {}
   }
 
 
@@ -82,12 +82,9 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val currentEpochConsensusValidator = new ConsensusValidator {
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
-        val slot = history.timeStampToSlotNumber(header.timestamp)
-        val expectedVrfMessage = buildVrfMessage(slot, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        assertArrayEquals("Different vrf message expected", expectedVrfMessage, message)
-      }
-      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {
+      override def verifyVrfProof(history: SidechainHistory, header: SidechainBlockHeader): Unit = {}
+
+      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
       }
     }
@@ -104,9 +101,9 @@ class ConsensusValidatorOmmersTest
     val fbException = new Exception("ForgerBoxException")
     val forgerBoxFailConsensusValidator = new ConsensusValidator {
       // always successful
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {}
+      override private[horizen] def verifyVrfProof(history: SidechainHistory, header: SidechainBlockHeader): Unit = {}
       // always fail
-      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = throw fbException
+      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = throw fbException
     }
 
     Try {
@@ -121,9 +118,9 @@ class ConsensusValidatorOmmersTest
     val vrfException = new Exception("VRFException")
     val vrfFailConsensusValidator = new ConsensusValidator {
       // always fail
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = throw vrfException
+      override private[horizen] def verifyVrfProof(history: SidechainHistory, header: SidechainBlockHeader): Unit = throw vrfException
       // always successful
-      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {}
+      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = {}
     }
 
     Try {
@@ -169,12 +166,8 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val previousEpochConsensusValidator = new ConsensusValidator {
-      override def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
-        val slot = history.timeStampToSlotNumber(header.timestamp)
-        val expectedVrfMessage = buildVrfMessage(slot, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        assertArrayEquals("Different vrf message expected", expectedVrfMessage, message)
-      }
-      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {
+      override private[horizen] def verifyVrfProof(history: SidechainHistory, verifiedBlock: SidechainBlockHeader): Unit = {}
+      override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
       }
     }

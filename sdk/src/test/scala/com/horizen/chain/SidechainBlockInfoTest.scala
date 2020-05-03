@@ -11,8 +11,6 @@ import org.scalatest.junit.JUnitSuite
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId, idToBytes}
-import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator}
-import com.horizen.vrf.VrfProofHash
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   setSeed(1000L)
@@ -118,7 +116,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
     //check equals and hash code
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProofHash, lastBlockIdInPreviousConsensusEpoch)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mcHeaderHashes, mcRefDataHeaderHashes, withdrawalEpochInfo, vrfProofHash, lastBlockIdInPreviousConsensusEpoch)
 
     assert(serializedInfoTry.get == info)
     assert(serializedInfoTry.get.hashCode() == info.hashCode())
