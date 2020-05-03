@@ -16,7 +16,7 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
-  var rnd = new Random(42)
+  var rnd = new Random(20)
   val maximumAvailableShift = 2
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):
@@ -82,7 +82,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   @Test
   def nonGenesisBlockCheck(): Unit = {
-    val epochSizeInSlots = 10
+    val epochSizeInSlots = 50
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
@@ -146,13 +146,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val blockGeneratedWithIncorrectVrfProof = generateBlockWithIncorrectVrfProof(lastGenerator)
     history.append(blockGeneratedWithIncorrectVrfProof).failed.get match {
       case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectVrfProof.id} had been failed")
-      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }
-
-    println("Test blockGeneratedWithIncorrectVrfProofHash")
-    val blockGeneratedWithIncorrectVrfProofHash = generateBlockWithIncorrectVrfProofHash(lastGenerator)
-    history.append(blockGeneratedWithIncorrectVrfProofHash).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage == s"Vrf proof hash is corrupted for block ${blockGeneratedWithIncorrectVrfProofHash.id}")
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
@@ -249,13 +242,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
     val corruptedRules =
       generationRules.copy(corruption = generationRules.corruption.copy(forcedVrfProof = Some(VrfGenerator.generateProof(rnd.nextLong()))))
-    generateBlock(corruptedRules, generator)._2
-  }
-
-  def generateBlockWithIncorrectVrfProofHash(generator: SidechainBlocksGenerator): SidechainBlock = {
-    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forcedVrfProofHash = Some(VrfGenerator.generateProofHash(rnd.nextLong()))))
     generateBlock(corruptedRules, generator)._2
   }
 

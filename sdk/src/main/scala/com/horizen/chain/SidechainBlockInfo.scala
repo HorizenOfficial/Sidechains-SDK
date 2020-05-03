@@ -1,7 +1,6 @@
 package com.horizen.chain
 
 import com.horizen.block.SidechainBlock
-import com.horizen.proof.{VrfProof, VrfProofSerializer}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfProofHash, VrfProofHashSerializer}
 import scorex.core.NodeViewModifier
@@ -20,8 +19,8 @@ case class SidechainBlockInfo(height: Int,
                               semanticValidity: ModifierSemanticValidity,
                               mainchainBlockReferenceHashes: Seq[MainchainBlockReferenceId], //mainchain block ids
                               withdrawalEpochInfo: WithdrawalEpochInfo,
-                              vrfProof: VrfProof,
-                              vrfProofHash: VrfProofHash
+                              vrfProofHash: VrfProofHash,
+                              lastBlockInPreviousConsensusEpoch: ModifierId
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
   override def getParentId: ModifierId = parentId
@@ -50,9 +49,8 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     obj.mainchainBlockReferenceHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
 
-    w.putInt(obj.vrfProof.bytes().length)
-    VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
     VrfProofHashSerializer.getSerializer.serialize(obj.vrfProofHash, w)
+    w.putBytes(idToBytes(obj.lastBlockInPreviousConsensusEpoch))
   }
 
   private def readMainchainReferencesIds(r: Reader): Seq[MainchainBlockReferenceId] = {
@@ -76,10 +74,9 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val mainChainReferences = readMainchainReferencesIds(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
-    val proofLength = r.getInt()
-    val vrfProof = VrfProofSerializer.getSerializer.parseBytes(r.getBytes(proofLength))
-
     val vrfProofHash = VrfProofHashSerializer.getSerializer.parse(r)
-    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo, vrfProof, vrfProofHash)
+    val lastBlockInPreviousConsensusEpoch = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
+
+    SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode), mainChainReferences, withdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
   }
 }

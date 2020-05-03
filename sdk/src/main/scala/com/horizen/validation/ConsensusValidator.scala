@@ -36,15 +36,13 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(verifiedBlock.parentId)
     verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
 
-    val blockInfo = history.blockToBlockInfo(verifiedBlock)
-      .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
-    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, blockInfo)
+    verifyVrfProof(history, verifiedBlock)
 
-    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
-    val vrfMessage = buildVrfMessage(slotNumber, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+    val stakeConsensusEpochInfo = history.getStakeConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
+      .getOrElse(throw new IllegalStateException(s"No stake consensus data for block ${verifiedBlock.id}"))
 
-    verifyVrfProofAndHash(history, verifiedBlock, vrfMessage)
-    verifyForgerBox(verifiedBlock, fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    val vrfProofHash: VrfProofHash = history.getVrfProofHashForBlock(verifiedBlock)
+    verifyForgerBox(verifiedBlock, stakeConsensusEpochInfo, vrfProofHash)
   }
 
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -60,20 +58,18 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
-  private def verifyVrfProofAndHash(history: SidechainHistory, block: SidechainBlock, message: VrfMessage): Unit = {
-    val vrfIsCorrect = block.forgerBox.vrfPubKey().verify(message, block.vrfProof)
-    if(!vrfIsCorrect) {
-      throw new IllegalStateException(s"VRF check for block ${block.id} had been failed")
-    }
+  private def verifyVrfProof(history: SidechainHistory, verifiedBlock: SidechainBlock): Unit = {
+    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
+    val vrfMessage = buildVrfMessage(slotNumber, history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId))
 
-    val calculatedVrfProofHash: VrfProofHash = block.vrfProof.proofToVRFHash(block.forgerBox.vrfPubKey(), message)
-    if (!calculatedVrfProofHash.equals(block.vrfProofHash)) {
-      throw new IllegalStateException(s"Vrf proof hash is corrupted for block ${block.id}")
+    val vrfIsCorrect = verifiedBlock.forgerBox.vrfPubKey().verify(vrfMessage, verifiedBlock.vrfProof)
+    if(!vrfIsCorrect) {
+      throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed")
     }
   }
 
   //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo): Unit = {
+  private def verifyForgerBox(block: SidechainBlock, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfProofHash: VrfProofHash): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${block.merklePath.bytes().deep.mkString}")
 
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(block.merklePath.apply(block.forgerBox.id()))
@@ -84,7 +80,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
     val value = block.forgerBox.value()
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(block.vrfProofHash, value, stakeConsensusEpochInfo.totalStake)
+    val stakeIsEnough = vrfProofCheckAgainstStake(vrfProofHash, value, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${block.id} is not enough for to be forger.")

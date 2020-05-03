@@ -11,6 +11,7 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import com.horizen.vrf.VrfProofHash
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
@@ -120,11 +121,14 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     parentScore + (block.mainchainBlocks.size.toLong << 32) + 1
   }
 
-
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
+
 
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
+    val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
+    val vrfProofHash = getVrfProofHashForBlock(block)
+
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
       calculateChainScore(block, parentBlockInfo.score),
@@ -133,8 +137,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      block.vrfProof,
-      block.vrfProofHash
+      vrfProofHash,
+      lastBlockInPreviousConsensusEpoch
     )
   }
 
@@ -465,6 +469,7 @@ object SidechainHistory
 
   def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
+
     SidechainBlockInfo(
       1,
       (block.mainchainBlocks.size.toLong << 32) + 1,
@@ -473,8 +478,8 @@ object SidechainHistory
       ModifierSemanticValidity.Unknown,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlocks.size), // First Withdrawal epoch value. Note: maybe put to params?
-      block.vrfProof,
-      block.vrfProofHash
+      new VrfProofHash(Array()), //vrfProofHash is not used at all, so use just placeholder
+      block.id,
     )
   }
 
@@ -488,7 +493,7 @@ object SidechainHistory
                                       stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty) {
-      val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlockInfo(calculateGenesisBlockInfo(genesisBlock, params))
+      val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
         .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
     }

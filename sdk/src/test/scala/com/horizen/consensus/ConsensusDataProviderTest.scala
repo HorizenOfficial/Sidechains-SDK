@@ -37,6 +37,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   private val vrfData = slotsPresentationToVrfData(slotsPresentation)
   val blockIdAndInfosPerEpoch: Seq[Seq[(ModifierId, SidechainBlockInfo)]] =
     generateBlockIdsAndInfos(genesisVrfProof, genesisVrfProofHash, vrfData)
+
   val epochIds: Seq[ConsensusEpochId] = blockIdAndInfosPerEpoch.map(epoch => blockIdToEpochId(epoch.last._1))
 
 
@@ -52,27 +53,28 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                        genesisVrfProofHash: VrfProofHash,
                                        vrfData: List[List[Option[(VrfProof, VrfProofHash)]]]): Seq[Seq[(ModifierId, SidechainBlockInfo)]] = {
 
+    val parentOfGenesisBlock = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))
 
     val genesisBlockInfo = new SidechainBlockInfo(
       0,
       0,
-      bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes)),
+      parentOfGenesisBlock,
       params.sidechainGenesisBlockTimestamp,
       ModifierSemanticValidity.Valid,
       Seq(),
       dummyWithdrawalEpochInfo,
-      genesisVrfProof,
-      genesisVrfProofHash)
+      genesisVrfProofHash,
+      params.sidechainGenesisBlockId)
 
     val genesisSidechainBlockIdAndInfo = (params.sidechainGenesisBlockId, genesisBlockInfo)
     val accumulator =
       ListBuffer[Seq[(ModifierId, SidechainBlockInfo)]](ListBuffer(genesisSidechainBlockIdAndInfo))
 
     vrfData.zipWithIndex.foldLeft(accumulator) { case (acc, (processed, index)) =>
-      val previousId = acc.last.last._1
+      val previousId: ModifierId = acc.last.last._1
       val nextTimeStamp = getTimeStampForEpochAndSlot(intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
       val newData =
-        generateBlockIdsAndInfosIter(previousId, params.consensusSecondsInSlot, nextTimeStamp, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
+        generateBlockIdsAndInfosIter(previousId, params.consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)
       acc
     }
@@ -82,23 +84,24 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   final def generateBlockIdsAndInfosIter(previousId: ModifierId,
                                          secondsInSlot: Int,
                                          nextTimestamp: Long,
+                                         lastBlockInPreviousConsensusEpoch: ModifierId,
                                          acc: ListBuffer[(ModifierId, SidechainBlockInfo)],
                                          vrfData: List[Option[(VrfProof, VrfProofHash)]]): Seq[(ModifierId, SidechainBlockInfo)] = {
     vrfData.headOption match {
       case Some(Some((vrfProof, vrfProofHash))) => {
-        val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfProofHash)
+        val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfProofHash, lastBlockInPreviousConsensusEpoch)
         acc += idInfo
-        generateBlockIdsAndInfosIter(idInfo._1, secondsInSlot, nextTimestamp + secondsInSlot, acc, vrfData.tail)
+        generateBlockIdsAndInfosIter(idInfo._1, secondsInSlot, nextTimestamp + secondsInSlot, lastBlockInPreviousConsensusEpoch, acc, vrfData.tail)
       }
-      case Some(None) => generateBlockIdsAndInfosIter(previousId, secondsInSlot, nextTimestamp + secondsInSlot, acc, vrfData.tail)
+      case Some(None) => generateBlockIdsAndInfosIter(previousId, secondsInSlot, nextTimestamp + secondsInSlot, lastBlockInPreviousConsensusEpoch, acc, vrfData.tail)
       case None => acc
     }
   }
 
-  private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfProofHash: VrfProofHash): (ModifierId, SidechainBlockInfo) = {
+  private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfProofHash: VrfProofHash, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
     val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes))
     val blockInfo =
-      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), dummyWithdrawalEpochInfo, vrfProof, vrfProofHash)
+      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), dummyWithdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
 
     (newBlockId, blockInfo)
   }
@@ -116,12 +119,12 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
     }
   }
 
-  def getFullConsensusEpochInfoForBlock(idInfo: (ModifierId, SidechainBlockInfo)): FullConsensusEpochInfo = {
-    getFullConsensusEpochInfoForBlock(idInfo._1, idInfo._2)
+  def getConsensusEpochInfoForBlock(idInfo: (ModifierId, SidechainBlockInfo)): FullConsensusEpochInfo = {
+    getFullConsensusEpochInfoForBlock(idInfo._2.timestamp, idInfo._2.parentId)
   }
 
   def getInfoForCheckingBlockInEpochNumber(epochNumber: Int): FullConsensusEpochInfo = {
-    getFullConsensusEpochInfoForBlock(blockIdAndInfosPerEpoch(epochNumber - 1).head)
+    getConsensusEpochInfoForBlock(blockIdAndInfosPerEpoch(epochNumber - 1).head)
   }
 }
 
@@ -158,12 +161,12 @@ class ConsensusDataProviderTest extends CompanionsFixture{
 
     val genesisBlockId = bytesToId(Utils.doubleSHA256Hash("genesis".getBytes()))
     val genesisBlockTimestamp = 1000000
-    val networkParams = TestNetParams(
+    val networkParams = new TestNetParams(
       sidechainGenesisBlockId = genesisBlockId,
       sidechainGenesisBlockTimestamp = genesisBlockTimestamp,
       consensusSlotsInEpoch = slotsInEpoch,
       consensusSecondsInSlot = 100
-    )
+    ) {override val sidechainGenesisBlockParentId: ModifierId = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))}
 
     val firstDataProvider = new TestedConsensusDataProvider(slotsPresentationForFirstDataProvider, networkParams)
     val blockIdAndInfosPerEpochForFirstDataProvider = firstDataProvider.blockIdAndInfosPerEpoch
@@ -173,10 +176,10 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     val consensusInfoForGenesisEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(1)
 
     val blockIdAndInfoFromStartSecondEpoch = blockIdAndInfosPerEpochForFirstDataProvider(1).head
-    val consensusInfoForStartSecondEpoch = firstDataProvider.getFullConsensusEpochInfoForBlock(blockIdAndInfoFromStartSecondEpoch)
+    val consensusInfoForStartSecondEpoch = firstDataProvider.getFullConsensusEpochInfoForBlock(blockIdAndInfoFromStartSecondEpoch._2.timestamp, blockIdAndInfoFromStartSecondEpoch._2.parentId)
 
     val blockIdAndInfoFromEndSecondEpoch = blockIdAndInfosPerEpochForFirstDataProvider(1).last
-    val consensusInfoForEndSecondEpoch = firstDataProvider.getFullConsensusEpochInfoForBlock(blockIdAndInfoFromEndSecondEpoch)
+    val consensusInfoForEndSecondEpoch = firstDataProvider.getFullConsensusEpochInfoForBlock(blockIdAndInfoFromEndSecondEpoch._2.timestamp, blockIdAndInfoFromEndSecondEpoch._2.parentId)
 
     val consensusInfoForEndThirdEpoch = firstDataProvider.getInfoForCheckingBlockInEpochNumber(3)
 
@@ -203,20 +206,6 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     assertNotEquals(consensusInfoForGenesisEpoch.stakeConsensusEpochInfo, consensusInfoForEndFourthEpoch.stakeConsensusEpochInfo)
     //and nonce is also differ
     assertNotEquals(consensusInfoForGenesisEpoch.nonceConsensusEpochInfo, consensusInfoForEndFourthEpoch.nonceConsensusEpochInfo)
-
-    //ConsensusInfo is the same: we got information for adding block to 5th epoch in both cases
-    val infoForFive = firstDataProvider.getInfoForCheckingBlockInEpochNumber(5)
-    val infoByLastBlockInFourEpochForFive = firstDataProvider.getFullConsensusEpochInfoForNextBlock(blockIdAndInfosPerEpochForFirstDataProvider(3).last._1, intToConsensusEpochNumber(5))
-    assertEquals(infoForFive, infoByLastBlockInFourEpochForFive)
-    //but we shall get other info if we try to get consensus info for different epoch number
-    val infoByLastBlockInFourEpochForFour = firstDataProvider.getFullConsensusEpochInfoForNextBlock(blockIdAndInfosPerEpochForFirstDataProvider(3).last._1, intToConsensusEpochNumber(4))
-    assertNotEquals(infoForFive, infoByLastBlockInFourEpochForFour)
-    //and nonce consensus data shall be differ if we try to calculate it for first block in epoch
-    val infoByFirstBlockInFourEpochForFive = firstDataProvider.getFullConsensusEpochInfoForNextBlock(blockIdAndInfosPerEpochForFirstDataProvider(3).head._1, intToConsensusEpochNumber(5))
-    assertNotEquals(infoByFirstBlockInFourEpochForFive.nonceConsensusEpochInfo, infoForFive.nonceConsensusEpochInfo)
-    assertEquals(infoByFirstBlockInFourEpochForFive.stakeConsensusEpochInfo, infoForFive.stakeConsensusEpochInfo)
-    assertNotEquals(infoByFirstBlockInFourEpochForFive.nonceConsensusEpochInfo, infoByLastBlockInFourEpochForFive.nonceConsensusEpochInfo)
-    assertEquals(infoByFirstBlockInFourEpochForFive.stakeConsensusEpochInfo, infoByLastBlockInFourEpochForFive.stakeConsensusEpochInfo)
 
     // regression test
     val nonceConsensusInfoForTenEpoch: NonceConsensusEpochInfo = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10).nonceConsensusEpochInfo

@@ -15,7 +15,6 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{ListSerializer, MerklePath, MerklePathSerializer}
-import com.horizen.vrf.VrfProofHash
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
 import scorex.core.serialization.ScorexSerializer
@@ -36,7 +35,6 @@ class SidechainBlock (
                        val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                        val forgerBox: ForgerBox,
                        val vrfProof: VrfProof,
-                       val vrfProofHash: VrfProofHash,
                        @JsonSerialize(using = classOf[MerklePathSerializer]) val merklePath: MerklePath,
                        val signature: Signature25519,
                        companion: SidechainTransactionsCompanion)
@@ -87,7 +85,6 @@ class SidechainBlock (
       mainchainBlocksStream.toByteArray,
       forgerBox.bytes(),
       vrfProof.bytes,
-      vrfProofHash.bytes(),
       merklePath.bytes()
     )
   }
@@ -141,7 +138,6 @@ object SidechainBlock extends ScorexEncoding {
              ownerPrivateKey: PrivateKey25519,
              forgerBox: ForgerBox,
              vrfProof: VrfProof,
-             vrfProofHash: VrfProofHash,
              merklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams,
@@ -153,7 +149,6 @@ object SidechainBlock extends ScorexEncoding {
     require(ownerPrivateKey != null)
     require(forgerBox != null)
     require(vrfProof != null)
-    require(vrfProofHash != null)
     require(merklePath != null)
     require(merklePath.bytes().length > 0)
     require(ownerPrivateKey.publicImage() == forgerBox.rewardProposition())
@@ -168,7 +163,6 @@ object SidechainBlock extends ScorexEncoding {
           sidechainTransactions,
           forgerBox,
           vrfProof,
-          vrfProofHash,
           merklePath,
           new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
           companion
@@ -185,7 +179,6 @@ object SidechainBlock extends ScorexEncoding {
       sidechainTransactions,
       forgerBox,
       vrfProof,
-      vrfProofHash,
       merklePath,
       signature,
       companion
@@ -197,7 +190,6 @@ object SidechainBlock extends ScorexEncoding {
     block
   }
 }
-
 
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
@@ -229,10 +221,6 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     w.putInt(vrfProofBytes.length)
     w.putBytes(vrfProofBytes)
 
-    val vrfProofHashBytes = obj.vrfProofHash.bytes()
-    w.putInt(vrfProofHashBytes.length)
-    w.putBytes(vrfProofHashBytes)
-
     w.putBytes(obj.signature.bytes())
 
     val merklePathLength = obj.merklePath.bytes().length
@@ -263,9 +251,6 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     val vrfProofLength = r.getInt()
     val vrfProof = VrfProof.parse(r.getBytes(vrfProofLength))
 
-    val vrfProofHashLength = r.getInt()
-    val vrfProofHash = VrfProofHash.parse(r.getBytes(vrfProofHashLength))
-
     val ownerSignature = new Signature25519(r.getBytes(Signature25519.SIGNATURE_LENGTH))
 
     val merklePathLength = r.getInt()
@@ -285,7 +270,6 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
       sidechainTransactions,
       forgerBox,
       vrfProof,
-      vrfProofHash,
       merklePath,
       ownerSignature,
       companion

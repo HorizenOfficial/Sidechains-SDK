@@ -5,7 +5,6 @@ import java.util.Random
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.params.NetworkParams
 import com.horizen.proof.VrfProof
-import com.horizen.vrf.VrfProofHash
 
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,
@@ -15,7 +14,6 @@ case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     stakeCheckCorruption: Boolean = false,
                                     forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None,
                                     forcedVrfProof: Option[VrfProof] = None,
-                                    forcedVrfProofHash: Option[VrfProofHash] = None
                                    ) {
   override def toString: String = {
     "CorruptedGenerationRules(" +
@@ -87,10 +85,6 @@ object CorruptedGenerationRules {
 
     if (rnd.nextInt(100) < 3) {
       rule = rule.copy(forcedVrfProof = Some(VrfGenerator.generateProof(rnd.nextInt())))
-    }
-
-    if (rnd.nextInt(100) < 3) {
-      rule = rule.copy(forcedVrfProofHash = Some(VrfGenerator.generateProofHash(rnd.nextInt())))
     }
 
     rule

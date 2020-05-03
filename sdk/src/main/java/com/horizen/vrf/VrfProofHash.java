@@ -3,6 +3,7 @@ package com.horizen.vrf;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.serialization.Views;
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;
 
@@ -47,7 +48,7 @@ public class VrfProofHash implements BytesSerializable {
     @Override
     public String toString() {
         return "VrfProofHash{" +
-                "proofHashBytes=" + Arrays.toString(proofHashBytes) +
+                "proofHashBytes=" + ByteUtils.toHexString(proofHashBytes) +
                 '}';
     }
 }

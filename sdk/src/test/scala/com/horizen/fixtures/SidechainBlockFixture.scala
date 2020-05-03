@@ -25,7 +25,7 @@ import scala.util.Random
 
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
-  extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerBox, block.vrfProof, block.vrfProofHash, block.merklePath, block.signature, companion) {
+  extends SidechainBlock(block.parentId, block.timestamp, block.mainchainBlocks, block.sidechainTransactions, block.forgerBox, block.vrfProof, block.merklePath, block.signature, companion) {
   override def semanticValidity(params: NetworkParams): Boolean = false
 }
 
@@ -44,7 +44,6 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
            sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VrfProof = null,
-           vrfProofHash: VrfProofHash = null,
            merklePath: MerklePath = null,
            companion: SidechainTransactionsCompanion,
            params: NetworkParams,
@@ -63,7 +62,6 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.rewardSecret,
       forgingBox,
       firstOrSecond(vrfProof, initialBlock.vrfProof),
-      firstOrSecond(vrfProofHash, initialBlock.vrfProofHash),
       firstOrSecond(merklePath, initialBlock.merklePath),
       firstOrSecond(companion, sidechainTransactionsCompanion),
       params,
@@ -95,7 +93,6 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.rewardSecret,
       forgerBox,
       vrfProof,
-      vrfProofHash,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
       companion,
       params
@@ -107,19 +104,19 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
   def generateGenesisBlockInfo(genesisMainchainBlockHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
-                               vrfProof: VrfProof = VrfGenerator.generateProof(42),
                                vrfProofHash: VrfProofHash = VrfGenerator.generateProofHash(34)
                               ): SidechainBlockInfo = {
+    val blockId = bytesToId(new Array[Byte](32))
     SidechainBlockInfo(
       1,
       (1L << 32) + 1,
-      bytesToId(new Array[Byte](32)),
+      blockId,
       timestamp.getOrElse(Random.nextLong()),
       validity,
       Seq(com.horizen.chain.byteArrayToMainchainBlockReferenceId(genesisMainchainBlockHash.getOrElse(new Array[Byte](32)))),
       WithdrawalEpochInfo(1, 1),
-      vrfProof,
-      vrfProofHash
+      vrfProofHash,
+      blockId
     )
   }
 
@@ -141,8 +138,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
       validity,
       SidechainBlockInfo.mainchainReferencesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      VrfGenerator.generateProof(parentBlockInfo.height),
-      VrfGenerator.generateProofHash(parentBlockInfo.timestamp)
+      VrfGenerator.generateProofHash(parentBlockInfo.timestamp),
+      block.parentId
     )
   }
 
@@ -172,10 +169,14 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture {
 
   val blockGenerationDelta = 10
 
-  def generateNextSidechainBlock(sidechainBlock: SidechainBlock, companion: SidechainTransactionsCompanion, params: NetworkParams, basicSeed: Long = 123177L): SidechainBlock = {
+  def generateNextSidechainBlock(sidechainBlock: SidechainBlock,
+                                 companion: SidechainTransactionsCompanion,
+                                 params: NetworkParams,
+                                 basicSeed: Long = 123177L,
+                                 timestampDelta: Long = blockGenerationDelta): SidechainBlock = {
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
-      timestamp = sidechainBlock.timestamp + blockGenerationDelta,
+      timestamp = sidechainBlock.timestamp + timestampDelta,
       mainchainBlocks = Seq(),
       sidechainTransactions = Seq(),
       companion = companion,

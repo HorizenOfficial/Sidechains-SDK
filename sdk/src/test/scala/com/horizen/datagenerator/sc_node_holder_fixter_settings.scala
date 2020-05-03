@@ -37,7 +37,6 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val genesisMessage =
       buildVrfMessage(intToConsensusSlotNumber(1), NonceConsensusEpochInfo(ConsensusNonce @@ "42".getBytes))
     val vrfProof: VrfProof = secretKey.prove(genesisMessage)
-    val vrfProofHash = vrfProof.proofToVRFHash(publicKey, genesisMessage)
     val merklePath = MerkleTreeFixture.generateRandomMerklePath(seed + 1)
     val companion = getDefaultTransactionsCompanion
 
@@ -48,7 +47,6 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
       Seq(),
       forgerBox,
       vrfProof,
-      vrfProofHash,
       merklePath,
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)), // empty signature
       companion
@@ -57,7 +55,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val signature = forgerMetadata.rewardSecret.sign(unsignedBlock.messageToSign)
 
     val data = new SidechainBlock(parentId, timestamp, mainchainReferences.asScala, Seq(), forgerBox,
-      vrfProof, vrfProofHash, merklePath, signature, companion)
+      vrfProof, merklePath, signature, companion)
 
     val hexString = data.bytes.map("%02X" format _).mkString.toLowerCase
     println(hexString)

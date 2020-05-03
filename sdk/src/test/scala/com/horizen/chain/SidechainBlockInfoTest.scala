@@ -3,7 +3,6 @@ package com.horizen.chain
 import java.io._
 
 import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator}
-import com.horizen.proof.VrfProof
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.VrfProofHash
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -24,13 +23,13 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val refIds = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
     "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainBlockReferenceId(BytesUtils.fromHexString(hex)))
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(10, 100)
-  val vrfProof: VrfProof = VrfGenerator.generateProof(height)
-  val vrfProofHash: VrfProofHash = VrfGenerator.generateProofHash(score)
+  val vrfProofHash: VrfProofHash = VrfGenerator.generateProofHash(height)
+  val lastBlockIdInPreviousConsensusEpoch: ModifierId = parentId
 
   @Test
   def creation(): Unit = {
     val clonedParentId: ModifierId = bytesToId(idToBytes(parentId))
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProof, vrfProofHash)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProofHash, lastBlockIdInPreviousConsensusEpoch)
 
     assertEquals("SidechainBlockInfo height is different", height, info.height)
     assertEquals("SidechainBlockInfo score is different", score, info.score)
@@ -46,7 +45,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
   @Test
   def serialization(): Unit = {
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProof, vrfProofHash)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProofHash, lastBlockIdInPreviousConsensusEpoch)
     val bytes = info.bytes
 
 
@@ -104,7 +103,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
     //check equals and hash code
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProof, vrfProofHash)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, refIds, withdrawalEpochInfo, vrfProofHash, lastBlockIdInPreviousConsensusEpoch)
 
     assert(serializedInfoTry.get == info)
     assert(serializedInfoTry.get.hashCode() == info.hashCode())

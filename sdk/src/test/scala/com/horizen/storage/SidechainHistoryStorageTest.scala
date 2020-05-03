@@ -7,11 +7,10 @@ import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
+import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils._
-import com.horizen.utils.Pair
+import com.horizen.utils.{Pair, _}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._
@@ -375,8 +374,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           tipNewValidity,
           activeChainBlockInfoList.last.mainchainBlockReferenceHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo,
-          activeChainBlockInfoList.last.vrfProof,
-          activeChainBlockInfoList.last.vrfProofHash
+          activeChainBlockInfoList.last.vrfProofHash,
+          activeChainBlockList.last.parentId
         ).bytes)
     ))
 
@@ -393,8 +392,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkTipNewValidity,
           forkChainBlockInfoList.last.mainchainBlockReferenceHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo,
-          forkChainBlockInfoList.last.vrfProof,
-          forkChainBlockInfoList.last.vrfProofHash
+          forkChainBlockInfoList.last.vrfProofHash,
+          forkChainBlockList.last.parentId,
         ).bytes)
     ))
 
@@ -445,7 +444,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update best block exception")
 
     val newBestBlock = forkChainBlockList.head
-    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2), newBestBlock.vrfProof, newBestBlock.vrfProofHash)
+    val newBestBlockInfo = SidechainBlockInfo(2, 2, newBestBlock.parentId, 20, ModifierSemanticValidity.Valid, SidechainBlockInfo.mainchainReferencesFromBlock(newBestBlock), WithdrawalEpochInfo(1, 2), VrfGenerator.generateProofHash(12), newBestBlock.parentId)
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(
       new ByteArrayWrapper(Array.fill(32)(-1: Byte)),
