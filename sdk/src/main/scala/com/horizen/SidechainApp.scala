@@ -27,7 +27,7 @@ import com.horizen.websocket._
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
+import scorex.core.network.PeerFeature
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
@@ -38,6 +38,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
+import com.horizen.network.SidechainNodeViewSynchronizer
 import scala.util.Try
 
 class SidechainApp @Inject()
@@ -97,7 +98,7 @@ class SidechainApp @Inject()
     case "regtest" => RegTestParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -106,7 +107,7 @@ class SidechainApp @Inject()
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -115,7 +116,7 @@ class SidechainApp @Inject()
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
-      genesisMainchainBlockHash = genesisBlock.mainchainBlocks.head.hash,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -176,12 +177,8 @@ class SidechainApp @Inject()
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
-      SidechainBlock, SidechainHistory, SidechainMemoryPool]
-      (networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-        modifierSerializers
-      ))
+    actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()

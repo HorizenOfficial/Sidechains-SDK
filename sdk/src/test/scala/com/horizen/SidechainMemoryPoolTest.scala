@@ -19,7 +19,7 @@ class SidechainMemoryPoolTest
   def remove(): Unit = {
     val memoryPool = getSidechainMemoryPool()
     val tx = getRegularTransaction
-    val txId: ModifierId = tx.id
+    val txId: ModifierId = ModifierId @@ tx.id
 
 
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true)
@@ -41,7 +41,7 @@ class SidechainMemoryPoolTest
     val tx = getRegularTransaction
     val txCompat = getCompatibleTransaction
     val txIncompat = getIncompatibleTransaction
-    val txId: ModifierId = tx.id
+    val txId: ModifierId = ModifierId @@ tx.id
 
     assertEquals("Put operation must be success.", memoryPool.put(tx).isSuccess, true)
     assertEquals("Size must be 1.", memoryPool.size, 1)
@@ -51,16 +51,16 @@ class SidechainMemoryPoolTest
     assertEquals("Put operation must be success.", memoryPool.put(txCompat).isSuccess,
           true)
     assertEquals("Size must be 2.", memoryPool.size, 2)
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.modifierById(txCompat.id).get, txCompat)
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.contains(txCompat.id), true)
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.modifierById(ModifierId @@ txCompat.id).get, txCompat)
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.contains(ModifierId @@ txCompat.id), true)
 
     assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess,
       false)
     assertEquals("Size must be 2.", memoryPool.size, 2)
     assertEquals("MemoryPool must not contain transaction " + txIncompat.id,
-      memoryPool.contains(txIncompat.id), false)
+      memoryPool.contains(ModifierId @@ txIncompat.id), false)
     assertEquals("MemoryPool must not contain transaction " + txIncompat.id,
-      1, memoryPool.notIn(Seq(txIncompat.id)).size)
+      1, memoryPool.notIn(Seq(ModifierId @@ txIncompat.id)).size)
 
     assertEquals("Take must return transaction " + tx.id, tx, memoryPool.take(1).head)
     assertEquals("Take with custom sort function must return transaction " + txCompat.id, txCompat,
@@ -74,15 +74,15 @@ class SidechainMemoryPoolTest
     val mp = memoryPool.filter(List(tx))
 
     assertEquals("After applying of filter size must be 1.", memoryPool.size, 1)
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.modifierById(txCompat.id).get, txCompat)
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.contains(txCompat.id), true)
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.modifierById(ModifierId @@ txCompat.id).get, txCompat)
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.contains(ModifierId @@ txCompat.id), true)
   }
 
   @Test
   def putSeq(): Unit = {
     val memoryPool = getSidechainMemoryPool()
     val txList = getRegularTransactionList(1).asScala.toList
-    val txId: ModifierId = txList.head.id
+    val txId: ModifierId = ModifierId @@ txList.head.id
 
     val txIncompat = txList ::: getIncompatibleTransactionList
     assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess, false)
@@ -105,7 +105,7 @@ class SidechainMemoryPoolTest
   def putWithoutCheck(): Unit = {
     val memoryPool = getSidechainMemoryPool()
     val txList = getRegularTransactionList(1).asScala.toList
-    val txId: ModifierId = txList.head.id
+    val txId: ModifierId = ModifierId @@ txList.head.id
 
     val txIncompat = txList ::: getIncompatibleTransactionList
     assertEquals("Put operation must be failure.", memoryPool.put(txIncompat).isSuccess, false)

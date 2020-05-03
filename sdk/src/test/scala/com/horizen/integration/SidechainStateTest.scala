@@ -3,9 +3,10 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{NoncedBoxData, ForgerBoxData, RegularBoxData}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
+
 import scala.collection.JavaConverters._
 import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
@@ -172,8 +173,8 @@ class SidechainStateTest
     Mockito.when(mockedBlock.parentId)
       .thenAnswer(answer => bytesToId(initialVersion.data))
 
-    Mockito.when(mockedBlock.mainchainBlocks)
-      .thenAnswer(answer => Seq[MainchainBlockReference]())
+    Mockito.when(mockedBlock.mainchainBlockReferencesData)
+      .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     applyTry.get

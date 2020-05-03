@@ -53,7 +53,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
-  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(new WithdrawalEpochValidator(params), new MainchainPoWValidator(params), new ConsensusValidator())
+  private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
+    new WithdrawalEpochValidator(params),
+    new MainchainPoWValidator(params),
+    new ConsensusValidator(),
+    new MainchainBlockReferenceValidator(params)
+  )
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))

@@ -76,6 +76,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   val utilMocks = new SidechainNodeViewUtilMocks()
 
+
   val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
   val allBoxes = utilMocks.allBoxes
   val genesisBlock = utilMocks.genesisBlock

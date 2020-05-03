@@ -39,9 +39,8 @@ class SidechainHistoryTest extends JUnitSuite
   customTransactionSerializers.put(11.toByte, SemanticallyInvalidTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getTransactionsCompanionWithCustomTransactions(customTransactionSerializers)
 
-  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestamp = Some(100000))
+  val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion, timestampOpt = Some(100000))
   var genesisBlockInfo: SidechainBlockInfo = _
-
   var params: NetworkParams = _
 
   val sidechainSettings = mock[SidechainSettings]
@@ -73,6 +72,7 @@ class SidechainHistoryTest extends JUnitSuite
       sidechainTransactionsCompanion,
       params)
     val consensusDataStorage = new ConsensusDataStorage(new IODBStoreAdapter(getStore()))
+    genesisBlock.semanticValidity(params)
     val historyTry =
       SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage, params, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L))
     assertTrue("Genesis history creation expected to be successful. ", historyTry.isSuccess)
@@ -119,7 +119,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB2.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(2, (1L << 32) + 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  List(), WithdrawalEpochInfo(1, 1), history.getVrfProofHashForBlock(blockB2), genesisBlock.id), history.bestBlockInfo)
+      SidechainBlockInfo(2, 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfProofHashForBlock(blockB2), genesisBlock.id), history.bestBlockInfo)
 
 
     // Test 2: append block after current tip (not after genesis)
@@ -143,7 +143,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB3.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(3, (1L << 32) + 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(), WithdrawalEpochInfo(1, 1), history.getVrfProofHashForBlock(blockB3), genesisBlock.id), history.bestBlockInfo)
+      SidechainBlockInfo(3, 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfProofHashForBlock(blockB3), genesisBlock.id), history.bestBlockInfo)
 
 
     // At the moment we have an active chain G1 -> B2 -> B3,
@@ -248,7 +248,7 @@ class SidechainHistoryTest extends JUnitSuite
 
 
     // Test 8: try to add block B4, that contains invalid transactions
-    val blockB4: SidechainBlock = generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
+    val blockB4: SidechainBlock = generateNextSidechainBlockWithInvalidTransaction(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
     history.append(blockB4) match {
       case Success((hist, prog)) =>
         history = hist
@@ -287,9 +287,9 @@ class SidechainHistoryTest extends JUnitSuite
     */
 
 
-    // Test 9: try to add block B5, to switch back to from "b"-chains to "B"-chain
+    // Test 9: try to add block B5, to switch back from "b"-chain to "B"-chain
     // Because of B4 is invalid, no switch expected.
-    val blockB5: SidechainBlock = generateNextSidechainBlockWithInvalidTransaction(blockB4, sidechainTransactionsCompanion, params)
+    val blockB5: SidechainBlock = generateNextSidechainBlock(blockB4, sidechainTransactionsCompanion, params)
     history.append(blockB5) match {
       case Success((hist, prog)) =>
         history = hist

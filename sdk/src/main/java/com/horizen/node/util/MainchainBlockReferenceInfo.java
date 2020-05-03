@@ -16,50 +16,61 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public final class MainchainBlockReferenceInfo implements BytesSerializable {
 
-    // Mainchain block reference hash with the most height
+    // Mainchain block reference header hash with the most height
     @JsonProperty("hash")
-    private byte[] mainchainBlockReferenceHash;
+    private byte[] mainchainHeaderHash;
 
     // parent mainchain block reference hash
     @JsonProperty("parentHash")
-    private byte[] parentMainchainBlockReferenceHash;
+    private byte[] parentMainchainHeaderHash;
 
     // Height in mainchain of mainchainBlockReference
     @JsonProperty("height")
     private int mainchainHeight;
 
-    // Sidechain block ID which contains this MC block reference
-    private byte[] sidechainBlockId;
+    // Sidechain block ID which contains this MC block reference header
+    private byte[] mainchainHeaderSidechainBlockId;
 
-    public MainchainBlockReferenceInfo(byte[] mainchainBlockReferenceHash,
-                                       byte[] parentMainchainBlockReferenceHash,
+    // Sidechain block ID which contains this MC block reference data
+    private byte[] mainchainReferenceDataSidechainBlockId;
+
+    public MainchainBlockReferenceInfo(byte[] mainchainHeaderHash,
+                                       byte[] parentMainchainHeaderHash,
                                        int mainchainHeight,
-                                       byte[] sidechainBlockId) {
-        assert (mainchainBlockReferenceHash.length == CommonParams.mainchainBlockHashLength());
-        this.mainchainBlockReferenceHash = Arrays.copyOf(mainchainBlockReferenceHash, mainchainBlockReferenceHash.length);
+                                       byte[] mainchainHeaderSidechainBlockId,
+                                       byte[] mainchainReferenceDataSidechainBlockId) {
+        assert (mainchainHeaderHash.length == CommonParams.mainchainBlockHashLength());
+        this.mainchainHeaderHash = Arrays.copyOf(mainchainHeaderHash, mainchainHeaderHash.length);
 
-        assert (parentMainchainBlockReferenceHash.length == CommonParams.mainchainBlockHashLength());
-        this.parentMainchainBlockReferenceHash = Arrays.copyOf(parentMainchainBlockReferenceHash, parentMainchainBlockReferenceHash.length);
+        assert (parentMainchainHeaderHash.length == CommonParams.mainchainBlockHashLength());
+        this.parentMainchainHeaderHash = Arrays.copyOf(parentMainchainHeaderHash, parentMainchainHeaderHash.length);
         this.mainchainHeight = mainchainHeight;
 
-        assert (sidechainBlockId.length == CommonParams.sidechainIdLength());
-        this.sidechainBlockId = Arrays.copyOf(sidechainBlockId, sidechainBlockId.length);
+        assert (mainchainHeaderSidechainBlockId.length == CommonParams.sidechainIdLength());
+        this.mainchainHeaderSidechainBlockId = Arrays.copyOf(mainchainHeaderSidechainBlockId, mainchainHeaderSidechainBlockId.length);
+
+        assert (mainchainReferenceDataSidechainBlockId.length == CommonParams.sidechainIdLength());
+        this.mainchainReferenceDataSidechainBlockId = Arrays.copyOf(mainchainReferenceDataSidechainBlockId, mainchainReferenceDataSidechainBlockId.length);
     }
 
-    public byte[] getMainchainBlockReferenceHash() {
-        return mainchainBlockReferenceHash;
+    public byte[] getMainchainHeaderHash() {
+        return mainchainHeaderHash;
     }
 
-    public byte[] getParentMainchainBlockReferenceHash() {
-        return parentMainchainBlockReferenceHash;
+    public byte[] getParentMainchainHeaderHash() {
+        return parentMainchainHeaderHash;
     }
 
     public int getMainchainHeight() {
         return mainchainHeight;
     }
 
-    public byte[] getSidechainBlockId() {
-        return sidechainBlockId;
+    public byte[] getMainchainHeaderSidechainBlockId() {
+        return mainchainHeaderSidechainBlockId;
+    }
+
+    public byte[] getMainchainReferenceDataSidechainBlockId() {
+        return mainchainReferenceDataSidechainBlockId;
     }
 
     public static MainchainBlockReferenceInfo parseBytes(byte[] bytes) {
@@ -74,15 +85,28 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable {
         int mainchainHeight = BytesUtils.getInt(bytes, offset);
         offset += Integer.BYTES;
 
-        byte[] sidechainBlockId = Arrays.copyOfRange(bytes, offset, offset + CommonParams.sidechainIdLength());
+        byte[] mainchainHeaderSidechainBlockId = Arrays.copyOfRange(bytes, offset, offset + CommonParams.sidechainIdLength());
         offset += CommonParams.sidechainIdLength();
 
-        return new MainchainBlockReferenceInfo(mainchainBlockReferenceHash, parentMainchainBlockReferenceHash, mainchainHeight, sidechainBlockId);
+        byte[] mainchainReferenceDataSidechainBlockId = Arrays.copyOfRange(bytes, offset, offset + CommonParams.sidechainIdLength());
+        offset += CommonParams.sidechainIdLength();
+
+        return new MainchainBlockReferenceInfo(
+                mainchainBlockReferenceHash,
+                parentMainchainBlockReferenceHash,
+                mainchainHeight,
+                mainchainHeaderSidechainBlockId,
+                mainchainReferenceDataSidechainBlockId);
     }
 
     @Override
     public byte[] bytes() {
-        return Bytes.concat(mainchainBlockReferenceHash, parentMainchainBlockReferenceHash, Ints.toByteArray(mainchainHeight), sidechainBlockId);
+        return Bytes.concat(
+                mainchainHeaderHash,
+                parentMainchainHeaderHash,
+                Ints.toByteArray(mainchainHeight),
+                mainchainHeaderSidechainBlockId,
+                mainchainReferenceDataSidechainBlockId);
     }
 
     @Override
@@ -96,17 +120,19 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable {
         if (o == null || getClass() != o.getClass()) return false;
         MainchainBlockReferenceInfo that = (MainchainBlockReferenceInfo) o;
         return mainchainHeight == that.mainchainHeight &&
-                Arrays.equals(mainchainBlockReferenceHash, that.mainchainBlockReferenceHash) &&
-                Arrays.equals(parentMainchainBlockReferenceHash, that.parentMainchainBlockReferenceHash) &&
-                Arrays.equals(sidechainBlockId, that.sidechainBlockId);
+                Arrays.equals(mainchainHeaderHash, that.mainchainHeaderHash) &&
+                Arrays.equals(parentMainchainHeaderHash, that.parentMainchainHeaderHash) &&
+                Arrays.equals(mainchainHeaderSidechainBlockId, that.mainchainHeaderSidechainBlockId) &&
+                Arrays.equals(mainchainReferenceDataSidechainBlockId, that.mainchainReferenceDataSidechainBlockId);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hash(mainchainHeight);
-        result = 31 * result + Arrays.hashCode(mainchainBlockReferenceHash);
-        result = 31 * result + Arrays.hashCode(parentMainchainBlockReferenceHash);
-        result = 31 * result + Arrays.hashCode(sidechainBlockId);
+        result = 31 * result + Arrays.hashCode(mainchainHeaderHash);
+        result = 31 * result + Arrays.hashCode(parentMainchainHeaderHash);
+        result = 31 * result + Arrays.hashCode(mainchainHeaderSidechainBlockId);
+        result = 31 * result + Arrays.hashCode(mainchainReferenceDataSidechainBlockId);
         return result;
     }
 }

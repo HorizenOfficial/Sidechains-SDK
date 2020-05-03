@@ -269,8 +269,14 @@
 					<include>certifierrightbox_hex</include>
 					<include>sidechainblockinfo_hex</include>
 					<include>sidechainsyncinfo_hex</include>
+                    <include>sidechainblock_hex</include>
+                    <include>sidechainblockheader_hex</include>
+                    <include>ommer_hex</include>
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
-					<include>mcblock473173</include>
+					<include>mcblock473173_mainnet</include>
+                    <include>mcblock473174_mainnet</include>
+                    <include>mcblock473175_mainnet</include>
+                    <include>mcblock473176_mainnet</include>
 					<include>withdrawalrequestbox_hex</include>
                     <include>nonce_calculation_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>

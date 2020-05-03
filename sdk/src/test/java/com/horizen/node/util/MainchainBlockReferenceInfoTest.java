@@ -16,17 +16,19 @@ public class MainchainBlockReferenceInfoTest {
 
     @Test
     public void serializationTest() {
-        byte[] mainchainBlockReferenceHash = generateBytes(CommonParams.mainchainBlockHashLength());
-        byte[] parentMainchainBlockReferenceHash = generateBytes(CommonParams.mainchainBlockHashLength());
+        byte[] mainchainHeaderHash = generateBytes(CommonParams.mainchainBlockHashLength());
+        byte[] parentMainchainHeaderHash = generateBytes(CommonParams.mainchainBlockHashLength());
         int mainchainHeight = rndGen.nextInt();
-        byte[] sidechainBlockId = generateBytes(CommonParams.sidechainIdLength());
+        byte[] mainchainHeaderSidechainBlockId = generateBytes(CommonParams.sidechainIdLength());
+        byte[] mainchainReferenceDataSidechainBlockId = generateBytes(CommonParams.sidechainIdLength());
 
-        MainchainBlockReferenceInfo refInfo = new MainchainBlockReferenceInfo(mainchainBlockReferenceHash, parentMainchainBlockReferenceHash, mainchainHeight, sidechainBlockId);
+        MainchainBlockReferenceInfo refInfo = new MainchainBlockReferenceInfo(mainchainHeaderHash, parentMainchainHeaderHash, mainchainHeight, mainchainHeaderSidechainBlockId, mainchainReferenceDataSidechainBlockId);
 
-        assertArrayEquals(mainchainBlockReferenceHash, refInfo.getMainchainBlockReferenceHash());
-        assertArrayEquals(parentMainchainBlockReferenceHash, refInfo.getParentMainchainBlockReferenceHash());
+        assertArrayEquals(mainchainHeaderHash, refInfo.getMainchainHeaderHash());
+        assertArrayEquals(parentMainchainHeaderHash, refInfo.getParentMainchainHeaderHash());
         assertEquals(mainchainHeight, refInfo.getMainchainHeight());
-        assertArrayEquals(sidechainBlockId, refInfo.getSidechainBlockId());
+        assertArrayEquals(mainchainHeaderSidechainBlockId, refInfo.getMainchainHeaderSidechainBlockId());
+        assertArrayEquals(mainchainReferenceDataSidechainBlockId, refInfo.getMainchainReferenceDataSidechainBlockId());
 
         assertEquals(refInfo, refInfo.serializer().parseBytes(refInfo.bytes()));
     }
