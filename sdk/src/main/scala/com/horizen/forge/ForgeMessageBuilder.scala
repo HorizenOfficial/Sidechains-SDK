@@ -98,7 +98,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                            merklePath: MerklePath,
                            forgerBoxRewardPrivateKey: PrivateKey25519,
                            vrfSecret: VrfSecretKey,
-                           vrfProof: VrfProof,
+                           vrfProof: VrfProof
                           ): ForgeResult = {
     var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - view.history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if(withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch

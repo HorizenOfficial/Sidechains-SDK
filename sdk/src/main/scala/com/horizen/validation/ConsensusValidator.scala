@@ -33,11 +33,14 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
-    verifyVrfProof(history, verifiedBlock.header)
+    val slotNumber: ConsensusSlotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
+    val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId))
+
+    verifyVrfProof(history, verifiedBlock.header, vrfMessage)
 
     val stakeConsensusEpochInfo = history.getStakeConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
       .getOrElse(throw new IllegalStateException(s"No stake consensus data for block ${verifiedBlock.id}"))
-    val vrfProofHash: VrfProofHash = history.getVrfProofHashForBlockHeader(verifiedBlock.header)
+    val vrfProofHash: VrfProofHash = history.getVrfProofHash(verifiedBlock.header)
     verifyForgerBox(verifiedBlock.header, stakeConsensusEpochInfo, vrfProofHash)
 
     val fullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
@@ -83,33 +86,33 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     // With current Nonce calculation algorithm, it's not possible to retrieve MainchainHeaders with RefData, so no way to recalculate proper Nonce.
     // Solutions: Nonce must be taken not from the whole MCRefs most PoW header, but like in original Ouroboros from the VRF, that is a part of SidechainBlockHeader.
     var isPreviousEpochOmmer: Boolean = false
-    for (ommer <- ommers) {
+    for(ommer <- ommers) {
       val ommerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommer.header.timestamp)
+      val ommerSlotNumber: ConsensusSlotNumber = history.timeStampToSlotNumber(ommer.header.timestamp)
       // Fork occurs in previous consensus epoch
-      if (ommerEpochNumber < ommersContainerEpochNumber) {
+      if(ommerEpochNumber < ommersContainerEpochNumber) {
         isPreviousEpochOmmer = true
-        verifyVrfProof(history, ommer.header)
-        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHashForBlockHeader(ommer.header))
+        val message = buildVrfMessage(ommerSlotNumber, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        verifyVrfProof(history, ommer.header, message)
+        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header))
 
         verifyOmmers(ommer, previousFullConsensusEpochInfo, null, history)
       }
       else { // Equals
-        if (isPreviousEpochOmmer) {
+        if(isPreviousEpochOmmer) {
           // We Have Ommers form different epochs
           throw new IllegalStateException("Ommers from both previous and current ConsensusEpoch are not supported.")
         }
-        verifyVrfProof(history, ommer.header)
-        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHashForBlockHeader(ommer.header))
+        val message = buildVrfMessage(ommerSlotNumber, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        verifyVrfProof(history, ommer.header, message)
+        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header))
 
         verifyOmmers(ommer, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
       }
     }
   }
 
-  private[horizen] def verifyVrfProof(history: SidechainHistory, verifiedBlock: SidechainBlockHeader): Unit = {
-    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
-    val vrfMessage = buildVrfMessage(slotNumber, history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId))
-
+  private[horizen] def verifyVrfProof(history: SidechainHistory, verifiedBlock: SidechainBlockHeader, vrfMessage: VrfMessage): Unit = {
     val vrfIsCorrect = verifiedBlock.forgerBox.vrfPubKey().verify(vrfMessage, verifiedBlock.vrfProof)
     if(!vrfIsCorrect) {
       throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed")

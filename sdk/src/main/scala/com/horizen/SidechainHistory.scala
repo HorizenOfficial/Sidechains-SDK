@@ -133,7 +133,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
-    val vrfProofHash = getVrfProofHashForBlockHeader(block.header)
+    val vrfProofHash = getVrfProofHash(block.header)
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -495,7 +495,6 @@ object SidechainHistory
     )
   }
 
-  //@TODO remove lastBlockInEpoch parameter, use genesisBlock.id instead
   private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,

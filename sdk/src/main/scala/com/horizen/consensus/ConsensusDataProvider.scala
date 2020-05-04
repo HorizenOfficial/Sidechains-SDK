@@ -45,6 +45,11 @@ trait ConsensusDataProvider {
     }
   }
 
+  //Added check of timestamp, otherwise malicious actor could create fake genesis block
+  private def isGenesisBlock(blockTimestamp: Block.Timestamp, parentBlockId: ModifierId): Boolean = {
+    blockTimestamp == params.sidechainGenesisBlockTimestamp && parentBlockId == params.sidechainGenesisBlockParentId
+  }
+
   def getFullConsensusEpochInfoForBlock(blockTimestamp: Timestamp, parentBlockId: ModifierId): FullConsensusEpochInfo = {
     val stakeConsensusEpochInfo = getStakeConsensusEpochInfo(blockTimestamp, parentBlockId)
       .getOrElse(throw new IllegalStateException(s"Stake was not defined for block ${parentBlockId}"))
@@ -73,9 +78,10 @@ trait ConsensusDataProvider {
     // that the nonce is stable before the next epoch begins.)
     // https://eprint.iacr.org/2017/573.pdf p.23
     val quietSlotsNumber = params.consensusSlotsInEpoch / 3
-    val eligibleSlotsRange = ((quietSlotsNumber + 1) until (params.consensusSlotsInEpoch - quietSlotsNumber))
+    val eligibleSlotsRangeStart = quietSlotsNumber + 1
+    val eligibleSlotsRangeEnd = params.consensusSlotsInEpoch - quietSlotsNumber - 1
 
-    val nonceMessageDigest: MessageDigest = createNonceMessageDigest(lastBlockIdInEpoch, lastBlockInfoInEpoch, eligibleSlotsRange)
+    val nonceMessageDigest: MessageDigest = createNonceMessageDigest(lastBlockIdInEpoch, lastBlockInfoInEpoch, eligibleSlotsRangeStart, eligibleSlotsRangeEnd)
 
     //According to https://eprint.iacr.org/2017/573.pdf p.26
     val previousEpoch: ConsensusEpochId = blockIdToEpochId(lastBlockInfoInEpoch.lastBlockInPreviousConsensusEpoch)
@@ -89,7 +95,7 @@ trait ConsensusDataProvider {
   }
 
   //Message digest for nonce calculation is done in reverse order, i.e. from last eligible slot to first eligible slot
-  private def createNonceMessageDigest(initialBlockId: ModifierId, initialBlockInfo: SidechainBlockInfo, eligibleSlotsRange: Range): MessageDigest = {
+  private def createNonceMessageDigest(initialBlockId: ModifierId, initialBlockInfo: SidechainBlockInfo,  eligibleSlotsRangeStart: Int, eligibleSlotsRangeEnd: Int): MessageDigest = {
     require(!isGenesisBlock(initialBlockId)) //genesis nonce calculation shall be done in other way
 
     val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
@@ -97,8 +103,8 @@ trait ConsensusDataProvider {
     var nextBlockId = initialBlockId
     var nextBlockInfo = initialBlockInfo
     var nextBlockSlot = timeStampToSlotNumber(initialBlockInfo.timestamp)
-    while (nextBlockId != initialBlockInfo.lastBlockInPreviousConsensusEpoch && nextBlockSlot >= eligibleSlotsRange.start) {
-      if (eligibleSlotsRange.contains(nextBlockSlot)) {
+    while (nextBlockId != initialBlockInfo.lastBlockInPreviousConsensusEpoch && nextBlockSlot >= eligibleSlotsRangeStart) {
+      if (eligibleSlotsRangeEnd >= nextBlockSlot) {
         digest.update(nextBlockInfo.vrfProofHash.bytes())
       }
       nextBlockId = nextBlockInfo.parentId
@@ -122,12 +128,12 @@ trait ConsensusDataProvider {
     }
   }
 
-  def getVrfProofHashForBlockHeader(block: SidechainBlockHeader): VrfProofHash = {
+  def getVrfProofHash(blockHeader: SidechainBlockHeader): VrfProofHash = {
     //try to get cached value, if no in cache then calculate
-    val cachedValue = ConsensusDataProvider.vrfProofHashCache.get(block.id)
+    val cachedValue = ConsensusDataProvider.vrfProofHashCache.get(blockHeader.id)
     if (cachedValue == null) {
-      val calculatedVrfProofHash = calculateVrfProofHashForBlockHeader(block)
-      ConsensusDataProvider.vrfProofHashCache.put(block.id, calculatedVrfProofHash)
+      val calculatedVrfProofHash = calculateVrfProofHash(blockHeader)
+      ConsensusDataProvider.vrfProofHashCache.put(blockHeader.id, calculatedVrfProofHash)
       calculatedVrfProofHash
     }
     else {
@@ -135,9 +141,9 @@ trait ConsensusDataProvider {
     }
   }
 
-  def calculateVrfProofHashForBlockHeader(block: SidechainBlockHeader): VrfProofHash = {
-    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.timestamp, block.parentId)
-    val slotNumber = timeStampToSlotNumber(block.timestamp)
+  def calculateVrfProofHash(blockHeader: SidechainBlockHeader): VrfProofHash = {
+    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(blockHeader.timestamp, blockHeader.parentId)
+    val slotNumber = timeStampToSlotNumber(blockHeader.timestamp)
 
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 
@@ -148,7 +154,7 @@ trait ConsensusDataProvider {
     //from other point of view:
     //  we will verify consensus data implicitly even without any consensus validator;
     //  all tests of Sidechain history will require correct VrfProof (otherwise SidechainBlockInfo will not be built correctly)
-    val calculatedVrfProofHash: VrfProofHash = block.vrfProof.proofToVRFHash(block.forgerBox.vrfPubKey(), vrfMessage)
+    val calculatedVrfProofHash: VrfProofHash = blockHeader.vrfProof.proofToVRFHash(blockHeader.forgerBox.vrfPubKey(), vrfMessage)
     calculatedVrfProofHash
   }
 }
