@@ -4,8 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.block.MainchainBlockReference;
+import com.horizen.block.MainchainHeader;
+import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.NoncedBox;
+import com.horizen.companion.SidechainBoxesDataCompanion;
+import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -19,7 +23,6 @@ import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.VarInt;
-import com.horizen.utils.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -76,7 +79,8 @@ public class CommandProcessor {
 
     private void printUsageMsg() {
         printer.print("Usage:\n" +
-                    "\t<command name> [<json data>]\n" +
+                    "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                    "\tFor interactive mode: <command name> [<json data>]\n" +
                 "Supported commands:\n" +
                     "\thelp\n" +
                     "\tgeneratekey <arguments>\n" +
@@ -192,14 +196,21 @@ public class CommandProcessor {
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+            SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
+            SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     System.currentTimeMillis() / 1000,
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef)).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.data())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
+                    null,
+                    null,
+                    null,
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()
@@ -207,7 +218,7 @@ public class CommandProcessor {
 
             int withdrawalEpochLength;
             try {
-                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlocks().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                 withdrawalEpochLength = creationOutput.withdrawalEpochLength();
             }
             catch (Exception e) {
@@ -260,11 +271,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, 1, 100);
+                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, 1, 100);
+                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1, 100);
+                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720 );
         }
         return null;
 

@@ -1,44 +1,57 @@
 #!/usr/bin/env python2
+from netrc import netrc
+
+from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import check_json_precision, \
-    initialize_chain, initialize_chain_clean, \
+    initialize_chain_clean, \
     start_nodes, stop_nodes, \
-    sync_blocks, sync_mempools, wait_bitcoinds
-from SidechainTestFramework.scutil import initialize_sc_chain, initialize_sc_chain_clean, \
+    sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, wait_sidechainclients, generate_genesis_data, TimeoutException
-import tempfile
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, \
+    bootstrap_sidechain_nodes
 import os
-import json
 import traceback
 import sys
 import shutil
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
 
 '''
-If you want to keep default behavior:
-For MC Test Only: Override sc_setup_chain, sc_setup_network, sc_add_options
-For SC Test Only: Override setup_chain, setup_network, add_options and sc_generate_genesis_data
-For MC&SC Tests: Don't override anything
-'''
+The workflow is the following:
+1- add_options      (for MC nodes)
+2- sc_add_options   (for SC nodes)
+3- setup_chain      (for MC nodes)
+4- setup_network    (for MC nodes)
+5- sc_setup_chain   (for SC nodes)
+6- sc_setup_network (for SC nodes)
 
-#Default config, for the moment, just setup 1 MC node and 1 SC node
+Override the proper methods if you want to change default behavior.
+
+Default behavior: the framework starts 1 SC node connected to 1 MC node.
+            *************          *************
+            * SC Node 1 *  <---->  * MC Node 1 *
+            *************          *************
+
+'''
 class SidechainTestFramework(BitcoinTestFramework):
-    
+
     def add_options(self, parser):
         pass
-    
+
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, 1)
-        
+
     def setup_network(self, split = False):
-        self.nodes = self.setup_nodes() 
+        self.nodes = self.setup_nodes()
         self.sync_all()
-    
+
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
-    
+
     def split_network(self):
         pass
 
@@ -48,25 +61,25 @@ class SidechainTestFramework(BitcoinTestFramework):
 
     def join_network(self):
         pass
-    
+
     def sc_add_options(self, parser):
         pass
-    
-    #For now it's not active. scutil.generateGenesisData will return None
-    def sc_generate_genesis_data(self):
-        return generate_genesis_data(self.nodes[0]) #Maybe other parameters in future
-    
+
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data() #Should interact with mainchain in order to generate Genesis Data for SC Nodes
-        initialize_sc_chain_clean(self.options.tmpdir, 1, genesisData)
-    
+        mc_node_1 = self.nodes[0]
+        sc_node_1_configuration = SCNodeConfiguration(
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
+        )
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000), sc_node_1_configuration)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
         self.sc_sync_all()
-    
+
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
-        
+
     def sc_split_network(self):
         pass
 
@@ -76,10 +89,10 @@ class SidechainTestFramework(BitcoinTestFramework):
 
     def sc_join_network(self):
         pass
-        
+
     def run_test(self):
         pass
-        
+
     def main(self):
         import optparse
 
@@ -96,7 +109,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
-       
+
         self.add_options(parser)
         self.sc_add_options(parser)
         (self.options, self.args) = parser.parse_args()
@@ -106,22 +119,22 @@ class SidechainTestFramework(BitcoinTestFramework):
             logging.basicConfig(level=logging.DEBUG)
 
         os.environ['PATH'] = self.options.zendir+":"+os.environ['PATH']
-        
+
         check_json_precision()
 
         success = False
         try:
             if not os.path.isdir(self.options.tmpdir):
                 os.makedirs(self.options.tmpdir)
-            
+
             print("Initializing test directory "+self.options.tmpdir)
-            
+
             self.setup_chain()
 
             self.setup_network()
-            
+
             self.sc_setup_chain()
-            
+
             self.sc_setup_network()
 
             self.run_test()
@@ -143,15 +156,15 @@ class SidechainTestFramework(BitcoinTestFramework):
         except Exception as e:
             print("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
-        
+
         if not self.options.noshutdown: #Support for tests with MC only, SC only, MC/SC
+            if hasattr(self,"sc_nodes"):
+                print("Stopping SC nodes")
+                stop_sc_nodes(self.sc_nodes)
             if hasattr(self, "nodes"):
                 print("Stopping MC nodes")
                 stop_nodes(self.nodes)
                 wait_bitcoinds()
-            if hasattr(self,"sc_nodes"):
-                print("Stopping SC nodes")
-                stop_sc_nodes(self.sc_nodes)
         else:
             print("Note: client processes were not stopped and may still be running")
 
@@ -169,7 +182,7 @@ class SidechainTestFramework(BitcoinTestFramework):
 '''Support for running MC & SC Nodes with different binaries. 
 For MC the implementation follows the one of BTF, for SC it is possible to specify multiple jars'''
 class SidechainComparisonTestFramework(SidechainTestFramework):
-    
+
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
                           default=os.getenv("BITCOIND", "zend"),
@@ -187,20 +200,19 @@ class SidechainComparisonTestFramework(SidechainTestFramework):
                                     extra_args=[['-debug', '-whitelist=127.0.0.1']] * self.num_nodes,
                                     binary=[self.options.testbinary] +
                                            [self.options.refbinary]*(self.num_nodes-1))
-    
+
     def sc_add_options(self, parser):
         parser.add_option("--jarspathlist", dest="jarspathlist", type = "string",
                           action = "callback", callback = self._get_args,
                           default=["resources/twinsChain.jar examples.hybrid.HybridApp", "resources/twinsChainOld.jar examples.hybrid.HybridApp"],
                           help="node jars to test in the format: \"<jar1>,<jar2>,...\"")
-    
+
     def _get_args(self, option, opt, value, parser):
         setattr(parser.values, option.dest, str.split(','))
-        
+
     def sc_setup_chain(self):
-        genesisData = self.sc_generate_genesis_data()
         self.num_sc_nodes = len(self.options.jarspathlist)
-        initialize_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes, genesisData)
-        
+        initialize_default_sc_chain_clean(self.options.tmpdir, self.num_sc_nodes)
+
     def sc_setup_network(self):
-        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)    
+        self.sc_nodes = start_sc_nodes(self.num_sc_nodes, self.options.tmpdir, binary = self.options.jarspathlist)

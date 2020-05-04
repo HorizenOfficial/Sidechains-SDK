@@ -58,17 +58,16 @@ class SidechainsHashMapTest extends JUnitSuite {
   }
 
   @Test
-  def testaddNeighbourProofs1(): Unit = {
+  def addNeighbourProofs1(): Unit = {
 
     val shm = new SidechainsHashMap()
-
-    val transactionHash = new Array[Byte](size)
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(11)
 
     sidechainIdSeq.foreach(v => {
-      Random.nextBytes(transactionHash)
-      shm.addTransactionHashes(v, Seq(transactionHash))
+      val forwardTransferMerkleRootHash = new Array[Byte](size)
+      Random.nextBytes(forwardTransferMerkleRootHash)
+      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
     })
 
     val merkleTree = shm.getMerkleTree
@@ -120,17 +119,16 @@ class SidechainsHashMapTest extends JUnitSuite {
   }
 
   @Test
-  def testaddNeighbourProofs2(): Unit = {
+  def addNeighbourProofs2(): Unit = {
 
     val shm = new SidechainsHashMap()
-
-    val transactionHash = new Array[Byte](size)
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(23)
 
     sidechainIdSeq.foreach(v => {
-      Random.nextBytes(transactionHash)
-      shm.addTransactionHashes(v, Seq(transactionHash))
+      val forwardTransferMerkleRootHash = new Array[Byte](size)
+      Random.nextBytes(forwardTransferMerkleRootHash)
+      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
     })
 
     val merkleTree = shm.getMerkleTree
@@ -182,17 +180,16 @@ class SidechainsHashMapTest extends JUnitSuite {
   }
 
   @Test
-  def testaddNeighbourProofs3(): Unit = {
+  def addNeighbourProofs3(): Unit = {
 
     val shm = new SidechainsHashMap()
-
-    val transactionHash = new Array[Byte](size)
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(47)
 
     sidechainIdSeq.foreach(v => {
-      Random.nextBytes(transactionHash)
-      shm.addTransactionHashes(v, Seq(transactionHash))
+      val forwardTransferMerkleRootHash = new Array[Byte](size)
+      Random.nextBytes(forwardTransferMerkleRootHash)
+      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
     })
 
     val merkleTree = shm.getMerkleTree

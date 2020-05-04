@@ -46,7 +46,7 @@ class SidechainSecretStorageTest
     secretList = new ListBuffer[Secret]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-    secretList ++= getSecretList(5).asScala ++ getCustomSecretList(5).asScala
+    secretList ++= getPrivateKey25519List(5).asScala ++ getCustomPrivateKeyList(5).asScala
 
     for (s <- secretList) {
       storedList.append({
@@ -88,7 +88,7 @@ class SidechainSecretStorageTest
 
 
     // Test 4: try get non-existing item
-    val nonExistingSecret = getSecret("test non-existing".getBytes())
+    val nonExistingSecret = getPrivateKey25519("test non-existing".getBytes())
     assertEquals("Storage should NOT contain requested Secrets.", None, secretStorage.get(nonExistingSecret.publicImage()))
 
 
@@ -104,7 +104,7 @@ class SidechainSecretStorageTest
     var tryRes: Try[SidechainSecretStorage] = null
     val expectedException = new IllegalArgumentException("on add exception")
 
-    val newSecret = getSecret("new secret".getBytes())
+    val newSecret = getPrivateKey25519("new secret".getBytes())
     val key = new ByteArrayWrapper(Blake2b256.hash(newSecret.publicImage().bytes))
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(newSecret))
 
@@ -135,7 +135,7 @@ class SidechainSecretStorageTest
 
 
     // Test 2: test failed add(...), when Storage throws an exception
-    val newSecret2 = getSecret("new secret2".getBytes())
+    val newSecret2 = getPrivateKey25519("new secret2".getBytes())
     tryRes = secretStorage.add(newSecret2)
     assertTrue("SecretStorage failure expected during add.", tryRes.isFailure)
     assertEquals("SecretStorage different exception expected during add.", expectedException, tryRes.failed.get)
@@ -195,7 +195,7 @@ class SidechainSecretStorageTest
 
 
     // Test 3: test successful remove(...), when try to remove non-existing Secret
-    val newSecret = getSecret("new secret".getBytes())
+    val newSecret = getPrivateKey25519("new secret".getBytes())
     tryRes = secretStorage.remove(newSecret.publicImage())
 
     assertTrue("SecretStorage successful removing expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),

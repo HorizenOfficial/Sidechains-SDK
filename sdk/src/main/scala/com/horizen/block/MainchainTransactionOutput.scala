@@ -1,17 +1,9 @@
 package com.horizen.block
 
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, VarInt}
 
-case class MainchainTransactionOutput
-  (outputBytes: Array[Byte],
-   pubKeyHash: Array[Byte],
-   amount: Long)
-{
-
+case class MainchainTransactionOutput(outputBytes: Array[Byte], value: Long, script: Array[Byte]) {
   def size: Int = outputBytes.length
-
-  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(outputBytes))
-
 }
 
 object MainchainTransactionOutput {
@@ -19,16 +11,16 @@ object MainchainTransactionOutput {
 
     var currentOffset: Int = offset
 
-    val amount: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
+    val value: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
     currentOffset += 8
 
     val scriptLength: VarInt = BytesUtils.getVarInt(outputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
-    val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue()))
+    val script: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue()))
     currentOffset += scriptLength.value().intValue()
 
-    new MainchainTransactionOutput(outputBytes.slice(offset, currentOffset), pubKeyHash, amount)
+    new MainchainTransactionOutput(outputBytes.slice(offset, currentOffset), value, script)
   }
 }
 

@@ -1,6 +1,7 @@
 package com.horizen.params
 import java.math.BigInteger
 
+import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
 
@@ -10,7 +11,10 @@ case class MainNetParams(
                      override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
                      override val genesisPoWData: Seq[(Int, Int)] = Seq(),
                      override val mainchainCreationBlockHeight: Int = 1,
-                     override val withdrawalEpochLength: Int = 100
+                     override val withdrawalEpochLength: Int = 100,
+                     override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
+                     override val consensusSecondsInSlot: Int = 120,
+                     override val consensusSlotsInEpoch: Int = 720
                    ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

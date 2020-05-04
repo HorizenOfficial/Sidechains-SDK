@@ -83,6 +83,8 @@ public class MerklePathTest {
 
         MerklePath mp2 = MerklePath.parseBytes(bytes);
         assertEquals("Empty Merkle Path expected.",0, mp2.merklePathList().size());
+        assertEquals("Merkle Path hash codes expected to be equal.", mp1.hashCode(), mp2.hashCode());
+        assertEquals("Merkle Pathes expected to be equal.", mp1, mp2);
 
         // Test 2: serialization/deserialization of non-empty MerklePath
         MerklePath mp3 = new MerklePath(merklePathSources);
@@ -90,6 +92,8 @@ public class MerklePathTest {
 
         MerklePath mp4 = MerklePath.parseBytes(bytes);
         assertEquals("Merkle Path list size expected to be 4.",4, mp4.merklePathList().size());
+        assertEquals("Merkle Path hash codes expected to be equal.", mp3.hashCode(), mp4.hashCode());
+        assertEquals("Merkle Pathes expected to be equal.", mp3, mp4);
         for(int i = 0; i < merklePathSources.size(); i++) {
             assertEquals(String.format("Merkle Path list item %d key expected to be equal.", i), merklePathSources.get(i).getKey(), mp4.merklePathList().get(i).getKey());
 

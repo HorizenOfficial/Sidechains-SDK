@@ -1,28 +1,27 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class WithdrawalRequestBoxSerializerTest
+public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
 {
     WithdrawalRequestBox box;
 
     @Before
     public void setUp() {
         // Note: current box bytes are also stored in "src/test/resources/withdrawalrequestbox_bytes"
-        box = new WithdrawalRequestBox(new MCPublicKeyHashProposition(new byte[MCPublicKeyHashProposition.KEY_LENGTH]), 1000, 10);
+        box = getWithdrawalRequestBox(new MCPublicKeyHashProposition(new byte[MCPublicKeyHashProposition.KEY_LENGTH]), 1000, 10);
 
         //Save box to binary file for regression tests.
         /*
@@ -36,12 +35,12 @@ public class WithdrawalRequestBoxSerializerTest
     }
 
     @Test
-    public void WithdrawalRequestBoxSerializerTest_SerializationTest() {
+    public void serializationTest() {
         BoxSerializer<WithdrawalRequestBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
 
         WithdrawalRequestBox box2 = serializer.parseBytes(bytes);
-        assertTrue("Boxes expected to be equal", box.equals(box2));
+        assertEquals("Boxes expected to be equal", box, box2);
 
 
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
@@ -50,7 +49,7 @@ public class WithdrawalRequestBoxSerializerTest
     }
 
     @Test
-    public void WithdrawalRequestBoxSerializerTest_RegressionTest() {
+    public void regressionTest() {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
@@ -58,7 +57,7 @@ public class WithdrawalRequestBoxSerializerTest
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
-            assertTrue(e.toString(), false);
+            fail(e.toString());
             return;
         }
 

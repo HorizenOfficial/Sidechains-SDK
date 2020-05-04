@@ -5,6 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxCertifierLockCrosschainOutput;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.box.CertifierRightBox;
+import com.horizen.box.data.CertifierRightBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
@@ -37,7 +38,13 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
     public Optional<CertifierRightBox> getBox() {
         byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
         long nonce = BytesUtils.getLong(hash, 0);
-        return Optional.of(new CertifierRightBox(new PublicKey25519Proposition(output.propositionBytes()), nonce, output.lockedAmount(), output.activeFromWithdrawalEpoch()));
+        return Optional.of(new CertifierRightBox(
+                new CertifierRightBoxData(
+                        new PublicKey25519Proposition(output.propositionBytes()),
+                        output.lockedAmount(),
+                        output.activeFromWithdrawalEpoch()),
+                nonce)
+        );
     }
 
     @Override

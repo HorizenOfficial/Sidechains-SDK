@@ -59,7 +59,7 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
             objectsTotalLength += length;
         }
 
-        if (reader.remaining() != objectsTotalLength)
+        if (reader.remaining() < objectsTotalLength)
             throw new IllegalArgumentException("Input data is corrupted.");
 
         List<T> objectsList = new ArrayList<>(objectsCount);

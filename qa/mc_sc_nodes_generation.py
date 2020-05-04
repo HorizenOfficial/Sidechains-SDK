@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
-from SidechainTestFramework.scutil import initialize_sc_chain_clean, start_sc_nodes, connect_sc_nodes, sync_sc_mempools, sync_sc_blocks, \
+from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, connect_sc_nodes, sync_sc_mempools, sync_sc_blocks, \
                                           wait_for_next_sc_blocks
 import json
 import random
@@ -36,7 +36,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         return start_nodes(3, self.options.tmpdir)
     
     def sc_setup_chain(self):
-        initialize_sc_chain_clean(self.options.tmpdir, 3, None)
+        initialize_default_sc_chain_clean(self.options.tmpdir, 3)
         
     def sc_setup_network(self, split = False):
         print("Initializing Sidechain nodes...")
@@ -109,9 +109,9 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         scnode0name = "node0"
         scnode1name = "node1"
         scnode2name = "node2"
-        scnode1address = self.sc_nodes[1].wallet_balances()["publicKeys"][0]
-        scnode0balance = int(self.sc_nodes[0].wallet_balances()["totalBalance"])
-        scnode1balance = int(self.sc_nodes[1].wallet_balances()["totalBalance"])
+        scnode1address = self.sc_nodes[1].wallet_allPublicKeys()["result"]["propositions"][0]
+        scnode0balance = int(self.sc_nodes[0].wallet_balance()["result"]["balance"])
+        scnode1balance = int(self.sc_nodes[1].wallet_balance()["result"]["balance"])
         print("-->SC Node 0 balance: {0}".format(scnode0balance))
         print("-->SC Node 1 balance: {0}".format(scnode1balance))
         sc_amount = random.randint(1, scnode0balance - 100)

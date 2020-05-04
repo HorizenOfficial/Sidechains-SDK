@@ -66,11 +66,13 @@ def EncodeDecimal(o):
 
 class AuthServiceProxy(object):
     __id_count = 0
+    hostname = ""
 
     def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
         self.__service_url = service_url
         self.__service_name = service_name
         self.__url = urlparse.urlparse(service_url)
+        self.hostname = self.__url.hostname
         if self.__url.port is None:
             port = 80
         else:

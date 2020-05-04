@@ -64,17 +64,7 @@ object MainchainTransaction {
     currentOffset += outputsNumber.size()
 
     for (i <- 1 to outputsNumber.value().intValue()) {
-      val value: Long = BytesUtils.getReversedLong(transactionBytes, currentOffset)
-      currentOffset += 8
-
-      val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-      currentOffset += scriptLength.size()
-
-      val script: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
-      val scriptHex: String = BytesUtils.toHexString(script)
-      currentOffset += scriptLength.value().intValue()
-
-      // possible creation of MainchainTxOutput(value, script)
+      currentOffset += MainchainTransactionOutput.parse(transactionBytes, currentOffset).size
     }
 
     if(version == SC_TX_VERSION) {

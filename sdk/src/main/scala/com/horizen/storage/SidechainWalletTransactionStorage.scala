@@ -2,18 +2,15 @@ package com.horizen.storage
 
 import java.util.Optional
 import java.util.{ArrayList => JArrayList, List => JList}
+
 import com.horizen.utils.{Pair => JPair}
 
 import scala.collection.JavaConverters._
-
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.utils.ByteArrayWrapper
-
 import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
-import scorex.util.idToBytes
-
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import scala.util.{Failure, Success, Try}
 
@@ -55,7 +52,7 @@ with ScorexLogging
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     for (tx <- transactionUpdateList)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(idToBytes(tx.id)),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(idToBytes(ModifierId @@ tx.id)),
         new ByteArrayWrapper(sidechainTransactionsCompanion.toBytes(tx))))
 
     storage.update(version,

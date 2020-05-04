@@ -178,13 +178,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/template:
+  /block/startForging:
     post:
       tags:
         - block
-      summary: find block candidate for being next tip
-      description: Return Sidechain block candidate for being next tip, already signed by Forger
-      operationId: getBlockTemplate
+      summary: Start forging
+      description: Start forging
+      operationId: startForging
       responses:
         '200':
           description: successful operation
@@ -196,10 +196,8 @@ paths:
                   result:
                     type: object
                     properties:
-                      block:
+                      result:
                         type: string
-                      blockInfo:
-                        $ref: '#/components/schemas/SidechainBlock'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -209,24 +207,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/submit:
+  /block/stopForging:
     post:
       tags:
         - block
-      summary: submitBlock
-      description: submitBlock
-      operationId: submitBlock
+      summary: Stop forging
+      description: Stop forging
+      operationId: stopForging
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      result:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/generate:
+    post:
+      tags:
+        - block
+      summary: try to generate new block by epoch and slot number
+      description: Returns id of generated sidechain block
+      operationId: generateBlockForEpochNumberAndSlot
       requestBody:
-        description: The sidechain block as array of bytes
         content:
           application/json:
             schema:
               type: object
               required:
-                - blockHex
+                - number
               properties:
-                blockHex:
-                  type: string
+                epochNumber:
+                  description: Epoch number
+                  type: integer
+                  format: int32
+                slotNumber:
+                  description: Slot number
+                  type: integer
+                  format: int32
       responses:
         '200':
           description: successful operation
@@ -249,25 +281,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /block/generate:
+  /block/forgingInfo:
     post:
       tags:
         - block
-      summary: generate new blocks
-      description: Returns ids of generated sidechain blocks
-      operationId: generateBlocks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - number
-              properties:
-                number:
-                  description: The number of blocks to generate
-                  type: integer
-                  format: int32
+      summary: Get forging info
+      description: Get forging info
+      operationId: getForgingInfo
       responses:
         '200':
           description: successful operation
@@ -279,10 +299,18 @@ paths:
                   result:
                     type: object
                     properties:
-                      blockIds:
-                        type: array
-                        items:
-                          type: string
+                      consensusSecondsInSlot:
+                        type: integer
+                        format: int32
+                      consensusSlotsInEpoch:
+                        type: integer
+                        format: int32
+                      bestEpochNumber:
+                        type: integer
+                        format: int32
+                      bestSlotNumber:
+                        type: integer
+                        format: int32
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -443,7 +471,9 @@ paths:
               type: object
               required:
                 - transactionInputs
-                - transactionOutputs
+                - regularOutputs
+                - withdrawalRequests
+                - forgerOutputs
               properties:
                 transactionInputs:
                   type: array
@@ -454,7 +484,8 @@ paths:
                     properties:
                       boxId:
                         type: string
-                transactionOutputs:
+                        description: id of RegularBox
+                regularOutputs:
                   type: array
                   items:
                     type: object
@@ -463,6 +494,37 @@ paths:
                       - value
                     properties:
                       publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                withdrawalRequests:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                     - publicKey
+                     - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                forgerOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - vrfPubKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      rewardKey:
+                        type: string
+                      vrfPubKey:
                         type: string
                       value:
                         type: integer
@@ -508,8 +570,11 @@ paths:
               type: object
               required:
                 - transactionOutputs
+                - withdrawalRequests
+                - forgerOutputs
+                - fee
               properties:
-                transactionOutputs:
+                regularOutputs:
                   type: array
                   items:
                     type: object
@@ -518,6 +583,37 @@ paths:
                       - value
                     properties:
                       publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                withdrawalRequests:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                     - publicKey
+                     - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                forgerOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - vrfPubKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      rewardKey:
+                        type: string
+                      vrfPubKey:
                         type: string
                       value:
                         type: integer
@@ -605,19 +701,72 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
   /transaction/withdrawCoins:
+      post:
+        tags:
+          - transaction
+        summary: send a transaction
+        description: Create and sign a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+        operationId: withdrawCoins
+        requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - outputs
+                properties:
+                  outputs:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - publicKey
+                        - value
+                      properties:
+                        publicKey:
+                          type: string
+                        value:
+                          type: integer
+                          format: int64
+                  fee:
+                    type: integer
+                    format: int64
+        responses:
+          '200':
+            description: successful operation
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    result:
+                      type: object
+                      properties:
+                        transactionId:
+                          type: string
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
+          default:
+            description: any kind of http error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/makeForgerStake:
     post:
       tags:
         - transaction
-      summary: send a transaction
-      description: Create and sign a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
-      operationId: withdrawCoins
+      summary: create transaction with forger stake
+      description: Create and sign a regular transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      operationId: makeForgerStake
       requestBody:
         content:
           application/json:
             schema:
               type: object
               required:
-                - transactionOutputs
+                - outputs
               properties:
                 outputs:
                   type: array
@@ -626,8 +775,13 @@ paths:
                     required:
                       - publicKey
                       - value
+                      - vrfPubKey
                     properties:
                       publicKey:
+                        type: string
+                      rewardKey:
+                        type: string
+                      vrfPubKey:
                         type: string
                       value:
                         type: integer
@@ -647,6 +801,91 @@ paths:
                     type: object
                     properties:
                       transactionId:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /transaction/spendForgingStake:
+    post:
+      tags:
+        - transaction
+      summary: create and sign a forging stake spending transaction
+      description: Create and sign a forging stake spending transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: spendForgingStake
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionInputs
+                - regularOutputs
+                - forgerOutputs
+              properties:
+                transactionInputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - boxId
+                    properties:
+                      boxId:
+                        type: string
+                        description: id of ForgerBox
+                regularOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                forgerOutputs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - publicKey
+                      - vrfPubKey
+                      - value
+                    properties:
+                      publicKey:
+                        type: string
+                      rewardKey:
+                        type: string
+                      vrfPubKey:
+                        type: string
+                      value:
+                        type: integer
+                        format: int64
+                format:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      transactionBytes:
                         type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -780,13 +1019,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /wallet/createSecret:
+  /wallet/createPrivateKey25519:
     post:
       tags:
         - wallet
-      summary: new secret
+      summary: new 25519 secret
       description: Create new secret and return corresponding address (public key)
-      operationId: createSecret
+      operationId: createPrivateKey25519
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/createVrfSecret:
+    post:
+      tags:
+        - wallet
+      summary: new Vrf secret
+      description: Create new Vrf secret and return corresponding public key
+      operationId: createVrfSecret
       responses:
         '200':
           description: successful operation

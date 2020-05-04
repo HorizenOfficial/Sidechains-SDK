@@ -1,11 +1,8 @@
 package com.horizen.block
 
-import com.google.common.primitives.{Bytes, Ints, Longs}
-import com.horizen.utils.{BytesUtils, ListSerializer, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-
-import scala.collection.JavaConverters._
 
 case class MainchainBackwardTransferCertificate
   (certificateBytes: Array[Byte],
@@ -26,7 +23,6 @@ case class MainchainBackwardTransferCertificate
   def size: Int = certificateBytes.length
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
-
 }
 
 object MainchainBackwardTransferCertificate {
@@ -81,7 +77,6 @@ object MainchainBackwardTransferCertificate {
       sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
 
   }
-
 }
 
 object MainchainBackwardTransferCertificateSerializer
@@ -94,5 +89,4 @@ object MainchainBackwardTransferCertificateSerializer
   override def parse(r: Reader): MainchainBackwardTransferCertificate = {
     MainchainBackwardTransferCertificate.parse(r.getBytes(r.remaining), 0)
   }
-
 }

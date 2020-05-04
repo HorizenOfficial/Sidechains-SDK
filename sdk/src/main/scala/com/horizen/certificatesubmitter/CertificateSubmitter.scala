@@ -65,7 +65,7 @@ class CertificateSubmitter
           mainchainApi.sendCertificate(
             CertificateRequestCreator.create(
               withdrawalEpochInfo.epoch - 1,
-              mcEndEpochBlockHashOpt.get().getMainchainBlockReferenceHash,
+              mcEndEpochBlockHashOpt.get().getMainchainHeaderHash(),
               withdrawalRequests.get,
               params
             )
