@@ -73,7 +73,7 @@ case class MainchainBlockReference(
         if (data.proofOfNoData._1.isDefined || data.proofOfNoData._2.isDefined)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-        val sidechainHashMap = new SidechainsHashMap()
+        val sidechainHashMap = new SidechainsCommitmentTree()
 
         if (data.sidechainRelatedAggregatedTransaction.isDefined) {
           val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(
@@ -87,7 +87,7 @@ case class MainchainBlockReference(
         if (data.backwardTransferCertificate.isDefined)
           sidechainHashMap.addCertificate(data.backwardTransferCertificate.get)
 
-        val sidechainHash = sidechainHashMap.getSidechainHash(sidechainId)
+        val sidechainHash = sidechainHashMap.getSidechainCommitmentEntryHash(sidechainId)
 
         if (!util.Arrays.equals(header.hashScTxsCommitment, data.mproof.get.apply(sidechainHash)))
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
@@ -114,14 +114,14 @@ case class MainchainBlockReference(
 
         // In case if only left neighbour is defined, it must be the rightmost leaf in the sidechains merkle tree.
         if (data.proofOfNoData._2.isEmpty &&
-            !data.proofOfNoData._1.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(data.proofOfNoData._1.get)))
+            !data.proofOfNoData._1.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(data.proofOfNoData._1.get)))
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour expected to be the last leaf in ScTxsCommitment merkle tree")
 
         data.proofOfNoData._1 match {
           case Some(leftNeighbourProof) =>
             if (new ByteArrayWrapper(leftNeighbourProof.sidechainId) >= sidechainId)
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour sidechain id is after current sidechain id")
-            val merkleRoot = leftNeighbourProof.merklePath.apply(SidechainHashList.getSidechainHash(leftNeighbourProof))
+            val merkleRoot = leftNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(leftNeighbourProof))
             if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour proof is inconsistent to MainchainHeader hashScTxsCommitment")
           case None =>
@@ -131,7 +131,7 @@ case class MainchainBlockReference(
           case Some(rightNeighbourProof) =>
             if (new ByteArrayWrapper(rightNeighbourProof.sidechainId) <= sidechainId)
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour sidechain id is before current sidechain id")
-            val merkleRoot = rightNeighbourProof.merklePath.apply(SidechainHashList.getSidechainHash(rightNeighbourProof))
+            val merkleRoot = rightNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rightNeighbourProof))
             if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour proof is inconsistent to MainchainHeader hashScTxsCommitment")
           case None =>
@@ -157,7 +157,7 @@ object MainchainBlockReference {
 
         val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
-        val sidechainHashMap = new SidechainsHashMap()
+        val sidechainHashMap = new SidechainsCommitmentTree()
 
         for (tx <- mainchainTxs)
           scIds = scIds ++ tx.getRelatedSidechains
@@ -184,9 +184,9 @@ object MainchainBlockReference {
           if (scIds.isEmpty) {
             MainchainBlockReferenceData(header.hash, None, None, (None, None), None)
           } else if (scIds.contains(sidechainId)) {
-            MainchainBlockReferenceData(header.hash, mc2scTransaction, sidechainHashMap.getMerklePath(sidechainId), (None, None), certificate)
+            MainchainBlockReferenceData(header.hash, mc2scTransaction, sidechainHashMap.getSidechainCommitmentEntryMerklePath(sidechainId), (None, None), certificate)
           } else {
-            MainchainBlockReferenceData(header.hash, mc2scTransaction, None, sidechainHashMap.getNeighbourProofs(sidechainId), certificate)
+            MainchainBlockReferenceData(header.hash, mc2scTransaction, None, sidechainHashMap.getNeighbourSidechainCommitmentEntryProofs(sidechainId), certificate)
           }
 
         Success(MainchainBlockReference(header, data))

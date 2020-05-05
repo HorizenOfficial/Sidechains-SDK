@@ -13,12 +13,12 @@ import scala.collection.mutable
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("headerHash"))
 case class MainchainBlockReferenceData(
-                                   headerHash: Array[Byte],
-                                   sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                                   @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
+                                        headerHash: Array[Byte],
+                                        sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
+                                        @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
                                    mproof: Option[MerklePath],
-                                   proofOfNoData: (Option[NeighbourProof], Option[NeighbourProof]),
-                                   backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
+                                        proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
+                                        backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
                                  ) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
@@ -59,7 +59,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
 
     obj.proofOfNoData._1 match {
       case Some(p) =>
-        val pb = NeighbourProofSerializer.toBytes(p)
+        val pb = SidechainCommitmentEntryProofSerializer.toBytes(p)
         w.putInt(pb.length)
         w.putBytes(pb)
       case None =>
@@ -68,7 +68,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
 
     obj.proofOfNoData._2 match {
       case Some(p) =>
-        val pb = NeighbourProofSerializer.toBytes(p)
+        val pb = SidechainCommitmentEntryProofSerializer.toBytes(p)
         w.putInt(pb.length)
         w.putBytes(pb)
       case None =>
@@ -108,18 +108,18 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
 
     val leftNeighbourSize: Int = r.getInt()
 
-    val leftNeighbour: Option[NeighbourProof] = {
+    val leftNeighbour: Option[SidechainCommitmentEntryProof] = {
       if (leftNeighbourSize > 0)
-        Some(NeighbourProofSerializer.parseBytes(r.getBytes(leftNeighbourSize)))
+        Some(SidechainCommitmentEntryProofSerializer.parseBytes(r.getBytes(leftNeighbourSize)))
       else
         None
     }
 
     val rightNeighbourSize: Int = r.getInt()
 
-    val rightNeighbour: Option[NeighbourProof] = {
+    val rightNeighbour: Option[SidechainCommitmentEntryProof] = {
       if (rightNeighbourSize > 0)
-        Some(NeighbourProofSerializer.parseBytes(r.getBytes(rightNeighbourSize)))
+        Some(SidechainCommitmentEntryProofSerializer.parseBytes(r.getBytes(rightNeighbourSize)))
       else
         None
     }

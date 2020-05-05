@@ -203,13 +203,15 @@ class SidechainStateStorageTest
 
     // Verify that withdrawal requests info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
-    assertTrue("No withdrawal reqeuests expected to be stored.", sidechainStateStorage.getWithdrawalRequests(withdrawalEpochInfo.epoch).isEmpty)
+    assertTrue("No withdrawal requests expected to be stored.", sidechainStateStorage.getWithdrawalRequests(withdrawalEpochInfo.epoch).isEmpty)
 
     val withdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(5).asScala.toList
 
     // Test append withdrawals operation (empty storage).
+    val firstWithdrawalEpochNumber: Int = 0
+
     val mod1Version = getVersion
-    val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(0, 1)
+    val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(firstWithdrawalEpochNumber, 1)
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList,
         Seq(), consensusEpoch, false
@@ -228,14 +230,14 @@ class SidechainStateStorageTest
       assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
     }
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
-      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
+      withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(firstWithdrawalEpochNumber))
 
 
     // Test append withdrawals to existing withdrawal epoch
     val mod2Version = getVersion
     val newWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(2).asScala.toList
 
-    val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(0, 2)
+    val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(firstWithdrawalEpochNumber, 2)
     assertTrue("Update(insert) must be successful.",
       sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), newWithdrawalRequestsList,
         Seq(), consensusEpoch, false
@@ -254,7 +256,37 @@ class SidechainStateStorageTest
       assertTrue("Storage must not contain specified forger box - " + box, sidechainStateStorage.getBox(box.id()).isEmpty)
     }
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
-      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
+      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(firstWithdrawalEpochNumber))
+
+
+    // Test clean-up for the old withdrawals from 2 epoch before
+    // Switch withdrawal epoch number to the second one.
+    val mod3Version = getVersion
+    val secondWithdrawalEpochNumber: Int = 1
+    val mod3WithdrawalEpochInfo = WithdrawalEpochInfo(secondWithdrawalEpochNumber, 1)
+    val secondEpochWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(2).asScala.toList
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod3Version, mod3WithdrawalEpochInfo, Set(), Set(), secondEpochWithdrawalRequestsList,
+        Seq(), consensusEpoch, false
+      ).isSuccess
+    )
+    // Check that first epoch withdrawals still exist -> no clean-up
+    assertEquals("Storage expected to have different withdrawal requests boxes applied.",
+      withdrawalRequestsList ++ newWithdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(firstWithdrawalEpochNumber))
+
+    // Switch withdrawal epoch number to the third one -> first epoch withdrawals expected to be removed.
+    val mod4Version = getVersion
+    val thirdWithdrawalEpochNumber: Int = 2
+    val mod4WithdrawalEpochInfo = WithdrawalEpochInfo(thirdWithdrawalEpochNumber, 1)
+    val thirdEpochWithdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(3).asScala.toList
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod4Version, mod4WithdrawalEpochInfo, Set(), Set(), thirdEpochWithdrawalRequestsList,
+        Seq(), consensusEpoch, false
+      ).isSuccess
+    )
+    // Check that first epoch withdrawals were removed.
+    assertEquals("Storage expected to have different withdrawal requests boxes applied.",
+      Seq(), sidechainStateStorage.getWithdrawalRequests(firstWithdrawalEpochNumber))
 
 
     // Test rollback operation
@@ -270,6 +302,48 @@ class SidechainStateStorageTest
       mod1WithdrawalEpochInfo, sidechainStateStorage.getWithdrawalEpochInfo.get)
     assertEquals("Storage expected to have different withdrawal requests boxes applied.",
       withdrawalRequestsList, sidechainStateStorage.getWithdrawalRequests(mod1WithdrawalEpochInfo.epoch))
+  }
+
+  @Test
+  def unprocessedWithdrawalRequestsFlow() : Unit = {
+    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+
+    // Verify that withdrawal requests info is not defined
+    assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
+    assertTrue("No withdrawal requests expected to be stored.", sidechainStateStorage.getWithdrawalRequests(withdrawalEpochInfo.epoch).isEmpty)
+    assertEquals("No unprocessedwithdrawal requests expected to be stored.",
+      Some(Seq()), sidechainStateStorage.getUnprocessedWithdrawalRequests(withdrawalEpochInfo.epoch))
+
+    val withdrawalRequestsList: List[WithdrawalRequestBox] = getWithdrawalRequestsBoxList(5).asScala.toList
+
+    // Append withdrawals for the first epoch. No certificate for this epoch.
+    val firstWithdrawalEpochNumber: Int = 0
+
+    val mod1Version = getVersion
+    val mod1WithdrawalEpochInfo = WithdrawalEpochInfo(firstWithdrawalEpochNumber, 1)
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod1Version, mod1WithdrawalEpochInfo, Set(), Set(), withdrawalRequestsList,
+        Seq(), consensusEpoch, false
+      ).isSuccess
+    )
+
+    // Test: storage expect to have defined unprocessed withdrawal requests for the first epoch
+    assertEquals("Storage expected to have different unprocessed withdrawal requests boxes applied.",
+      Some(withdrawalRequestsList), sidechainStateStorage.getUnprocessedWithdrawalRequests(firstWithdrawalEpochNumber))
+
+
+    // Test: set the modifier contains certificate for the first epoch -> unprocessed withdrawal request
+    // for the first epoch expected to be None.
+    val secondWithdrawalEpochNumber: Int = 1
+    val certificateIsPresent: Boolean = true
+
+    val mod2Version = getVersion
+    val mod2WithdrawalEpochInfo = WithdrawalEpochInfo(secondWithdrawalEpochNumber, 1)
+    assertTrue("Update(insert) must be successful.",
+      sidechainStateStorage.update(mod2Version, mod2WithdrawalEpochInfo, Set(), Set(), Seq(),
+        Seq(), consensusEpoch, certificateIsPresent
+      ).isSuccess
+    )
   }
 
   @Test

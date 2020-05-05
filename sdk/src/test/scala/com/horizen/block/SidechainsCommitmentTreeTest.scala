@@ -10,7 +10,7 @@ import org.scalatest.junit.JUnitSuite
 
 import scala.util.Random
 
-class SidechainsHashMapTest extends JUnitSuite {
+class SidechainsCommitmentTreeTest extends JUnitSuite {
 
   private val size = 32;
 
@@ -60,7 +60,7 @@ class SidechainsHashMapTest extends JUnitSuite {
   @Test
   def addNeighbourProofs1(): Unit = {
 
-    val shm = new SidechainsHashMap()
+    val shm = new SidechainsCommitmentTree()
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(11)
 
@@ -72,7 +72,7 @@ class SidechainsHashMapTest extends JUnitSuite {
 
     val merkleTree = shm.getMerkleTree
 
-    val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
+    val (lProof1, rProof1) = shm.getNeighbourSidechainCommitmentEntryProofs(beforeLeftMostSidechainId)
 
     assertTrue("Proof for left neighbour must not exist.", lProof1.isEmpty)
     assertTrue("Proof for right neighbour must exist.", rProof1.isDefined)
@@ -80,11 +80,11 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
       )
     )
 
-    val (lProof2, rProof2) = shm.getNeighbourProofs(innerSidechainId)
+    val (lProof2, rProof2) = shm.getNeighbourSidechainCommitmentEntryProofs(innerSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof2.isDefined)
     assertTrue("Proof for right neighbour must exist.", rProof2.isDefined)
@@ -92,27 +92,27 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 4", 4, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 5", 5, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
       )
     )
 
-    val (lProof3, rProof3) = shm.getNeighbourProofs(afterRightMostSidechainId)
+    val (lProof3, rProof3) = shm.getNeighbourSidechainCommitmentEntryProofs(afterRightMostSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
       )
     )
 
@@ -121,7 +121,7 @@ class SidechainsHashMapTest extends JUnitSuite {
   @Test
   def addNeighbourProofs2(): Unit = {
 
-    val shm = new SidechainsHashMap()
+    val shm = new SidechainsCommitmentTree()
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(23)
 
@@ -133,7 +133,7 @@ class SidechainsHashMapTest extends JUnitSuite {
 
     val merkleTree = shm.getMerkleTree
 
-    val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
+    val (lProof1, rProof1) = shm.getNeighbourSidechainCommitmentEntryProofs(beforeLeftMostSidechainId)
 
     assertTrue("Proof for left neighbour must not exist.", lProof1.isEmpty)
     assertTrue("Proof for right neighbour must exist.", rProof1.isDefined)
@@ -141,11 +141,11 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
       )
     )
 
-    val (lProof2, rProof2) = shm.getNeighbourProofs(innerSidechainId)
+    val (lProof2, rProof2) = shm.getNeighbourSidechainCommitmentEntryProofs(innerSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof2.isDefined)
     assertTrue("Proof for right neighbour must exist.", rProof2.isDefined)
@@ -153,27 +153,27 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 4", 10, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 5", 11, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
       )
     )
 
-    val (lProof3, rProof3) = shm.getNeighbourProofs(afterRightMostSidechainId)
+    val (lProof3, rProof3) = shm.getNeighbourSidechainCommitmentEntryProofs(afterRightMostSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
       )
     )
 
@@ -182,7 +182,7 @@ class SidechainsHashMapTest extends JUnitSuite {
   @Test
   def addNeighbourProofs3(): Unit = {
 
-    val shm = new SidechainsHashMap()
+    val shm = new SidechainsCommitmentTree()
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(47)
 
@@ -194,7 +194,7 @@ class SidechainsHashMapTest extends JUnitSuite {
 
     val merkleTree = shm.getMerkleTree
 
-    val (lProof1, rProof1) = shm.getNeighbourProofs(beforeLeftMostSidechainId)
+    val (lProof1, rProof1) = shm.getNeighbourSidechainCommitmentEntryProofs(beforeLeftMostSidechainId)
 
     assertTrue("Proof for left neighbour must not exist.", lProof1.isEmpty)
     assertTrue("Proof for right neighbour must exist.", rProof1.isDefined)
@@ -202,11 +202,11 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
       )
     )
 
-    val (lProof2, rProof2) = shm.getNeighbourProofs(innerSidechainId)
+    val (lProof2, rProof2) = shm.getNeighbourSidechainCommitmentEntryProofs(innerSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof2.isDefined)
     assertTrue("Proof for right neighbour must exist.", rProof2.isDefined)
@@ -214,27 +214,27 @@ class SidechainsHashMapTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 22", 22, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 23", 23, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainHashList.getSidechainHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
       )
     )
 
-    val (lProof3, rProof3) = shm.getNeighbourProofs(afterRightMostSidechainId)
+    val (lProof3, rProof3) = shm.getNeighbourSidechainCommitmentEntryProofs(afterRightMostSidechainId)
 
     assertTrue("Proof for left neighbour must exist.", lProof3.isDefined)
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainHashList.getSidechainHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainHashList.getSidechainHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
       )
     )
 
