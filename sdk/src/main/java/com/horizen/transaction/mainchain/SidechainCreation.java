@@ -39,9 +39,17 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public Optional<ForgerBox> getBox() {
+    public ForgerBox getBox() {
         // at the moment sc creation output doesn't create any new coins.
-        return Optional.of(getHardcodedGenesisForgerBox());
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
+        long value = output.amount();
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
+
+        long nonce = 42L;
+
+        return forgerBoxData.getBox(nonce);
     }
 
     @Override

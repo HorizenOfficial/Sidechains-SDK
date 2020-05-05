@@ -86,8 +86,8 @@ class CertificateSubmitter
     val submitMessage: SubmitMessageType =
       GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmitResult](submitCertificateFunction)
 
-    val forgedBlockAsFuture = (sidechainNodeViewHolderRef ? submitMessage).asInstanceOf[Future[SubmitResult]]
-    forgedBlockAsFuture.onComplete{
+    val submitAsFuture = (sidechainNodeViewHolderRef ? submitMessage).asInstanceOf[Future[SubmitResult]]
+    submitAsFuture.onComplete{
       case Success(SubmitSuccess) =>
         log.info(s"Backward transfer certificate was successfully created.")
 

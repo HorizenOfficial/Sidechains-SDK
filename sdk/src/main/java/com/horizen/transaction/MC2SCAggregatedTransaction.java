@@ -82,7 +82,7 @@ public final class MC2SCAggregatedTransaction
         if (_newBoxes == null) {
             _newBoxes = new ArrayList<>();
             for(SidechainRelatedMainchainOutput t : _mc2scTransactionsOutputs) {
-                t.getBox().map(box -> _newBoxes.add((Box<Proposition>) box));
+                _newBoxes.add((Box<Proposition>) t.getBox());
             }
         }
         return Collections.unmodifiableList(_newBoxes);
