@@ -3,7 +3,10 @@ package com.horizen.vrf
 import scala.util.Try
 
 object VrfLoader {
-  lazy val vrfFunctions: VrfFunctions = loadClass("com.horizen.vrf.VrfFunctionsImpl")
+  val vrfStub = "com.horizen.vrf.VrfFunctionsImpl"
+  val zendooImpl = "com.horizen.vrf.VrfFunctionsImplZendoo"
+
+  lazy val vrfFunctions: VrfFunctions = loadClass(zendooImpl)
 
   private def loadClass(className: String): VrfFunctions = {
     val loaders: List[ClassLoader] = List(ClassLoader.getSystemClassLoader, this.getClass.getClassLoader)

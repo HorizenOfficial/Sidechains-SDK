@@ -55,9 +55,8 @@ package object consensus {
     VrfMessage @@ resBytes
   }
 
-  def sha256HashToPositiveBigInteger(bytes: Array[Byte]): BigInteger = {
-    require(bytes.length == sha256HashLen)
-    new BigInteger(1, bytes)
+  def vrfProofHashToPositiveBigInteger(vrfProofHash: VrfProofHash): BigInteger = {
+    new BigInteger(1, vrfProofHash.bytes())
   }
 
   def vrfProofCheckAgainstStake(vrfProofHash: VrfProofHash, actualStake: Long, totalStake: Long): Boolean = {
@@ -73,7 +72,7 @@ package object consensus {
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
   def vrfProofHashToRequiredStakePercentage(vrfProofHash: VrfProofHash): BigDecimal = {
-    val hashAsBigDecimal: BigDecimal = new BigDecimal(sha256HashToPositiveBigInteger(vrfProofHash.bytes()))
+    val hashAsBigDecimal: BigDecimal = new BigDecimal(vrfProofHashToPositiveBigInteger(vrfProofHash))
 
     hashAsBigDecimal
       .remainder(forgerStakePercentPrecision) //got random number from 0 to forgerStakePercentPrecision - 1

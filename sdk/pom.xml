@@ -35,6 +35,12 @@
 
 	<dependencies>
 
+        <dependency>
+            <groupId>com.horizen</groupId>
+            <artifactId>zendoo-sc-cryptolib</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
