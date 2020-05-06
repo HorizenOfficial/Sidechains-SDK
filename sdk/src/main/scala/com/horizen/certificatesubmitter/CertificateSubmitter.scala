@@ -8,8 +8,7 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrent
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.mainchain.{CertificateRequest, CertificateRequestCreator}
-import com.horizen.mainchain.api.RpcMainchainApi
+import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi}
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.utils.WithdrawalEpochUtils
@@ -48,7 +47,7 @@ class CertificateSubmitter
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
   }
 
-  lazy val mainchainApi = new RpcMainchainApi(settings)
+  lazy val mainchainApi = new RpcMainchainNodeApi(settings)
 
   protected def submitCertificate(sidechainNodeView: View): SubmitResult = {
     try {

@@ -38,7 +38,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] val forgingStakesInfoKey = calculateKey("forgingStakes".getBytes)
   private val forgingStakeInfoSerializer = new ListSerializer[ForgingStakeInfo](ForgingStakeInfoSerializer)
 
-  private[horizen] def getWithdrawalEpochCounterKey: ByteArrayWrapper = calculateKey("withdrawalEpochCounter".getBytes)
+  private val undefinedWithdrawalEpochCounter: Int = -1
+  private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+  }
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
@@ -78,21 +81,21 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getWithdrawalEpochCounter: Option[Int] = {
-    storage.get(getWithdrawalEpochCounterKey).asScala match {
+  def getWithdrawalEpochCounter(epoch: Int): Int = {
+    storage.get(getWithdrawalEpochCounterKey(epoch)).asScala match {
       case Some(baw) =>
         Try {
           Ints.fromByteArray(baw.data)
-        }.toOption
-      case _ => None
+        }.toOption.getOrElse(undefinedWithdrawalEpochCounter)
+      case _ => undefinedWithdrawalEpochCounter
     }
   }
 
   def getWithdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
     // Aggregate withdrawal requests until reaching the counter, where the key is not present in the storage.
     val withdrawalRequests: ListBuffer[WithdrawalRequestBox] = ListBuffer()
-    var counter: Int = 0
-    while(true) {
+    val lastCounter: Int = getWithdrawalEpochCounter(epoch)
+    for(counter <- 0 to lastCounter) {
       storage.get(getWithdrawalRequestsKey(epoch, counter)).asScala match {
         case Some(baw) =>
           withdrawalRequestSerializer.parseBytesTry(baw.data) match {
@@ -102,10 +105,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
               log.error("Error while withdrawal requests parsing.", exception)
               return Seq[WithdrawalRequestBox]()
           }
-        case _ =>
-          return withdrawalRequests
+        case None =>
+          log.error("Error while withdrawal requests retrieving: record expected to exist.")
+          return Seq[WithdrawalRequestBox]()
       }
-      counter += 1
     }
     withdrawalRequests
   }
@@ -115,7 +118,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case v if v.isPresent => None
       case _ => Some(getWithdrawalRequests(epoch))
     }
-
   }
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
@@ -194,24 +196,28 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     updateList.add(new JPair(withdrawalEpochInformationKey,
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
 
+    if (withdrawalRequestAppendSeq.nonEmpty) {
+      // Calculate the next counter for storing withdrawal requests without duplication previously stored ones.
+      val nextWithdrawalEpochCounter: Int = getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1
+
+      updateList.add(new JPair(getWithdrawalEpochCounterKey(withdrawalEpochInfo.epoch),
+        new ByteArrayWrapper(Ints.toByteArray(nextWithdrawalEpochCounter))))
+
+      updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch, nextWithdrawalEpochCounter),
+        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
+    }
+
+    // If withdrawal epoch switched to the next one, then remove outdated withdrawal related records and counters (2 epochs before).
     val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfo.epoch
       case _ => false
     }
-    if (withdrawalRequestAppendSeq.nonEmpty) {
-      // Calculate the next counter for storing withdrawal requests without duplication previously stored ones.
-      val nextWithdrawalEpochCounter: Int = if(isWithdrawalEpochSwitched) 0 else getWithdrawalEpochCounter.getOrElse(-1) + 1
-
-      updateList.add(new JPair(getWithdrawalEpochCounterKey, new ByteArrayWrapper(Ints.toByteArray(nextWithdrawalEpochCounter))))
-
-      updateList.add(new JPair(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch, nextWithdrawalEpochCounter),
-        new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
-
-      // If withdrawal epoch switched to the next one, then remove outdated withdrawal related records (2 epochs before).
-      if (isWithdrawalEpochSwitched) {
-        for (i <- 0 to getWithdrawalEpochCounter.getOrElse(-1))
-          removeList.add(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch - 2, i))
+    if (isWithdrawalEpochSwitched) {
+      val withdrawalEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
+      for (counter <- 0 to getWithdrawalEpochCounter(withdrawalEpochNumberToRemove)) {
+        removeList.add(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch - 2, counter))
       }
+      removeList.add(getWithdrawalEpochCounterKey(withdrawalEpochNumberToRemove))
     }
 
     // Update Certificate related data

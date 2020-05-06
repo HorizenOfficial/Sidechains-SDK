@@ -2,11 +2,10 @@ package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.SidechainSettings
-import com.horizen.mainchain.{CertificateRequest, CertificateResponce, SidechainInfoResponce}
 import com.horizen.utils.BytesUtils
 
-class RpcMainchainApi(val sidechainSettings: SidechainSettings)
-  extends MainchainApi
+class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
+  extends MainchainNodeApi
 {
 
   private lazy val isOsWindows = {
@@ -36,30 +35,30 @@ class RpcMainchainApi(val sidechainSettings: SidechainSettings)
       "'" + parameter + "'"
   }
 
-  private def enclosStringParameter(parameter: String): String ={
+  private def encloseStringParameter(parameter: String): String ={
     "\"" + parameter + "\""
   }
 
-  override def getSidechainInfo: SidechainInfoResponce = {
+  override def getSidechainInfo: SidechainInfoResponse = {
     val objectMapper = new ObjectMapper()
-    val responce = callRpc("getscinfo")
+    val response = callRpc("getscinfo")
 
-    objectMapper.readValue(responce, classOf[SidechainInfoResponce])
+    objectMapper.readValue(response, classOf[SidechainInfoResponse])
   }
 
-  override def sendCertificate(certificateRequest: CertificateRequest): CertificateResponce = {
+  override def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse = {
     val objectMapper = new ObjectMapper()
     val feeParam: String = if (!certificateRequest.subtractFeeFromAmount) {
         " false " + certificateRequest.fee
     } else ""
-    val responce = callRpc("send_certificate "
-      + enclosStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
+    val response = callRpc("send_certificate "
+      + encloseStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
       + certificateRequest.epochNumber + " "
-      + enclosStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
-      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.withdrawalRequests))
+      + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
+      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers))
       + feeParam
       )
 
-    CertificateResponce(BytesUtils.fromHexString(responce))
+    SendCertificateResponse(BytesUtils.fromHexString(response))
   }
 }

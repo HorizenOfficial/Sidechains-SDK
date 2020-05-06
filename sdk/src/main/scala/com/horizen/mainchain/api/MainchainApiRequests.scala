@@ -1,15 +1,15 @@
-package com.horizen.mainchain
+package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
-
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import java.math.BigDecimal
 
 @JsonView(Array(classOf[Views.Default]))
-case class SidechainInfoResponce
+case class SidechainInfoResponse
   (sidechainId: Array[Byte],
-   balance: Double,
+   balance: String,
    creatingTxHash: Array[Byte],
    createdInBlock: Array[Byte],
    createdAtBlockHeight: Long,
@@ -17,47 +17,46 @@ case class SidechainInfoResponce
   )
 
 @JsonView(Array(classOf[Views.Default]))
-case class WithdrawalRequest
+case class BackwardTransferEntry
   (pubkeyhash: Array[Byte],
-   amount: Double)
+   amount: String)
 {
   require(pubkeyhash != null, "Address MUST be NOT NULL.")
-  require(amount > 0, "Amount MUST be greater than 0.")
 }
 
 @JsonView(Array(classOf[Views.Default]))
-case class CertificateRequest
+case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
-   withdrawalRequests: Seq[WithdrawalRequest],
+   backwardTransfers: Seq[BackwardTransferEntry],
    subtractFeeFromAmount: Boolean = false,
-   fee: Double = 0.00001)
+   fee: String = "0.00001")
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
   require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
-  require(withdrawalRequests != null, "List of WithdrawalRequests MUST be NOT NULL.")
-  require(withdrawalRequests.nonEmpty, "List of WithdrawalRequests MUST be not empty.")
+  require(backwardTransfers != null, "List of BackwardTransfers MUST be NOT NULL.")
+  require(backwardTransfers.nonEmpty, "List of BackwardTransfers MUST be not empty.")
 }
 
-case class CertificateResponce
+case class SendCertificateResponse
   (certificateId: Array[Byte])
 
-case class RawCertificateRequest
+case class GetRawCertificateRequest
   (certificateId: Array[Byte])
 
 @JsonView(Array(classOf[Views.Default]))
-case class RawCertificateResponce
+case class GetRawCertificateResponse
   (hex: Array[Byte])
 
 object CertificateRequestCreator {
 
-  val ZEN_COINS_DIVIDOR = 100000000
+  val ZEN_COINS_DIVISOR: BigDecimal = new BigDecimal(100000000)
 
   def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
-             params: NetworkParams) : CertificateRequest = {
-    CertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
-      withdrawalRequestBoxes.map(wrb => WithdrawalRequest(wrb.proposition().bytes(), wrb.value().toDouble/ZEN_COINS_DIVIDOR)))
+             params: NetworkParams) : SendCertificateRequest = {
+    SendCertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
+      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
   }
 }
