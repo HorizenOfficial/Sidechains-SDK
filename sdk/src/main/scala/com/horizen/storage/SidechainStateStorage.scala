@@ -102,12 +102,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
             case Success(wr) =>
               withdrawalRequests.appendAll(wr.asScala)
             case Failure(exception) =>
-              log.error("Error while withdrawal requests parsing.", exception)
-              return Seq[WithdrawalRequestBox]()
+              throw new IllegalStateException("Error while withdrawal requests parsing.", exception)
           }
         case None =>
-          log.error("Error while withdrawal requests retrieving: record expected to exist.")
-          return Seq[WithdrawalRequestBox]()
+          throw new IllegalStateException("Error while withdrawal requests retrieving: record expected to exist.")
       }
     }
     withdrawalRequests
