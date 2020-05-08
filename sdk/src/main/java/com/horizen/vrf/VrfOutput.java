@@ -10,45 +10,45 @@ import scorex.core.serialization.ScorexSerializer;
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public class VrfProofHash implements BytesSerializable {
-    private final byte[] proofHashBytes;
+public class VrfOutput implements BytesSerializable {
+    private final byte[] vrfOutputBytes;
 
-    public VrfProofHash(byte[] bytes) {
-        proofHashBytes = Arrays.copyOf(bytes, bytes.length);
+    public VrfOutput(byte[] bytes) {
+        vrfOutputBytes = Arrays.copyOf(bytes, bytes.length);
     }
 
     @JsonProperty("bytes")
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(proofHashBytes, proofHashBytes.length);
+        return Arrays.copyOf(vrfOutputBytes, vrfOutputBytes.length);
     }
 
     @Override
     public ScorexSerializer serializer() {
-        return VrfProofHashSerializer.getSerializer();
+        return VrfOutputSerializer.getSerializer();
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        VrfProofHash vrfProofHash = (VrfProofHash) o;
-        return Arrays.equals(proofHashBytes, vrfProofHash.proofHashBytes);
+        VrfOutput vrfOutput = (VrfOutput) o;
+        return Arrays.equals(vrfOutputBytes, vrfOutput.vrfOutputBytes);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(proofHashBytes);
+        return Arrays.hashCode(vrfOutputBytes);
     }
 
-    public static VrfProofHash parse(byte[] bytes) {
-        return new VrfProofHash(bytes);
+    public static VrfOutput parse(byte[] bytes) {
+        return new VrfOutput(bytes);
     }
 
     @Override
     public String toString() {
-        return "VrfProofHash{" +
-                "proofHashBytes=" + ByteUtils.toHexString(proofHashBytes) +
+        return "VrfOutput{" +
+                "vrfOutputBytes=" + ByteUtils.toHexString(vrfOutputBytes) +
                 '}';
     }
 }

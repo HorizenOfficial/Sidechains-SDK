@@ -82,7 +82,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   @Test
   def nonGenesisBlockCheck(): Unit = {
-    val epochSizeInSlots = 50
+    val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)

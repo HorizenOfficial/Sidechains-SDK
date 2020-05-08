@@ -2,7 +2,7 @@ package com.horizen.vrf
 
 import java.util
 
-import com.horizen.vrf.VrfFunctions.KeyType
+import com.horizen.vrf.VrfFunctions.{KeyType, ProofType}
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
 
@@ -14,16 +14,16 @@ class VrfFunctionsTest {
   val secretBytes: Array[Byte] = keys.get(KeyType.SECRET)
   val publicBytes: Array[Byte] = keys.get(KeyType.PUBLIC)
   val message: Array[Byte] = "Very secret message!".getBytes
-  val vrfProofBytes: Array[Byte] = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, message)
+  val vrfProofBytes: Array[Byte] = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, message).get(ProofType.VRF_PROOF)
   val vrfProofCheck: Boolean = VrfLoader.vrfFunctions.verifyProof(message, publicBytes, vrfProofBytes)
-  val vrfProofHashBytes: Array[Byte] = VrfLoader.vrfFunctions.vrfProofToVrfHash(publicBytes, message, vrfProofBytes)
+  val vrfOutputBytes: Array[Byte] = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, message, vrfProofBytes).get()
 
   @Test
   def sanityCheck(): Unit = {
-    assertNotEquals(vrfProofBytes.deep, vrfProofHashBytes.deep)
+    assertNotEquals(vrfProofBytes.deep, vrfOutputBytes.deep)
     assertTrue(VrfLoader.vrfFunctions.publicKeyIsValid(publicBytes))
     assertTrue(vrfProofCheck)
-    assertTrue(vrfProofHashBytes.nonEmpty)
+    assertTrue(vrfOutputBytes.nonEmpty)
   }
 
 
@@ -33,16 +33,17 @@ class VrfFunctionsTest {
     val rnd = new Random()
 
     for (i <- 1 to 10) {
-      val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes
-      val firstVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage)
-      val secondVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage)
+      val messageLen = rnd.nextInt(128) % VrfLoader.vrfFunctions.maximumVrfMessageLength()
+      val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes.take(messageLen)
+      val firstVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
+      val secondVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
       //assertEquals(vrfProofBytes.deep, otherVrfProofBytes.deep)
 
-      val firstVrfProofHashBytes = VrfLoader.vrfFunctions.vrfProofToVrfHash(publicBytes, newMessage, firstVrfProofBytes)
-      val secondVrfProofHashBytes = VrfLoader.vrfFunctions.vrfProofToVrfHash(publicBytes, newMessage, secondVrfProofBytes)
+      val firstVrfOutputBytes = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, newMessage, firstVrfProofBytes).get
+      val secondVrfOutputBytes = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, newMessage, secondVrfProofBytes).get
 
-      assertEquals(firstVrfProofHashBytes.deep, secondVrfProofHashBytes.deep)
-      println(s"iteration ${i}, for message len ${newMessage.length}")
+      assertEquals(firstVrfOutputBytes.deep, secondVrfOutputBytes.deep)
+      println(s"Vrf output determinism check: iteration ${i}, for message len ${newMessage.length}")
     }
   }
 

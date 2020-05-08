@@ -257,7 +257,7 @@ class MainchainBlockReferenceValidatorTest
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(0, 0),
-      VrfGenerator.generateProofHash(0),
+      VrfGenerator.generateVrfOutput(0),
       block.parentId
     )
   }

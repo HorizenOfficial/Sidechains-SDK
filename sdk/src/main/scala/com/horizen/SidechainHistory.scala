@@ -11,7 +11,7 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
@@ -133,7 +133,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
-    val vrfProofHash = getVrfProofHash(block.header)
+    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
+    val vrfOutput = getVrfOutput(block.header, nonceConsensusEpochInfo)
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -144,7 +145,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      vrfProofHash,
+      vrfOutput.getOrElse(new VrfOutput(Array())), //technically block is not correct from consensus point of view if vrfOutput is None
       lastBlockInPreviousConsensusEpoch
     )
   }
@@ -490,7 +491,7 @@ object SidechainHistory
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
-      new VrfProofHash(Array()), //vrfProofHash is not used at all, so use just placeholder
+      new VrfOutput(Array()), //vrfOutput is not used at all, so use just placeholder
       block.id,
     )
   }

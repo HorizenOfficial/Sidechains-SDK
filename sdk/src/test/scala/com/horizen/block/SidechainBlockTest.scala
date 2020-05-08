@@ -9,11 +9,13 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, VrfPublicKey}
+import com.horizen.secret.VrfSecretKey
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
+import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -42,8 +44,21 @@ class SidechainBlockTest
 
   val seed: Long = 11L
   val parentId: ModifierId = getRandomBlockId(seed)
-  val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-  val vrfProof: VrfProof = VrfGenerator.generateProof(seed)
+
+  val generatedDataSeed = 908
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfSecretKey(generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(generatedDataSeed)
+  }
+
+  val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
+    val publicKey: VrfPublicKey = secret.publicImage();
+    Option((secret, publicKey))
+  }
+
+  val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPair)
+  val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(generatedDataSeed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test

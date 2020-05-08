@@ -13,7 +13,9 @@ import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
+import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -28,6 +30,12 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
 
     @Before
     public void beforeEachTest() {
+        //Set to true if you want to update Vrf related data
+        if (false) {
+            VrfGeneratedDataProvider.updateVrfPublicKey(111);
+            VrfGeneratedDataProvider.updateVrfPublicKey(221);
+        }
+
         long fee = 10;
         long timestamp = 1547798549470L;
 
@@ -54,8 +62,8 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
 
-        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), getVRFPublicKey(111)));
-        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), getVRFPublicKey(221)));
+        to.add(new ForgerBoxData(pk7.publicImage(), 20L, pk7.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(111)));
+        to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(221)));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
         transaction = RegularTransaction.create(from, to, fee, timestamp);

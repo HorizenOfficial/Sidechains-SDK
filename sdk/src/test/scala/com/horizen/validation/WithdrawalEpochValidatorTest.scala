@@ -215,7 +215,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
-        WithdrawalEpochInfo(1, withdrawalEpochLength), VrfGenerator.generateProofHash(0), bytesToId(new Array[Byte](32))
+        WithdrawalEpochInfo(1, withdrawalEpochLength), VrfGenerator.generateVrfOutput(0), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
@@ -224,7 +224,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     // Test 3: valid block - no MainchainBlockReferenceData, parent is in the middle of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
-        WithdrawalEpochInfo(1, withdrawalEpochLength / 2), VrfGenerator.generateProofHash(1), bytesToId(new Array[Byte](32))
+        WithdrawalEpochInfo(1, withdrawalEpochLength / 2), VrfGenerator.generateVrfOutput(1), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
@@ -233,7 +233,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     // Test 4: valid block - no MainchainBlockReferenceData, parent is at the beginning of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),  Seq(),
-        WithdrawalEpochInfo(1, 0), VrfGenerator.generateProofHash(2), bytesToId(new Array[Byte](32))
+        WithdrawalEpochInfo(1, 0), VrfGenerator.generateVrfOutput(2), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with no MainchainBlockReferenceData expected to be valid.", validator.validate(block, history).isSuccess)
@@ -260,7 +260,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3), // lead to the middle index -> no epoch switch
-        VrfGenerator.generateProofHash(3), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(3), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with MainchainBlockReferenceData that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -270,7 +270,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2), // lead to the last epoch index -> no epoch switch
-        VrfGenerator.generateProofHash(4), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(4), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with MainchainBlockReferenceData that lead to the finish of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -280,7 +280,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1), // lead to the switching of the epoch
-        VrfGenerator.generateProofHash(5), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(5), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with MainchainBlockReferenceData that lead to epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
@@ -312,7 +312,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 3), // lead to the middle index -> no epoch switch
-        VrfGenerator.generateProofHash(5), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(5), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with SC transactions andMainchainBlockReferenceData that are in the middle of the epoch expected to be valid.", validator.validate(block, history).isSuccess)
@@ -322,7 +322,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2), // lead to the last epoch index -> no epoch switch
-        VrfGenerator.generateProofHash(6), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(6), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with SC transactions and MainchainBlockReferenceData that lead to the finish of the epoch expected to be invalid.", validator.validate(block, history).isFailure)
@@ -336,7 +336,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 1), // lead to the switching of the epoch
-        VrfGenerator.generateProofHash(7), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(7), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with SC transactions and MainchainBlockReferenceData that lead to the epoch switching expected to be invalid.", validator.validate(block, history).isFailure)
@@ -450,7 +450,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
       Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, withdrawalEpochLength - 2), // lead to the last epoch index -> no epoch switch
-        VrfGenerator.generateProofHash(7), bytesToId(new Array[Byte](32))
+        VrfGenerator.generateVrfOutput(7), bytesToId(new Array[Byte](32))
       ))
     })
     assertTrue("Sidechain block with MainchainBlockReferenceData that lead to the finish of the epoch and 2 more MainchainHeaders expected to be valid.",

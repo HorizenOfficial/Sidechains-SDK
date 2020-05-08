@@ -8,17 +8,25 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.box.ForgerBox
 import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfo, ForgerBoxMerklePathInfoSerializer, MerklePath, Pair}
+import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
+  val vrfGenerationSeed = 907
+
+  //uncomment if you want update vrf related data
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationSeed)
+  }
+
   val forgerBox: ForgerBox = getForgerBox(
     getPrivateKey25519("123".getBytes()).publicImage(),
     1000L,
     100L,
     getPrivateKey25519("456".getBytes()).publicImage(),
-    getVRFPublicKey(222L)
+    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed)
   )
   val emptyMerklePath: MerklePath = new MerklePath(new JArrayList())
 

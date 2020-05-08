@@ -5,7 +5,9 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
+import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -25,6 +27,13 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
 
     @Before
     public void setUp() {
+        int vrfGenerationSeed = 901;
+
+        //uncomment if you want update vrf related data
+        if (false) {
+            VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationSeed);
+        }
+
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
         // Note: current box bytes are also stored in "src/test/resources/forgerrbox_hex"
         box = getForgerBox(
@@ -32,7 +41,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
                 1000,
                 10,
                 new PublicKey25519Proposition(keyPair.getValue()),
-                getVRFPublicKey(123));
+                VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed));
 
      //Set to true and run if you want to update regression data.
         if (false) {

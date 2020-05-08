@@ -7,11 +7,14 @@ import com.horizen.block.SidechainBlockHeader
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainBlockInfoProvider
-import com.horizen.utils.LruCache
-import com.horizen.vrf.VrfProofHash
+import com.horizen.utils.{LruCache, Utils}
+import com.horizen.vrf.VrfOutput
+import io.iohk.iodb.ByteArrayWrapper
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
 import scorex.util.{ModifierId, ScorexLogging}
+
+import scala.compat.java8.OptionConverters._
 
 trait ConsensusDataProvider {
   this: TimeToEpochSlotConverter
@@ -105,7 +108,7 @@ trait ConsensusDataProvider {
     var nextBlockSlot = timeStampToSlotNumber(initialBlockInfo.timestamp)
     while (nextBlockId != initialBlockInfo.lastBlockInPreviousConsensusEpoch && nextBlockSlot >= eligibleSlotsRangeStart) {
       if (eligibleSlotsRangeEnd >= nextBlockSlot) {
-        digest.update(nextBlockInfo.vrfProofHash.bytes())
+        digest.update(nextBlockInfo.vrfOutput.bytes())
       }
       nextBlockId = nextBlockInfo.parentId
       nextBlockInfo = storage.blockInfoById(nextBlockId)
@@ -128,39 +131,35 @@ trait ConsensusDataProvider {
     }
   }
 
-  def getVrfProofHash(blockHeader: SidechainBlockHeader): VrfProofHash = {
+  def getVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
     //try to get cached value, if no in cache then calculate
-    val cachedValue = ConsensusDataProvider.vrfProofHashCache.get(blockHeader.id)
+    val key = ConsensusDataProvider.blockIdAndNonceToKey(blockHeader.id, nonceConsensusEpochInfo)
+    val cachedValue = ConsensusDataProvider.vrfOutputCache.get(key)
     if (cachedValue == null) {
-      val calculatedVrfProofHash = calculateVrfProofHash(blockHeader)
-      ConsensusDataProvider.vrfProofHashCache.put(blockHeader.id, calculatedVrfProofHash)
-      calculatedVrfProofHash
+      calculateVrfOutput(blockHeader, nonceConsensusEpochInfo).map{vrfOutput =>
+        ConsensusDataProvider.vrfOutputCache.put(key, vrfOutput)
+        vrfOutput
+      }
     }
     else {
-      cachedValue
+      Some(cachedValue)
     }
   }
 
-  def calculateVrfProofHash(blockHeader: SidechainBlockHeader): VrfProofHash = {
-    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(blockHeader.timestamp, blockHeader.parentId)
-    val slotNumber = timeStampToSlotNumber(blockHeader.timestamp)
-
+  private def calculateVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
+    val slotNumber: ConsensusSlotNumber = timeStampToSlotNumber(blockHeader.timestamp)
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 
-    //@TO DISCUSS
-    //We can also as well verify correctness of VrfProof in the block here, and for example return none in case if VrfProof is not correct,
-    //it will simplify consensus validator due vrf message shall not be constructed second time, and, more important,
-    //creation VrfProof will be done only once, but not twice (during verify VrfProof itself and during VrfProofHash calculation itself)
-    //from other point of view:
-    //  we will verify consensus data implicitly even without any consensus validator;
-    //  all tests of Sidechain history will require correct VrfProof (otherwise SidechainBlockInfo will not be built correctly)
-    val calculatedVrfProofHash: VrfProofHash = blockHeader.vrfProof.proofToVRFHash(blockHeader.forgerBox.vrfPubKey(), vrfMessage)
-    calculatedVrfProofHash
+    blockHeader.vrfProof.proofToVrfOutput(blockHeader.forgerBox.vrfPubKey(), vrfMessage).asScala
   }
 }
 
 object ConsensusDataProvider {
-  private val vrfProofHashCache: LruCache[ModifierId, VrfProofHash] = new LruCache[ModifierId, VrfProofHash](32) //check cache size
+  private def blockIdAndNonceToKey(blockId: ModifierId, nonceConsensusEpochInfo: NonceConsensusEpochInfo): ByteArrayWrapper = {
+    new ByteArrayWrapper(Utils.doubleSHA256HashOfConcatenation(blockId.getBytes, nonceConsensusEpochInfo.consensusNonce))
+  }
+
+  private val vrfOutputCache: LruCache[ByteArrayWrapper, VrfOutput] = new LruCache[ByteArrayWrapper, VrfOutput](32) //check cache size
 
   def calculateNonceForGenesisBlock(params: NetworkParams): NonceConsensusEpochInfo = {
     NonceConsensusEpochInfo(ConsensusNonce(Longs.toByteArray(params.sidechainGenesisBlockTimestamp)))

@@ -3,14 +3,20 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.utils.Pair;
+import com.horizen.vrf.VrfFunctions;
 import com.horizen.vrf.VrfLoader;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
+import com.horizen.vrf.VrfOutput;
 
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
+import static com.horizen.vrf.VrfFunctions.ProofType.VRF_PROOF;
+import static com.horizen.vrf.VrfFunctions.ProofType.VRF_PROOF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
     private final byte[] secretBytes;
@@ -32,8 +38,9 @@ public class VrfSecretKey implements Secret {
         return publicBytes;
     }
 
-    public VrfProof prove(byte[] message) {
-        return new VrfProof(VrfLoader.vrfFunctions().createVrfProof(getSecretBytes(), getPublicBytes(), message));
+    public Pair<VrfProof, VrfOutput> prove(byte[] message) {
+        EnumMap<VrfFunctions.ProofType, byte[]> proofs = VrfLoader.vrfFunctions().createVrfProof(getSecretBytes(), getPublicBytes(), message);
+        return new Pair<>(new VrfProof(proofs.get(VRF_PROOF)), new VrfOutput(proofs.get(VRF_PROOF_OUTPUT)));
     }
 
     @Override
@@ -76,7 +83,7 @@ public class VrfSecretKey implements Secret {
 
     @Override
     public VrfProof sign(byte[] message) {
-        return prove(message);
+        return prove(message).getKey();
     }
 
     @Override

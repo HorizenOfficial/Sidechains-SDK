@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import com.horizen.block.SidechainBlock
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import com.horizen.vrf.{VrfProofHash, VrfProofHashSerializer}
+import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
@@ -20,7 +20,7 @@ case class SidechainBlockInfo(height: Int,
                               mainchainHeaderHashes: Seq[MainchainHeaderHash],
                               mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash],
                               withdrawalEpochInfo: WithdrawalEpochInfo,
-                              vrfProofHash: VrfProofHash,
+                              vrfOutput: VrfOutput,
                               lastBlockInPreviousConsensusEpoch: ModifierId
                              ) extends BytesSerializable with LinkedElement[ModifierId] {
 
@@ -56,7 +56,7 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     obj.mainchainReferenceDataHeaderHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
 
-    VrfProofHashSerializer.getSerializer.serialize(obj.vrfProofHash, w)
+    VrfOutputSerializer.getSerializer.serialize(obj.vrfOutput, w)
     w.putBytes(idToBytes(obj.lastBlockInPreviousConsensusEpoch))
   }
 
@@ -82,10 +82,10 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
 
-    val vrfProofHash = VrfProofHashSerializer.getSerializer.parse(r)
+    val vrfOutput = VrfOutputSerializer.getSerializer.parse(r)
     val lastBlockInPreviousConsensusEpoch = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 
     SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode),
-      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
+      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfOutput, lastBlockInPreviousConsensusEpoch)
   }
 }
