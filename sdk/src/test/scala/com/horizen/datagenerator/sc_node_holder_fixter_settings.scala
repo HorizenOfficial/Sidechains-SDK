@@ -59,7 +59,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
-    val signature = forgerMetadata.rewardSecret.sign(unsignedBlockHeader.messageToSign)
+    val signature = forgerMetadata.blockSignSecret.sign(unsignedBlockHeader.messageToSign)
 
     val signedBlockHeader: SidechainBlockHeader = SidechainBlockHeader(
       blockVersion,

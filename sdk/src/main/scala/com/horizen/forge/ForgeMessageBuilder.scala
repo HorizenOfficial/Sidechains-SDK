@@ -20,7 +20,8 @@ import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
-                          val params: NetworkParams) extends ScorexLogging with TimeToEpochSlotConverter {
+                          val params: NetworkParams,
+                          allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging with TimeToEpochSlotConverter {
   type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
@@ -56,8 +57,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
         val sidechainWallet = nodeView.vault
 
+        // Get ForgerBoxes and MerklePaths from wallet and order them by stake decreasing.
         val forgerBoxMerklePathInfoSeq: Seq[(ForgerBox, MerklePath)]
-        = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq()).map(d => (d.forgerBox, d.merklePath))
+        = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+          .sortWith(_.forgerBox.value() > _.forgerBox.value())
+          .map(d => (d.forgerBox, d.merklePath))
 
         val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof)]
         = forgerBoxMerklePathInfoSeq.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
@@ -82,17 +86,20 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  forgerBox: ForgerBox,
                                  merklePath: MerklePath): Option[(ForgerBox, MerklePath, PrivateKey25519, VrfProof)] = {
     for {
-      rewardPrivateKey <- wallet.secret(forgerBox.rewardProposition()).asInstanceOf[Option[PrivateKey25519]]
+      blockSignPrivateKey <- wallet.secret(forgerBox.blockSignProposition()).asInstanceOf[Option[PrivateKey25519]]
       vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
-    } yield (forgerBox, merklePath, rewardPrivateKey, vrfSecret.prove(vrfMessage))
+    } yield (forgerBox, merklePath, blockSignPrivateKey, vrfSecret.prove(vrfMessage))
   }
 
-  private def checkNextEpochAndSlot(parentBlockTimesStamp: Long,
-                                    bestBlockTimestamp: Long,
+  private def checkNextEpochAndSlot(parentBlockTimestamp: Long,
+                                    currentTipBlockTimestamp: Long,
                                     nextEpochNumber: ConsensusEpochNumber,
                                     nextSlotNumber: ConsensusSlotNumber): Try[Unit] = {
-    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(parentBlockTimesStamp)
-    val bestBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(bestBlockTimestamp)
+    // Parent block and current tip block can be the same in case of extension the Active chain.
+    // But can be different in case of sidechain fork caused by mainchain fork.
+    // In this case parent block is before the tip, and tip block will be the last Ommer included into the next block.
+    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(parentBlockTimestamp)
+    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
     if(parentBlockEpochAndSlot >= nextBlockEpochAndSlot) {
@@ -101,8 +108,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     else if ((nextEpochNumber - parentBlockEpochAndSlot.epochNumber) > 1) {
       Failure(new IllegalArgumentException (s"Forging is not possible, because of whole consensus epoch is missed: current epoch = $nextEpochNumber, parent epoch = ${parentBlockEpochAndSlot.epochNumber}"))
     }
-    else if(bestBlockEpochAndSlot >= nextBlockEpochAndSlot) {
-      Failure(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $bestBlockEpochAndSlot"))
+    else if(currentTipBlockEpochAndSlot >= nextBlockEpochAndSlot) {
+      Failure(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $currentTipBlockEpochAndSlot"))
     }
     else
       Success()
@@ -112,49 +119,50 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   private def getBranchPointInfo(history: SidechainHistory): Try[BranchPointInfo] = Try {
     val bestMainchainHeaderInfo = history.getBestMainchainHeaderInfo.get
 
-    val (bestKnownHashHeight: Int, newHeaderHashes: Seq[MainchainHeaderHash]) =
+    val (bestMainchainCommonPointHeight: Int, bestMainchainCommonPointHash: MainchainHeaderHash, newHeaderHashes: Seq[MainchainHeaderHash]) =
       mainchainSynchronizer.getMainchainDivergentSuffix(history, MainchainSynchronizer.MAX_BLOCKS_REQUEST) match {
-        case Success((height, hashes)) => (height, hashes.tail) // hashes contains also the hash of best known block
+        case Success((height, hashes)) => (height, hashes.head, hashes.tail) // hashes contains also the hash of best known block
         case Failure(ex) =>
           // For regtest Forger is allowed to produce next block in case if there is no MC Node connection
-          if (params.isInstanceOf[RegTestParams])
-            (bestMainchainHeaderInfo.height, Seq())
+          if (params.isInstanceOf[RegTestParams] && allowNoWebsocketConnectionInRegtest)
+            (bestMainchainHeaderInfo.height, bestMainchainHeaderInfo.hash, Seq())
           else
             throw ex
       }
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
-    if(bestKnownHashHeight == bestMainchainHeaderInfo.height) {
+    if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
       val branchPointId: ModifierId = history.bestBlockId
       var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-      val maxReferenceDataNumber: Int = Math.min(SidechainBlock.MAX_MC_BLOCKS_NUMBER, withdrawalEpochMcBlocksLeft) // to not to include mcblock references from different withdrawal epochs
+      // to not to include mcblock references data from different withdrawal epochs
+      val maxReferenceDataNumber: Int = Math.min(SidechainBlock.MAX_MC_BLOCKS_NUMBER, withdrawalEpochMcBlocksLeft)
 
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
       val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
 
       val mainchainReferenceDataHeaderHashesToInclude = nextMainchainReferenceDataHeaderHashes.take(maxReferenceDataNumber)
-      val mainchainHeadersHashesToInclude = mainchainReferenceDataHeaderHashesToInclude.filter(hash => !missedMainchainReferenceDataHeaderHashes.contains(hash))
+      val mainchainHeadersHashesToInclude = newHeaderHashes
 
       BranchPointInfo(branchPointId, mainchainReferenceDataHeaderHashesToInclude, mainchainHeadersHashesToInclude)
     }
     else { // Some blocks in SC Active chain contains orphaned MainchainHeaders
-      val orphanedMainchainHeadersNumber: Int = bestMainchainHeaderInfo.height - bestKnownHashHeight
+      val orphanedMainchainHeadersNumber: Int = bestMainchainHeaderInfo.height - bestMainchainCommonPointHeight
       val newMainchainHeadersNumber = newHeaderHashes.size
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
         ForgeFailed(new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders."))
       }
 
-      val firstOrphanedHashHeight: Int = bestKnownHashHeight + 1
+      val firstOrphanedHashHeight: Int = bestMainchainCommonPointHeight + 1
       val firstOrphanedMainchainHeaderInfo = history.getMainchainHeaderInfoByHeight(firstOrphanedHashHeight).get
       val orphanedSidechainBlockId: ModifierId = firstOrphanedMainchainHeaderInfo.sidechainBlockId
       val orphanedSidechainBlockInfo: SidechainBlockInfo = history.blockInfoById(orphanedSidechainBlockId)
 
       if (firstOrphanedMainchainHeaderInfo.hash.equals(orphanedSidechainBlockInfo.mainchainHeaderHashes.head)) {
-        // First Unknown MainchainHeader is the first header inside the containing SidechainBlock, so no common MainchainHeaders present in SidechainBlock before it
+        // First orphaned MainchainHeader is the first header inside the containing SidechainBlock, so no common MainchainHeaders present in SidechainBlock before it
         BranchPointInfo(orphanedSidechainBlockInfo.parentId, Seq(), newHeaderHashes)
       }
       else {
@@ -170,8 +178,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                          timestamp: Long,
                          branchPointInfo: BranchPointInfo,
                          forgerBox: ForgerBox,
-                         merklePath: MerklePath,
-                         forgerBoxRewardPrivateKey: PrivateKey25519,
+                         forgerBoxMerklePath: MerklePath,
+                         blockSignPrivateKey: PrivateKey25519,
                          vrfProof: VrfProof): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
@@ -223,10 +231,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       transactions,
       mainchainHeaders,
       ommers,
-      forgerBoxRewardPrivateKey,
+      blockSignPrivateKey,
       forgerBox,
       vrfProof,
-      merklePath,
+      forgerBoxMerklePath,
       companion,
       params)
 

@@ -180,8 +180,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     new MainchainBlockReferenceInfo(mcHash, referenceInfo.getParentId, mcBlockHeight, idToBytes(mainchainHeaderSidechainBlockId), idToBytes(mainchainReferenceDataSidechainBlockId))
   }
 
-  def getMainchainHashesForIndexes(indexes: Seq[Int]): Seq[MainchainHeaderHash] = {
-    indexes.flatMap(index => activeChain.mcHashByMcHeight(index))
+  def getMainchainHashesForIndexes(mainchainHeights: Seq[Int]): Seq[MainchainHeaderHash] = {
+    mainchainHeights.flatMap(mainchainHeight => activeChain.mcHashByMcHeight(mainchainHeight))
   }
 
   def getBestMainchainHeaderInfo: Option[MainchainHeaderInfo] = {
@@ -198,9 +198,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val mcHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(mainchainHeaderHash)
     for {
       mcHeight <- activeChain.mcHeadersHeightByMcHash(mcHash)
-      headerContainingId <- activeChain.idByMcHeader(mcHash)
+      sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
-    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, headerContainingId)
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId)
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {
@@ -217,8 +217,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val mcHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(mainchainHeaderHash)
     for {
       mcHeight <- activeChain.mcRefDataHeightByMcHash(mcHash)
-      dataContainingId <- activeChain.idByMcReferenceData(mcHash)
-    } yield MainchainBlockReferenceDataInfo(mcHash, mcHeight, dataContainingId)
+      sidechainBlockId <- activeChain.idByMcReferenceData(mcHash)
+    } yield MainchainBlockReferenceDataInfo(mcHash, mcHeight, sidechainBlockId)
   }
 
   def update(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {

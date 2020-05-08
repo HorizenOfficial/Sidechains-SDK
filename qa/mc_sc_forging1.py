@@ -46,7 +46,7 @@ Test:
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
     G[220h;220d;] - 0[;;] - 1[221h;221d;]
                           \
-                                - 2[221'h,222'h;;1[...]] - 3[223'h;221'd-223'd;] - 4[224'h;224'd;] - 5[;;]
+                                - 2[221'h,222'h;;1[...]] - 3[223'h,224'h;221'd-223'd;] - 4[;224'd;] - 5[;;]
                             \
                                     -   6[221''h-225''h;;2[...;1],3[...],4[...],5[;;]]
 """
@@ -153,9 +153,10 @@ class MCSCConnectedNodes(SidechainTestFramework):
         scblock_id3 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id2, scblock_id3, sc_node1)
         # Verify that SC block MainchainHeaders and MainchainRefData
-        check_mcheaders_amount(1, scblock_id3, sc_node1)
+        check_mcheaders_amount(2, scblock_id3, sc_node1)
         check_mcreferencedata_amount(3, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash3, scblock_id3, sc_node1)
+        check_mcheader_presence(mcblock_hash4, scblock_id3, sc_node1)
         check_mcreferencedata_presence(fork_mcblock_hash1, scblock_id3, sc_node1)
         check_mcreferencedata_presence(fork_mcblock_hash2, scblock_id3, sc_node1)
         check_mcreferencedata_presence(mcblock_hash3, scblock_id3, sc_node1)
@@ -165,9 +166,9 @@ class MCSCConnectedNodes(SidechainTestFramework):
         scblock_id4 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id3, scblock_id4, sc_node1)
         # Verify that SC block MainchainHeaders and MainchainRefData
-        check_mcheaders_amount(1, scblock_id4, sc_node1)
+        check_mcheaders_amount(0, scblock_id4, sc_node1)
         check_mcreferencedata_amount(1, scblock_id4, sc_node1)
-        check_mcreference_presence(mcblock_hash4, scblock_id4, sc_node1)
+        check_mcreferencedata_presence(mcblock_hash4, scblock_id4, sc_node1)
         check_ommers_amount(0, scblock_id4, sc_node1)
 
         # Generate SC block with no MC data. Needed for further test

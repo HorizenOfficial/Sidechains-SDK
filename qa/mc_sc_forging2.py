@@ -27,7 +27,7 @@ Test:
     - Forge SC block, verify that previously forged block was set as ommer, verify that common MC block #221 was included as well
     
     MC blocks on MC node 1 in the end:
-    220     -   221     -   222'
+    220     -   221     -   222
                     \
                         -   222'    -   223'*
             

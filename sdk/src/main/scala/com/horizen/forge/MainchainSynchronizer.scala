@@ -7,6 +7,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.websocket.MainchainNodeChannel
 import com.horizen.utils._
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
@@ -22,35 +23,41 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
 
   // Return common block height and hash as a hex string.
   def getMainchainCommonBlockHashAndHeight(history: SidechainHistory): Try[(Int, String)] = Try {
+    // Bitcoin-style Locator is ordered from tip to genesis
     val locatorHashes: Seq[String] = history.getMainchainHashesLocator.map(baw => BytesUtils.toHexString(baw.data))
     val (commonHeight, commonHashHex) = mainchainNodeChannel.getBestCommonPoint(locatorHashes).get
     val commonHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(commonHashHex))
 
-    if(commonHash == history.getBestMainchainHeaderInfo.get.hash) {
+    if(commonHashHex == locatorHashes.head) {
       // No orphan mainchain blocks -> return result as is
       (commonHeight, commonHashHex)
     } else {
       // Orphan mainchain blocks present
       // Check if there is more recent common block, that was not a part of locatorHashes
       val commonHashLocatorIndex: Int = locatorHashes.indexOf(commonHashHex)
-      val firstUnknownHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(locatorHashes(commonHashLocatorIndex - 1)))
-      // Get the list of MainchainHeader Hashes between previously found common point and first unknown point.
-      // Order them from newest to oldest as locator.
-      val locator: Seq[String] = history.getMainchainHashes(commonHash, firstUnknownHash).map(baw => BytesUtils.toHexString(baw.data)).reverse
+      val firstOrphanedMainchainHeaderHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(locatorHashes(commonHashLocatorIndex - 1)))
+      // Get the list of MainchainHeader Hashes between previously found common point and first orphaned point.
+      // Order them from newest to oldest same as bitcoin-style locator.
+      val locator: Seq[String] = history.getMainchainHashes(commonHash, firstOrphanedMainchainHeaderHash).map(baw => BytesUtils.toHexString(baw.data)).reverse
 
-      mainchainNodeChannel.getNewBlockHashes(locator, 1) match {
-        case Success((height, hashes)) => (height, hashes.head)
+      mainchainNodeChannel.getBestCommonPoint(locator) match {
+        case Success((height, hash)) => (height, hash)
         case Failure(ex) => throw ex
       }
     }
   }
 
   def getMainchainBlockReferences(history: SidechainHistory, hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainBlockReference]] = Try {
-    val references = hashes.map(hash => mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash.data))).filter(_.isSuccess).map(_.get)
-    if(references.size != hashes.size)
-      throw new IllegalStateException("Can't retrieve all hashes requested. Connection error.")
-    else
-      references
+    val references = ListBuffer[MainchainBlockReference]()
+    for(hash <- hashes) {
+      mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash.data)) match {
+        case Success(ref) =>
+          references.append(ref)
+        case Failure(ex) =>
+          throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash $hash. Connection error.", ex)
+      }
+    }
+    references
   }
 }
 

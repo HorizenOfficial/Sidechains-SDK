@@ -26,7 +26,7 @@ class Forger(settings: SidechainSettings,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
              val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
-  val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params)
+  val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 

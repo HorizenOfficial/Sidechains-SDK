@@ -153,10 +153,10 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
 
     /////////// Forger box verification /////////////////
-    println("Test blockGeneratedWithIncorrectForgerBoxRewardProposition")
-    val blockGeneratedWithIncorrectForgerBoxRewardProposition = generateBlockWithIncorrectForgerBoxRewardProposition(lastGenerator)
-    history.append(blockGeneratedWithIncorrectForgerBoxRewardProposition).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectForgerBoxRewardProposition.id} is inconsistent to stakes merkle root hash"))
+    println("Test blockGeneratedWithIncorrectForgerBoxBlockSignProposition")
+    val blockGeneratedWithIncorrectForgerBoxBlockSignProposition = generateBlockWithIncorrectForgerBoxBlockSignProposition(lastGenerator)
+    history.append(blockGeneratedWithIncorrectForgerBoxBlockSignProposition).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectForgerBoxBlockSignProposition.id} is inconsistent to stakes merkle root hash"))
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
@@ -249,9 +249,9 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     generateBlock(corruptedRules, generator)._2
   }
 
-  def generateBlockWithIncorrectForgerBoxRewardProposition(generator: SidechainBlocksGenerator): SidechainBlock = {
+  def generateBlockWithIncorrectForgerBoxBlockSignProposition(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(rewardPropositionChanged = true)
+    val forgerBoxCorruption = ForgerBoxCorruptionRules(blockSignPropositionChanged = true)
     val corruptedRules =
       generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
     generateBlock(corruptedRules, generator)._2

@@ -253,13 +253,13 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     val nonce: Long = initialForgerBox.nonce() + forgerBoxCorruptionRules.nonceShift
     val value: Long = initialForgerBox.value() + forgerBoxCorruptionRules.valueShift
 
-    val rewardProposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.rewardPropositionChanged) {
+    val blockSignProposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.blockSignPropositionChanged) {
       val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
-      val newRewardProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
-      newRewardProposition
+      val newBlockSignProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
+      newBlockSignProposition
     }
     else {
-      initialForgerBox.rewardProposition()
+      initialForgerBox.blockSignProposition()
     }
 
     val vrfPubKey: VrfPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
@@ -277,7 +277,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       initialForgerBox.vrfPubKey()
     }
 
-    new ForgerBoxData(proposition, value, rewardProposition, vrfPubKey).getBox(nonce)
+    new ForgerBoxData(proposition, value, blockSignProposition, vrfPubKey).getBox(nonce)
   }
 
   private def getIncorrectPossibleForger(initialPossibleForger: PossibleForger): PossibleForger = {

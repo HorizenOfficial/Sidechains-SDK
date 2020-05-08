@@ -8,7 +8,8 @@ import scala.concurrent.duration.FiniteDuration
 case class WebSocketSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
-                             reconnectionMaxAttempts: Int
+                             reconnectionMaxAttempts: Int,
+                             allowNoConnectionInRegtest: Boolean = true // In Regtest allow to forge new blocks without connection to MC node, for example.
                             )
 
 case class GenesisDataSettings(scGenesisBlockHex: String,
