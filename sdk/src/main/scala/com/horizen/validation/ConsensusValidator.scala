@@ -40,7 +40,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
     val stakeConsensusEpochInfo = history.getStakeConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
       .getOrElse(throw new IllegalStateException(s"No stake consensus data for block ${verifiedBlock.id}"))
-    val vrfProofHash: VrfProofHash = history.getVrfProofHash(verifiedBlock.header)
+    val nonceConsensusEpochInfo = history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
+
+    val vrfProofHash: VrfProofHash = history.getVrfProofHash(verifiedBlock.header, nonceConsensusEpochInfo)
     verifyForgerBox(verifiedBlock.header, stakeConsensusEpochInfo, vrfProofHash)
 
     val fullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
@@ -94,7 +96,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
         isPreviousEpochOmmer = true
         val message = buildVrfMessage(ommerSlotNumber, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
         verifyVrfProof(history, ommer.header, message)
-        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header))
+        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header, previousFullConsensusEpochInfo.nonceConsensusEpochInfo))
 
         verifyOmmers(ommer, previousFullConsensusEpochInfo, null, history)
       }
@@ -105,7 +107,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
         }
         val message = buildVrfMessage(ommerSlotNumber, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
         verifyVrfProof(history, ommer.header, message)
-        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header))
+        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, history.getVrfProofHash(ommer.header, currentFullConsensusEpochInfo.nonceConsensusEpochInfo))
 
         verifyOmmers(ommer, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
       }
