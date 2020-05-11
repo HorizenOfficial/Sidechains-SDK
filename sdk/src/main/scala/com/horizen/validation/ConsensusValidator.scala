@@ -40,7 +40,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val nonceConsensusEpochInfo = history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
 
     val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, nonceConsensusEpochInfo)
-      .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock} had been failed"))
+      .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
     verifyForgerBox(verifiedBlock.header, stakeConsensusEpochInfo, vrfOutput)
 
