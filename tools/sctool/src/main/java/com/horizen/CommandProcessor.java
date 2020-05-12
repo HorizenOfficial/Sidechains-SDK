@@ -7,6 +7,7 @@ import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
 import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
+import com.horizen.box.ForgerBox;
 import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
@@ -15,13 +16,16 @@ import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
+import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.secret.PrivateKey25519Serializer;
+import com.horizen.secret.VrfSecretKey;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.utils.BytesUtils;
+import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
 
 import java.io.IOException;
@@ -200,17 +204,28 @@ public class CommandProcessor {
             SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
 
+            // TODO: hardcoded
+            ForgerBox forgerBox = SidechainCreation.getHardcodedGenesisForgerBox();
+            PrivateKey25519 forgerSecret = SidechainCreation.genesisSecret;
+            byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
+            VrfSecretKey vrfSecret = SidechainCreation.vrfGenesisSecretKey;
+            VrfProof vrfProof  = vrfSecret.prove(vrfMessage);
+            MerklePath mp = new MerklePath(new ArrayList<>());
+            // Set genesis block timestamp to not to have block in future exception during STF tests.
+            // TODO: timestamp should be a hidden optional parameter during SC bootstrapping and must be used by STF
+            Long timestamp = System.currentTimeMillis() / 1000 - (params.consensusSlotsInEpoch() / 2 * params.consensusSecondsInSlot());
+
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
-                    System.currentTimeMillis() / 1000,
+                    timestamp,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.data())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
-                    key,
-                    null,
-                    null,
-                    null,
+                    forgerSecret,
+                    forgerBox,
+                    vrfProof,
+                    mp,
                     sidechainTransactionsCompanion,
                     params,
                     scala.Option.empty()

@@ -31,9 +31,9 @@ public final class ForgerBox
         return boxData.vrfPublicKey();
     }
 
-    @JsonProperty("rewardProposition")
-    public PublicKey25519Proposition rewardProposition() {
-        return boxData.rewardProposition();
+    @JsonProperty("blockSignProposition")
+    public PublicKey25519Proposition blockSignProposition() {
+        return boxData.blockSignProposition();
     }
 
     @Override
@@ -48,7 +48,7 @@ public final class ForgerBox
 
     @Override
     public String toString() {
-        return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, rewardProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), rewardProposition(), nonce());
+        return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, blockSignProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), blockSignProposition(), nonce());
     }
 
     public static ForgerBox parseBytes(byte[] bytes) {

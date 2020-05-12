@@ -198,7 +198,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
             assertTrue("Box must be ForgerBox", box instanceof ForgerBox);
             ForgerBox forgerBox = (ForgerBox)box;
             assertTrue("Transaction must contain new box for specified forger boxes data.",
-                    to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.rewardProposition(), forgerBox.vrfPubKey())));
+                    to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.blockSignProposition(), forgerBox.vrfPubKey())));
         }
 
 
@@ -222,7 +222,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
             else if (box instanceof ForgerBox) {
                 ForgerBox forgerBox = (ForgerBox)box;
                 assertTrue("Transaction must contain new box for specified forger boxes data.",
-                        to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.rewardProposition(), forgerBox.vrfPubKey())));
+                        to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.blockSignProposition(), forgerBox.vrfPubKey())));
             }
             else
                 fail("Box must be an instance of RegularBox or ForgerBox.");

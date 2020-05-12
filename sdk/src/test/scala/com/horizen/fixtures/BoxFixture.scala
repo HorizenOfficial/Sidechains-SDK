@@ -165,8 +165,8 @@ trait BoxFixture
 
 
   def getForgerBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long,
-                   rewardProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): ForgerBox = {
-    new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey).getBox(nonce)
+                   blockSignProposition: PublicKey25519Proposition, vrfPublicKey: VrfPublicKey): ForgerBox = {
+    new ForgerBoxData(proposition, value, blockSignProposition, vrfPublicKey).getBox(nonce)
   }
 
 

@@ -3,7 +3,7 @@ package com.horizen.storage
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block._
-import com.horizen.chain._
+import com.horizen.chain.{MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -178,6 +178,47 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
                                                mainchainHeaderSidechainBlockId: ModifierId,
                                                mainchainReferenceDataSidechainBlockId: ModifierId): MainchainBlockReferenceInfo = {
     new MainchainBlockReferenceInfo(mcHash, referenceInfo.getParentId, mcBlockHeight, idToBytes(mainchainHeaderSidechainBlockId), idToBytes(mainchainReferenceDataSidechainBlockId))
+  }
+
+  def getMainchainHashesForIndexes(mainchainHeights: Seq[Int]): Seq[MainchainHeaderHash] = {
+    mainchainHeights.flatMap(mainchainHeight => activeChain.mcHashByMcHeight(mainchainHeight))
+  }
+
+  def getBestMainchainHeaderInfo: Option[MainchainHeaderInfo] = {
+    getMainchainHeaderInfoByHeight(activeChain.heightOfMcHeaders)
+  }
+
+  def getMainchainHeaderInfoByHeight(mainchainHeight: Int): Option[MainchainHeaderInfo] = {
+    for {
+      mcHash <- activeChain.mcHashByMcHeight(mainchainHeight)
+    } yield getMainchainHeaderInfoByHash(mcHash).get
+  }
+
+  def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = {
+    val mcHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(mainchainHeaderHash)
+    for {
+      mcHeight <- activeChain.mcHeadersHeightByMcHash(mcHash)
+      sidechainBlockId <- activeChain.idByMcHeader(mcHash)
+      mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId)
+  }
+
+  def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {
+    getMainchainBlockReferenceDataInfoByHeight(activeChain.heightOfMcReferencesData)
+  }
+
+  def getMainchainBlockReferenceDataInfoByHeight(mainchainHeight: Int): Option[MainchainBlockReferenceDataInfo] = {
+    for {
+      mcHash <- activeChain.mcHashByMcHeight(mainchainHeight)
+    } yield getMainchainBlockReferenceDataInfoByHash(mcHash).get
+  }
+
+  def getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceDataInfo] = {
+    val mcHash: MainchainHeaderHash = byteArrayToMainchainHeaderHash(mainchainHeaderHash)
+    for {
+      mcHeight <- activeChain.mcRefDataHeightByMcHash(mcHash)
+      sidechainBlockId <- activeChain.idByMcReferenceData(mcHash)
+    } yield MainchainBlockReferenceDataInfo(mcHash, mcHeight, sidechainBlockId)
   }
 
   def update(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {

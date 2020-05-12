@@ -32,6 +32,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
   }
 
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(verifiedBlock.parentId)
+    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
+
     val verifiedBlockInfo = history.blockToBlockInfo(verifiedBlock)
       .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
     val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, verifiedBlockInfo)
@@ -46,8 +49,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val previousFullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(previousEpochLastBlockId, history.blockInfoById(previousEpochLastBlockId))
     verifyOmmers(verifiedBlock, fullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
 
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(verifiedBlock.parentId)
-    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
+    verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
 
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -60,7 +62,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
     val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
+  }
 
+  private def verifyTimestampInFuture(verifiedBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
