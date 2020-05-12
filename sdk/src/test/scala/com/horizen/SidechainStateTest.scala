@@ -2,7 +2,9 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, SidechainBlock}
+
+import com.horizen.box.{RegularBox, WithdrawalRequestBox}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box._
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
@@ -148,6 +150,8 @@ class SidechainStateTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
+
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn(bytesToId(stateVersion.last.data))
@@ -213,7 +217,8 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[Seq[ForgingStakeInfo]](),
-      ArgumentMatchers.any[ConsensusEpochNumber]()))
+      ArgumentMatchers.any[ConsensusEpochNumber](),
+      ArgumentMatchers.any[Boolean]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -222,12 +227,15 @@ class SidechainStateTest
         val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
         val forgingStakesToAppendSeq = answer.getArgument[Seq[ForgingStakeInfo]](5)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
+        val containsBackwardTransferCertificate = answer.getArgument[Boolean](7)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
         // Verify Forging stakes data
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
         assertEquals("Forging stake seq should be different.", forgingStakes, forgingStakesToAppendSeq)
+        // Verify certificate presence
+        assertFalse("Certificate expected to be absent.", containsBackwardTransferCertificate)
 
 
         stateVersion += version

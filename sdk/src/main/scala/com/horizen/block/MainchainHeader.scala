@@ -24,10 +24,10 @@ import scala.util.Try
 @JsonIgnoreProperties(Array("mainchainHeaderBytes", "hashHex"))
 class MainchainHeader(
                        val mainchainHeaderBytes: Array[Byte], // for Serialization/Deserialization
-                       val version: Int,                      // 4 bytes
-                       val hashPrevBlock: Array[Byte],        // 32 bytes
-                       val hashMerkleRoot: Array[Byte],       // 32 bytes
-                       val hashSCMerkleRootsMap: Array[Byte], // 32 bytes
+                       val version: Int, // 4 bytes
+                       val hashPrevBlock: Array[Byte], // 32 bytes
+                       val hashMerkleRoot: Array[Byte], // 32 bytes
+                       val hashScTxsCommitment: Array[Byte], // 32 bytes
                        val time: Int, // 4 bytes
                        val bits: Int, // 4 bytes
                        val nonce: Array[Byte], // 32 bytes
@@ -49,7 +49,7 @@ class MainchainHeader(
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     if(hashPrevBlock == null || hashPrevBlock.length != 32
       || hashMerkleRoot == null || hashMerkleRoot.length != 32
-      || hashSCMerkleRootsMap == null || hashSCMerkleRootsMap.length != 32
+      || hashScTxsCommitment == null || hashScTxsCommitment.length != 32
       || nonce == null || nonce.length != 32
       || solution == null || solution.length != params.EquihashSolutionLength // Note: Solution length depends on Equihash (N, K) params
       || time <= 0)

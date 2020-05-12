@@ -32,6 +32,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
   private val initialMainchainBlockReferenceHeader = new MainchainHeader(generateBytes(),
     -1, generateBytes(), new Array[Byte](0), new Array[Byte](0), Instant.now.getEpochSecond.toInt, 0,
     new Array[Byte](0), new Array[Byte](0))
+
   private var lastGeneratedHash: ByteArrayWrapper = initialMainchainBlockReferenceHeader.hash
 
 
@@ -65,7 +66,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
           headerWithNoSerialization.version,
           headerWithNoSerialization.hashPrevBlock,
           headerWithNoSerialization.hashMerkleRoot,
-          headerWithNoSerialization.hashSCMerkleRootsMap,
+          headerWithNoSerialization.hashScTxsCommitment,
           headerWithNoSerialization.time,
           headerWithNoSerialization.bits,
           headerWithNoSerialization.nonce,
@@ -79,7 +80,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
         headerWithNoSerialization.version,
         headerWithNoSerialization.hashPrevBlock,
         headerWithNoSerialization.hashMerkleRoot,
-        headerWithNoSerialization.hashSCMerkleRootsMap,
+        headerWithNoSerialization.hashScTxsCommitment,
         headerWithNoSerialization.time,
         headerWithNoSerialization.bits,
         headerWithNoSerialization.nonce,
@@ -89,7 +90,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     }
 
 
-    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None)) {
+    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, (None,None), None)) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
     }
 

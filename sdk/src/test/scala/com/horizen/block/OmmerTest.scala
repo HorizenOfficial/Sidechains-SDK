@@ -221,7 +221,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       mcBlockRef1.header.version,
       mcBlockRef1.header.hashPrevBlock,
       mcBlockRef1.header.hashMerkleRoot,
-      mcBlockRef1.header.hashSCMerkleRootsMap,
+      mcBlockRef1.header.hashScTxsCommitment,
       -1, // broke time
       mcBlockRef1.header.bits,
       mcBlockRef1.header.nonce,

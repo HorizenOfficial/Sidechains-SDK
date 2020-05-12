@@ -301,9 +301,12 @@
 					<include>mctx_v-4_single_ft</include>								<!-- generated on regtest on 15.10.2019 -->
 					<include>mctx_v-4_multiple_ft</include>								<!-- generated on regtest on 15.10.2019 -->
 					<include>mctx_v-4_sc_creation</include> 							<!-- generated on regtest on 15.10.2019 -->
-					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
-					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
 					<include>sc_node_holder_fixter_settings.conf</include>
+					<include>new_mc_blocks/mc_block_empty_sidechains</include>
+					<include>new_mc_blocks/mc_block_create_3_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_2_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2</include>
 				</includes>
 			</testResource>
 		</testResources>

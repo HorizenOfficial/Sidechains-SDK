@@ -1,27 +1,22 @@
 package com.horizen.block
 
 import java.util
-import java.util.List
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.serialization.{JsonMerkleRootsSerializer, Views}
+import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
-import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, Utils, VarInt}
+import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
-import com.google.common.primitives.Bytes
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
-import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
-import scala.collection.mutable
 
 
 // Mainchain Block structure:
@@ -44,6 +39,7 @@ case class MainchainBlockReference(
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
+  // TODO: check "is mutated" of merkle tree used inside
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // Check that header is valid.
     header.semanticValidity(params) match {
@@ -55,95 +51,146 @@ case class MainchainBlockReference(
     if(!data.headerHash.sameElements(header.hash))
       throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
 
-    // Check Data consistency to Data header hash.
-    if (util.Arrays.equals(header.hashSCMerkleRootsMap, params.zeroHashBytes)) {
-      // If there is not SC related outputs in MC block, SCMap, and AggTx expected to be not defined.
-      if (data.sidechainsMerkleRootsMap.isDefined || data.sidechainRelatedAggregatedTransaction.isDefined)
-        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData is inconsistent to MainchainHeader")
+    if (util.Arrays.equals(header.hashScTxsCommitment, params.zeroHashBytes)) {
+      // If there is not SC related outputs in MC block, then proofs, AggTx and Certificate expected to be not defined.
+      if (data.mproof.isDefined ||
+          data.proofOfNoData._1.isDefined ||
+          data.proofOfNoData._2.isDefined ||
+          data.sidechainRelatedAggregatedTransaction.isDefined ||
+          data.backwardTransferCertificate.isDefined)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
     }
     else {
-      val sidechainsMerkleRootsMap = data.sidechainsMerkleRootsMap.getOrElse(
-        throw new InconsistentMainchainBlockReferenceDataException("MainchainBlockReferenceData SCMap is inconsistent to MainchainHeader hashSCMerkleRootsMap."))
+      val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
-      // verify SCMap Merkle root hash equals to one in the header.
-      val SCSeq = sidechainsMerkleRootsMap.toIndexedSeq.sortWith((a, b) => a._1.compareTo(b._1) < 0)
-      val merkleTreeLeaves = SCSeq.map(pair => {
-        BytesUtils.reverseBytes(Utils.doubleSHA256Hash(
-            Bytes.concat(
-              BytesUtils.reverseBytes(pair._1.data),
-              BytesUtils.reverseBytes(pair._2)
-            )
-        ))
-      }).toList.asJava
-      val merkleTree: MerkleTree = MerkleTree.createMerkleTree(merkleTreeLeaves)
-      if(merkleTree.isMutated)
-        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} SCMap leads to mutated MerkleTree.")
-      if (!util.Arrays.equals(header.hashSCMerkleRootsMap, merkleTree.rootHash()))
-        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} SCMap root hash is inconsistent to MainchainHeader hashSCMerkleRootsMap.")
+      // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
+      if (data.mproof.isDefined) {
+        // Check for defined transaction and/or certificate.
+        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.backwardTransferCertificate.isEmpty)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-      val sidechainMerkleRootHash = sidechainsMerkleRootsMap.get(new ByteArrayWrapper(params.sidechainId))
-      if (sidechainMerkleRootHash.isEmpty) {
-        // there is no related outputs for current Sidechain, AggTx expected to be not defined.
-        if(data.sidechainRelatedAggregatedTransaction.nonEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
-      } else {
-        val sidechainRelatedAggregatedTransaction = data.sidechainRelatedAggregatedTransaction.getOrElse(
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash."))
+        // Check for empty neighbour proofs.
+        if (data.proofOfNoData._1.isDefined || data.proofOfNoData._2.isDefined)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
+        val sidechainHashMap = new SidechainsCommitmentTree()
 
-        // verify AggTx
-        val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(
-          sidechainRelatedAggregatedTransaction.mc2scTransactionsOutputs().asScala.map(_.hash()).asJava)
+        if (data.sidechainRelatedAggregatedTransaction.isDefined) {
+          val mc2scTransactionsOutputsMerkleTree = MerkleTree.createMerkleTree(
+            data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala.map(_.hash()).asJava)
+          if(mc2scTransactionsOutputsMerkleTree.isMutated)
+            throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx outputs leads to mutated MerkleTree.")
 
-        if(mc2scTransactionsOutputsMerkleTree.isMutated)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx outputs leads to mutated MerkleTree.")
-        if(!util.Arrays.equals(sidechainMerkleRootHash.get, mc2scTransactionsOutputsMerkleTree.rootHash()))
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is inconsistent to sidechain MerkleRootHash.")
+          sidechainHashMap.addForwardTransferMerkleRootHash(sidechainId, mc2scTransactionsOutputsMerkleTree.rootHash())
+        }
 
-        if (!sidechainRelatedAggregatedTransaction.semanticValidity())
+        if (data.backwardTransferCertificate.isDefined)
+          sidechainHashMap.addCertificate(data.backwardTransferCertificate.get)
+
+        val sidechainHash = sidechainHashMap.getSidechainCommitmentEntryHash(sidechainId)
+
+        if (!util.Arrays.equals(header.hashScTxsCommitment, data.mproof.get.apply(sidechainHash)))
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
+
+        if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
+      } else { // Current sidechain was not mentioned in MainchainBlockReference.
+        // Check for empty transaction and certificate.
+        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.backwardTransferCertificate.isDefined)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+
+        // Check for at least one neighbour proof to be defined.
+        if (data.proofOfNoData._1.isEmpty && data.proofOfNoData._2.isEmpty)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+
+        // In case if both neighbours are defined, check that there are no sidechains between them.
+        if (data.proofOfNoData._1.isDefined && data.proofOfNoData._2.isDefined &&
+            data.proofOfNoData._2.get.merklePath.leafIndex() - 1 != data.proofOfNoData._1.get.merklePath.leafIndex())
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left and right neighbours expected to be neighbour leaves in ScTxsCommitment merkle tree")
+
+        // In case if only right neighbour is defined, it must be the leftmost leaf in the sidechains merkle tree.
+        if (data.proofOfNoData._1.isEmpty && !data.proofOfNoData._2.get.merklePath.isLeftmost)
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour expected to be the first leaf in ScTxsCommitment merkle tree")
+
+        // In case if only left neighbour is defined, it must be the rightmost leaf in the sidechains merkle tree.
+        if (data.proofOfNoData._2.isEmpty &&
+            !data.proofOfNoData._1.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(data.proofOfNoData._1.get)))
+          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour expected to be the last leaf in ScTxsCommitment merkle tree")
+
+        data.proofOfNoData._1 match {
+          case Some(leftNeighbourProof) =>
+            if (new ByteArrayWrapper(leftNeighbourProof.sidechainId) >= sidechainId)
+              throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour sidechain id is after current sidechain id")
+            val merkleRoot = leftNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(leftNeighbourProof))
+            if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))
+              throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour proof is inconsistent to MainchainHeader hashScTxsCommitment")
+          case None =>
+        }
+
+        data.proofOfNoData._2 match {
+          case Some(rightNeighbourProof) =>
+            if (new ByteArrayWrapper(rightNeighbourProof.sidechainId) <= sidechainId)
+              throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour sidechain id is before current sidechain id")
+            val merkleRoot = rightNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rightNeighbourProof))
+            if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))
+              throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour proof is inconsistent to MainchainHeader hashScTxsCommitment")
+          case None =>
+        }
       }
     }
   }
 }
 
-
 object MainchainBlockReference {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 2048 * 1024 //2048K
+  val SC_CERT_BLOCK_VERSION = 3
 
-  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = { // TO DO: get sidechainId from some params object
+  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = {
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(params.sidechainId.length == 32)
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
-      case Success((header, mainchainTxs)) =>
-        // Calculate SCMap and verify it
+      case Success((header, mainchainTxs, certificates)) =>
+        // Calculate ScTxsCommitment
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
+
+        val sidechainId = new ByteArrayWrapper(params.sidechainId)
+
+        val sidechainHashMap = new SidechainsCommitmentTree()
+
         for (tx <- mainchainTxs)
           scIds = scIds ++ tx.getRelatedSidechains
 
-        if (scIds.isEmpty)
-          Success(MainchainBlockReference(header, MainchainBlockReferenceData(header.hash,None, None)))
-        else {
-          var aggregatedTransactionsMap: mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction] = mutable.Map[ByteArrayWrapper, MC2SCAggregatedTransaction]()
-          for (id <- scIds) {
-            var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
-            for (tx <- mainchainTxs) {
-              sidechainRelatedTransactionsOutputs.addAll(getSidechainRelatedTransactionsOutputs(tx, id).asJava)
-            }
-            aggregatedTransactionsMap.put(id, new MC2SCAggregatedTransaction(sidechainRelatedTransactionsOutputs, header.time))
+        var mc2scTransaction: Option[MC2SCAggregatedTransaction] = None
+        for (id <- scIds) {
+          var sidechainRelatedTransactionsOutputs: java.util.ArrayList[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = new java.util.ArrayList()
+          for (tx <- mainchainTxs) {
+            sidechainRelatedTransactionsOutputs.addAll(getSidechainRelatedTransactionsOutputs(tx, id).asJava)
           }
-
-          val SCMap: mutable.Map[ByteArrayWrapper, Array[Byte]] = aggregatedTransactionsMap.map {
-            case (k, v) =>
-              (k, v.mc2scMerkleRootHash())
-          }
-
-          val mc2scTransaction: Option[MC2SCAggregatedTransaction] = aggregatedTransactionsMap.get(new ByteArrayWrapper(params.sidechainId))
-
-          Success(MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, mc2scTransaction, Option(SCMap))))
+          val merkleTree = MerkleTree.createMerkleTree(sidechainRelatedTransactionsOutputs.asScala.map(_.hash()).asJava)
+          sidechainHashMap.addForwardTransferMerkleRootHash(id, merkleTree.rootHash())
+          if(id == sidechainId)
+            mc2scTransaction = Some(new MC2SCAggregatedTransaction(sidechainRelatedTransactionsOutputs, header.time))
         }
+
+        scIds = scIds ++ certificates.map(c => new ByteArrayWrapper(c.sidechainId))
+
+        certificates.foreach(c => sidechainHashMap.addCertificate(c))
+
+        val certificate: Option[MainchainBackwardTransferCertificate] = certificates.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+
+        val data: MainchainBlockReferenceData =
+          if (scIds.isEmpty) {
+            MainchainBlockReferenceData(header.hash, None, None, (None, None), None)
+          } else if (scIds.contains(sidechainId)) {
+            MainchainBlockReferenceData(header.hash, mc2scTransaction, sidechainHashMap.getSidechainCommitmentEntryMerklePath(sidechainId), (None, None), certificate)
+          } else {
+            MainchainBlockReferenceData(header.hash, mc2scTransaction, None, sidechainHashMap.getNeighbourSidechainCommitmentEntryProofs(sidechainId), certificate)
+          }
+
+        Success(MainchainBlockReference(header, data))
+
       case Failure(e) =>
         Failure(e)
     }
@@ -172,7 +219,8 @@ object MainchainBlockReference {
   }
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
-  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]): Try[(MainchainHeader, Seq[MainchainTransaction])] = Try {
+  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[MainchainBackwardTransferCertificate])] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -185,15 +233,31 @@ object MainchainBlockReference {
         // parse transactions
         var transactions: Seq[MainchainTransaction] = Seq[MainchainTransaction]()
 
-        while(offset < mainchainBlockBytes.length) {
+        while (transactions.size < transactionsCount.value()) {
           val tx: MainchainTransaction = MainchainTransaction.create(mainchainBlockBytes, offset).get
           transactions = transactions :+ tx
           offset += tx.size
         }
-        if(transactions.size != transactionsCount.value())
-          throw new IllegalArgumentException("Input data corrupted. Actual Tx number parsed %d, expected %d".format(transactions.size, transactionsCount.value()))
 
-        (header, transactions)
+        var certificates: Seq[MainchainBackwardTransferCertificate] = Seq[MainchainBackwardTransferCertificate]()
+
+        // Parse certificates only if version is the same as specified and there is bytes to parse.
+        if (header.version == SC_CERT_BLOCK_VERSION) {
+            val certificatesCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
+            offset += certificatesCount.size()
+
+            while (certificates.size < certificatesCount.value()) {
+              val c: MainchainBackwardTransferCertificate = MainchainBackwardTransferCertificate.parse(mainchainBlockBytes, offset)
+              certificates = certificates :+ c
+              offset += c.size
+            }
+        }
+
+        if(offset < mainchainBlockBytes.length)
+          throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - offset))
+
+        (header, transactions, certificates)
+
       case Failure(e) =>
         throw e
     }
@@ -204,6 +268,7 @@ object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlock
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
     w.putInt(obj.header.bytes.length)
     w.putBytes(obj.header.bytes)
+
     w.putInt(obj.data.bytes.length)
     w.putBytes(obj.data.bytes)
   }

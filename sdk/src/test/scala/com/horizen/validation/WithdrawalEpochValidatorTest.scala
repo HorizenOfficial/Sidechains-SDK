@@ -121,12 +121,12 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 4: valid genesis block with 1 MainchainBlockReferenceData with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
-    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeeb"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
-    // parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
+    // parse MC block with tx version -4 with creation of 3 sidechains.
     // sc creation output withdrawal epoch = 100
-    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
     mcRefs = Seq(mcBlockRef)
@@ -157,7 +157,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 5: the same as above but with valid withdrawalEpochLength specified in params / sc creation
-    Mockito.when(params.withdrawalEpochLength).thenReturn(100)
+    Mockito.when(params.withdrawalEpochLength).thenReturn(5)
     assertTrue("Sidechain genesis block with 1 MainchainBlockReferencesData with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
   }
 
@@ -340,11 +340,11 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 11: invalid block - with 1 MainchainBlockReferenceData with sc creation tx with declared sidechain creation output
-    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeeb"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
-    // parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
-    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
+    // parse MC block with tx version -4 with creation of 3 sidechains.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
 

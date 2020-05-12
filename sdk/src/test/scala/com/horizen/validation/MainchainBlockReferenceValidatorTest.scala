@@ -207,7 +207,7 @@ class MainchainBlockReferenceValidatorTest
           classOf[InvalidMainchainDataException], e.getClass)
     }
 
-
+    /* TODO: restore and add new tests
     // Test 8: validate block, that contains MainchainReferenceData with SCMap data inconsistent to header hashSCMerkleRootsMap.
     val randomHash: Array[Byte] = new Array[Byte](32)
     Random.nextBytes(randomHash)
@@ -236,6 +236,7 @@ class MainchainBlockReferenceValidatorTest
         assertEquals("Different exception type expected during validation.",
           classOf[InconsistentMainchainBlockReferenceDataException], e.getClass)
     }
+    */
   }
 
   private def mockBlock(id: ModifierId, parentId: ModifierId, headers: Seq[MainchainHeader], refData: Seq[MainchainBlockReferenceData]): SidechainBlock = {

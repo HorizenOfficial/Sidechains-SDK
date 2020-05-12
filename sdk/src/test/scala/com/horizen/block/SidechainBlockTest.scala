@@ -320,7 +320,7 @@ class SidechainBlockTest
       mcBlockRef3.header.version,
       mcBlockRef3.header.hashPrevBlock,
       mcBlockRef3.header.hashMerkleRoot,
-      mcBlockRef3.header.hashSCMerkleRootsMap,
+      mcBlockRef3.header.hashScTxsCommitment,
       -1, // broke time
       mcBlockRef3.header.bits,
       mcBlockRef3.header.nonce,
@@ -776,7 +776,7 @@ class SidechainBlockTest
         h.version,
         currentParent, // mock parent hash
         h.hashMerkleRoot,
-        h.hashSCMerkleRootsMap,
+        h.hashScTxsCommitment,
         h.time,
         h.bits,
         h.nonce,

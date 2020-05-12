@@ -9,6 +9,7 @@ case class WebSocketSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
                              reconnectionMaxAttempts: Int,
+                             zencliCommandLine: String,
                              allowNoConnectionInRegtest: Boolean = true // In Regtest allow to forge new blocks without connection to MC node, for example.
                             )
 
@@ -17,16 +18,12 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                mcBlockHeight: Int,
                                powData: String,
                                mcNetwork: String,
-                               withdrawalEpochLength: Int
-                              )
+                               withdrawalEpochLength: Int)
 
 case class WalletSettings(seed: String,
-                          genesisSecrets: Seq[String]
-                         )
-
+                          genesisSecrets: Seq[String])
 
 case class SidechainSettings(scorexSettings: ScorexSettings,
                              genesisData: GenesisDataSettings,
                              websocket: WebSocketSettings,
-                             wallet: WalletSettings
-                            )
+                             wallet: WalletSettings)

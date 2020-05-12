@@ -478,8 +478,8 @@ def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdraw
     if diff > 1:
         mainchain_node.generate(diff)
 
-    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length,
-                                              [{"address": public_key, "amount": forward_transfer_amount}])
+    custom_data = "" # vrf public key in future
+    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, public_key, forward_transfer_amount, custom_data)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
     mainchain_node.generate(1)
