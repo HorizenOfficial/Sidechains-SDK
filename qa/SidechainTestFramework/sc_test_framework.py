@@ -59,6 +59,10 @@ class SidechainTestFramework(BitcoinTestFramework):
         sync_blocks(self.nodes)
         sync_mempools(self.nodes)
 
+    def sync_nodes(self, mc_nodes):
+        sync_blocks(mc_nodes)
+        sync_mempools(mc_nodes)
+
     def join_network(self):
         pass
 
@@ -86,6 +90,10 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_sync_all(self):
         sync_sc_blocks(self.sc_nodes)
         sync_sc_mempools(self.sc_nodes)
+
+    def sc_sync_nodes(self, sc_nodes):
+        sync_sc_blocks(sc_nodes)
+        sync_sc_mempools(sc_nodes)
 
     def sc_join_network(self):
         pass

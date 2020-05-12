@@ -637,7 +637,7 @@ class SidechainBlockTest
     random.nextBytes(anotherOmmersHash)
     val unsignedModifiedHeader = validBlock.header.copy(ommersMerkleRootHash = anotherOmmersHash)
     val signedModifiedHeader = unsignedModifiedHeader.copy(
-      signature = forgerMetadata.rewardSecret.sign(unsignedModifiedHeader.messageToSign)
+      signature = forgerMetadata.blockSignSecret.sign(unsignedModifiedHeader.messageToSign)
     )
     invalidBlock = invalidateBlock(
       validBlock,
@@ -805,7 +805,7 @@ class SidechainBlockTest
       sidechainTransactions,
       mainchainHeaders,
       ommers,
-      forgerMetadata.rewardSecret,
+      forgerMetadata.blockSignSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),

@@ -148,7 +148,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val hashesTry = mcnode.getNewBlockHashes(reqHashes, limit)
     assertTrue("Result expected to be successful.", hashesTry.isSuccess)
-    assertEquals("Result hashes is different.", respHashes, hashesTry.get)
+    assertEquals("Result hashes is different.", (respHeight, respHashes), hashesTry.get)
   }
 
   @Test

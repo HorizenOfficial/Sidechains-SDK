@@ -93,8 +93,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public static long initialValue = 10000000000L;
     public static ForgerBox getHardcodedGenesisForgerBox() {
         PublicKey25519Proposition proposition = genesisSecret.publicImage();
-        PublicKey25519Proposition rewardProposition = genesisSecret.publicImage();
-        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, rewardProposition, vrfPublicKey);
+        PublicKey25519Proposition blockSignProposition = genesisSecret.publicImage();
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, blockSignProposition, vrfPublicKey);
         long nonce = 42L;
 
         return forgerBoxData.getBox(nonce);

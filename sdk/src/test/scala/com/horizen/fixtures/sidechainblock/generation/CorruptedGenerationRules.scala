@@ -95,14 +95,14 @@ object CorruptedGenerationRules {
 case class ForgerBoxCorruptionRules(propositionChanged: Boolean = false,
                                     nonceShift: Long = 0,
                                     valueShift: Long = 0,
-                                    rewardPropositionChanged: Boolean = false,
+                                    blockSignPropositionChanged: Boolean = false,
                                     vrfPubKeyChanged: Boolean = false) {
   override def toString: String = {
     "ForgerBoxCorruptionRules(" +
     s"propositionChanged = ${propositionChanged}, " +
     s"nonceShift = ${nonceShift}, " +
     s"valueShift = ${valueShift}, " +
-    s"rewardPropositionChanged = ${rewardPropositionChanged}, " +
+    s"blockSignPropositionChanged = ${blockSignPropositionChanged}, " +
     s"vrfPubKeyChanged = ${vrfPubKeyChanged}"
   }
 }
@@ -132,7 +132,7 @@ object ForgerBoxCorruptionRules {
     }
 
     if (rnd.nextInt(100) < 1) {
-      rule = rule.copy(rewardPropositionChanged = true)
+      rule = rule.copy(blockSignPropositionChanged = true)
     }
 
     if (rnd.nextInt(100) < 2) {

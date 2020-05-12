@@ -46,6 +46,8 @@ object ProofOfWorkVerifier {
           // We reached the genesis MC block reference. So get the rest of (time, bits) pairs from genesis pow data.
           for(timeBitsTuple <- params.genesisPoWData.reverse) {
             timeBitsData = timeBitsTuple :: timeBitsData
+            if(timeBitsData.size == params.nPowAveragingWindow + params.nMedianTimeSpan)
+              break
           }
           break
         }

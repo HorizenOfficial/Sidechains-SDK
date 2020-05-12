@@ -16,12 +16,13 @@ import java.util.{Optional => JOptional}
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainRelatedMainchainOutput}
+import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import scorex.core.consensus.ModifierSemanticValidity
 
 import scala.collection.mutable
 import scala.util.{Failure, Random, Success}
+
 
 class MainchainBlockReferenceValidatorTest
   extends JUnitSuite

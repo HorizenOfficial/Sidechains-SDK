@@ -140,7 +140,7 @@ class SidechainJSONBOChecker {
     val forgerBoxElementNames = forgerBox.fieldNames().asScala.toSet
     assertEquals(7, forgerBoxElementNames.size)
 
-    val forgerBoxExpectedElements = Set("nonce", "id", "rewardProposition", "typeId", "vrfPubKey", "value", "proposition")
+    val forgerBoxExpectedElements = Set("nonce", "id", "blockSignProposition", "typeId", "vrfPubKey", "value", "proposition")
     assertEquals(forgerBoxExpectedElements, forgerBoxElementNames)
 
 
