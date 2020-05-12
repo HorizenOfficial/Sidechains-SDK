@@ -1,17 +1,18 @@
-package com.horizen.consensus
+package com.horizen.validation
 
 import com.horizen.SidechainHistory
 import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader}
+import com.horizen.consensus._
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.validation.ConsensusValidator
 import com.horizen.vrf.VrfProofHash
-import org.junit.Assert.{assertArrayEquals, assertEquals, fail => jFail}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.ModifierId
+import org.junit.Assert.{assertEquals, assertArrayEquals, fail => jFail}
+
 
 import scala.util.{Failure, Success, Try}
 

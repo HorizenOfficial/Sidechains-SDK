@@ -254,6 +254,18 @@ def connect_nodes_bi(nodes, a, b):
     connect_nodes(nodes[a], b)
     connect_nodes(nodes[b], a)
 
+def disconnect_nodes(from_connection, node_num):
+    ip_port = "127.0.0.1:"+str(p2p_port(node_num))
+    from_connection.disconnectnode(ip_port)
+    # poll until version handshake complete to avoid race conditions
+    # with transaction relaying
+    while any(peer['version'] == 0 for peer in from_connection.getpeerinfo()):
+        time.sleep(0.1)
+
+def disconnect_nodes_bi(nodes, a, b):
+    disconnect_nodes(nodes[a], b)
+    disconnect_nodes(nodes[b], a)
+
 def find_output(node, txid, amount):
     """
     Return index to output of txid with value amount
@@ -466,8 +478,8 @@ def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdraw
     if diff > 1:
         mainchain_node.generate(diff)
 
-    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length,
-                                              [{"address": public_key, "amount": forward_transfer_amount}])
+    custom_data = "" # vrf public key in future
+    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, public_key, forward_transfer_amount, custom_data)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
     mainchain_node.generate(1)

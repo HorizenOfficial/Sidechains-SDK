@@ -116,7 +116,8 @@ class SidechainStateTest
       Set(),
       Seq[WithdrawalRequestBox](),
       forgingStakesToAppendSeq,
-      initialConsensusEpoch
+      initialConsensusEpoch,
+      false
     )
   }
 

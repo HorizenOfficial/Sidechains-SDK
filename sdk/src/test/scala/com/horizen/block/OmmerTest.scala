@@ -72,7 +72,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       Seq(),  // No txs
       Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
-      forgerMetadata.rewardSecret,
+      forgerMetadata.blockSignSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
@@ -221,7 +221,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       mcBlockRef1.header.version,
       mcBlockRef1.header.hashPrevBlock,
       mcBlockRef1.header.hashMerkleRoot,
-      mcBlockRef1.header.hashSCMerkleRootsMap,
+      mcBlockRef1.header.hashScTxsCommitment,
       -1, // broke time
       mcBlockRef1.header.bits,
       mcBlockRef1.header.nonce,
@@ -313,7 +313,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       Seq(),  // No txs
       Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
-      forgerMetadata.rewardSecret,
+      forgerMetadata.blockSignSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
@@ -374,7 +374,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       Seq(),  // No txs
       Seq(mcBlockRef1.header, mcBlockRef2.header),
       Seq(),  // No ommers
-      forgerMetadata.rewardSecret,
+      forgerMetadata.blockSignSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),

@@ -51,7 +51,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta1.rewardSecret,
+      forgerMeta1.blockSignSecret,
       forgerBox1,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -78,7 +78,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       mcRefs.map(_.header),
       Seq(),
-      forgerMeta2.rewardSecret,
+      forgerMeta2.blockSignSecret,
       forgerBox2,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -105,7 +105,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       mcRefs.map(_.header),
       Seq(),
-      forgerMeta3.rewardSecret,
+      forgerMeta3.blockSignSecret,
       forgerBox3,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -122,12 +122,12 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 4: valid genesis block with 1 MainchainBlockReferenceData with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
-    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeeb"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
-    // parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
+    // parse MC block with tx version -4 with creation of 3 sidechains.
     // sc creation output withdrawal epoch = 100
-    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
     mcRefs = Seq(mcBlockRef)
@@ -140,7 +140,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       mcRefs.map(_.header),
       Seq(),
-      forgerMeta4.rewardSecret,
+      forgerMeta4.blockSignSecret,
       forgerBox4,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -158,7 +158,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 5: the same as above but with valid withdrawalEpochLength specified in params / sc creation
-    Mockito.when(params.withdrawalEpochLength).thenReturn(100)
+    Mockito.when(params.withdrawalEpochLength).thenReturn(5)
     assertTrue("Sidechain genesis block with 1 MainchainBlockReferencesData with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
   }
 
@@ -180,7 +180,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta1.rewardSecret,
+      forgerMeta1.blockSignSecret,
       forgerBox1,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -205,7 +205,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta2.rewardSecret,
+      forgerMeta2.blockSignSecret,
       forgerBox2,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -249,7 +249,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(), // No MainchainHeaders - no need of them
       Seq(),
-      forgerMeta5.rewardSecret,
+      forgerMeta5.blockSignSecret,
       forgerBox5,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -301,7 +301,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
       Seq(),
       Seq(),
-      forgerMeta8.rewardSecret,
+      forgerMeta8.blockSignSecret,
       forgerBox8,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -347,11 +347,11 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 11: invalid block - with 1 MainchainBlockReferenceData with sc creation tx with declared sidechain creation output
-    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000001"
+    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeeb"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
-    // parse MC block with tx version -4 with 1 sc creation output and 3 forward transfer.
-    val mcBlockHex = Source.fromResource("mcblock_sc_support_regtest_sc_creation").getLines().next()
+    // parse MC block with tx version -4 with creation of 3 sidechains.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
 
@@ -363,7 +363,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta11.rewardSecret,
+      forgerMeta11.blockSignSecret,
       forgerBox11,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -389,7 +389,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta12.rewardSecret,
+      forgerMeta12.blockSignSecret,
       forgerBox12,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -414,7 +414,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       Seq(),
       Seq(),
-      forgerMeta13.rewardSecret,
+      forgerMeta13.blockSignSecret,
       forgerBox13,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
@@ -439,7 +439,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       Seq(),
       mcRefs.map(_.header), // 4 MainchainHeaders, from different withdrawal epochs
       Seq(),
-      forgerMeta14.rewardSecret,
+      forgerMeta14.blockSignSecret,
       forgerBox14,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),

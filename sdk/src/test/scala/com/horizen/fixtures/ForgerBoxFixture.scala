@@ -8,7 +8,7 @@ import com.horizen.secret.{PrivateKey25519, VrfKeyGenerator, VrfSecretKey}
 import com.horizen.utils
 import com.horizen.utils.Ed25519
 
-case class ForgerBoxGenerationMetadata(propositionSecret: PrivateKey25519, rewardSecret: PrivateKey25519, vrfSecret: VrfSecretKey)
+case class ForgerBoxGenerationMetadata(propositionSecret: PrivateKey25519, blockSignSecret: PrivateKey25519, vrfSecret: VrfSecretKey)
 
 object ForgerBoxFixture {
   def generateForgerBox(seed: Long): (ForgerBox, ForgerBoxGenerationMetadata) = {

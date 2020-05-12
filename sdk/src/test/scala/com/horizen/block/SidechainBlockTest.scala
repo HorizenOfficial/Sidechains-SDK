@@ -320,7 +320,7 @@ class SidechainBlockTest
       mcBlockRef3.header.version,
       mcBlockRef3.header.hashPrevBlock,
       mcBlockRef3.header.hashMerkleRoot,
-      mcBlockRef3.header.hashSCMerkleRootsMap,
+      mcBlockRef3.header.hashScTxsCommitment,
       -1, // broke time
       mcBlockRef3.header.bits,
       mcBlockRef3.header.nonce,
@@ -637,7 +637,7 @@ class SidechainBlockTest
     random.nextBytes(anotherOmmersHash)
     val unsignedModifiedHeader = validBlock.header.copy(ommersMerkleRootHash = anotherOmmersHash)
     val signedModifiedHeader = unsignedModifiedHeader.copy(
-      signature = forgerMetadata.rewardSecret.sign(unsignedModifiedHeader.messageToSign)
+      signature = forgerMetadata.blockSignSecret.sign(unsignedModifiedHeader.messageToSign)
     )
     invalidBlock = invalidateBlock(
       validBlock,
@@ -776,7 +776,7 @@ class SidechainBlockTest
         h.version,
         currentParent, // mock parent hash
         h.hashMerkleRoot,
-        h.hashSCMerkleRootsMap,
+        h.hashScTxsCommitment,
         h.time,
         h.bits,
         h.nonce,
@@ -806,7 +806,7 @@ class SidechainBlockTest
       sidechainTransactions,
       mainchainHeaders,
       ommers,
-      forgerMetadata.rewardSecret,
+      forgerMetadata.blockSignSecret,
       forgerBox,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),

@@ -15,23 +15,23 @@ import java.util.Objects;
 import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
 
 public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
-    private final PublicKey25519Proposition rewardProposition;
+    private final PublicKey25519Proposition blockSignProposition;
     private final VrfPublicKey vrfPublicKey;
 
     public ForgerBoxData(PublicKey25519Proposition proposition,
                          long value,
-                         PublicKey25519Proposition rewardProposition,
+                         PublicKey25519Proposition blockSignProposition,
                          VrfPublicKey vrfPublicKey) {
         super(proposition, value);
-        Objects.requireNonNull(rewardProposition, "rewardProposition must be defined");
+        Objects.requireNonNull(blockSignProposition, "blockSignProposition must be defined");
         Objects.requireNonNull(vrfPublicKey, "vrfPublicKey must be defined");
 
-        this.rewardProposition = rewardProposition;
+        this.blockSignProposition = blockSignProposition;
         this.vrfPublicKey = vrfPublicKey;
     }
 
-    public PublicKey25519Proposition rewardProposition() {
-        return rewardProposition;
+    public PublicKey25519Proposition blockSignProposition() {
+        return blockSignProposition;
     }
 
     public VrfPublicKey vrfPublicKey() {
@@ -48,7 +48,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
         return Bytes.concat(
                 proposition().bytes(),
                 Longs.toByteArray(value()),
-                rewardProposition().bytes(),
+                blockSignProposition().bytes(),
                 vrfPublicKey().bytes());
     }
 
@@ -64,19 +64,19 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
 
     public static ForgerBoxData parseBytes(byte[] bytes) {
         int valueOffset = PublicKey25519Proposition.getLength();
-        int rewardPropositionOffset = valueOffset + Longs.BYTES;
-        int vrfPubKeyOffset = rewardPropositionOffset + PublicKey25519Proposition.getLength();
+        int blockSignPropositionOffset = valueOffset + Longs.BYTES;
+        int vrfPubKeyOffset = blockSignPropositionOffset + PublicKey25519Proposition.getLength();
 
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parseBytes(Arrays.copyOf(bytes, valueOffset));
-        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, rewardPropositionOffset));
-        PublicKey25519Proposition rewardProposition = PublicKey25519Proposition.parseBytes(Arrays.copyOfRange(bytes, rewardPropositionOffset, vrfPubKeyOffset));
+        long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, blockSignPropositionOffset));
+        PublicKey25519Proposition blockSignProposition = PublicKey25519Proposition.parseBytes(Arrays.copyOfRange(bytes, blockSignPropositionOffset, vrfPubKeyOffset));
         VrfPublicKey vrfPublicKey = VrfPublicKeySerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, vrfPubKeyOffset, bytes.length));
 
-        return new ForgerBoxData(proposition, value, rewardProposition, vrfPublicKey);
+        return new ForgerBoxData(proposition, value, blockSignProposition, vrfPublicKey);
     }
 
     @Override
     public byte[] customFieldsHash() {
-        return Blake2b256.hash(Bytes.concat(rewardProposition().pubKeyBytes(), vrfPublicKey().pubKeyBytes()));
+        return Blake2b256.hash(Bytes.concat(blockSignProposition().pubKeyBytes(), vrfPublicKey().pubKeyBytes()));
     }
 }

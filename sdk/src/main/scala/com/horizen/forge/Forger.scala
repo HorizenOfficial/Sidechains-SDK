@@ -26,7 +26,7 @@ class Forger(settings: SidechainSettings,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
              val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
-  val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params)
+  val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -110,12 +110,12 @@ class Forger(settings: SidechainSettings,
       }
 
       case Success(ForgeFailed(ex)) => {
-        log.error("Forging had been failed")
+        log.error(s"Forging had been failed. Reason: ${ex.getMessage}")
         respondsToOpt.map(respondsTo => respondsTo ! Failure(ex))
       }
 
       case failure @ Failure(ex) => {
-        log.error("Forging had been failed")
+        log.error(s"Forging had been failed. Reason: ${ex.getMessage}")
         respondsToOpt.map(respondsTo => respondsTo ! failure)
       }
     }

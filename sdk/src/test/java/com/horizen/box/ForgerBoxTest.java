@@ -24,23 +24,23 @@ public class ForgerBoxTest extends BoxFixtureClass {
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(propositionKeyPair.getValue());
         long nonce = randomGenerator.nextLong();
         long value = randomGenerator.nextLong();
-        Pair<byte[], byte[]> rewardKeyPair = Ed25519.createKeyPair(propositionKeyPair.getKey());
-        PublicKey25519Proposition rewardProposition = new PublicKey25519Proposition(rewardKeyPair.getValue());
+        Pair<byte[], byte[]> blockSignKeyPair = Ed25519.createKeyPair(propositionKeyPair.getKey());
+        PublicKey25519Proposition blockSignProposition = new PublicKey25519Proposition(blockSignKeyPair.getValue());
 
-        VrfPublicKey vrfPubKey = VrfKeyGenerator.getInstance().generateSecret(rewardKeyPair.getKey()).publicImage();
-        ForgerBox box = getForgerBox(proposition, nonce, value, rewardProposition, vrfPubKey);
+        VrfPublicKey vrfPubKey = VrfKeyGenerator.getInstance().generateSecret(blockSignKeyPair.getKey()).publicImage();
+        ForgerBox box = getForgerBox(proposition, nonce, value, blockSignProposition, vrfPubKey);
 
         assertEquals("Proposition shall be equal", proposition, box.proposition());
         assertEquals("Nonce shall be equal", nonce, box.nonce());
         assertEquals("value shall be equal", value, box.value());
-        assertEquals("rewardProposition shall be equal", rewardProposition, box.rewardProposition());
+        assertEquals("BlockSignProposition shall be equal", blockSignProposition, box.blockSignProposition());
         assertEquals("Nonce shall be equal", vrfPubKey, box.vrfPubKey());
     }
 
     @Test
     public void equalsAndHashTest() {
         ForgerBox left = ForgerBoxFixture.generateForgerBox(1)._1;
-        ForgerBox sameAsLeft = getForgerBox(left.proposition(),  left.nonce(), left.value(), left.rewardProposition(), left.vrfPubKey());
+        ForgerBox sameAsLeft = getForgerBox(left.proposition(),  left.nonce(), left.value(), left.blockSignProposition(), left.vrfPubKey());
         ForgerBox right = ForgerBoxFixture.generateForgerBox(2)._1;
 
         assertEquals("Forger boxes with same data shall be equals", left, sameAsLeft);

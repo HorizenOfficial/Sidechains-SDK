@@ -354,7 +354,6 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     Mockito.when(block.id).thenReturn(ModifierId @@ BytesUtils.toHexString(blockHash))
     Mockito.when(block.parentId).thenReturn(ModifierId @@ prevSCBlockId)
 
-
     var mainchainHeaders = Seq[MainchainHeader]()
     for (powRelatedData <- powRelatedDataSeq) {
       mainchainHeaders = mainchainHeaders :+ MainchainHeaderForPoWTest(powRelatedData.bits, BytesUtils.fromHexString(powRelatedData.mcblockhash), BytesUtils.fromHexString(tmpPrevMCBlockHash), powRelatedData.time)
