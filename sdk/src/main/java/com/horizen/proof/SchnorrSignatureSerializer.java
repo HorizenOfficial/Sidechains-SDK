@@ -3,7 +3,7 @@ package com.horizen.proof;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrSignature> {
+public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrProof> {
     private static SchnorrSignatureSerializer serializer;
 
     static {
@@ -19,12 +19,12 @@ public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrSignat
     }
 
     @Override
-    public void serialize(SchnorrSignature proof, Writer writer) {
+    public void serialize(SchnorrProof proof, Writer writer) {
         writer.putBytes(proof.bytes());
     }
 
     @Override
-    public SchnorrSignature parse(Reader reader) {
-        return SchnorrSignature.parse(reader.getBytes(reader.remaining()));
+    public SchnorrProof parse(Reader reader) {
+        return SchnorrProof.parse(reader.getBytes(reader.remaining()));
     }
 }

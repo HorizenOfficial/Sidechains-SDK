@@ -70,13 +70,14 @@ class CertificateSubmitter
           val previousMcEndEpochBlockHash =
             lastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochInfo.epoch - 1).getOrElse(prePreviousEpochPlaceholderForFirstEpoch)
 
-          val proof = generateProof(withdrawalRequests, mcEndEpochBlockHash, previousMcEndEpochBlockHash, sidechainNodeView.vault)
+          val proofWithQuality = generateProof(withdrawalRequests, mcEndEpochBlockHash, previousMcEndEpochBlockHash, sidechainNodeView.vault)
 
           val certificate: CertificateRequest = CertificateRequestCreator.create(
             withdrawalEpoch,
             mcEndEpochBlockHash,
             previousMcEndEpochBlockHash,
-            proof,
+            proofWithQuality.getKey,
+            proofWithQuality.getValue,
             withdrawalRequests,
             params)
 
@@ -97,21 +98,21 @@ class CertificateSubmitter
   }
 
 
-  private def generateProof(withdrawalRequestBoxes: Seq[WithdrawalRequestBox], endWithdrawalEpochBlockHash: Array[Byte], prevEndWithdrawalEpochBlockHash: Array[Byte], sidechainWallet: SidechainWallet): Array[Byte] = {
-    val message = BackwardTransferLoader.schnorrFunctions.createBackwardTransferMessage(withdrawalRequestBoxes.asJava, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash)
+  private def generateProof(withdrawalRequestBoxes: Seq[WithdrawalRequestBox], endWithdrawalEpochBlockHash: Array[Byte], prevEndWithdrawalEpochBlockHash: Array[Byte], sidechainWallet: SidechainWallet): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+    val message = BackwardTransferLoader.sigProofThresholdCircuit.generateMessageToBeSigned(withdrawalRequestBoxes.asJava, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash)
     val publicKeysBytes = params.schnorrPublicKeys.map(_.bytes())
 
     val schnorrSignatures = params.schnorrPublicKeys.map{publicKey =>
       sidechainWallet.secret(publicKey).map(_.sign(message).bytes).getOrElse(missedPrivateKeySignatureBytesPlaceholder)
     }
 
-    BackwardTransferLoader.schnorrFunctions.createProof(
+    BackwardTransferLoader.sigProofThresholdCircuit.createProof(
       withdrawalRequestBoxes.asJava,
       endWithdrawalEpochBlockHash,
       prevEndWithdrawalEpochBlockHash,
       schnorrSignatures.asJava,
       publicKeysBytes.asJava,
-      params.backwardTransferThreshold,
+      params.signersThreshold,
       params.provingKeyFilePath)
   }
 
@@ -156,10 +157,10 @@ class CertificateSubmitter
   }
 
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
-    val backwardTransferPublicKeys = params.schnorrPublicKeys
+    val signersPublicKeys = params.schnorrPublicKeys
 
     val actualPoseidonRootHash =
-      BackwardTransferLoader.schnorrFunctions.generatePoseidonHash(backwardTransferPublicKeys.map(_.bytes()).asJava, params.backwardTransferThreshold)
+      BackwardTransferLoader.sigProofThresholdCircuit.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
     val expectedPoseidonRootHash = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
     if (actualPoseidonRootHash.deep != expectedPoseidonRootHash.deep) {
@@ -167,9 +168,9 @@ class CertificateSubmitter
     }
 
     val wallet = sidechainNodeView.vault
-    val actualStoredPrivateKey = backwardTransferPublicKeys.map(pubKey => wallet.secret(pubKey)).size
-    if (actualStoredPrivateKey < params.backwardTransferThreshold) {
-      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected private keys size shall be at least ${params.backwardTransferThreshold} but actual is ${actualStoredPrivateKey}")
+    val actualStoredPrivateKey = signersPublicKeys.map(pubKey => wallet.secret(pubKey)).size
+    if (actualStoredPrivateKey < params.signersThreshold) {
+      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected private keys size shall be at least ${params.signersThreshold} but actual is ${actualStoredPrivateKey}")
     }
   }
 

@@ -2,9 +2,9 @@ package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.proof.SchnorrSignature;
+import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.SchnorrPublicKey;
+import com.horizen.proposition.SchnorrProposition;
 import com.horizen.backwardtransfer.BackwardTransferLoader;
 
 import java.util.Arrays;
@@ -12,11 +12,11 @@ import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
-public class SchnorrSecretKey implements Secret {
+public class SchnorrSecret implements Secret {
     private final byte[] secretBytes;
     private final byte[] publicBytes;
 
-    public SchnorrSecretKey(byte[] secretKey, byte[] publicKey) {
+    public SchnorrSecret(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
@@ -38,9 +38,9 @@ public class SchnorrSecretKey implements Secret {
     }
 
     @Override
-    public SchnorrPublicKey publicImage() {
+    public SchnorrProposition publicImage() {
         byte[] publicKey = Arrays.copyOf(publicBytes, publicBytes.length);
-        return new SchnorrPublicKey(publicKey);
+        return new SchnorrProposition(publicKey);
     }
 
     @Override
@@ -49,7 +49,7 @@ public class SchnorrSecretKey implements Secret {
         return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
     }
 
-    public static SchnorrSecretKey parse(byte[] bytes) {
+    public static SchnorrSecret parse(byte[] bytes) {
         int secretKeyOffset = Ints.BYTES;
         int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
         int publicKeyOffset = secretKeyOffset + secretKeyLength;
@@ -57,12 +57,12 @@ public class SchnorrSecretKey implements Secret {
         byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
         byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
 
-        return new SchnorrSecretKey(secretKey, publicKey);
+        return new SchnorrSecret(secretKey, publicKey);
     }
 
     @Override
     public SecretSerializer serializer() {
-        return SchnorrSecretKeySerializer.getSerializer();
+        return SchnorrSecretSerializer.getSerializer();
     }
 
     @Override
@@ -71,15 +71,15 @@ public class SchnorrSecretKey implements Secret {
     }
 
     @Override
-    public SchnorrSignature sign(byte[] message) {
-        return new SchnorrSignature(BackwardTransferLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
+    public SchnorrProof sign(byte[] message) {
+        return new SchnorrProof(BackwardTransferLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SchnorrSecretKey that = (SchnorrSecretKey) o;
+        SchnorrSecret that = (SchnorrSecret) o;
         return Arrays.equals(secretBytes, that.secretBytes) &&
                 Arrays.equals(publicBytes, that.publicBytes);
     }

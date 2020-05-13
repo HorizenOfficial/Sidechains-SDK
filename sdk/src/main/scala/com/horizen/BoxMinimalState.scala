@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.MainchainBackwardTransferCertificate
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.Box
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.proposition.Proposition

@@ -41,6 +41,12 @@
 			<version>${scala.version}</version>
 		</dependency>
 
+        <dependency>
+            <groupId>com.horizen</groupId>
+            <artifactId>zendoo-sc-cryptolib</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
         <dependency>
             <groupId>io.circe</groupId>

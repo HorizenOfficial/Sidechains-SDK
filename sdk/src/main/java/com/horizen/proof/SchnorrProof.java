@@ -2,9 +2,9 @@ package com.horizen.proof;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proposition.SchnorrPublicKey;
+import com.horizen.proposition.SchnorrProposition;
 import com.horizen.backwardtransfer.BackwardTransferLoader;
-import com.horizen.secret.SchnorrSecretKey;
+import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
 import java.util.Arrays;
@@ -14,11 +14,11 @@ import static com.horizen.proof.CoreProofsIdsEnum.SchnorrSignatureId;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("typeId")
-public class SchnorrSignature implements ProofOfKnowledge<SchnorrSecretKey, SchnorrPublicKey>
+public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition>
 {
     private final byte[] signature;
 
-    public SchnorrSignature(byte[] signatureBytes) {
+    public SchnorrProof(byte[] signatureBytes) {
         Objects.requireNonNull(signatureBytes, "Public key can't be null");
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
@@ -30,7 +30,7 @@ public class SchnorrSignature implements ProofOfKnowledge<SchnorrSecretKey, Schn
     }
 
     @Override
-    public boolean isValid(SchnorrPublicKey publicKey, byte[] message) {
+    public boolean isValid(SchnorrProposition publicKey, byte[] message) {
         return BackwardTransferLoader.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
     }
 
@@ -44,7 +44,7 @@ public class SchnorrSignature implements ProofOfKnowledge<SchnorrSecretKey, Schn
         return SchnorrSignatureSerializer.getSerializer();
     }
 
-    public static SchnorrSignature parse(byte[] bytes) {
-        return new SchnorrSignature(bytes);
+    public static SchnorrProof parse(byte[] bytes) {
+        return new SchnorrProof(bytes);
     }
 }

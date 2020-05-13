@@ -3,9 +3,9 @@ package com.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.proof.SchnorrSignature;
+import com.horizen.proof.SchnorrProof;
 import com.horizen.backwardtransfer.BackwardTransferLoader;
-import com.horizen.secret.SchnorrSecretKey;
+import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
 import java.util.Arrays;
@@ -13,16 +13,16 @@ import java.util.Objects;
 
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
-public class SchnorrPublicKey implements ProofOfKnowledgeProposition<SchnorrSecretKey> {
+public class SchnorrProposition implements ProofOfKnowledgeProposition<SchnorrSecret> {
     private final byte[] publicBytes;
 
-    public SchnorrPublicKey(byte[] publicKey) {
+    public SchnorrProposition(byte[] publicKey) {
         Objects.requireNonNull(publicKey, "Public key can't be null");
 
         publicBytes = Arrays.copyOf(publicKey, publicKey.length);
     }
 
-    public boolean verify(byte[] message, SchnorrSignature signature) {
+    public boolean verify(byte[] message, SchnorrProof signature) {
         return BackwardTransferLoader.schnorrFunctions().verify(message, pubKeyBytes(), signature.bytes());
     }
 
@@ -40,14 +40,14 @@ public class SchnorrPublicKey implements ProofOfKnowledgeProposition<SchnorrSecr
 
     @Override
     public PropositionSerializer serializer() {
-        return SchnorrPublicKeySerializer.getSerializer();
+        return SchnorrPropositionSerializer.getSerializer();
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SchnorrPublicKey that = (SchnorrPublicKey) o;
+        SchnorrProposition that = (SchnorrProposition) o;
         return Arrays.equals(publicBytes, that.publicBytes);
     }
 
@@ -56,8 +56,8 @@ public class SchnorrPublicKey implements ProofOfKnowledgeProposition<SchnorrSecr
         return Arrays.hashCode(publicBytes);
     }
 
-    public static SchnorrPublicKey parseBytes(byte[] bytes) {
-        return new SchnorrPublicKey(bytes);
+    public static SchnorrProposition parseBytes(byte[] bytes) {
+        return new SchnorrProposition(bytes);
     }
 
     @Override

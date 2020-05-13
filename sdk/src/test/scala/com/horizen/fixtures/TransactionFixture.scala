@@ -15,10 +15,10 @@ trait TransactionFixture extends BoxFixture {
 
   def generateRegularTransaction(rnd: Random, transactionBaseTimeStamp: Long, inputTransactionsSize: Int, outputTransactionsSize: Int): RegularTransaction = {
     val inputTransactionsList: Seq[PrivateKey25519] = (1 to inputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextString(32).getBytes))
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong().toString.getBytes))
 
     val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to outputTransactionsSize)
-      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextString(32).getBytes).publicImage())
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(rnd.nextLong().toString.getBytes).publicImage())
 
     getRegularTransaction(inputTransactionsList, outputTransactionsList, rnd = rnd, transactionBaseTimeStamp = transactionBaseTimeStamp)
   }

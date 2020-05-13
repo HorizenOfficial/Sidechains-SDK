@@ -353,6 +353,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
   }
 
+  @Ignore
   @Test
   def blockBackwardTransfer3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with backward transfers to from 3 sidechains and forward transfer to 1 sidechain.

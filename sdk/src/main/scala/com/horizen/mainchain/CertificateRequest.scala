@@ -32,6 +32,7 @@ case class CertificateRequest(
    endEpochBlockHash: Array[Byte],
    previousEpochEndBlockHash: Array[Byte],
    proofBytes: Array[Byte],
+   quality: Long,
    withdrawalRequests: Seq[WithdrawalRequest],
    subtractFeeFromAmount: Boolean = false,
    fee: Double = 0.00001)
@@ -60,6 +61,7 @@ object CertificateRequestCreator {
              endEpochBlockHash: Array[Byte],
              previousEpochEndBlockHash: Array[Byte],
              proofBytes: Array[Byte],
+             quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              params: NetworkParams) : CertificateRequest = {
 
@@ -69,6 +71,7 @@ object CertificateRequestCreator {
       endEpochBlockHash,
       previousEpochEndBlockHash,
       proofBytes,
+      quality,
       withdrawalRequestBoxes.map(wrb => WithdrawalRequest(wrb.proposition().bytes(), wrb.value().toDouble/ZEN_COINS_DIVIDOR)))
   }
 }

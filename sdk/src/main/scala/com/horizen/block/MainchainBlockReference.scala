@@ -178,7 +178,7 @@ object MainchainBlockReference {
 
         certificates.foreach(c => sidechainHashMap.addCertificate(c))
 
-        val certificate: Option[MainchainBackwardTransferCertificate] = certificates.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+        val certificate: Option[WithdrawalEpochCertificate] = certificates.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
 
         val data: MainchainBlockReferenceData =
           if (scIds.isEmpty) {
@@ -220,7 +220,7 @@ object MainchainBlockReference {
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
   private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
-    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[MainchainBackwardTransferCertificate])] = Try {
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate])] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -239,7 +239,7 @@ object MainchainBlockReference {
           offset += tx.size
         }
 
-        var certificates: Seq[MainchainBackwardTransferCertificate] = Seq[MainchainBackwardTransferCertificate]()
+        var certificates: Seq[WithdrawalEpochCertificate] = Seq[WithdrawalEpochCertificate]()
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
@@ -247,7 +247,7 @@ object MainchainBlockReference {
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {
-              val c: MainchainBackwardTransferCertificate = MainchainBackwardTransferCertificate.parse(mainchainBlockBytes, offset)
+              val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
               certificates = certificates :+ c
               offset += c.size
             }

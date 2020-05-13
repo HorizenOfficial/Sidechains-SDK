@@ -2,7 +2,7 @@ package com.horizen.params
 
 import java.math.BigInteger
 
-import com.horizen.proposition.SchnorrPublicKey
+import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -30,8 +30,8 @@ trait NetworkParams {
   val sidechainId: Array[Byte]
   val sidechainGenesisBlockId: ModifierId
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
-  val schnorrPublicKeys: Seq[SchnorrPublicKey]
-  val backwardTransferThreshold: Int
+  val schnorrPublicKeys: Seq[SchnorrProposition]
+  val signersThreshold: Int
   val provingKeyFilePath: String
 
   val maxHistoryRewritingLength: Int = 100

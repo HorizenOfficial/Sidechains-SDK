@@ -18,8 +18,8 @@ import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
-import com.horizen.proposition.{SchnorrPublicKey, SchnorrPublicKeySerializer}
-import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretKeySerializer, SecretSerializer}
+import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -98,8 +98,8 @@ class SidechainApp @Inject()
 
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
-  val schnorrPublicKeys: Seq[SchnorrPublicKey] = sidechainSettings.backwardTransferSettings.backwardTransferPublicKeys
-    .map(bytes => SchnorrPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+  val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.backwardTransferSettings.signersPublicKeys
+    .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -111,8 +111,8 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = schnorrPublicKeys,
-      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      schnorrPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
 
@@ -124,8 +124,8 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = schnorrPublicKeys,
-      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      schnorrPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
 
@@ -137,8 +137,8 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = schnorrPublicKeys,
-      backwardTransferThreshold = sidechainSettings.backwardTransferSettings.backwardTransferThreshold,
+      schnorrPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
@@ -175,8 +175,8 @@ class SidechainApp @Inject()
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
 
-    for(secretSchnorr <- sidechainSettings.backwardTransferSettings.backwardTransferSecrets)
-      sidechainSecretStorage.add(SchnorrSecretKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
+    for(secretSchnorr <- sidechainSettings.backwardTransferSettings.signersSecrets)
+      sidechainSecretStorage.add(SchnorrSecretSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
 

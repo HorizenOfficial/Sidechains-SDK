@@ -21,9 +21,9 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                               )
 
 case class BackwardTransferSettings(submitterIsEnabled: Boolean,
-                                    backwardTransferPublicKeys: Seq[String],
-                                    backwardTransferThreshold: Int,
-                                    backwardTransferSecrets: Seq[String],
+                                    signersPublicKeys: Seq[String],
+                                    signersThreshold: Int,
+                                    signersSecrets: Seq[String],
                                     provingKeyFilePath: String
                                    )
 
