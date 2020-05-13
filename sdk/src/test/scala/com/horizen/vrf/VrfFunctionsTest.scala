@@ -14,9 +14,9 @@ class VrfFunctionsTest {
   val secretBytes: Array[Byte] = keys.get(KeyType.SECRET)
   val publicBytes: Array[Byte] = keys.get(KeyType.PUBLIC)
   val message: Array[Byte] = "Very secret message!".getBytes
-  val vrfProofBytes: Array[Byte] = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, message).get(ProofType.VRF_PROOF)
+  val vrfProofBytes: Array[Byte] = VrfLoader.vrfFunctions.createProof(secretBytes, publicBytes, message).get(ProofType.VRF_PROOF)
   val vrfProofCheck: Boolean = VrfLoader.vrfFunctions.verifyProof(message, publicBytes, vrfProofBytes)
-  val vrfOutputBytes: Array[Byte] = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, message, vrfProofBytes).get()
+  val vrfOutputBytes: Array[Byte] = VrfLoader.vrfFunctions.proofToOutput(publicBytes, message, vrfProofBytes).get()
 
   @Test
   def sanityCheck(): Unit = {
@@ -35,12 +35,13 @@ class VrfFunctionsTest {
     for (i <- 1 to 10) {
       val messageLen = rnd.nextInt(128) % VrfLoader.vrfFunctions.maximumVrfMessageLength()
       val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes.take(messageLen)
-      val firstVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
-      val secondVrfProofBytes = VrfLoader.vrfFunctions.createVrfProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
+      val firstVrfProofBytes = VrfLoader.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
+      val secondVrfProofBytes = VrfLoader.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
+      //@TODO uncomment this ASAP after proof generation became deterministic
       //assertEquals(vrfProofBytes.deep, otherVrfProofBytes.deep)
 
-      val firstVrfOutputBytes = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, newMessage, firstVrfProofBytes).get
-      val secondVrfOutputBytes = VrfLoader.vrfFunctions.vrfProofToVrfOutput(publicBytes, newMessage, secondVrfProofBytes).get
+      val firstVrfOutputBytes = VrfLoader.vrfFunctions.proofToOutput(publicBytes, newMessage, firstVrfProofBytes).get
+      val secondVrfOutputBytes = VrfLoader.vrfFunctions.proofToOutput(publicBytes, newMessage, secondVrfProofBytes).get
 
       assertEquals(firstVrfOutputBytes.deep, secondVrfOutputBytes.deep)
       println(s"Vrf output determinism check: iteration ${i}, for message len ${newMessage.length}")

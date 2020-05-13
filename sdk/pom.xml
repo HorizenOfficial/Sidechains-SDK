@@ -270,17 +270,17 @@
 					<include>publickey25519proposition_hex</include>
 					<include>privatekey25519_hex</include>
 					<include>regulartransaction_hex</include>
-                    <include>VrfPublicKey111</include>
-                    <include>VrfPublicKey221</include>
-                    <include>VrfOutput234</include>
-                    <include>VrfProof908</include>
-                    <include>VrfSecretKey908</include>
-                    <include>VrfProof178</include>
-                    <include>VrfSecretKey178</include>
-                    <include>VrfPublicKey907</include>
-                    <include>VrfPublicKey901</include>
-                    <include>VrfProof143</include>
-                    <include>VrfSecretKey143</include>
+                    <include>RegularTransactionSerializerTestVrfPublicKey111</include>
+                    <include>RegularTransactionSerializerTestVrfPublicKey221</include>
+                    <include>SidechainBlockInfoTestVrfOutput234</include>
+                    <include>SidechainBlockTestVrfProof908</include>
+                    <include>SidechainBlockTestVrfSecretKey908</include>
+                    <include>SidechainBlockHeaderTestVrfProof178</include>
+                    <include>SidechainBlockHeaderTestVrfSecretKey178</include>
+                    <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
+                    <include>ForgerBoxSerializationTestVrfPublicKey901</include>
+                    <include>OmmerTestVrfProof143</include>
+                    <include>OmmerTestVrfSecretKey143</include>
                     <include>regularbox_hex</include>
                     <include>forgerrbox_hex</include>
 					<include>certifierrightbox_hex</include>

@@ -28,7 +28,7 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     }
 
     public Optional<VrfOutput> proofToVrfOutput(VrfPublicKey publicKey, byte[] message) {
-        return VrfLoader.vrfFunctions().vrfProofToVrfOutput(publicKey.pubKeyBytes(), message, proofBytes).map(VrfOutput::new);
+        return VrfLoader.vrfFunctions().proofToOutput(publicKey.pubKeyBytes(), message, proofBytes).map(VrfOutput::new);
     }
 
     @Override

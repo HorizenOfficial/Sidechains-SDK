@@ -557,7 +557,7 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
       headers,
       refData,
       WithdrawalEpochInfo(0, height),
-      VrfGenerator.generateVrfOutput(height),
+      Option(VrfGenerator.generateVrfOutput(height)),
       parentId
     )
   }

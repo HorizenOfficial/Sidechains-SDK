@@ -130,7 +130,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))),
       Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainReferenceDataHeaderHash.getOrElse(new Array[Byte](32)))),
       WithdrawalEpochInfo(1, 1),
-      vrfOutput,
+      Option(vrfOutput),
       blockId
     )
   }
@@ -154,7 +154,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp),
+      Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),
       block.parentId
     )
   }

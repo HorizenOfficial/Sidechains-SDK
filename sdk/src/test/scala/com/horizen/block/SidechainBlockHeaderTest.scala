@@ -17,19 +17,20 @@ import scala.util.{Failure, Success}
 
 class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with SidechainBlockFixture {
   val vrfGenerationDataSeed = 178
+  val vrfGenerationPrefix = "SidechainBlockHeaderTest"
   //set to true for update vrf related data
   if (false) {
-    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationDataSeed)
-    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed)
+    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage();
     Option((secret, publicKey))
   }
 
-  val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationDataSeed))
+  val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
   val header: SidechainBlockHeader =
     createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt)._1
   val params: NetworkParams = MainNetParams()
@@ -47,14 +48,14 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     assertEquals("SidechainBlockHeader version is different", header.version, serializedHeader.version)
     assertEquals("SidechainBlockHeader parentId is different", header.parentId, serializedHeader.parentId)
     assertEquals("SidechainBlockHeader timestamp is different", header.timestamp, serializedHeader.timestamp)
-    //assertEquals("SidechainBlockHeader forgerBox is different", header.forgerBox, serializedHeader.forgerBox)
+    assertEquals("SidechainBlockHeader forgerBox is different", header.forgerBox, serializedHeader.forgerBox)
     assertEquals("SidechainBlockHeader forgerBoxMerklePath is different", header.forgerBoxMerklePath, serializedHeader.forgerBoxMerklePath)
     assertArrayEquals("SidechainBlockHeader vrfProof is different", header.vrfProof.bytes, serializedHeader.vrfProof.bytes) // TODO: replace with vrfProof inself later
     assertArrayEquals("SidechainBlockHeader sidechainTransactionsMerkleRootHash is different", header.sidechainTransactionsMerkleRootHash, serializedHeader.sidechainTransactionsMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader mainchainMerkleRootHash is different", header.mainchainMerkleRootHash, serializedHeader.mainchainMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader ommersMerkleRootHash is different", header.ommersMerkleRootHash, serializedHeader.ommersMerkleRootHash)
     assertEquals("SidechainBlockHeader ommersNumber is different", header.ommersCumulativeScore, serializedHeader.ommersCumulativeScore)
-    //assertEquals("SidechainBlockHeader id is different", header.id, serializedHeader.id)
+    assertEquals("SidechainBlockHeader id is different", header.id, serializedHeader.id)
 
     // Set to true to regenerate regression data
     if(false) {

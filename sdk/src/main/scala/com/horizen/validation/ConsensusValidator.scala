@@ -37,33 +37,29 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
     verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
 
-    val stakeConsensusEpochInfo = history.getStakeConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
-      .getOrElse(throw new IllegalStateException(s"No stake consensus data for block ${verifiedBlock.id}"))
+    val currentConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
 
-    val nonceConsensusEpochInfo = history.getOrCalculateNonceConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
-
-    val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, nonceConsensusEpochInfo)
+    val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
       .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
-    verifyForgerBox(verifiedBlock.header, stakeConsensusEpochInfo, vrfOutput)
+    verifyForgerBox(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
 
-    val fullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
-    val lastBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
-    val previousFullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInfo.timestamp, lastBlockInfo.parentId)
-    verifyOmmers(verifiedBlock, fullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+    val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
+    val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
+    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, previousFullConsensusEpochInfo, history)
 
     verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
 
-  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
+  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, timeConverter: TimeToEpochSlotConverter): Unit = {
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
 
-    val absoluteSlotNumberForVerifiedBlock = history.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
-    val absoluteSlotNumberForParentBlock = history.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
+    val absoluteSlotNumberForVerifiedBlock = timeConverter.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
+    val absoluteSlotNumberForParentBlock = timeConverter.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
     if (absoluteSlotNumberForVerifiedBlock <= absoluteSlotNumberForParentBlock) throw new IllegalArgumentException("Block absolute slot number is equal or less than parent block")
 
-    val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
-    val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
+    val epochNumberForVerifiedBlock = timeConverter.timeStampToEpochNumber(verifiedBlockTimestamp)
+    val epochNumberForParentBlock = timeConverter.timeStampToEpochNumber(parentBlockTimestamp)
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 

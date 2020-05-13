@@ -55,17 +55,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
     val parentOfGenesisBlock = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))
 
-    val genesisBlockInfo = new SidechainBlockInfo(
-      0,
-      0,
-      parentOfGenesisBlock,
-      params.sidechainGenesisBlockTimestamp,
-      ModifierSemanticValidity.Valid,
-      Seq(),
-      Seq(),
-      dummyWithdrawalEpochInfo,
-      genesisVrfOutput,
-      params.sidechainGenesisBlockId)
+    val genesisBlockInfo = new SidechainBlockInfo(0, 0, parentOfGenesisBlock, params.sidechainGenesisBlockTimestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, None, params.sidechainGenesisBlockId)
 
     val genesisSidechainBlockIdAndInfo = (params.sidechainGenesisBlockId, genesisBlockInfo)
     val accumulator =
@@ -102,7 +92,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfOutput: VrfOutput, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
     val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes))
     val blockInfo =
-      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, vrfOutput, lastBlockInPreviousConsensusEpoch)
+      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, Option(vrfOutput), lastBlockInPreviousConsensusEpoch)
 
     (newBlockId, blockInfo)
   }

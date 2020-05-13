@@ -108,7 +108,7 @@ trait ConsensusDataProvider {
     var nextBlockSlot = timeStampToSlotNumber(initialBlockInfo.timestamp)
     while (nextBlockId != initialBlockInfo.lastBlockInPreviousConsensusEpoch && nextBlockSlot >= eligibleSlotsRangeStart) {
       if (eligibleSlotsRangeEnd >= nextBlockSlot) {
-        digest.update(nextBlockInfo.vrfOutput.bytes())
+        digest.update(nextBlockInfo.vrfOutputOpt.getOrElse(throw new IllegalStateException("Try to calculate nonce by using block with incorrect Vrf proof")).bytes())
       }
       nextBlockId = nextBlockInfo.parentId
       nextBlockInfo = storage.blockInfoById(nextBlockId)

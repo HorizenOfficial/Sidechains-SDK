@@ -3,10 +3,10 @@ package com.horizen.integration
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusDataStorage, StakeConsensusEpochInfo}
+import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -14,11 +14,10 @@ import com.horizen.storage.{IODBStoreAdapter, InMemoryStorageAdapter, SidechainH
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.validation.SidechainBlockSemanticValidator
-import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
-import org.mockito.Mockito
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.core.consensus.History.ProgressInfo
@@ -121,7 +120,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB2.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(2, 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfOutput(blockB2.header, history.getOrCalculateNonceConsensusEpochInfo(blockB2.header.timestamp, blockB2.header.parentId)).getOrElse(new VrfOutput(Array())), genesisBlock.id), history.bestBlockInfo)
+      SidechainBlockInfo(2, 2, blockB2.parentId, genesisBlock.timestamp + blockGenerationDelta * 1, ModifierSemanticValidity.Valid,  Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfOutput(blockB2.header, history.getOrCalculateNonceConsensusEpochInfo(blockB2.header.timestamp, blockB2.header.parentId)), genesisBlock.id), history.bestBlockInfo)
 
 
     // Test 2: append block after current tip (not after genesis)
@@ -145,7 +144,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
     assertEquals("Expected to have different best block, best block was changed.", blockB3.id , history.bestBlockId)
     assertEquals("Expected to have different best block info, best block was changed.",
-      SidechainBlockInfo(3, 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfOutput(blockB3.header, history.getOrCalculateNonceConsensusEpochInfo(blockB3.header.timestamp, blockB3.header.parentId)).getOrElse(new VrfOutput(Array())), genesisBlock.id), history.bestBlockInfo)
+      SidechainBlockInfo(3, 3, blockB3.parentId, genesisBlock.timestamp + blockGenerationDelta * 2, ModifierSemanticValidity.Valid, Seq(),  Seq(), WithdrawalEpochInfo(1, 1), history.getVrfOutput(blockB3.header, history.getOrCalculateNonceConsensusEpochInfo(blockB3.header.timestamp, blockB3.header.parentId)), genesisBlock.id), history.bestBlockInfo)
 
 
     // At the moment we have an active chain G1 -> B2 -> B3,
@@ -547,6 +546,9 @@ class SidechainHistoryTest extends JUnitSuite
 
   @Test
   def checkSidechainBlockInfoCreation(): Unit = {
+    val firstBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(241))
+    val secondBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(242))
+
     val testParams = MainNetParams(new Array[Byte](32),
       genesisBlock.id,
       sidechainGenesisBlockTimestamp = 100000,
@@ -556,7 +558,8 @@ class SidechainHistoryTest extends JUnitSuite
     val sidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), sidechainTransactionsCompanion, testParams)
     // Create first history object
     val consensusDataStorage1 = new ConsensusDataStorage(new InMemoryStorageAdapter())
-    var history = SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage1, testParams, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L)).get
+    var history = Mockito.spy(SidechainHistory.genesisHistory(sidechainHistoryStorage, consensusDataStorage1, testParams, genesisBlock, Seq(new SidechainBlockSemanticValidator(params)), Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L)).get)
+    Mockito.doAnswer(_ => firstBlockVrfOutputOpt).when(history).getVrfOutput(ArgumentMatchers.any[SidechainBlockHeader], ArgumentMatchers.any[NonceConsensusEpochInfo])
 
     val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, testParams)
     assertEquals(2, history.timeStampToEpochNumber(block1.timestamp))
@@ -565,9 +568,11 @@ class SidechainHistoryTest extends JUnitSuite
     history = history.reportModifierIsValid(block1)
     val block1Info = history.bestBlockInfo
     assertEquals(genesisBlock.id, block1Info.lastBlockInPreviousConsensusEpoch)
-    assertEquals(history.blockToBlockInfo(block1).get.copy(semanticValidity = ModifierSemanticValidity.Valid), block1Info) //Sidechain block Info creation doesn't fill semantic validity
+    assertEquals(history.blockToBlockInfo(block1).get.copy(semanticValidity = ModifierSemanticValidity.Valid, vrfOutputOpt = firstBlockVrfOutputOpt), block1Info) //Sidechain block Info creation doesn't fill semantic validity
 
     val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, testParams)
+    history = Mockito.spy(history)
+    Mockito.doAnswer(_ => secondBlockVrfOutputOpt).when(history).getVrfOutput(ArgumentMatchers.any[SidechainBlockHeader], ArgumentMatchers.any[NonceConsensusEpochInfo])
     history = history.append(block2).get._1
     history = history.reportModifierIsValid(block2)
     val block2Info = history.bestBlockInfo

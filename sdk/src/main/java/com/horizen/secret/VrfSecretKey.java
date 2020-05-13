@@ -16,7 +16,7 @@ import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
 import static com.horizen.vrf.VrfFunctions.ProofType.VRF_PROOF;
-import static com.horizen.vrf.VrfFunctions.ProofType.VRF_PROOF_OUTPUT;
+import static com.horizen.vrf.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
     private final byte[] secretBytes;
@@ -39,8 +39,8 @@ public class VrfSecretKey implements Secret {
     }
 
     public Pair<VrfProof, VrfOutput> prove(byte[] message) {
-        EnumMap<VrfFunctions.ProofType, byte[]> proofs = VrfLoader.vrfFunctions().createVrfProof(getSecretBytes(), getPublicBytes(), message);
-        return new Pair<>(new VrfProof(proofs.get(VRF_PROOF)), new VrfOutput(proofs.get(VRF_PROOF_OUTPUT)));
+        EnumMap<VrfFunctions.ProofType, byte[]> proofs = VrfLoader.vrfFunctions().createProof(getSecretBytes(), getPublicBytes(), message);
+        return new Pair<>(new VrfProof(proofs.get(VRF_PROOF)), new VrfOutput(proofs.get(VRF_OUTPUT)));
     }
 
     @Override

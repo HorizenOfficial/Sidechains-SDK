@@ -46,19 +46,21 @@ class SidechainBlockTest
   val parentId: ModifierId = getRandomBlockId(seed)
 
   val generatedDataSeed = 908
+  val vrfGenerationPrefix = "SidechainBlockTest"
+
   if (false) {
-    VrfGeneratedDataProvider.updateVrfSecretKey(generatedDataSeed)
-    VrfGeneratedDataProvider.updateVrfProof(generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, generatedDataSeed)
   }
 
   val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
-    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(generatedDataSeed)
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, generatedDataSeed)
     val publicKey: VrfPublicKey = secret.publicImage();
     Option((secret, publicKey))
   }
 
   val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPair)
-  val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(generatedDataSeed)
+  val vrfProof: VrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, generatedDataSeed)
 
   // Create Block with Txs, MainchainBlockReferencesData, MainchainHeaders and Ommers
   // Note: block is semantically invalid because Block contains the same MC chain as Ommers, but it's ok for serialization test

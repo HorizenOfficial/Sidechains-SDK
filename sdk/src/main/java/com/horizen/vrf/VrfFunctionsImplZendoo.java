@@ -1,9 +1,7 @@
 package com.horizen.vrf;
 
-import com.google.common.primitives.Longs;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -31,7 +29,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public EnumMap<ProofType, byte[]> createVrfProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message) {
+    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message) {
         VRFSecretKey secretKey = VRFSecretKey.deserialize(secretKeyBytes);
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
 
@@ -43,7 +41,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
 
         EnumMap<ProofType, byte[]> proofsMap = new EnumMap<>(ProofType.class);
         proofsMap.put(ProofType.VRF_PROOF, vrfProofBytes);
-        proofsMap.put(ProofType.VRF_PROOF_OUTPUT, vrfOutputBytes);
+        proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
 
         secretKey.freeSecretKey();
         publicKey.freePublicKey();
@@ -85,7 +83,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     }
 
     @Override
-    public Optional<byte[]> vrfProofToVrfOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
+    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
         FieldElement messageAsFieldElement = messageToFieldElement(message);

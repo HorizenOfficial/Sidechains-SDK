@@ -25,7 +25,6 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
         return VrfLoader.vrfFunctions().verifyProof(message, pubKeyBytes(), proof.bytes());
     }
 
-    //Do we need that function at all?
     public boolean isValid() {
         return VrfLoader.vrfFunctions().publicKeyIsValid(pubKeyBytes());
     }

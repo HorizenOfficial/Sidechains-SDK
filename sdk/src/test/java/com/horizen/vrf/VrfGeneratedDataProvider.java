@@ -18,58 +18,53 @@ public class VrfGeneratedDataProvider {
     private static String pathPrefix = "src/test/resources/";
     private static final ClassLoader classLoader = VrfGeneratedDataProvider.class.getClassLoader();
 
-    public static VrfSecretKey updateVrfSecretKey(Integer seed) {
+    public static VrfSecretKey updateVrfSecretKey(String prefix, Integer seed) {
         VrfSecretKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes());
-        writeToFile(seed, VrfSecretKey.class, obj.bytes());
+        writeToFile(prefix, seed, VrfSecretKey.class, obj.bytes());
         return obj;
     }
 
-    public static VrfSecretKey getVrfSecretKey(Integer seed) {
-        return VrfSecretKey.parse(readBytesFromFile(seed, VrfSecretKey.class));
+    public static VrfSecretKey getVrfSecretKey(String prefix, Integer seed) {
+        return VrfSecretKey.parse(readBytesFromFile(prefix, seed, VrfSecretKey.class));
     }
 
-    public static VrfPublicKey updateVrfPublicKey(Integer seed) {
+    public static VrfPublicKey updateVrfPublicKey(String prefix, Integer seed) {
         VrfPublicKey obj = VrfKeyGenerator.getInstance().generateSecret(seed.toString().getBytes()).publicImage();
-        writeToFile(seed, obj.getClass(), obj.bytes());
+        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
         return obj;
     }
 
-    public static VrfPublicKey updateVrfPublicKey(Integer seed, VrfPublicKey obj) {
-        writeToFile(seed, VrfPublicKey.class, obj.bytes());
-        return obj;
-    }
-
-    public static VrfPublicKey getVrfPublicKey(Integer seed) {
-        return readFromFile(seed, VrfPublicKey.class);
+    public static VrfPublicKey getVrfPublicKey(String prefix, Integer seed) {
+        return readFromFile(prefix, seed, VrfPublicKey.class);
     }
 
 
-    public static void updateVrfOutput(Integer seed) {
+    public static void updateVrfOutput(String prefix, Integer seed) {
         VrfOutput obj = VrfGenerator.generateVrfOutput(seed);
-        writeToFile(seed, obj.getClass(), obj.bytes());
+        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
     }
 
-    public static VrfOutput getVrfOutput(Integer seed) {
-        return readFromFile(seed, VrfOutput.class);
+    public static VrfOutput getVrfOutput(String prefix, Integer seed) {
+        return readFromFile(prefix, seed, VrfOutput.class);
     }
 
-    public static void updateVrfProof(Integer seed) {
+    public static void updateVrfProof(String prefix, Integer seed) {
         VrfProof obj = VrfGenerator.generateProof(seed);
-        writeToFile(seed, obj.getClass(), obj.bytes());
+        writeToFile(prefix, seed, obj.getClass(), obj.bytes());
     }
 
-    public static VrfProof getVrfProof(Integer seed) {
-        return readFromFile(seed, VrfProof.class);
+    public static VrfProof getVrfProof(String prefix, Integer seed) {
+        return readFromFile(prefix, seed, VrfProof.class);
     }
 
 
-    private static <T> String getFileName(Integer seed, Class<T> classToProcess) {
-        return classToProcess.getSimpleName() + seed.toString();
+    private static <T> String getFileName(String prefix, Integer seed, Class<T> classToProcess) {
+        return prefix + classToProcess.getSimpleName() + seed.toString();
     }
 
-    private static <T> void writeToFile(Integer seed, Class<T> classToWrite, byte[] data) {
+    private static <T> void writeToFile(String prefix, Integer seed, Class<T> classToWrite, byte[] data) {
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(pathPrefix + getFileName(seed, classToWrite)));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(pathPrefix + getFileName(prefix, seed, classToWrite)));
             writer.write(BytesUtils.toHexString(data));
             writer.close();
         }
@@ -77,8 +72,8 @@ public class VrfGeneratedDataProvider {
         }
     }
 
-    private static<T> T readFromFile(Integer seed, Class<T> classToRead) {
-        byte[] bytes = readBytesFromFile(seed, classToRead);
+    private static<T> T readFromFile(String prefix, Integer seed, Class<T> classToRead) {
+        byte[] bytes = readBytesFromFile(prefix, seed, classToRead);
         try {
             return (T) classToRead.getDeclaredConstructors()[0].newInstance(bytes);
         }
@@ -87,9 +82,9 @@ public class VrfGeneratedDataProvider {
         }
     }
 
-    private static<T> byte[] readBytesFromFile(Integer seed, Class<T> classToRead) {
+    private static<T> byte[] readBytesFromFile(String prefix, Integer seed, Class<T> classToRead) {
         try {
-            String fileName = getFileName(seed, classToRead);
+            String fileName = getFileName(prefix, seed, classToRead);
             URL url = classLoader.getResource(fileName);
             if (url == null) {
                 throw new IllegalStateException("Failed to find file " + fileName + " probably it was not added to test resources in POM");

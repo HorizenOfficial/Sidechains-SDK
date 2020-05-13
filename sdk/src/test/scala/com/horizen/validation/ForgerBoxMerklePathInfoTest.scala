@@ -15,10 +15,11 @@ import org.scalatest.junit.JUnitSuite
 
 class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907
+  val vrfGenerationPrefix = "ForgerBoxMerklePathInfoTest"
 
   //uncomment if you want update vrf related data
   if (false) {
-    VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationSeed)
+    VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
   }
 
   val forgerBox: ForgerBox = getForgerBox(
@@ -26,7 +27,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     1000L,
     100L,
     getPrivateKey25519("456".getBytes()).publicImage(),
-    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationSeed)
+    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
   )
   val emptyMerklePath: MerklePath = new MerklePath(new JArrayList())
 

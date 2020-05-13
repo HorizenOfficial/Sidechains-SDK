@@ -40,7 +40,7 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public Optional<byte[]> vrfProofToVrfOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
+    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
         assert (proofBytes.length == vrfLength);
         int xorByte = proofBytes[0] ^ proofBytes[proofBytes.length - 1];
 
@@ -57,7 +57,7 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public EnumMap<ProofType, byte[]> createVrfProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message){
+    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message){
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(message);
 
         byte[] proofBytes = Arrays.copyOf(messageWithCorrectLength, messageWithCorrectLength.length);;
@@ -65,11 +65,11 @@ public class VrfFunctionsImpl implements VrfFunctions {
             proofBytes[i] = (byte) (proofBytes[i] ^ secretKeyBytes[0]);
         }
 
-        byte[] vrfOutputBytes = vrfProofToVrfOutput(publicKeyBytes, message, proofBytes).get();
+        byte[] vrfOutputBytes = proofToOutput(publicKeyBytes, message, proofBytes).get();
 
         EnumMap<ProofType, byte[]> proofsMap = new EnumMap<>(ProofType.class);
         proofsMap.put(ProofType.VRF_PROOF, proofBytes);
-        proofsMap.put(ProofType.VRF_PROOF_OUTPUT, vrfOutputBytes);
+        proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
         //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
         return proofsMap;
     }
