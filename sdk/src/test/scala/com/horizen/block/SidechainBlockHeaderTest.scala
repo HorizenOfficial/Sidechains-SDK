@@ -114,7 +114,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
 
     // Test 2: signed header with invalid signature must be not semantically valid
-    val invalidSignature = forgerMetadata.rewardSecret.sign("different_message".getBytes())
+    val invalidSignature = forgerMetadata.blockSignSecret.sign("different_message".getBytes())
     val invalidSignedHeader = baseUnsignedHeader.copy(signature = invalidSignature)
     invalidSignedHeader.semanticValidity(params) match {
       case Success(_) =>
@@ -126,7 +126,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
 
     // Test 3: signed header must be semantically valid
-    val validSignature = forgerMetadata.rewardSecret.sign(baseUnsignedHeader.messageToSign)
+    val validSignature = forgerMetadata.blockSignSecret.sign(baseUnsignedHeader.messageToSign)
     val validSignedHeader = baseUnsignedHeader.copy(signature = validSignature)
     validSignedHeader.semanticValidity(params) match {
       case Success(_) =>
@@ -136,7 +136,7 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
     // Test 4: invalid timestamp < 0
     var header = baseUnsignedHeader.copy(timestamp = -1L)
-    var headerSignature = forgerMetadata.rewardSecret.sign(header.messageToSign)
+    var headerSignature = forgerMetadata.blockSignSecret.sign(header.messageToSign)
     var signedHeader = header.copy(signature = headerSignature)
     signedHeader.semanticValidity(params) match {
       case Success(_) =>

@@ -68,7 +68,7 @@ case class SidechainBlockHeader(
     if(version != SidechainBlock.BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
     // check, that signature is valid
-    if(!signature.isValid(forgerBox.rewardProposition(), messageToSign))
+    if(!signature.isValid(forgerBox.blockSignProposition(), messageToSign))
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
   }
 

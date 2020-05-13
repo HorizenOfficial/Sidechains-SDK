@@ -34,7 +34,7 @@ class SidechainBlock(
                      )
   extends OmmersContainer with Block[SidechainTypes#SCBT]
 {
-  def forgerPublicKey: PublicKey25519Proposition = header.forgerBox.rewardProposition()
+  def forgerPublicKey: PublicKey25519Proposition = header.forgerBox.blockSignProposition()
 
   override type M = SidechainBlock
 
@@ -221,7 +221,7 @@ object SidechainBlock extends ScorexEncoding {
     require(vrfProof != null)
     require(forgerBoxMerklePath != null)
     require(forgerBoxMerklePath.bytes().length > 0)
-    require(ownerPrivateKey.publicImage() == forgerBox.rewardProposition())
+    require(ownerPrivateKey.publicImage() == forgerBox.blockSignProposition())
 
     // Calculate merkle root hashes for SidechainBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = calculateTransactionsMerkleRootHash(sidechainTransactions)

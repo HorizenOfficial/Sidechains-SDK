@@ -36,7 +36,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     assertEquals("Header block version = 536870912 expected.", 536870912, header.get.version)
     assertEquals("Hash of previous block is different.", "00000000368e5124aaaa18a6d1e7ccd3fab6a771a337fd0575fff8dcdb08db8a", BytesUtils.toHexString(header.get.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "887291c26089a67ac7aaa7d75b37fadcebececb66cca7c94ef8663845cc0a9f7", BytesUtils.toHexString(header.get.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash expected to be zero bytes.", BytesUtils.toHexString(params.zeroHashBytes), BytesUtils.toHexString(header.get.hashSCMerkleRootsMap))
+    assertEquals("SCMap Merkle root hash expected to be zero bytes.", BytesUtils.toHexString(params.zeroHashBytes), BytesUtils.toHexString(header.get.hashScTxsCommitment))
     assertEquals("Creation time is different", 1525191363, header.get.time)
     assertEquals("PoW bits is different.", "1c6e36cd", BytesUtils.toHexString(Ints.toByteArray(header.get.bits)))
     assertEquals("Nonce is different.", "00000000000000000000000000000000000000000000000000112231e1ed0000", BytesUtils.toHexString(header.get.nonce))
@@ -58,7 +58,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     assertEquals("Header block version = 536870912 expected.", 536870912, header.get.version)
     assertEquals("Hash of previous block is different.", "0000000012a6f7043ff79a447976e0a326c37546fd99fe22cf010ce1bc92f676", BytesUtils.toHexString(header.get.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "60360bbca66fee8acd969258943f8dbe255a623b70121a05115efcfdb8725195", BytesUtils.toHexString(header.get.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash expected to be zero bytes.", BytesUtils.toHexString(params.zeroHashBytes), BytesUtils.toHexString(header.get.hashSCMerkleRootsMap))
+    assertEquals("SCMap Merkle root hash expected to be zero bytes.", BytesUtils.toHexString(params.zeroHashBytes), BytesUtils.toHexString(header.get.hashScTxsCommitment))
     assertEquals("Creation time is different", 1555936766, header.get.time)
     assertEquals("PoW bits is different.", "1c19e23e", BytesUtils.toHexString(Ints.toByteArray(header.get.bits)))
     assertEquals("Nonce is different.", "399f2d410000000000000000000000000000000000000000388626f4a1130010", BytesUtils.toHexString(header.get.nonce))
@@ -85,7 +85,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
 
     // Test 2: change time to negative value
     var invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
-      header.hashSCMerkleRootsMap, -10, header.bits, header.nonce, header.solution)
+      header.hashScTxsCommitment, -10, header.bits, header.nonce, header.solution)
     invalidHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Header expected to be semantically Invalid.")
@@ -97,7 +97,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
 
     // Test 3: change time to one 2 hours and 1 second far in future
     invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
-      header.hashSCMerkleRootsMap, (Instant.now.getEpochSecond + 2 * 60 * 60 + 1).toInt, header.bits, header.nonce, header.solution)
+      header.hashScTxsCommitment, (Instant.now.getEpochSecond + 2 * 60 * 60 + 1).toInt, header.bits, header.nonce, header.solution)
     invalidHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Header expected to be semantically Invalid.")
@@ -109,7 +109,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     // Test 4: brake PoW
     // TO DO: maybe add more tests related to PoW, see ProofOfWorkVerifierTest
     invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
-      header.hashSCMerkleRootsMap, header.time, BytesUtils.getInt(BytesUtils.fromHexString("1c21c09e"), 0), header.nonce, header.solution)
+      header.hashScTxsCommitment, header.time, BytesUtils.getInt(BytesUtils.fromHexString("1c21c09e"), 0), header.nonce, header.solution)
     invalidHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Header expected to be semantically Invalid.")
@@ -124,7 +124,7 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     val brokenBytes: Array[Byte] = BytesUtils.fromHexString("abcd")
     System.arraycopy(brokenBytes, 0, brokenSolution, brokenSolution.length - brokenBytes.length, brokenBytes.length)
     invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
-      header.hashSCMerkleRootsMap, header.time, header.bits, header.nonce, brokenSolution)
+      header.hashScTxsCommitment, header.time, header.bits, header.nonce, brokenSolution)
     invalidHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Header expected to be semantically Invalid.")

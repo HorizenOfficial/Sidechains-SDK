@@ -140,7 +140,7 @@ class SidechainJSONBOChecker {
     val forgerBoxElementNames = forgerBox.fieldNames().asScala.toSet
     assertEquals(7, forgerBoxElementNames.size)
 
-    val forgerBoxExpectedElements = Set("nonce", "id", "rewardProposition", "typeId", "vrfPubKey", "value", "proposition")
+    val forgerBoxExpectedElements = Set("nonce", "id", "blockSignProposition", "typeId", "vrfPubKey", "value", "proposition")
     assertEquals(forgerBoxExpectedElements, forgerBoxElementNames)
 
 
@@ -174,7 +174,7 @@ class SidechainJSONBOChecker {
     assertEquals(BytesUtils.fromHexString(json.get("mainchainHeaderBytes").asText()), header.mainchainHeaderBytes)
     assertEquals(BytesUtils.fromHexString(json.get("hashPrevBlock").asText()), header.hashPrevBlock)
     assertEquals(BytesUtils.fromHexString(json.get("hashMerkleRoot").asText()), header.hashMerkleRoot)
-    assertEquals(BytesUtils.fromHexString(json.get("hashSCMerkleRootsMap").asText()), header.hashSCMerkleRootsMap)
+    assertEquals(BytesUtils.fromHexString(json.get("hashScTxsCommitment").asText()), header.hashScTxsCommitment)
     assertEquals(BytesUtils.fromHexString(json.get("nonce").asText()), header.nonce)
     assertEquals(BytesUtils.fromHexString(json.get("solution").asText()), header.solution)
 
@@ -190,8 +190,11 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("sidechainRelatedAggregatedTransaction").isObject)
     assertTrue(json.get("merkleRoots").isArray)
 
+    // TODO: check all json fields in MainchainBlockReferenceData
+    //assertsOnMainchainHeaderJson(json.get("header"), mc.header)
+    //assertsOnMerklerootsJson(json.get("merkleRoots"), mc.sidechainsMerkleRootsMap)
+    //assertsOnM2SCTransactionJson(json.get("sidechainRelatedAggregatedTransaction"), mc.sidechainRelatedAggregatedTransaction.get)
     assertEquals(BytesUtils.fromHexString(json.get("headerHash").asText()), data.headerHash)
-    assertsOnMerklerootsJson(json.get("merkleRoots"), data.sidechainsMerkleRootsMap)
     assertsOnM2SCTransactionJson(json.get("sidechainRelatedAggregatedTransaction"), data.sidechainRelatedAggregatedTransaction)
   }
 

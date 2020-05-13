@@ -4,7 +4,6 @@ import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlo
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
 import scorex.util.ModifierId
-
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 

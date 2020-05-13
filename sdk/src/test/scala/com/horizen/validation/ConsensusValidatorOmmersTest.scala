@@ -12,6 +12,8 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.ModifierId
+import org.junit.Assert.{assertEquals, assertArrayEquals, fail => jFail}
+
 
 import scala.util.{Failure, Success, Try}
 
@@ -91,8 +93,6 @@ class ConsensusValidatorOmmersTest
       override private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
       }
-
-      //override
     }
 
     Try {

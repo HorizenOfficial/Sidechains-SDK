@@ -522,7 +522,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                      rewardKey:
+                      blockSignPublicKey:
                         type: string
                       vrfPubKey:
                         type: string
@@ -611,7 +611,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                      rewardKey:
+                      blockSignPublicKey:
                         type: string
                       vrfPubKey:
                         type: string
@@ -779,7 +779,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                      rewardKey:
+                      blockSignPublicKey:
                         type: string
                       vrfPubKey:
                         type: string
@@ -862,7 +862,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                      rewardKey:
+                      blockSignPublicKey:
                         type: string
                       vrfPubKey:
                         type: string

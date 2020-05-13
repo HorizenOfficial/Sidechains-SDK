@@ -56,8 +56,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
-    new ConsensusValidator(),
-    new MainchainBlockReferenceValidator(params)
+    new MainchainBlockReferenceValidator(params),
+    new ConsensusValidator()
   )
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {

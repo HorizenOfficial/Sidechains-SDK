@@ -34,6 +34,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
 
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+    val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
+    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
+
     val stakeConsensusEpochInfo = history.getStakeConsensusEpochInfo(verifiedBlock.timestamp, verifiedBlock.parentId)
       .getOrElse(throw new IllegalStateException(s"No stake consensus data for block ${verifiedBlock.id}"))
 
@@ -49,8 +52,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val previousFullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInfo.timestamp, lastBlockInfo.parentId)
     verifyOmmers(verifiedBlock, fullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
 
-    val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
-    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
+    verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
 
   private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -63,7 +65,9 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
     val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
+  }
 
+  private def verifyTimestampInFuture(verifiedBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future

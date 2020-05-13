@@ -46,7 +46,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
             } ], \
             "forgerOutputs": [ { \
             "publicKey": forger_box_receiver_pub_key, \
-            "rewardKey": forger_box_receiver_pub_key, \
+            "blockSignPublicKey": forger_box_receiver_pub_key, \
             "vrfPubKey": forger_box_receiver_vrf_pub_key, \
             "value": total_box_value - amount \
             } ], \

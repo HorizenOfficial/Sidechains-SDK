@@ -124,7 +124,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     })
 
     val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
-      .filter(forgerBox => pubKeys.contains(forgerBox.rewardProposition()))
+      .filter(forgerBox => pubKeys.contains(forgerBox.blockSignProposition()))
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
       .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
