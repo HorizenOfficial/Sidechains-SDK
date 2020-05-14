@@ -165,6 +165,7 @@ class SidechainBlockTest
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
+    assertEquals("Deserialized Block id is different.", block.id, deserializedBlock.id)
   }
 
   @Test

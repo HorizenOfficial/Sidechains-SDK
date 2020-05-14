@@ -29,6 +29,9 @@ case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   previousEpochEndBlockHash: Array[Byte],
+   proofBytes: Array[Byte],
+   quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
    subtractFeeFromAmount: Boolean = false,
    fee: String = "0.00001")
@@ -53,10 +56,20 @@ object CertificateRequestCreator {
 
   val ZEN_COINS_DIVISOR: BigDecimal = new BigDecimal(100000000)
 
-  def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
+  def create(epochNumber: Int,
+             endEpochBlockHash: Array[Byte],
+             previousEpochEndBlockHash: Array[Byte],
+             proofBytes: Array[Byte],
+             quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              params: NetworkParams) : SendCertificateRequest = {
-    SendCertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
+    SendCertificateRequest(
+      params.sidechainId,
+      epochNumber,
+      endEpochBlockHash,
+      previousEpochEndBlockHash,
+      proofBytes,
+      quality,
       withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
   }
 }

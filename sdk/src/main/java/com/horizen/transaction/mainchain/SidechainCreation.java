@@ -54,6 +54,10 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         );
     }
 
+    public byte[] getBackwardTransferPoseidonRootHash() {
+        return new byte[0];
+    }
+
     public static SidechainCreation parseBytes(byte[] bytes) {
 
         int offset = 0;

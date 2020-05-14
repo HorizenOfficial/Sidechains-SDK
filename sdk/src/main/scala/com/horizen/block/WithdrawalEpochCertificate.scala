@@ -4,29 +4,32 @@ import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-case class MainchainBackwardTransferCertificate
+case class WithdrawalEpochCertificate
   (certificateBytes: Array[Byte],
    version: Int,
    sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   previousEndEpochBlockHash: Array[Byte] = Array(),
+   proof: Array[Byte] = Array(),
+   quality: Long,
    totalAmount: Long,
    fee: Long,
    transactionOutputs: Seq[MainchainTransactionOutput],
    outputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
-  override type M = MainchainBackwardTransferCertificate
+  override type M = WithdrawalEpochCertificate
 
-  override def serializer: ScorexSerializer[MainchainBackwardTransferCertificate] = MainchainBackwardTransferCertificateSerializer
+  override def serializer: ScorexSerializer[WithdrawalEpochCertificate] = MainchainBackwardTransferCertificateSerializer
 
   def size: Int = certificateBytes.length
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
 }
 
-object MainchainBackwardTransferCertificate {
-  def parse(certificateBytes: Array[Byte], offset: Int) : MainchainBackwardTransferCertificate = {
+object WithdrawalEpochCertificate {
+  def parse(certificateBytes: Array[Byte], offset: Int) : WithdrawalEpochCertificate = {
 
     var currentOffset: Int = offset
 
@@ -41,6 +44,9 @@ object MainchainBackwardTransferCertificate {
 
     val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
+
+    val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
+    currentOffset += 8
 
     val totalAmount: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
@@ -73,20 +79,20 @@ object MainchainBackwardTransferCertificate {
     val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    new MainchainBackwardTransferCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, totalAmount, fee, transactionOutputs, outputs)
+    new WithdrawalEpochCertificate(certificateBytes.slice(offset, currentOffset), version,
+      sidechainId, epochNumber, endEpochBlockHash, Array(), Array(), totalAmount, fee, quality, transactionOutputs, outputs)
 
   }
 }
 
 object MainchainBackwardTransferCertificateSerializer
-  extends ScorexSerializer[MainchainBackwardTransferCertificate]
+  extends ScorexSerializer[WithdrawalEpochCertificate]
 {
-  override def serialize(certificate: MainchainBackwardTransferCertificate, w: Writer): Unit = {
+  override def serialize(certificate: WithdrawalEpochCertificate, w: Writer): Unit = {
     w.putBytes(certificate.certificateBytes)
 }
 
-  override def parse(r: Reader): MainchainBackwardTransferCertificate = {
-    MainchainBackwardTransferCertificate.parse(r.getBytes(r.remaining), 0)
+  override def parse(r: Reader): WithdrawalEpochCertificate = {
+    WithdrawalEpochCertificate.parse(r.getBytes(r.remaining), 0)
   }
 }

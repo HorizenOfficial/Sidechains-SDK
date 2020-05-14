@@ -565,7 +565,7 @@ object SidechainHistory
     )
   }
 
-  private[horizen] def genesisHistory(historyStorage: SidechainHistoryStorage,
+  private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
