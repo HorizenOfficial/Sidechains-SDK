@@ -5,7 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;
-import com.horizen.backwardtransfer.BackwardTransferLoader;
+import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -72,7 +72,7 @@ public class SchnorrSecret implements Secret {
 
     @Override
     public SchnorrProof sign(byte[] message) {
-        return new SchnorrProof(BackwardTransferLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
+        return new SchnorrProof(ZendooCryptoLibLoader.schnorrFunctions().sign(getSecretBytes(), getPublicBytes(), message));
     }
 
     @Override

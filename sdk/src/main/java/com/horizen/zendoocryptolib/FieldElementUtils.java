@@ -5,7 +5,7 @@ import com.horizen.librustsidechains.FieldElement;
 import java.util.Arrays;
 
 public class FieldElementUtils {
-    static int maximumVrfMessageLength() {
+    public static int maximumVrfMessageLength() {
         return FieldElement.FIELD_ELEMENT_LENGTH;
     }
 

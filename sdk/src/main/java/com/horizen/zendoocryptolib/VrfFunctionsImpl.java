@@ -1,14 +1,14 @@
-package com.horizen.vrf;
+package com.horizen.zendoocryptolib;
 
 
 import com.horizen.utils.Utils;
+import com.horizen.zendoocryptolib.VrfFunctions;
 
 import java.math.BigInteger;
 import java.util.*;
 
 public class VrfFunctionsImpl implements VrfFunctions {
     private static int vrfLength = 32; //sha256HashLen
-    private static byte[] consensusHardcodedSaltString = "TEST".getBytes();
 
     @Override
     public EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed) {
@@ -72,10 +72,5 @@ public class VrfFunctionsImpl implements VrfFunctions {
         proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
         //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
         return proofsMap;
-    }
-
-    @Override
-    public int maximumVrfMessageLength() {
-        return 1024 * 1024;
     }
 }

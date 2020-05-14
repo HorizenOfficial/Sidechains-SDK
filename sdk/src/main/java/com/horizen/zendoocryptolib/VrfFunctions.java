@@ -1,4 +1,4 @@
-package com.horizen.vrf;
+package com.horizen.zendoocryptolib;
 
 import java.util.EnumMap;
 import java.util.Optional;
@@ -24,6 +24,4 @@ public interface VrfFunctions {
 
     //Return Vrf proof hash for given proof / key / message; return None if proof is not valid
     Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes);
-
-    int maximumVrfMessageLength();
 }

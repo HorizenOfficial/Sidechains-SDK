@@ -1,14 +1,15 @@
-package com.horizen.vrf;
+package com.horizen.zendoocryptolib;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
+import com.horizen.zendoocryptolib.VrfFunctions;
 
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Optional;
 
-import static com.horizen.vrf.VrfFunctions.KeyType.PUBLIC;
-import static com.horizen.vrf.VrfFunctions.KeyType.SECRET;
+import static com.horizen.zendoocryptolib.VrfFunctions.KeyType.PUBLIC;
+import static com.horizen.zendoocryptolib.VrfFunctions.KeyType.SECRET;
 
 public class VrfFunctionsImplZendoo implements VrfFunctions {
     //@TODO Seed shall be supported from JNI side
@@ -34,7 +35,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
 
         VRFKeyPair keyPair = new VRFKeyPair(secretKey, publicKey);
-        FieldElement fieldElement = messageToFieldElement(message);
+        FieldElement fieldElement = FieldElementUtils.messageToFieldElement(message);
         VRFProveResult vrfProofAndVrfOutput = keyPair.prove(fieldElement);
         byte[] vrfProofBytes = vrfProofAndVrfOutput.getVRFProof().serializeProof();
         byte[] vrfOutputBytes = vrfProofAndVrfOutput.getVRFOutput().serializeFieldElement();
@@ -56,7 +57,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     public boolean verifyProof(byte[] message, byte[] publicKeyBytes, byte[] proofBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
-        FieldElement messageAsFieldElement = messageToFieldElement(message);
+        FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
 
         FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
 
@@ -86,7 +87,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
     public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
         VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
-        FieldElement messageAsFieldElement = messageToFieldElement(message);
+        FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
 
         FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
 
@@ -103,18 +104,5 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         else {
             return Optional.empty();
         }
-    }
-
-    @Override
-    public int maximumVrfMessageLength() {
-        return FieldElement.FIELD_ELEMENT_LENGTH;
-    }
-
-    private FieldElement messageToFieldElement(byte[] message) {
-        if (message.length >= maximumVrfMessageLength()) {
-            throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + maximumVrfMessageLength());
-        }
-        return FieldElement.deserialize(Arrays.copyOf(message, maximumVrfMessageLength()));
     }
 }

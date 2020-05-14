@@ -19,7 +19,7 @@ class SidechainsCommitmentTree
     }
   }
 
-  def addCertificate(certificate: MainchainBackwardTransferCertificate): Unit = {
+  def addCertificate(certificate: WithdrawalEpochCertificate): Unit = {
     val sidechainId = new ByteArrayWrapper(certificate.sidechainId)
     sidechainsHashMap.get(sidechainId) match {
       case Some(entry) => entry.setWithdrawalCertificateHash(certificate.hash)

@@ -7,11 +7,11 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.mainchain.api.{CertificateRequest, CertificateRequestCreator, RpcMainchainNodeApi}
+import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
-import com.horizen.backwardtransfer.BackwardTransferLoader
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.WithdrawalEpochUtils
+import com.horizen.zendoocryptolib.ZendooCryptoLibLoader
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -71,7 +71,7 @@ class CertificateSubmitter
 
           val proofWithQuality = generateProof(withdrawalRequests, mcEndEpochBlockHash, previousMcEndEpochBlockHash, sidechainNodeView.vault)
 
-          val certificate: CertificateRequest = CertificateRequestCreator.create(
+          val certificate: SendCertificateRequest = CertificateRequestCreator.create(
             withdrawalEpoch,
             mcEndEpochBlockHash,
             previousMcEndEpochBlockHash,
@@ -98,14 +98,14 @@ class CertificateSubmitter
 
 
   private def generateProof(withdrawalRequestBoxes: Seq[WithdrawalRequestBox], endWithdrawalEpochBlockHash: Array[Byte], prevEndWithdrawalEpochBlockHash: Array[Byte], sidechainWallet: SidechainWallet): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val message = BackwardTransferLoader.sigProofThresholdCircuit.generateMessageToBeSigned(withdrawalRequestBoxes.asJava, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash)
+    val message = ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequestBoxes.asJava, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash)
     val publicKeysBytes = params.schnorrPublicKeys.map(_.bytes())
 
     val schnorrSignatures = params.schnorrPublicKeys.map{publicKey =>
       sidechainWallet.secret(publicKey).map(_.sign(message).bytes).getOrElse(missedPrivateKeySignatureBytesPlaceholder)
     }
 
-    BackwardTransferLoader.sigProofThresholdCircuit.createProof(
+    ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.createProof(
       withdrawalRequestBoxes.asJava,
       endWithdrawalEpochBlockHash,
       prevEndWithdrawalEpochBlockHash,
@@ -159,7 +159,7 @@ class CertificateSubmitter
     val signersPublicKeys = params.schnorrPublicKeys
 
     val actualPoseidonRootHash =
-      BackwardTransferLoader.sigProofThresholdCircuit.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
+      ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
     val expectedPoseidonRootHash = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
     if (actualPoseidonRootHash.deep != expectedPoseidonRootHash.deep) {

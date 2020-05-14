@@ -22,6 +22,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
+import com.horizen.zendoocryptolib.{VrfFunctions, ZendooCryptoLibLoader}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -270,7 +271,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
       do {
         val corruptedVrfPublicKeyBytes =
-          VrfLoader.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
+          ZendooCryptoLibLoader.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
         corrupted = new VrfPublicKey(corruptedVrfPublicKeyBytes)
         println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
       } while (corrupted.bytes.deep == initialForgerBox.vrfPubKey().bytes.deep)

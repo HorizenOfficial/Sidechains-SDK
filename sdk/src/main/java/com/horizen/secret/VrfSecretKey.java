@@ -4,8 +4,8 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.utils.Pair;
-import com.horizen.vrf.VrfFunctions;
-import com.horizen.vrf.VrfLoader;
+import com.horizen.zendoocryptolib.VrfFunctions;
+import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.vrf.VrfOutput;
@@ -15,8 +15,8 @@ import java.util.EnumMap;
 import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.VrfPrivateKeySecretId;
-import static com.horizen.vrf.VrfFunctions.ProofType.VRF_PROOF;
-import static com.horizen.vrf.VrfFunctions.ProofType.VRF_OUTPUT;
+import static com.horizen.zendoocryptolib.VrfFunctions.ProofType.VRF_PROOF;
+import static com.horizen.zendoocryptolib.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
     public static final byte SECRET_TYPE_ID = VrfPrivateKeySecretId.id();
@@ -42,7 +42,7 @@ public class VrfSecretKey implements Secret {
     }
 
     public Pair<VrfProof, VrfOutput> prove(byte[] message) {
-        EnumMap<VrfFunctions.ProofType, byte[]> proofs = VrfLoader.vrfFunctions().createProof(getSecretBytes(), getPublicBytes(), message);
+        EnumMap<VrfFunctions.ProofType, byte[]> proofs = ZendooCryptoLibLoader.vrfFunctions().createProof(getSecretBytes(), getPublicBytes(), message);
         return new Pair<>(new VrfProof(proofs.get(VRF_PROOF)), new VrfOutput(proofs.get(VRF_OUTPUT)));
     }
 

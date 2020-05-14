@@ -3,7 +3,7 @@ package com.horizen.proof;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
-import com.horizen.backwardtransfer.BackwardTransferLoader;
+import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
 import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
@@ -31,7 +31,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
 
     @Override
     public boolean isValid(SchnorrProposition publicKey, byte[] message) {
-        return BackwardTransferLoader.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
+        return ZendooCryptoLibLoader.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
     }
 
     @Override
