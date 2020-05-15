@@ -1,6 +1,7 @@
 package com.horizen.vrf;
 
 import java.util.EnumMap;
+import java.util.Optional;
 
 public interface VrfFunctions {
     enum KeyType {
@@ -8,13 +9,21 @@ public interface VrfFunctions {
         PUBLIC
     }
 
+    enum ProofType {
+        VRF_PROOF,
+        VRF_OUTPUT
+    }
+
     EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed);
 
-    byte[] createVrfProof(byte[] secretKey, byte[] publicKey, byte[] message);
+    EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message);
 
-    boolean verifyProof(byte[] message, byte[] publicKey, byte[] proofBytes);
+    boolean verifyProof(byte[] message, byte[] publicKeyBytes, byte[] proofBytes);
 
-    boolean publicKeyIsValid(byte[] publicKey);
+    boolean publicKeyIsValid(byte[] publicKeyBytes);
 
-    byte[] vrfProofToVrfHash(byte[] publicKey, byte[] message, byte[] proof);
+    //Return Vrf proof hash for given proof / key / message; return None if proof is not valid
+    Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes);
+
+    int maximumVrfMessageLength();
 }

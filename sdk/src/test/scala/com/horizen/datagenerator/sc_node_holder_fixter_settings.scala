@@ -1,15 +1,15 @@
 package com.horizen.datagenerator
 
-import com.horizen.block._
-import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.BytesUtils
-import java.math.BigInteger
 import java.time.Instant
+
+import com.horizen.block._
 import com.horizen.box.ForgerBox
-import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
-import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.consensus._
+import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture}
+import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.VrfKeyGenerator
+import com.horizen.utils.BytesUtils
 import org.junit.Test
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -33,7 +33,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
     val publicKey = secretKey.publicImage()
     val genesisMessage =
       buildVrfMessage(intToConsensusSlotNumber(1), NonceConsensusEpochInfo(ConsensusNonce @@ "42".getBytes))
-    val vrfProof: VrfProof = secretKey.prove(genesisMessage)
+    val vrfProof: VrfProof = secretKey.prove(genesisMessage).getKey
     val merklePath = MerkleTreeFixture.generateRandomMerklePath(seed + 1)
     val companion = getDefaultTransactionsCompanion
 

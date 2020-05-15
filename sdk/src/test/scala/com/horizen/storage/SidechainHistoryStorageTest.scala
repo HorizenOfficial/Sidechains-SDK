@@ -401,7 +401,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           activeChainBlockInfoList.last.mainchainHeaderHashes,
           activeChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo,
-          activeChainBlockInfoList.last.vrfProofHash,
+          activeChainBlockInfoList.last.vrfOutputOpt,
           activeChainBlockList.last.parentId
         ).bytes)
     ))
@@ -420,7 +420,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkChainBlockInfoList.last.mainchainHeaderHashes,
           forkChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo,
-          forkChainBlockInfoList.last.vrfProofHash,
+          forkChainBlockInfoList.last.vrfOutputOpt,
           forkChainBlockList.last.parentId,
         ).bytes)
     ))
@@ -481,7 +481,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(newBestBlock),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
       WithdrawalEpochInfo(1, 2),
-      VrfGenerator.generateProofHash(12),
+      Option(VrfGenerator.generateVrfOutput(12)),
       newBestBlock.parentId,
     )
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

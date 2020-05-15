@@ -47,7 +47,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       mainchainHeadersHashes,
       mainchainReferencesDataHeadersHashes,
       WithdrawalEpochInfo(1, 1),
-      VrfGenerator.generateProofHash(Random.nextLong()),
+      Option(VrfGenerator.generateVrfOutput(Random.nextLong())),
       getRandomModifier()
     )
 
@@ -85,7 +85,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
         new SidechainBlock(null, null, allRefs.map(_.data), allRefs.map(_.header), null, null),
         parentSidechainBlockInfo.withdrawalEpochInfo,
         params),
-      VrfGenerator.generateProofHash(Random.nextLong()),
+      Option(VrfGenerator.generateVrfOutput(Random.nextLong())),
       parent
     )
 

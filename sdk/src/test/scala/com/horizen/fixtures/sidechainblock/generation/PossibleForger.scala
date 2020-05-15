@@ -3,7 +3,7 @@ package com.horizen.fixtures.sidechainblock.generation
 import com.horizen.consensus.VrfMessage
 import com.horizen.proof.VrfProof
 import com.horizen.utils.MerklePath
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 
 
 case class PossibleForger(forgingData: SidechainForgingData,
@@ -23,7 +23,7 @@ case class PossibleForger(forgingData: SidechainForgingData,
 
   def isNotSpent: Boolean = spentInEpochsAgoOpt.isEmpty
 
-  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfProofHash)] = {
+  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfOutput)] = {
     merklePathInPrePreviousEpochOpt.flatMap(_ => forgingData.canBeForger(vrfMessage, totalStake, additionalCheck))
   }
 

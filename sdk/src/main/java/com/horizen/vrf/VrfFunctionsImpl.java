@@ -1,8 +1,6 @@
 package com.horizen.vrf;
 
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.utils.Utils;
 
 import java.math.BigInteger;
@@ -24,12 +22,12 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public boolean verifyProof(byte[] messageBytes, byte[] publicKey, byte[] proofBytes) {
+    public boolean verifyProof(byte[] messageBytes, byte[] publicKeyBytes, byte[] proofBytes) {
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(messageBytes);
 
         byte[] decoded = Arrays.copyOf(proofBytes, proofBytes.length);
         for (int i = 0; i < decoded.length; i++) {
-            decoded[i] = (byte) (decoded[i] ^ publicKey[0]);
+            decoded[i] = (byte) (decoded[i] ^ publicKeyBytes[0]);
         }
         //System.out.println("check message: " + ByteUtils.toHexString(messageBytes) + " by proof:" + ByteUtils.toHexString(proofBytes) + " by public key: " +ByteUtils.toHexString(publicKey));
 
@@ -37,32 +35,47 @@ public class VrfFunctionsImpl implements VrfFunctions {
     }
 
     @Override
-    public boolean publicKeyIsValid(byte[] publicKey) {
-        return publicKey.length == vrfLength;
+    public boolean publicKeyIsValid(byte[] publicKeyBytes) {
+        return publicKeyBytes.length == vrfLength;
     }
 
     @Override
-    public byte[] vrfProofToVrfHash(byte[] publicKey, byte[] message, byte[] proof) {
-        assert (proof.length == vrfLength);
-        int xorByte = proof[0] ^ proof[proof.length - 1];
+    public Optional<byte[]> proofToOutput(byte[] publicKeyBytes, byte[] message, byte[] proofBytes) {
+        assert (proofBytes.length == vrfLength);
+        int xorByte = proofBytes[0] ^ proofBytes[proofBytes.length - 1];
 
-        byte[] vrfHash =  Arrays.copyOf(proof, proof.length);
-        for (int i = 0; i < vrfHash.length; ++i) {
-            vrfHash[i] = (byte) (vrfHash[i] ^ xorByte);
+        if (verifyProof(message, publicKeyBytes, proofBytes)) {
+            byte[] vrfOutput =  Arrays.copyOf(proofBytes, proofBytes.length);
+            for (int i = 0; i < vrfOutput.length; ++i) {
+                vrfOutput[i] = (byte) (vrfOutput[i] ^ xorByte);
+            }
+            return Optional.of(vrfOutput);
         }
-        return vrfHash;
+        else {
+            return Optional.empty();
+        }
     }
 
     @Override
-    public byte[] createVrfProof(byte[] secretKey, byte[] publicKey, byte[] message){
+    public EnumMap<ProofType, byte[]> createProof(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] message){
         byte[] messageWithCorrectLength = Utils.doubleSHA256Hash(message);
 
         byte[] proofBytes = Arrays.copyOf(messageWithCorrectLength, messageWithCorrectLength.length);;
         for (int i = 0; i < proofBytes.length; ++i) {
-            proofBytes[i] = (byte) (proofBytes[i] ^ secretKey[0]);
+            proofBytes[i] = (byte) (proofBytes[i] ^ secretKeyBytes[0]);
         }
 
+        byte[] vrfOutputBytes = proofToOutput(publicKeyBytes, message, proofBytes).get();
+
+        EnumMap<ProofType, byte[]> proofsMap = new EnumMap<>(ProofType.class);
+        proofsMap.put(ProofType.VRF_PROOF, proofBytes);
+        proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
         //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
-        return proofBytes;
+        return proofsMap;
+    }
+
+    @Override
+    public int maximumVrfMessageLength() {
+        return 1024 * 1024;
     }
 }

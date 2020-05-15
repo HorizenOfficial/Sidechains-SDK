@@ -7,18 +7,22 @@ import scala.util.Random
 import scorex.util.bytesToId
 import java.util.{ArrayList => JArrayList}
 
-import com.horizen.proof.Signature25519
+import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proposition.VrfPublicKey
+import com.horizen.secret.VrfSecretKey
 
 trait SidechainBlockHeaderFixture extends BoxFixture {
 
-  def createUnsignedBlockHeader(seed: Long = 123134L): (SidechainBlockHeader, ForgerBoxGenerationMetadata) = {
+  def createUnsignedBlockHeader(seed: Long = 123134L,
+                                vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
+                                vrfProofOpt: Option[VrfProof] = None): (SidechainBlockHeader, ForgerBoxGenerationMetadata) = {
     val random: Random = new Random(seed)
 
     val parentId = new Array[Byte](32)
     random.nextBytes(parentId)
 
-    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed)
-    val vrfProof = VrfGenerator.generateProof(seed)
+    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeysOpt)
+    val vrfProof = vrfProofOpt.getOrElse(VrfGenerator.generateProof(seed))
 
     val merklePath = new MerklePath(new JArrayList())
 

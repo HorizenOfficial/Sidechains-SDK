@@ -3,7 +3,7 @@ package com.horizen
 import java.math.{BigDecimal, BigInteger, MathContext}
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId
 import supertagged.TaggedType
 
@@ -55,13 +55,12 @@ package object consensus {
     VrfMessage @@ resBytes
   }
 
-  def sha256HashToPositiveBigInteger(bytes: Array[Byte]): BigInteger = {
-    require(bytes.length == sha256HashLen)
-    new BigInteger(1, bytes)
+  def vrfOutputToPositiveBigInteger(vrfOutput: VrfOutput): BigInteger = {
+    new BigInteger(1, vrfOutput.bytes())
   }
 
-  def vrfProofCheckAgainstStake(vrfProofHash: VrfProofHash, actualStake: Long, totalStake: Long): Boolean = {
-    val requiredStakePercentage: BigDecimal = vrfProofHashToRequiredStakePercentage(vrfProofHash)
+  def vrfProofCheckAgainstStake(vrfOutput: VrfOutput, actualStake: Long, totalStake: Long): Boolean = {
+    val requiredStakePercentage: BigDecimal = vrfOutputToRequiredStakePercentage(vrfOutput)
     val actualStakePercentage: BigDecimal = new BigDecimal(actualStake).divide(new BigDecimal(totalStake), stakeConsensusDivideMathContext)
 
     requiredStakePercentage.compareTo(actualStakePercentage) match {
@@ -72,8 +71,8 @@ package object consensus {
   }
 
   // @TODO shall be changed by adding "active slots coefficient" according to Ouroboros Praos Whitepaper (page 10)
-  def vrfProofHashToRequiredStakePercentage(vrfProofHash: VrfProofHash): BigDecimal = {
-    val hashAsBigDecimal: BigDecimal = new BigDecimal(sha256HashToPositiveBigInteger(vrfProofHash.bytes()))
+  def vrfOutputToRequiredStakePercentage(vrfOutput: VrfOutput): BigDecimal = {
+    val hashAsBigDecimal: BigDecimal = new BigDecimal(vrfOutputToPositiveBigInteger(vrfOutput))
 
     hashAsBigDecimal
       .remainder(forgerStakePercentPrecision) //got random number from 0 to forgerStakePercentPrecision - 1

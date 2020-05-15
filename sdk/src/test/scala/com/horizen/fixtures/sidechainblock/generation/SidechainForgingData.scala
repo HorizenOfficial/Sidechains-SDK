@@ -8,23 +8,24 @@ import com.horizen.consensus._
 import com.horizen.proof.VrfProof
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator, VrfSecretKey}
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 
 
 case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VrfSecretKey) {
   /**
    * @return VrfProof in case if can be forger
    */
-  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfProofHash)] = {
-    val vrfProof = vrfSecret.prove(vrfMessage)
-    val vrfProofHash = vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage)
+  def canBeForger(vrfMessage: VrfMessage, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(VrfProof, VrfOutput)] = {
+    val vrfProofAndHash = vrfSecret.prove(vrfMessage)
+    val vrfProof = vrfProofAndHash.getKey
+    val vrfOutput = vrfProofAndHash.getValue
 
     val checker = (stakeCheck _).tupled.andThen(additionalCheck)
-    Some((vrfProof, vrfProofHash)).filter{case (vrfProof, vrfProofHash) => checker(vrfProofHash, totalStake)}
+    Some((vrfProof, vrfOutput)).filter{case (vrfProof, vrfOutput) => checker(vrfOutput, totalStake)}
   }
 
-  private def stakeCheck(vrfProofHash: VrfProofHash, totalStake: Long): Boolean = {
-    vrfProofCheckAgainstStake(vrfProofHash, forgerBox.value(), totalStake)
+  private def stakeCheck(vrfOutput: VrfOutput, totalStake: Long): Boolean = {
+    vrfProofCheckAgainstStake(vrfOutput, forgerBox.value(), totalStake)
   }
 
   val forgerId: Array[Byte] = forgerBox.id()

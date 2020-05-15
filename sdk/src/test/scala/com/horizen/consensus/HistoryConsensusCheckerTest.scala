@@ -18,7 +18,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
     //val testSeed = 234
     val rnd: Random = new Random(testSeed)
 
-    val initialParams = TestNetParams(consensusSlotsInEpoch = 50, sidechainGenesisBlockTimestamp = 1333344452L)
+    val initialParams = TestNetParams(consensusSlotsInEpoch = 10, sidechainGenesisBlockTimestamp = 1333344452L)
     val (params, genesisBlock, genesisGenerator, genesisForgingData, genesisEndEpochInfo) = SidechainBlocksGenerator.startSidechain(10000000000L, testSeed, initialParams)
     val history: SidechainHistory = createHistory(params, genesisBlock, genesisEndEpochInfo)
     val nonce = history.calculateNonceForEpoch(blockIdToEpochId(genesisBlock.id))
@@ -28,7 +28,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
 
     val generators = mutable.IndexedSeq(genesisGenerator)
 
-    (1 to 300)
+    (1 to 50)
       .foldLeft[(SidechainHistory, mutable.IndexedSeq[SidechainBlocksGenerator])]((history, generators)) { (acc, index) =>
         val currentHistory: SidechainHistory = acc._1
         val currentGenerators: mutable.IndexedSeq[SidechainBlocksGenerator] =  acc._2
@@ -63,7 +63,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
                                       currentGenerator: SidechainBlocksGenerator,
                                       correctGenerationRules: GenerationRules,
                                       rnd: Random,
-                                      incorrectBlocksCount: Int = 10): Unit = Try {
+                                      incorrectBlocksCount: Int = 2): Unit = Try {
     (1 to incorrectBlocksCount)
       .foreach{ _ =>
         val incorrectGenerationRules: GenerationRules = CorruptedGenerationRules.corruptGenerationRules(rnd, params, currentGenerator, correctGenerationRules)
@@ -78,7 +78,7 @@ class HistoryConsensusCheckerTest extends JUnitSuite with HistoryConsensusChecke
   def testManySeeds(): Unit = {
     val seed = 9084
 
-    (50 to 55).foreach{index =>
+    (50 to 50).foreach{index =>
       println(s"SEED IS ${index}")
       testWithSeed(index + seed)
     }

@@ -9,7 +9,7 @@ import com.horizen.proof.VrfProof
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
 import com.horizen.utils
 import com.horizen.utils.{BytesUtils, Utils}
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import org.junit.Test
 import scorex.core.consensus.ModifierSemanticValidity
@@ -32,11 +32,11 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
   private val genesisVrfProof = new VrfProof("genesis".getBytes())
-  private val genesisVrfProofHash = new VrfProofHash("genesisHash".getBytes())
+  private val genesisVrfOutput = new VrfOutput("genesisHash".getBytes())
 
   private val vrfData = slotsPresentationToVrfData(slotsPresentation)
   val blockIdAndInfosPerEpoch: Seq[Seq[(ModifierId, SidechainBlockInfo)]] =
-    generateBlockIdsAndInfos(genesisVrfProof, genesisVrfProofHash, vrfData)
+    generateBlockIdsAndInfos(genesisVrfProof, genesisVrfOutput, vrfData)
 
   val epochIds: Seq[ConsensusEpochId] = blockIdAndInfosPerEpoch.map(epoch => blockIdToEpochId(epoch.last._1))
 
@@ -50,22 +50,12 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
   //vrfData -- contains data per epoch for filling SidechainBlockInfo, in case if VrfData contains None it means that slot shall be skipped
   private def generateBlockIdsAndInfos(genesisVrfProof: VrfProof,
-                                       genesisVrfProofHash: VrfProofHash,
-                                       vrfData: List[List[Option[(VrfProof, VrfProofHash)]]]): Seq[Seq[(ModifierId, SidechainBlockInfo)]] = {
+                                       genesisVrfOutput: VrfOutput,
+                                       vrfData: List[List[Option[(VrfProof, VrfOutput)]]]): Seq[Seq[(ModifierId, SidechainBlockInfo)]] = {
 
     val parentOfGenesisBlock = bytesToId(Utils.doubleSHA256Hash("genesisParent".getBytes))
 
-    val genesisBlockInfo = new SidechainBlockInfo(
-      0,
-      0,
-      parentOfGenesisBlock,
-      params.sidechainGenesisBlockTimestamp,
-      ModifierSemanticValidity.Valid,
-      Seq(),
-      Seq(),
-      dummyWithdrawalEpochInfo,
-      genesisVrfProofHash,
-      params.sidechainGenesisBlockId)
+    val genesisBlockInfo = new SidechainBlockInfo(0, 0, parentOfGenesisBlock, params.sidechainGenesisBlockTimestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, None, params.sidechainGenesisBlockId)
 
     val genesisSidechainBlockIdAndInfo = (params.sidechainGenesisBlockId, genesisBlockInfo)
     val accumulator =
@@ -87,10 +77,10 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                          nextTimestamp: Long,
                                          lastBlockInPreviousConsensusEpoch: ModifierId,
                                          acc: ListBuffer[(ModifierId, SidechainBlockInfo)],
-                                         vrfData: List[Option[(VrfProof, VrfProofHash)]]): Seq[(ModifierId, SidechainBlockInfo)] = {
+                                         vrfData: List[Option[(VrfProof, VrfOutput)]]): Seq[(ModifierId, SidechainBlockInfo)] = {
     vrfData.headOption match {
-      case Some(Some((vrfProof, vrfProofHash))) => {
-        val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfProofHash, lastBlockInPreviousConsensusEpoch)
+      case Some(Some((vrfProof, vrfOutput))) => {
+        val idInfo = generateSidechainBlockInfo(previousId, nextTimestamp, vrfProof, vrfOutput, lastBlockInPreviousConsensusEpoch)
         acc += idInfo
         generateBlockIdsAndInfosIter(idInfo._1, secondsInSlot, nextTimestamp + secondsInSlot, lastBlockInPreviousConsensusEpoch, acc, vrfData.tail)
       }
@@ -99,20 +89,20 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
     }
   }
 
-  private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfProofHash: VrfProofHash, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
+  private def generateSidechainBlockInfo(parentId: ModifierId, timestamp: Long, vrfProof: VrfProof, vrfOutput: VrfOutput, lastBlockInPreviousConsensusEpoch: ModifierId): (ModifierId, SidechainBlockInfo) = {
     val newBlockId = bytesToId(Utils.doubleSHA256Hash(parentId.getBytes))
     val blockInfo =
-      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, vrfProofHash, lastBlockInPreviousConsensusEpoch)
+      new SidechainBlockInfo(0, 0, parentId, timestamp, ModifierSemanticValidity.Valid, Seq(), Seq(), dummyWithdrawalEpochInfo, Option(vrfOutput), lastBlockInPreviousConsensusEpoch)
 
     (newBlockId, blockInfo)
   }
 
 
-  private def slotsPresentationToVrfData(slotsRepresentations: List[List[Int]], prefix: String = ""):  List[List[Option[(VrfProof, VrfProofHash)]]] = {
+  private def slotsPresentationToVrfData(slotsRepresentations: List[List[Int]], prefix: String = ""):  List[List[Option[(VrfProof, VrfOutput)]]] = {
     slotsRepresentations.zipWithIndex.map{case (slotsRepresentationsForEpoch, epochIndex) =>
       slotsRepresentationsForEpoch.zipWithIndex.map{
         case (1, slotIndex) =>
-          Some(new VrfProof(s"${prefix}proof${epochIndex}${slotIndex}".getBytes), new VrfProofHash(s"${prefix}proofHash${epochIndex}${slotIndex}".getBytes))
+          Some(new VrfProof(s"${prefix}proof${epochIndex}${slotIndex}".getBytes), new VrfOutput(s"${prefix}vrfOutput${epochIndex}${slotIndex}".getBytes))
         case (0, _) =>
           None
         case _ => throw new IllegalArgumentException

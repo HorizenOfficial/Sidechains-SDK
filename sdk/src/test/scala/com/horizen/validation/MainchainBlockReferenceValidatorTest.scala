@@ -1,27 +1,22 @@
 package com.horizen.validation
 
+import java.util.{Optional => JOptional}
+
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.utils.WithdrawalEpochInfo
+import org.junit.Assert.{assertEquals, fail => jFail}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import scorex.util.{ModifierId, bytesToId}
-import org.junit.Assert.{assertEquals, fail => jFail}
-import java.util.{Optional => JOptional}
-import com.horizen.box.Box
-import com.horizen.proposition.Proposition
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.collection.mutable
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 
 class MainchainBlockReferenceValidatorTest
@@ -259,7 +254,7 @@ class MainchainBlockReferenceValidatorTest
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(0, 0),
-      VrfGenerator.generateProofHash(0),
+      Option(VrfGenerator.generateVrfOutput(0)),
       block.parentId
     )
   }

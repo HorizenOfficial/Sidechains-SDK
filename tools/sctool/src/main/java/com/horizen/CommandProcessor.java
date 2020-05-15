@@ -209,7 +209,7 @@ public class CommandProcessor {
             PrivateKey25519 forgerSecret = SidechainCreation.genesisSecret;
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
             VrfSecretKey vrfSecret = SidechainCreation.vrfGenesisSecretKey;
-            VrfProof vrfProof  = vrfSecret.prove(vrfMessage);
+            VrfProof vrfProof  = vrfSecret.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
             // Set genesis block timestamp to not to have block in future exception during STF tests.
             // TODO: timestamp should be a hidden optional parameter during SC bootstrapping and must be used by STF

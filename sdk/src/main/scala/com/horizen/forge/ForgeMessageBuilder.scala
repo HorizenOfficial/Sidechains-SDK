@@ -11,7 +11,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.MerklePath
-import com.horizen.vrf.VrfProofHash
+import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -62,16 +62,16 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       .sortWith(_.forgerBox.value() > _.forgerBox.value())
       .map(d => (d.forgerBox, d.merklePath))
 
-    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfProofHash)]
+    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)]
     = forgerBoxMerklePathInfoSeq.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
 
-    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfProofHash)] =
-      ownedForgingDataView.filter{case(forgerBox, merklePath, privateKey25519, vrfProof, vrfProofHash) => vrfProofCheckAgainstStake(vrfProofHash, forgerBox.value(), totalStake)}
+    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)] =
+      ownedForgingDataView.filter{case(forgerBox, merklePath, privateKey25519, vrfProof, vrfOutput) => vrfProofCheckAgainstStake(vrfOutput, forgerBox.value(), totalStake)}
 
     val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
     val forgingResult = eligibleForgerOpt
-      .map{case (forgerBox, merklePath, privateKey25519, vrfProof, vrfProofHash) =>
+      .map{case (forgerBox, merklePath, privateKey25519, vrfProof, vrfOutput) =>
         forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgerBox, merklePath, privateKey25519, vrfProof)}
       .getOrElse(SkipSlot)
 
@@ -86,15 +86,16 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
   }
 
-  private def getSecretsAndProof(wallet: SidechainWallet,
-                                 vrfMessage: VrfMessage,
-                                 forgerBox: ForgerBox,
-                                 merklePath: MerklePath): Option[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfProofHash)] = {
+  private def getSecretsAndProof(wallet: SidechainWallet, vrfMessage: VrfMessage, forgerBox: ForgerBox, merklePath: MerklePath): Option[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)] = {
     for {
-      blockSignPrivateKey <- wallet.secret(forgerBox.blockSignProposition()).asInstanceOf[Option[PrivateKey25519]]
+      rewardPrivateKey <- wallet.secret(forgerBox.blockSignProposition()).asInstanceOf[Option[PrivateKey25519]]
       vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
-      vrfProof <- Some(vrfSecret.prove(vrfMessage))
-    } yield (forgerBox, merklePath, blockSignPrivateKey, vrfProof, vrfProof.proofToVRFHash(forgerBox.vrfPubKey(), vrfMessage))
+      vrfProofAndHash <- Some(vrfSecret.prove(vrfMessage))
+    } yield {
+      val vrfProof = vrfProofAndHash.getKey
+      val vrfOutput = vrfProofAndHash.getValue
+      (forgerBox, merklePath, rewardPrivateKey, vrfProof, vrfOutput)
+    }
   }
 
   private def checkNextEpochAndSlot(parentBlockTimestamp: Long,
