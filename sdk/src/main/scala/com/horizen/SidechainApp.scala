@@ -111,7 +111,7 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
@@ -124,7 +124,7 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )
@@ -137,7 +137,7 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
     )

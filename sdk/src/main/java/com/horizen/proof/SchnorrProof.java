@@ -19,7 +19,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
     private final byte[] signature;
 
     public SchnorrProof(byte[] signatureBytes) {
-        Objects.requireNonNull(signatureBytes, "Public key can't be null");
+        Objects.requireNonNull(signatureBytes, "SchnorrProofBytes can't be null");
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
     }

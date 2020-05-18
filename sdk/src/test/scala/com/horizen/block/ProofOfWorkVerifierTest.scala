@@ -193,7 +193,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       override val withdrawalEpochLength: Int = 100
       override val consensusSecondsInSlot: Int = 120
       override val consensusSlotsInEpoch: Int = 720
-      override val schnorrPublicKeys: Seq[SchnorrProposition] = Seq()
+      override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
       override val signersThreshold: Int = 0
       override val provingKeyFilePath: String = ""
     }

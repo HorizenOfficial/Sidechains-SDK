@@ -519,7 +519,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
-      override val schnorrPublicKeys: Seq[SchnorrProposition] = Seq()
+      override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
       override val signersThreshold: Int = 0
       override val provingKeyFilePath: String = ""
     }

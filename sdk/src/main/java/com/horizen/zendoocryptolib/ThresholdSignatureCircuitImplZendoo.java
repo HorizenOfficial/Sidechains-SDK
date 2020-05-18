@@ -8,11 +8,19 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
 import com.horizen.utils.Pair;
+import jdk.nashorn.internal.runtime.options.Option;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCircuit {
+    private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
+
+    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+        return new BackwardTransfer(box.proposition().bytes(), box.value());
+    }
+
     @Override
     public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt, byte[] endWithdrawalEpochBlockHash, byte[] prevEndWithdrawalEpochBlockHash) {
         BackwardTransfer[] backwardTransfers =
@@ -25,12 +33,20 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, List<byte[]> schnorrSignatureBytesList, List<byte[]> schnorrPublicKeysBytesList, long threshold, String provingKeyPath) {
+    public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+                                          byte[] endEpochBlockHash,
+                                          byte[] prevEndEpochBlockHash,
+                                          List<byte[]> schnorrPublicKeysBytesList,
+                                          List<Optional<byte[]>> schnorrSignatureBytesList,
+                                          long threshold,
+                                          String provingKeyPath){
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
-        List<SchnorrSignature> signatures =
-                schnorrSignatureBytesList.stream().map(ThresholdSignatureCircuitImplZendoo::schnorrSignatureBytesToSignature).collect(Collectors.toList());
+        List<SchnorrSignature> signatures = schnorrSignatureBytesList
+                                                .stream()
+                                                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
+                                                .collect(Collectors.toList());
 
         List<SchnorrPublicKey> publicKeys =
                 schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
@@ -52,7 +68,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         List<SchnorrPublicKey> publicKeys =
                 schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
-
 
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(
                 backwardTransfers, publicKeys, endEpochBlockHash, prevEndEpochBlockHash, threshold, quality, proof, provingKeyPath);
@@ -77,16 +92,5 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return sysDataConstantBytes;
     }
 
-    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
-        return new BackwardTransfer(box.proposition().bytes(), box.value());
-    }
 
-    private static SchnorrSignature schnorrSignatureBytesToSignature(byte[] signatureBytes) {
-        if (signatureBytes == null) {
-            return null;
-        }
-        else {
-            return SchnorrSignature.deserialize(signatureBytes);
-        }
-    }
 }

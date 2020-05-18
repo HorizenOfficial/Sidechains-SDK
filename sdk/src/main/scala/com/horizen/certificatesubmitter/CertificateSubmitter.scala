@@ -1,16 +1,21 @@
 package com.horizen.certificatesubmitter
 
 
+import java.util.Optional
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
+import com.horizen.proof.SchnorrProof
+import com.horizen.proposition.SchnorrProposition
+import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.WithdrawalEpochUtils
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.zendoocryptolib.ZendooCryptoLibLoader
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -39,111 +44,25 @@ class CertificateSubmitter
     extends SubmitResult {override def toString: String = s"Backward transfer certificate creation was failed due to ${ex}"}
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-  type SubmitMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmitResult]
-  type CheckMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Unit]
 
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-
-  val prePreviousEpochPlaceholderForFirstEpoch: Array[Byte] = null
-  val missedPrivateKeySignatureBytesPlaceholder:  Array[Byte] = null
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
-  lazy val mainchainApi = new RpcMainchainNodeApi(settings)
-
-  protected def submitCertificate(sidechainNodeView: View): SubmitResult = {
-    try {
-      val history = sidechainNodeView.history
-      val withdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
-      if (withdrawalEpochInfo.epoch > 0 && WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
-        val withdrawalEpoch = withdrawalEpochInfo.epoch - 1
-
-        for {
-          withdrawalRequests <- sidechainNodeView.state.unprocessedWithdrawalRequests(withdrawalEpoch)
-          mcEndEpochBlockHash <- lastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochInfo.epoch)
-        } yield {
-          val previousMcEndEpochBlockHash =
-            lastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochInfo.epoch - 1).getOrElse(prePreviousEpochPlaceholderForFirstEpoch)
-
-          val proofWithQuality = generateProof(withdrawalRequests, mcEndEpochBlockHash, previousMcEndEpochBlockHash, sidechainNodeView.vault)
-
-          val certificate: SendCertificateRequest = CertificateRequestCreator.create(
-            withdrawalEpoch,
-            mcEndEpochBlockHash,
-            previousMcEndEpochBlockHash,
-            proofWithQuality.getKey,
-            proofWithQuality.getValue,
-            withdrawalRequests,
-            params)
-
-          mainchainApi.sendCertificate(certificate)
-        }
-      }
-
-      SubmitSuccess
-
-    } catch {
-      case e: Throwable => SubmitFailed(e)
-    }
-  }
-
-  private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Option[Array[Byte]] = {
-    val mcHeight = params.mainchainCreationBlockHeight + withdrawalEpochNumber * params.withdrawalEpochLength - 1
-    history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash)
-  }
-
-
-  private def generateProof(withdrawalRequestBoxes: Seq[WithdrawalRequestBox], endWithdrawalEpochBlockHash: Array[Byte], prevEndWithdrawalEpochBlockHash: Array[Byte], sidechainWallet: SidechainWallet): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val message = ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequestBoxes.asJava, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash)
-    val publicKeysBytes = params.schnorrPublicKeys.map(_.bytes())
-
-    val schnorrSignatures = params.schnorrPublicKeys.map{publicKey =>
-      sidechainWallet.secret(publicKey).map(_.sign(message).bytes).getOrElse(missedPrivateKeySignatureBytesPlaceholder)
-    }
-
-    ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.createProof(
-      withdrawalRequestBoxes.asJava,
-      endWithdrawalEpochBlockHash,
-      prevEndWithdrawalEpochBlockHash,
-      schnorrSignatures.asJava,
-      publicKeysBytes.asJava,
-      params.signersThreshold,
-      params.provingKeyFilePath)
-  }
-
-  protected def trySubmitCertificate: Receive = {
-    case SemanticallySuccessfulModifier(_: SidechainBlock) => {
-      val submitCertificateFunction: View => SubmitResult = submitCertificate
-
-      val submitMessage: SubmitMessageType =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmitResult](submitCertificateFunction)
-
-      val certificateSubmittingResult = (sidechainNodeViewHolderRef ? submitMessage).asInstanceOf[Future[SubmitResult]]
-      certificateSubmittingResult.onComplete{
-        case Success(SubmitSuccess) =>
-          log.info(s"Backward transfer certificate was successfully created.")
-
-        case Success(SubmitFailed(ex)) =>
-          log.info("Creation of backward transfer certificate had been failed." + ex)
-
-        case Failure(ex) =>
-          log.info("Creation of backward transfer certificate had been failed. " + ex)
-      }
+  override def receive: Receive = {
+    checkSubmitter orElse trySubmitCertificate orElse {
+      case message: Any => log.error("CertificateSubmitter received strange message: " + message)
     }
   }
 
   protected def checkSubmitter: Receive = {
     case SidechainAppEvents.SidechainApplicationStart => {
       val submitterCheckingFunction: View => Unit = checkSubmitterMessage
-
-      val checkMessage: CheckMessageType =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Unit](submitterCheckingFunction)
-
-      val checkAsFuture = (sidechainNodeViewHolderRef ? checkMessage).asInstanceOf[Future[Unit]]
+      val checkAsFuture = (sidechainNodeViewHolderRef ? submitterCheckingFunction).asInstanceOf[Future[Unit]]
       checkAsFuture.onComplete{
         case Success(()) =>
           log.info(s"Backward transfer certificate submitter was successfully started.")
@@ -156,14 +75,14 @@ class CertificateSubmitter
   }
 
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
-    val signersPublicKeys = params.schnorrPublicKeys
+    val signersPublicKeys = params.signersPublicKeys
 
-    val actualPoseidonRootHash =
+    val actualSysDataConstant =
       ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
-    val expectedPoseidonRootHash = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
-    if (actualPoseidonRootHash.deep != expectedPoseidonRootHash.deep) {
-      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected poseidon root hash ${expectedPoseidonRootHash.deep} but actual is ${actualPoseidonRootHash.deep}")
+    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
+    if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
+      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
     }
 
     val wallet = sidechainNodeView.vault
@@ -174,18 +93,111 @@ class CertificateSubmitter
   }
 
   private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
-    val mainchainReference = history
-      .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash)
-      .orElseGet(throw new IllegalStateException("No mainchain creation transaction in history"))
+    val mainchainReference: MainchainBlockReference = history
+      .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
+      .getOrElse(throw new IllegalStateException("No mainchain creation transaction in history"))
 
     mainchainReference.data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
   }
 
-  override def receive: Receive = {
-      trySubmitCertificate orElse
-      checkSubmitter orElse {
-        case message: Any => log.error("CertificateSubmitter received strange message: " + message)
+
+  protected def trySubmitCertificate: Receive = {
+    case SemanticallySuccessfulModifier(_: SidechainBlock) => {
+      val checkGenerationData =
+        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[DataForProofGeneration]](getDataForProofGeneration)
+
+      val certificateSubmittingResult = (sidechainNodeViewHolderRef ? checkGenerationData).asInstanceOf[Future[Option[DataForProofGeneration]]]
+      certificateSubmittingResult.onComplete{
+        case Success(Some(dataForProofGeneration)) => {
+          val proofWithQuality = generateProof(dataForProofGeneration)
+          val certificate: SendCertificateRequest = CertificateRequestCreator.create(
+            dataForProofGeneration.processedEpochNumber,
+            dataForProofGeneration.endWithdrawalEpochBlockHash,
+            dataForProofGeneration.prevEndWithdrawalEpochBlockHash,
+            proofWithQuality.getKey,
+            proofWithQuality.getValue,
+            dataForProofGeneration.withdrawalRequests,
+            params)
+
+          mainchainApi.sendCertificate(certificate) //process return result here?
+          log.info(s"Backward transfer certificate was successfully created.")
+        }
+
+        case Success(None) =>
+          log.error("Creation of backward transfer certificate had been skipped")
+
+        case Failure(ex) =>
+          log.error("Creation of backward transfer certificate had been failed. " + ex)
       }
+    }
+  }
+
+  lazy val mainchainApi = new RpcMainchainNodeApi(settings)
+
+  case class DataForProofGeneration(processedEpochNumber: Int,
+                                    withdrawalRequests: Seq[WithdrawalRequestBox],
+                                    endWithdrawalEpochBlockHash: Array[Byte],
+                                    prevEndWithdrawalEpochBlockHash: Array[Byte],
+                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+
+  protected def getDataForProofGeneration(sidechainNodeView: View): Option[DataForProofGeneration] = {
+    val state = sidechainNodeView.state
+
+    val withdrawalEpochInfo: WithdrawalEpochInfo = state.getWithdrawalEpochInfo
+    if (WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
+      val processedWithdrawalEpochNumber = withdrawalEpochInfo.epoch - 1
+      state.getUnprocessedWithdrawalRequests(processedWithdrawalEpochNumber)
+        .map(unprocessedWithdrawalRequests => buildDataForProofGeneration(sidechainNodeView, processedWithdrawalEpochNumber, unprocessedWithdrawalRequests))
+    }
+    else {
+      None
+    }
+  }
+
+  private def buildDataForProofGeneration(sidechainNodeView: View, processedWithdrawalEpochNumber: Int, unprocessedWithdrawalRequests: Seq[WithdrawalRequestBox]): DataForProofGeneration = {
+    val history = sidechainNodeView.history
+
+    val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
+    val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
+
+    val message = ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHash, previousEndEpochBlockHash)
+
+    val sidechainWallet = sidechainNodeView.vault
+    val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
+      params.signersPublicKeys.map{signerPublicKey =>
+        val signature = sidechainWallet.secret(signerPublicKey).map(schnorrSecret => schnorrSecret.asInstanceOf[SchnorrSecret].sign(message))
+        (signerPublicKey, signature)
+      }
+
+    DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, signersPublicKeyWithSignatures)
+  }
+
+  private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+    if (withdrawalEpochNumber == -1) {
+      history
+        .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
+        .map(mainchainBlockReference => mainchainBlockReference.header.hashPrevBlock)
+        .get
+    }
+    else {
+      val mcHeight = params.mainchainCreationBlockHeight + withdrawalEpochNumber * params.withdrawalEpochLength - 1
+      history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+    }
+  }
+
+  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
+      dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
+
+    //create and return proof with quality
+    ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.createProof(
+      dataForProofGeneration.withdrawalRequests.asJava,
+      dataForProofGeneration.endWithdrawalEpochBlockHash,
+      dataForProofGeneration.prevEndWithdrawalEpochBlockHash,
+      signersPublicKeysBytes.asJava,
+      signaturesBytes.asJava,
+      params.signersThreshold,
+      params.provingKeyFilePath)
   }
 }
 
