@@ -2,6 +2,8 @@ package com.horizen;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
@@ -18,12 +20,10 @@ import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Creator;
-import com.horizen.secret.PrivateKey25519Serializer;
-import com.horizen.secret.VrfSecretKey;
+import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
+import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
@@ -35,6 +35,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 public class CommandProcessor {
     private MessagePrinter printer;
@@ -55,6 +56,12 @@ public class CommandProcessor {
                 break;
             case "genesisinfo":
                 processGenesisInfo(command.data());
+                break;
+            case "generateVrfKey":
+                processGenerateVrfKey(command.data());
+                break;
+            case "generateSchnorrKey":
+                processGenerateSchnorrKeys(command.data());
                 break;
             default:
                 printUnsupportedCommandMsg(command.name());
@@ -119,11 +126,92 @@ public class CommandProcessor {
         printer.print(res);
     }
 
+    private void printGenerateVrfKeyUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
+    }
+
+    private  void processGenerateVrfKey(JsonNode json) {
+
+        if(!json.has("seed") || !json.get("seed").isTextual()) {
+            printGenerateVrfKeyUsageMsg("wrong arguments syntax.");
+            return;
+        }
+
+        VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes());
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("vrfSecret", BytesUtils.toHexString(vrfSecretKey.bytes()));
+        resJson.put("vrfPublicKey", BytesUtils.toHexString(vrfSecretKey.getPublicBytes()));
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void printGenerateSchnorrKeyUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateSchnorrKey {\"seed\":\"my seed\", \"keyCount\":10, \"threshold\":5}");
+    }
+
+    private void processGenerateSchnorrKeys(JsonNode json) {
+
+        if (!json.has("keyCount") || !json.get("keyCount").isInt()) {
+            printGenerateSchnorrKeyUsageMsg("wrong key count");
+            return;
+        }
+
+        int keyCount = json.get("keyCount").asInt();
+
+        if (keyCount <= 0) {
+            printGenerateSchnorrKeyUsageMsg("wrong key count - " + keyCount);
+            return;
+        }
+
+        if (!json.has("threshold") || !json.get("threshold").isInt()) {
+            printGenerateSchnorrKeyUsageMsg("wrong threshold");
+            return;
+        }
+
+        int threshold = json.get("threshold").asInt();
+
+        if (threshold <= 0 || threshold > keyCount) {
+            printGenerateSchnorrKeyUsageMsg("wrong threshold - " + threshold);
+            return;
+        }
+
+        List<SchnorrSecret> secretKeys = new ArrayList<>();
+
+        for (int i = 0; i < keyCount; i++ ) {
+            secretKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes()));
+        }
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("threshold", threshold);
+
+        ArrayNode keyArrayNode = resJson.putArray("schnorrKeys");
+
+        for (SchnorrSecret secretKey : secretKeys) {
+            ObjectNode keyNode = mapper.createObjectNode();
+            keyNode.put("schnorrSecret", BytesUtils.toHexString(secretKey.bytes()));
+            keyNode.put("schnorrPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
+            keyArrayNode.add(keyNode);
+        }
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
                         "\tgenesisinfo {\n" +
                             "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
+                            "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
                             "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
                             "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                             "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
@@ -168,6 +256,21 @@ public class CommandProcessor {
 
         PrivateKey25519 key = PrivateKey25519Serializer.getSerializer().parseBytes(secretBytes);
 
+        String vrfSecretHex = json.get("vrfSecret").asText();
+        if(vrfSecretHex.length() != 586) {// size of hex representation of VrfSecretKey
+            printGenesisInfoUsageMsg("'vrfSecret' value size is wrong.");
+            return;
+        }
+        byte vrfSecretBytes[];
+        try {
+            vrfSecretBytes = BytesUtils.fromHexString(vrfSecretHex);
+        } catch (IllegalArgumentException e) {
+            printGenesisInfoUsageMsg("'secret' expected to be a hex string.");
+            return;
+        }
+
+        VrfSecretKey vrfSecretKey = VrfSecretKeySerializer.getSerializer().parseBytes(vrfSecretBytes);
+
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
         if(shouldUpdateConfig &&
                         (!json.has("sourceconfig") || !json.get("sourceconfig").isTextual() ||
@@ -194,6 +297,7 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
+            String ss1 = BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, infoBytes.length));
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -204,12 +308,17 @@ public class CommandProcessor {
             SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
 
-            // TODO: hardcoded
-            ForgerBox forgerBox = SidechainCreation.getHardcodedGenesisForgerBox();
-            PrivateKey25519 forgerSecret = SidechainCreation.genesisSecret;
+            //Find Sidechain creation information
+            SidechainCreation sidechainCreation = null;
+            for (SidechainRelatedMainchainOutput output : mcRef.data().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs()) {
+                if (output instanceof SidechainCreation) {
+                    sidechainCreation =  (SidechainCreation) output;
+                }
+            }
+
+            ForgerBox forgerBox = sidechainCreation.getBox();
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
-            VrfSecretKey vrfSecret = SidechainCreation.vrfGenesisSecretKey;
-            VrfProof vrfProof  = vrfSecret.prove(vrfMessage).getKey();
+            VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
             // Set genesis block timestamp to not to have block in future exception during STF tests.
             // TODO: timestamp should be a hidden optional parameter during SC bootstrapping and must be used by STF
@@ -222,7 +331,7 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Arrays.asList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
-                    forgerSecret,
+                    key,
                     forgerBox,
                     vrfProof,
                     mp,

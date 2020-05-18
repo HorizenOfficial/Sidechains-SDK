@@ -261,9 +261,6 @@ object SidechainWallet
 
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
-      //remove it as well after fix SidechainCreation
-      genesisWallet.addSecret(SidechainCreation.genesisSecret)
-      genesisWallet.addSecret(SidechainCreation.vrfGenesisSecretKey)
       genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else

@@ -15,7 +15,7 @@ import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.PrivateKey25519
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.transaction.mainchain.SidechainCreation
@@ -369,7 +369,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   println("end SidechainBlocksGenerator object")
 
   def startSidechain(initialValue: Long, seed: Long, params: NetworkParams): (NetworkParams, SidechainBlock, SidechainBlocksGenerator, SidechainForgingData, FinishedEpochInfo) = {
-    require(initialValue == SidechainCreation.initialValue) // in future can add any value here, but currently initial forger box is hardcoded
+    //require(initialValue == SidechainCreation.initialValue) // in future can add any value here, but currently initial forger box is hardcoded
     println("startSidechain")
 
     val random: Random = new Random(seed)
@@ -414,9 +414,17 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   }
 
   private def buildGenesisSidechainForgingData(initialValue: Long, seed: Long): SidechainForgingData = {
-    val key = SidechainCreation.genesisSecret
-    val forgerBox = SidechainCreation.getHardcodedGenesisForgerBox
-    SidechainForgingData(key, forgerBox, SidechainCreation.vrfGenesisSecretKey)
+    val key = PrivateKey25519Creator.getInstance().generateSecret(seed.toString.getBytes)
+    val value = initialValue
+    val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(seed.toString.getBytes)
+    val vrfPublicKey = vrfSecretKey.publicImage()
+
+    val forgerBoxData = new ForgerBoxData(key.publicImage(), value, key.publicImage(), vrfPublicKey)
+
+    val nonce = 42L
+
+    val forgerBox = forgerBoxData.getBox(nonce)
+    SidechainForgingData(key, forgerBox, vrfSecretKey)
   }
 
   private def buildGenesisMerkleTree(genesisForgerBox: ForgerBox): MerkleTree = {

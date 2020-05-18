@@ -39,9 +39,16 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public Optional<ForgerBox> getBox() {
-        // at the moment sc creation output doesn't create any new coins.
-        return Optional.of(getHardcodedGenesisForgerBox());
+    public ForgerBox getBox() {
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
+        long value = output.amount();
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
+
+        long nonce = 42L;
+
+        return forgerBoxData.getBox(nonce);
     }
 
     @Override
@@ -86,22 +93,4 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public int withdrawalEpochLength() {
         return output.withdrawalEpochLength();
     }
-
-
-
-    private static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
-    public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
-    public static VrfSecretKey vrfGenesisSecretKey = VrfKeyGenerator.getInstance().generateSecret(genesisStakeKeys.getKey());
-    private static VrfPublicKey vrfPublicKey = vrfGenesisSecretKey.publicImage();
-
-    public static long initialValue = 10000000000L;
-    public static ForgerBox getHardcodedGenesisForgerBox() {
-        PublicKey25519Proposition proposition = genesisSecret.publicImage();
-        PublicKey25519Proposition blockSignProposition = genesisSecret.publicImage();
-        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, blockSignProposition, vrfPublicKey);
-        long nonce = 42L;
-
-        return forgerBoxData.getBox(nonce);
-    }
-
 }

@@ -178,7 +178,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   @Test
   def blockCreate3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with creation of 3 sidechains.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_1_sidechain").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
     //Check for sidechain 1
