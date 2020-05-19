@@ -1,8 +1,7 @@
-package com.horizen.zendoocryptolib;
+package com.horizen.cryptolibProvider;
 
 
 import com.horizen.utils.Utils;
-import com.horizen.zendoocryptolib.VrfFunctions;
 
 import java.math.BigInteger;
 import java.util.*;

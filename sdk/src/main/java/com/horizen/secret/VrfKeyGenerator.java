@@ -3,9 +3,9 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
-import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
+import com.horizen.cryptolibProvider.CryptoLibProvider;
 import scorex.crypto.hash.Blake2b256;
-import com.horizen.zendoocryptolib.VrfFunctions.KeyType;
+import com.horizen.cryptolibProvider.VrfFunctions.KeyType;
 import java.util.EnumMap;
 import java.util.List;
 
@@ -27,7 +27,7 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
 
     @Override
     public VrfSecretKey generateSecret(byte[] seed) {
-        EnumMap<KeyType, byte[]> keys = ZendooCryptoLibLoader.vrfFunctions().generatePublicAndSecretKeys(seed);
+        EnumMap<KeyType, byte[]> keys = CryptoLibProvider.vrfFunctions().generatePublicAndSecretKeys(seed);
         return new VrfSecretKey(keys.get(KeyType.SECRET), keys.get(KeyType.PUBLIC));
     }
 

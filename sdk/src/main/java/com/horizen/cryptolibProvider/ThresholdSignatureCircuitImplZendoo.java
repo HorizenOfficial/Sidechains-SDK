@@ -1,4 +1,4 @@
-package com.horizen.zendoocryptolib;
+package com.horizen.cryptolibProvider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.librustsidechains.FieldElement;
@@ -8,7 +8,6 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
 import com.horizen.utils.Pair;
-import jdk.nashorn.internal.runtime.options.Option;
 
 import java.util.List;
 import java.util.Optional;

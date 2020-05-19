@@ -1,15 +1,13 @@
-package com.horizen.zendoocryptolib;
+package com.horizen.cryptolibProvider;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
-import com.horizen.zendoocryptolib.VrfFunctions;
 
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Optional;
 
-import static com.horizen.zendoocryptolib.VrfFunctions.KeyType.PUBLIC;
-import static com.horizen.zendoocryptolib.VrfFunctions.KeyType.SECRET;
+import static com.horizen.cryptolibProvider.VrfFunctions.KeyType.PUBLIC;
+import static com.horizen.cryptolibProvider.VrfFunctions.KeyType.SECRET;
 
 public class VrfFunctionsImplZendoo implements VrfFunctions {
     //@TODO Seed shall be supported from JNI side

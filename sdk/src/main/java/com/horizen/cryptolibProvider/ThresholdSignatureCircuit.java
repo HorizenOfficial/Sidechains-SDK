@@ -1,4 +1,4 @@
-package com.horizen.zendoocryptolib;
+package com.horizen.cryptolibProvider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.utils.Pair;

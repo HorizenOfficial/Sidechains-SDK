@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
-import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
+import com.horizen.cryptolibProvider.CryptoLibProvider;
 import com.horizen.vrf.VrfOutput;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
@@ -28,12 +28,12 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     }
 
     public Optional<VrfOutput> proofToVrfOutput(VrfPublicKey publicKey, byte[] message) {
-        return ZendooCryptoLibLoader.vrfFunctions().proofToOutput(publicKey.pubKeyBytes(), message, proofBytes).map(VrfOutput::new);
+        return CryptoLibProvider.vrfFunctions().proofToOutput(publicKey.pubKeyBytes(), message, proofBytes).map(VrfOutput::new);
     }
 
     @Override
     public boolean isValid(VrfPublicKey proposition, byte[] message) {
-        return ZendooCryptoLibLoader.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
+        return CryptoLibProvider.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
     }
 
     @JsonProperty("vrfProof")
