@@ -69,11 +69,13 @@ trait ConsensusDataProvider {
       ConsensusDataProvider.calculateNonceForGenesisBlock(params)
     }
     else {
-      calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch, lastBlockInfoInEpoch)
+      calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch, lastBlockInfoInEpoch, Seq())
     }
   }
 
-  private def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId, lastBlockInfoInEpoch: SidechainBlockInfo): NonceConsensusEpochInfo = {
+  private[horizen] def calculateNonceForNonGenesisEpoch(lastBlockIdInEpoch: ModifierId,
+                                                        lastBlockInfoInEpoch: SidechainBlockInfo,
+                                                        acc: Seq[(VrfOutput, ConsensusSlotNumber)]): NonceConsensusEpochInfo = {
     // Hash function is applied to the concatenation of VRF values that are inserted into each block, using values from
     // all blocks up to and including the middle ≈ 8k slots of an epoch that lasts approximately 24k slots in entirety.
     // (The “quiet” periods before and after this central block of slots that sets the nonce will
@@ -84,7 +86,7 @@ trait ConsensusDataProvider {
     val eligibleSlotsRangeStart = quietSlotsNumber + 1
     val eligibleSlotsRangeEnd = params.consensusSlotsInEpoch - quietSlotsNumber - 1
 
-    val nonceMessageDigest: MessageDigest = createNonceMessageDigest(lastBlockIdInEpoch, lastBlockInfoInEpoch, eligibleSlotsRangeStart, eligibleSlotsRangeEnd)
+    val nonceMessageDigest: MessageDigest = createNonceMessageDigest(lastBlockIdInEpoch, lastBlockInfoInEpoch, eligibleSlotsRangeStart, eligibleSlotsRangeEnd, acc)
 
     //According to https://eprint.iacr.org/2017/573.pdf p.26
     val previousEpoch: ConsensusEpochId = blockIdToEpochId(lastBlockInfoInEpoch.lastBlockInPreviousConsensusEpoch)
@@ -98,10 +100,20 @@ trait ConsensusDataProvider {
   }
 
   //Message digest for nonce calculation is done in reverse order, i.e. from last eligible slot to first eligible slot
-  private def createNonceMessageDigest(initialBlockId: ModifierId, initialBlockInfo: SidechainBlockInfo,  eligibleSlotsRangeStart: Int, eligibleSlotsRangeEnd: Int): MessageDigest = {
+  private def createNonceMessageDigest(initialBlockId: ModifierId,
+                                       initialBlockInfo: SidechainBlockInfo,
+                                       eligibleSlotsRangeStart: Int,
+                                       eligibleSlotsRangeEnd: Int,
+                                       acc: Seq[(VrfOutput, ConsensusSlotNumber)]): MessageDigest = {
     require(!isGenesisBlock(initialBlockId)) //genesis nonce calculation shall be done in other way
 
     val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
+
+    // Update digest with accumulated values first, that are stored in reverse order as well.
+    for(entry <- acc) {
+      if (entry._2 >= eligibleSlotsRangeStart && entry._2 <= eligibleSlotsRangeEnd)
+        digest.update(entry._1.bytes())
+    }
 
     var nextBlockId = initialBlockId
     var nextBlockInfo = initialBlockInfo
