@@ -40,7 +40,7 @@ object MainchainTxSidechainCreationCrosschainOutput {
     val address: Array[Byte] = BytesUtils.reverseBytes(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val customDataLength: VarInt = BytesUtils.getVarInt(sidechainCreationOutputBytes, currentOffset)
+    val customDataLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
     currentOffset += customDataLength.size()
 
     val customData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customDataLength.value().intValue())

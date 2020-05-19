@@ -14,6 +14,7 @@ import com.horizen.utils.Pair;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfSecretKey;
+import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -46,7 +47,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 
-        long nonce = 42L;
+        byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
+        long nonce = BytesUtils.getLong(hash, 0);
 
         return forgerBoxData.getBox(nonce);
     }
