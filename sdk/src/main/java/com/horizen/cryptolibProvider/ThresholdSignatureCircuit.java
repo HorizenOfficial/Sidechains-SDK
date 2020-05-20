@@ -22,7 +22,7 @@ public interface ThresholdSignatureCircuit {
                                    String provingKeyPath);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
-                        long threshold, long quality, byte[] proof, String provingKeyPath);
+                        long threshold, long quality, byte[] proof, String verificationKeyPath);
 
     //For verifying schnorr public keys //sigproof threshold signature circuite
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);

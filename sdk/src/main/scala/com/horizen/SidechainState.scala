@@ -99,7 +99,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   r.value().equals(o.amount)
                 }))
               throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.signersPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, certificate.previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.provingKeyFilePath)) {
+              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.signersPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, certificate.previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.verificationKeyFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
               }
 

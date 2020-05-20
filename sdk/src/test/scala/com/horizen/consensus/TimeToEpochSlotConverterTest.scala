@@ -33,6 +33,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
     override val signersThreshold: Int = 0
     override val provingKeyFilePath: String = ""
+    override val verificationKeyFilePath: String = ""
   }
 
   class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,

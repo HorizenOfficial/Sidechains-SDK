@@ -21,12 +21,12 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                withdrawalEpochLength: Int
                               )
 
-case class BackwardTransferSettings(submitterIsEnabled: Boolean,
-                                    signersPublicKeys: Seq[String],
-                                    signersThreshold: Int,
-                                    signersSecrets: Seq[String],
-                                    provingKeyFilePath: String
-                                   )
+case class withdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
+                                              signersPublicKeys: Seq[String],
+                                              signersThreshold: Int,
+                                              signersSecrets: Seq[String],
+                                              provingKeyFilePath: String,
+                                              verificationKeyFilePath: String)
 
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])
@@ -36,9 +36,9 @@ case class MainchainSettings(
                             )
 
 case class SidechainSettings(
-                        scorexSettings: ScorexSettings,
-                        genesisData: GenesisDataSettings,
-                        websocket: WebSocketSettings,
-                        backwardTransferSettings: BackwardTransferSettings,
-                        wallet: WalletSettings
+                              scorexSettings: ScorexSettings,
+                              genesisData: GenesisDataSettings,
+                              websocket: WebSocketSettings,
+                              backwardTransferSettings: withdrawalEpochCertificateSettings,
+                              wallet: WalletSettings
                             )

@@ -522,6 +522,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
       override val signersThreshold: Int = 0
       override val provingKeyFilePath: String = ""
+      override val verificationKeyFilePath: String = ""
     }
   }
 

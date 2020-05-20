@@ -61,7 +61,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long threshold, long quality, byte[] proof, String provingKeyPath) {
+    public Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long threshold, long quality, byte[] proof, String verificationKeyPath) {
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
@@ -69,7 +69,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
 
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(
-                backwardTransfers, publicKeys, endEpochBlockHash, prevEndEpochBlockHash, threshold, quality, proof, provingKeyPath);
+                backwardTransfers, publicKeys, endEpochBlockHash, prevEndEpochBlockHash, threshold, quality, proof, verificationKeyPath);
 
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
 

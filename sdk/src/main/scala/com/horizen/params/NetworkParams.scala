@@ -33,6 +33,8 @@ trait NetworkParams {
   val signersPublicKeys: Seq[SchnorrProposition]
   val signersThreshold: Int
   val provingKeyFilePath: String
+  val verificationKeyFilePath: String
+
 
   val maxHistoryRewritingLength: Int = 100
 

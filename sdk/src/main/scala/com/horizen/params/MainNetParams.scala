@@ -18,7 +18,8 @@ case class MainNetParams(
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
-                          override val provingKeyFilePath: String = ""
+                          override val provingKeyFilePath: String = "",
+                          override val verificationKeyFilePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
