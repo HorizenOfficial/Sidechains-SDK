@@ -158,6 +158,7 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
     val signersPublicKeys = params.schnorrPublicKeys
 
+    /*
     val actualPoseidonRootHash =
       ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
@@ -165,6 +166,7 @@ class CertificateSubmitter
     if (actualPoseidonRootHash.deep != expectedPoseidonRootHash.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected poseidon root hash ${expectedPoseidonRootHash.deep} but actual is ${actualPoseidonRootHash.deep}")
     }
+    */
 
     val wallet = sidechainNodeView.vault
     val actualStoredPrivateKey = signersPublicKeys.map(pubKey => wallet.secret(pubKey)).size

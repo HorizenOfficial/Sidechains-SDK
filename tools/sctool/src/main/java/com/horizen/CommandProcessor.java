@@ -13,6 +13,7 @@ import com.horizen.box.ForgerBox;
 import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
+import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -27,6 +28,7 @@ import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
+import scorex.core.transaction.state.SecretCompanion;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -118,8 +120,10 @@ public class CommandProcessor {
         }
         PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
 
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
         ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("secret", BytesUtils.toHexString(key.bytes()));
+        resJson.put("secret", BytesUtils.toHexString(secretsCompanion.toBytes(key)));
         resJson.put("publicKey", BytesUtils.toHexString(key.publicImage().bytes()));
 
         String res = resJson.toString();
@@ -139,10 +143,12 @@ public class CommandProcessor {
             return;
         }
 
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
         VrfSecretKey vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes());
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("vrfSecret", BytesUtils.toHexString(vrfSecretKey.bytes()));
+        resJson.put("vrfSecret", BytesUtils.toHexString(secretsCompanion.toBytes(vrfSecretKey)));
         resJson.put("vrfPublicKey", BytesUtils.toHexString(vrfSecretKey.getPublicBytes()));
 
         String res = resJson.toString();
@@ -181,6 +187,8 @@ public class CommandProcessor {
             return;
         }
 
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
         List<SchnorrSecret> secretKeys = new ArrayList<>();
 
         for (int i = 0; i < keyCount; i++ ) {
@@ -196,7 +204,7 @@ public class CommandProcessor {
 
         for (SchnorrSecret secretKey : secretKeys) {
             ObjectNode keyNode = mapper.createObjectNode();
-            keyNode.put("schnorrSecret", BytesUtils.toHexString(secretKey.bytes()));
+            keyNode.put("schnorrSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secretKey)));
             keyNode.put("schnorrPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
             keyArrayNode.add(keyNode);
         }
@@ -226,11 +234,14 @@ public class CommandProcessor {
     }
 
     private void processGenesisInfo(JsonNode json) {
-        if(!json.has("info") || !json.get("info").isTextual()
-                || !json.has("secret") || !json.get("secret").isTextual()) {
+        if (!json.has("info") || !json.get("info").isTextual()
+            || !json.has("vrfSecret") || !json.get("vrfSecret").isTextual()
+            || !json.has("secret") || !json.get("secret").isTextual()) {
             printGenesisInfoUsageMsg("wrong arguments syntax.");
             return;
         }
+
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         String infoHex = json.get("info").asText();
         byte infoBytes[];
@@ -242,7 +253,7 @@ public class CommandProcessor {
         }
 
         String secretHex = json.get("secret").asText();
-        if(secretHex.length() != 128) {// size of hex representation of Private25519Key
+        if(secretHex.length() != 130) {// size of hex representation of Private25519Key
             printGenesisInfoUsageMsg("'secret' value size is wrong.");
             return;
         }
@@ -254,10 +265,10 @@ public class CommandProcessor {
             return;
         }
 
-        PrivateKey25519 key = PrivateKey25519Serializer.getSerializer().parseBytes(secretBytes);
+        PrivateKey25519 key = (PrivateKey25519) secretsCompanion.parseBytes(secretBytes);
 
         String vrfSecretHex = json.get("vrfSecret").asText();
-        if(vrfSecretHex.length() != 586) {// size of hex representation of VrfSecretKey
+        if(vrfSecretHex.length() != 588) {// size of hex representation of VrfSecretKey
             printGenesisInfoUsageMsg("'vrfSecret' value size is wrong.");
             return;
         }
@@ -269,7 +280,7 @@ public class CommandProcessor {
             return;
         }
 
-        VrfSecretKey vrfSecretKey = VrfSecretKeySerializer.getSerializer().parseBytes(vrfSecretBytes);
+        VrfSecretKey vrfSecretKey = (VrfSecretKey) secretsCompanion.parseBytes(vrfSecretBytes);
 
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
         if(shouldUpdateConfig &&

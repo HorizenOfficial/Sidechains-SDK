@@ -93,6 +93,20 @@ class Account(object):
         self.secret = secret
         self.publicKey = publicKey
 
+"""
+An Vrf key.
+The JSON representation is only for documentation.
+
+VrfKey: {
+    "vrfSecret":
+    "vrfPublicKey": "a public key"
+}
+"""
+class VrfKey(object):
+
+    def __init__(self, secret, publicKey):
+        self.secret = secret
+        self.publicKey = publicKey
 
 """
 Information about sidechain network already bootstrapped.
@@ -107,12 +121,13 @@ SCBootstrapInfo: {
     "pow_data":
     "network":
     "withdrawal_epoch_length":
+    "vrf_key": an instance of VrfKey
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, vrf_key):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -121,3 +136,4 @@ class SCBootstrapInfo(object):
         self.pow_data = pow_data
         self.network = network
         self.withdrawal_epoch_length = withdrawal_epoch_length
+        self.vrf_key = vrf_key

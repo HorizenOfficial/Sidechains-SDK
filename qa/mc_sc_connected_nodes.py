@@ -5,7 +5,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
-from SidechainTestFramework.scutil import check_regularbox_balance, connect_sc_nodes, \
+from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
     bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
     check_mainchain_block_reference_info, check_wallet_balance
 
@@ -97,7 +97,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
                 second_sc_mc_best_block_ref_info, first_mainchain_node_block),
             "The mainchain block is not included inside SC block reference info.")
 
-        check_regularbox_balance(first_sidechain_node, genesis_account, 1, wallet_balance)
+        check_box_balance(first_sidechain_node, genesis_account, 3, 1, wallet_balance)
         check_wallet_balance(first_sidechain_node, wallet_balance)
 
         # MC 1 mine a new block

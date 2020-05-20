@@ -6,10 +6,12 @@ import scala.util.Try
 object ZendooCryptoLibLoader {
   val vrfStub = "com.horizen.zendoocryptolib.VrfFunctionsImpl"
   val zendooImpl = "com.horizen.zendoocryptolib.VrfFunctionsImplZendoo"
+  val schnorrImpl = "com.horizen.zendoocryptolib.SchnorrFunctionsImplZendoo"
+  val sigProofThresholdCircuitImpl = "com.horizen.zendoocryptolib.ThresholdSignatureCircuitImplZendoo"
 
   lazy val vrfFunctions: VrfFunctions = loadClass(zendooImpl)
-  lazy val schnorrFunctions: SchnorrFunctions = loadClass("com.horizen.zendoocryptolib.SchnorrFunctionsImplZendoo.java")
-  lazy val sigProofThresholdCircuitFunctions: ThresholdSignatureCircuit = loadClass("com.horizen.zendoocryptolib.SigProofThresholdCircuitImplZendoo.java")
+  lazy val schnorrFunctions: SchnorrFunctions = loadClass(schnorrImpl)
+  lazy val sigProofThresholdCircuitFunctions: ThresholdSignatureCircuit = loadClass(sigProofThresholdCircuitImpl)
 
   private def loadClass[T](className: String): T = {
     val loaders: List[ClassLoader] = List(ClassLoader.getSystemClassLoader, this.getClass.getClassLoader)
