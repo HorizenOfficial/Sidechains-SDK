@@ -46,7 +46,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
     val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
-    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, previousFullConsensusEpochInfo, verifiedBlock.parentId, parentBlockInfo, history, Seq())
+    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, Some(previousFullConsensusEpochInfo), verifiedBlock.parentId, parentBlockInfo, history, Seq())
 
     verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
@@ -91,7 +91,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
    */
   private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,
                                     currentFullConsensusEpochInfo: FullConsensusEpochInfo,
-                                    previousFullConsensusEpochInfo: FullConsensusEpochInfo,
+                                    previousFullConsensusEpochInfoOpt: Option[FullConsensusEpochInfo],
                                     bestKnownParentId: ModifierId,
                                     bestKnownParentInfo: SidechainBlockInfo,
                                     history: SidechainHistory,
@@ -105,27 +105,33 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
     var accumulator: Seq[(VrfOutput, ConsensusSlotNumber)] = previousEpochOmmersInfoAccumulator
     var previousOmmerEpochNumber: ConsensusEpochNumber = ommersContainerEpochNumber
-    var ommerFullConsensusEpochInfo = currentFullConsensusEpochInfo
+    var ommerCurrentFullConsensusEpochInfo = currentFullConsensusEpochInfo
+    var ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
 
     for(ommer <- ommers) {
       val ommerEpochAndSlot: ConsensusEpochAndSlot = history.timestampToEpochAndSlot(ommer.header.timestamp)
 
       if(ommerEpochAndSlot.epochNumber < previousOmmerEpochNumber) {
         // First ommer is from previous consensus epoch to Ommer Container epoch.
-        ommerFullConsensusEpochInfo = previousFullConsensusEpochInfo
+        ommerCurrentFullConsensusEpochInfo = previousFullConsensusEpochInfoOpt
+          .getOrElse(throw new IllegalStateException(s"Block ${ommersContainer.header.id} contains ommer two epochs before."))
+        // We are not allow to have an ommers 2 epoch before ommer container.
+        // It means that between block and its parent the whole epoch was skipped.
+        ommerPreviousFullConsensusEpochInfoOpt = None
       } else if(ommerEpochAndSlot.epochNumber > previousOmmerEpochNumber) {
         // Ommer switched the consensus epoch (previous ommer was from previous epoch).
         // It means, that bestKnownParentId (parent of verified block) is also from previous epoch.
         // So calculate the nonce again with passing info of all Ommers from previous epoch as well.
         val nonce = history.calculateNonceForNonGenesisEpoch(bestKnownParentId, bestKnownParentInfo, accumulator)
-        ommerFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo, nonce)
+        ommerCurrentFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo, nonce)
+        ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
       }
 
-      val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerFullConsensusEpochInfo.nonceConsensusEpochInfo)
+      val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
         .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
-      verifyForgerBox(ommer.header, ommerFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
+      verifyForgerBox(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
 
-      verifyOmmers(ommer, ommerFullConsensusEpochInfo, previousFullConsensusEpochInfo,
+      verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
         bestKnownParentId, bestKnownParentInfo, history, accumulator)
 
       // Add previous epoch ommer info to accumulated sequence.
