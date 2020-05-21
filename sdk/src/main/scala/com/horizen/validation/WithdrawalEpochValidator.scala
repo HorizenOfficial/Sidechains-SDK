@@ -56,6 +56,6 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
     val backwardTransferCertificateCount = block.mainchainBlockReferencesData.flatMap(_.backwardTransferCertificate).size
 
     if (backwardTransferCertificateCount > 1)
-      throw new IllegalArgumentException("Sidechain block must contain 0 or 1 backward transfer certificate, but contains % certificates.".format(backwardTransferCertificateCount))
+      throw new IllegalArgumentException("Sidechain block must contain 0 or 1 backward transfer certificate, but contains %d certificates.".format(backwardTransferCertificateCount))
   }
 }

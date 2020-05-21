@@ -30,7 +30,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
@@ -58,7 +58,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
@@ -85,7 +85,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
@@ -135,7 +135,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
 
     assertFalse("New Block occurred without SC mentioned inside, MProof expected to be undefined.",
-      mcblock.data.mproof.isDefined)
+      mcblock.data.mProof.isDefined)
     assertFalse("New Block occurred without SC mentioned inside, MC2SCAggTx expected to be undefined.",
       mcblock.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertFalse("New Block occurred without SC mentioned inside, Certificate expected to be undefined.",
@@ -159,7 +159,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock.data.mproof.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock.data.mProof.isEmpty)
     assertTrue("Block must not contain proof for left neighbour.", mcblock.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock.data.proofOfNoData._2.isEmpty)
 
@@ -196,7 +196,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock1.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -233,7 +233,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock2.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock2.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
 
@@ -258,7 +258,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock3.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -301,7 +301,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock1.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -328,7 +328,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock2.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock2.data.mproof.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock2.data.mProof.isEmpty)
     assertTrue("Block must contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isDefined)
     assertTrue("Block must contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isDefined)
 
@@ -347,7 +347,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock3.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -385,7 +385,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock1.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -404,7 +404,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock2.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock2.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
 
@@ -423,7 +423,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must contain certificate.", mcblock3.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -442,7 +442,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock4.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock4.data.mproof.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock4.data.mProof.isEmpty)
     assertTrue("Block must not contain proof for left neighbour.", mcblock4.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must contain proof for right neighbour.", mcblock4.data.proofOfNoData._2.isDefined)
 
@@ -461,7 +461,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock5.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock5.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock5.data.mproof.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock5.data.mProof.isEmpty)
     assertTrue("Block must contain proof for left neighbour.", mcblock5.data.proofOfNoData._1.isDefined)
     assertTrue("Block must not contain proof for right neighbour.", mcblock5.data.proofOfNoData._2.isEmpty)
   }

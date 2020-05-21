@@ -5,20 +5,18 @@ import java.util.{ArrayList => JArrayList}
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.SidechainTypes
-import com.horizen.utils.{Pair => JPair}
-
-import scala.util._
-import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters._
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer}
-import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, _}
+import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
-import com.horizen.consensus._
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.compat.java8.OptionConverters._
+import scala.util._
 
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
@@ -47,8 +45,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getWithdrawalBlockKey(epoch: Int) : ByteArrayWrapper = {
+  private[horizen] def getWithdrawalBlockKey(epoch: Int): ByteArrayWrapper = {
     calculateKey(("Withdrawal block - " + epoch).getBytes)
+  }
+
+  private val lastWithdrawalCertificatePreviousMcBlockHashKey: ByteArrayWrapper = {
+    calculateKey("Previous MC block hash Key".getBytes)
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -161,6 +163,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
+  def getLastWithdrawalCertificatePreviousMcBlockHashOpt: Option[Array[Byte]] = storage.get(lastWithdrawalCertificatePreviousMcBlockHashKey).asScala.map(_.data)
+
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
@@ -168,7 +172,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
              consensusEpoch: ConsensusEpochNumber,
-             containsBackwardTransferCertificate: Boolean): Try[SidechainStateStorage] = Try {
+             withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -219,14 +223,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     // Update Certificate related data
-    if (containsBackwardTransferCertificate)
-      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1),
-        version))
-
+    withdrawalEpochCertificateOpt.map { withdrawalEpochCertificate =>
+      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1), version))
+      updateList.add(new JPair(lastWithdrawalCertificatePreviousMcBlockHashKey, withdrawalEpochCertificate.endEpochBlockHash))
+    }
 
     // Update Consensus related data
-    if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch)
+    if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
+    }
 
     val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveSet, forgingStakesToAppendSeq)
     updateList.add(new JPair(

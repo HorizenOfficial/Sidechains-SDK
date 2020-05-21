@@ -113,7 +113,6 @@ class CertificateSubmitter
           val certificate: SendCertificateRequest = CertificateRequestCreator.create(
             dataForProofGeneration.processedEpochNumber,
             dataForProofGeneration.endWithdrawalEpochBlockHash,
-            dataForProofGeneration.prevEndWithdrawalEpochBlockHash,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
