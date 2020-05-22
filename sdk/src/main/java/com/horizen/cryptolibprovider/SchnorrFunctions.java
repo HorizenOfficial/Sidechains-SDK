@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import java.util.EnumMap;
 
@@ -16,4 +16,10 @@ public interface SchnorrFunctions {
 
     //looks like is not used at all in SDK
     boolean verify(byte[] messageBytes, byte[] publicKeyBytes, byte[] signatureBytes);
+
+    int schnorrSecretKeyLength();
+
+    int schnorrPublicKeyLength();
+
+    int schnorrSignatureLength();
 }

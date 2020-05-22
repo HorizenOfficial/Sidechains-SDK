@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
@@ -6,8 +6,8 @@ import com.horizen.vrfnative.*;
 import java.util.EnumMap;
 import java.util.Optional;
 
-import static com.horizen.cryptolibProvider.VrfFunctions.KeyType.PUBLIC;
-import static com.horizen.cryptolibProvider.VrfFunctions.KeyType.SECRET;
+import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.PUBLIC;
+import static com.horizen.cryptolibprovider.VrfFunctions.KeyType.SECRET;
 
 public class VrfFunctionsImplZendoo implements VrfFunctions {
     //@TODO Seed shall be supported from JNI side
@@ -102,5 +102,25 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         else {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public int vrfSecretKeyLength() {
+        return VRFSecretKey.SECRET_KEY_LENGTH;
+    }
+
+    @Override
+    public int vrfPublicKeyLen() {
+        return VRFPublicKey.PUBLIC_KEY_LENGTH;
+    }
+
+    @Override
+    public int vrfProofLen() {
+        return VRFProof.PROOF_LENGTH;
+    }
+
+    @Override
+    public int vrfOutputLen() {
+        return FieldElement.FIELD_ELEMENT_LENGTH;
     }
 }

@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider
+package com.horizen.cryptolibprovider
 
 object CryptoLibProvider {
   val vrfFunctions: VrfFunctions = new VrfFunctionsImplZendoo()

@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 
 import com.horizen.utils.Utils;
@@ -71,5 +71,25 @@ public class VrfFunctionsImpl implements VrfFunctions {
         proofsMap.put(ProofType.VRF_OUTPUT, vrfOutputBytes);
         //System.out.println("For message:" + ByteUtils.toHexString(message) + "create proof: " + ByteUtils.toHexString(proofBytes) + " by public key: " + ByteUtils.toHexString(publicKey));
         return proofsMap;
+    }
+
+    @Override
+    public int vrfSecretKeyLength() {
+        return vrfLength;
+    }
+
+    @Override
+    public int vrfPublicKeyLen() {
+        return vrfLength;
+    }
+
+    @Override
+    public int vrfProofLen() {
+        return vrfLength;
+    }
+
+    @Override
+    public int vrfOutputLen() {
+        return vrfLength;
     }
 }

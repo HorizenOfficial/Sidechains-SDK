@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -25,6 +26,6 @@ public class VrfProofSerializer implements ProofSerializer<VrfProof> {
 
     @Override
     public VrfProof parse(Reader reader) {
-        return VrfProof.parse(reader.getBytes(reader.remaining()));
+        return VrfProof.parse(reader.getBytes(CryptoLibProvider.vrfFunctions().vrfProofLen()));
     }
 }
