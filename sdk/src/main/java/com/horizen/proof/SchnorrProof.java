@@ -3,7 +3,7 @@ package com.horizen.proof;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
-import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
+import com.horizen.cryptolibProvider.CryptoLibProvider;
 import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
@@ -19,7 +19,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
     private final byte[] signature;
 
     public SchnorrProof(byte[] signatureBytes) {
-        Objects.requireNonNull(signatureBytes, "Public key can't be null");
+        Objects.requireNonNull(signatureBytes, "SchnorrProofBytes can't be null");
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
     }
@@ -31,7 +31,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
 
     @Override
     public boolean isValid(SchnorrProposition publicKey, byte[] message) {
-        return ZendooCryptoLibLoader.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
+        return CryptoLibProvider.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
     }
 
     @Override

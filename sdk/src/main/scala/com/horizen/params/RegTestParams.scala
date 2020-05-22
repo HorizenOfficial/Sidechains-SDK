@@ -16,9 +16,10 @@ case class RegTestParams(
                           override val sidechainGenesisBlockTimestamp: Block.Timestamp = 720 * 120,
                           override val consensusSecondsInSlot: Int = 120,
                           override val consensusSlotsInEpoch: Int = 720,
-                          override val schnorrPublicKeys: Seq[SchnorrProposition] = Seq(),
+                          override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
-                          override val provingKeyFilePath: String = ""
+                          override val provingKeyFilePath: String = "",
+                          override val verificationKeyFilePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

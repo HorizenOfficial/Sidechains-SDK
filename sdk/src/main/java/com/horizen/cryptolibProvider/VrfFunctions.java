@@ -1,4 +1,4 @@
-package com.horizen.zendoocryptolib;
+package com.horizen.cryptolibProvider;
 
 import java.util.EnumMap;
 import java.util.Optional;

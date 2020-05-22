@@ -13,7 +13,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.zendoocryptolib.ZendooCryptoLibLoader
+import com.horizen.cryptolibProvider.CryptoLibProvider
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -66,7 +66,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     stateStorage.getWithdrawalRequests(epoch)
   }
 
-  def unprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
+  def getUnprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
     stateStorage.getUnprocessedWithdrawalRequests(epoch)
   }
 
@@ -89,7 +89,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
     //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
     for (certificate <- mod.mainchainBlockReferencesData.flatMap(_.backwardTransferCertificate)) {
-      unprocessedWithdrawalRequests(certificate.epochNumber) match {
+      getUnprocessedWithdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
           if (withdrawalRequests.size != certificate.outputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
@@ -99,7 +99,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   r.value().equals(o.amount)
                 }))
               throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-              if (!ZendooCryptoLibLoader.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.schnorrPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, certificate.previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.provingKeyFilePath)) {
+              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.signersPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, certificate.previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.verificationKeyFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
               }
 

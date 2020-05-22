@@ -111,10 +111,12 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
-    )
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
+
+  )
 
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -124,9 +126,10 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
     )
 
     case "mainnet" => MainNetParams(
@@ -137,9 +140,10 @@ class SidechainApp @Inject()
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
-      schnorrPublicKeys = signersPublicKeys,
+      signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath
+      provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

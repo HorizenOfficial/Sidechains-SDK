@@ -221,7 +221,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
 
-    genesis_secrets = [bootstrap_info.vrf_key.secret]
+    if bootstrap_info.vrf_key is not None:
+        genesis_secrets = [bootstrap_info.vrf_key.secret]
 
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)

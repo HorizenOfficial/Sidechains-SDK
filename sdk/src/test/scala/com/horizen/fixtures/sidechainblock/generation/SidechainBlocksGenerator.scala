@@ -22,7 +22,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.zendoocryptolib.{VrfFunctions, ZendooCryptoLibLoader}
+import com.horizen.cryptolibProvider.{VrfFunctions, CryptoLibProvider}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -271,7 +271,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
       do {
         val corruptedVrfPublicKeyBytes =
-          ZendooCryptoLibLoader.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
+          CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
         corrupted = new VrfPublicKey(corruptedVrfPublicKeyBytes)
         println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
       } while (corrupted.bytes.deep == initialForgerBox.vrfPubKey().bytes.deep)
@@ -369,7 +369,6 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   println("end SidechainBlocksGenerator object")
 
   def startSidechain(initialValue: Long, seed: Long, params: NetworkParams): (NetworkParams, SidechainBlock, SidechainBlocksGenerator, SidechainForgingData, FinishedEpochInfo) = {
-    //require(initialValue == SidechainCreation.initialValue) // in future can add any value here, but currently initial forger box is hardcoded
     println("startSidechain")
 
     val random: Random = new Random(seed)
@@ -527,9 +526,10 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val withdrawalEpochLength: Int = params.withdrawalEpochLength
       override val consensusSecondsInSlot: Int = params.consensusSecondsInSlot
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
-      override val schnorrPublicKeys: Seq[SchnorrProposition] = Seq()
+      override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
       override val signersThreshold: Int = 0
       override val provingKeyFilePath: String = ""
+      override val verificationKeyFilePath: String = ""
     }
   }
 

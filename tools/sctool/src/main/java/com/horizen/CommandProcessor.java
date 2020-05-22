@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
 import com.horizen.block.Ommer;
@@ -92,13 +94,15 @@ public class CommandProcessor {
 
     private void printUsageMsg() {
         printer.print("Usage:\n" +
-                    "\tFrom command line: <program name> <command name> [<json data>]\n" +
-                    "\tFor interactive mode: <command name> [<json data>]\n" +
-                "Supported commands:\n" +
-                    "\thelp\n" +
-                    "\tgeneratekey <arguments>\n" +
-                    "\tgenesisinfo <arguments>\n" +
-                    "\texit\n"
+                      "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                      "\tFor interactive mode: <command name> [<json data>]\n" +
+                      "Supported commands:\n" +
+                      "\thelp\n" +
+                      "\tgeneratekey <arguments>\n" +
+                      "\tgenerateVrfKey <arguments>\n" +
+                      "\tgenerateSchnorrKeys <arguments>\n" +
+                      "\tgenesisinfo <arguments>\n" +
+                      "\texit\n"
         );
     }
 
@@ -109,13 +113,13 @@ public class CommandProcessor {
     private void printGenerateKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgeneratekey {\"seed\":\"my seed\"}");
+                      "\tgeneratekey {\"seed\":\"my seed\"}");
     }
 
     private void processGenerateKey(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateKeyUsageMsg("wrong arguments syntax.");
+            printGenerateKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
         PrivateKey25519 key = PrivateKey25519Creator.getInstance().generateSecret(json.get("seed").asText().getBytes());
@@ -133,13 +137,13 @@ public class CommandProcessor {
     private void printGenerateVrfKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateVrfKey {\"seed\":\"my seed\"}");
+                      "\tgenerateVrfKey {\"seed\":\"my seed\"}");
     }
 
     private  void processGenerateVrfKey(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateVrfKeyUsageMsg("wrong arguments syntax.");
+            printGenerateVrfKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
 
@@ -155,35 +159,41 @@ public class CommandProcessor {
         printer.print(res);
     }
 
-    private void printGenerateSchnorrKeyUsageMsg(String error) {
+    private void printGenerateSchnorrKeysUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateSchnorrKey {\"seed\":\"my seed\", \"keyCount\":10, \"threshold\":5}");
+                      "\tgenerateSchnorrKey {\"seed\":\"my seed\", \"keyCount\":10, \"threshold\":5}" +
+                      "\tthreshold parameter should be less or equal to keyCount.");
     }
 
     private void processGenerateSchnorrKeys(JsonNode json) {
 
+        if(!json.has("seed") || !json.get("seed").isTextual()) {
+            printGenerateSchnorrKeysUsageMsg("seed is not specified or has invalid format.");
+            return;
+        }
+
         if (!json.has("keyCount") || !json.get("keyCount").isInt()) {
-            printGenerateSchnorrKeyUsageMsg("wrong key count");
+            printGenerateSchnorrKeysUsageMsg("wrong key count");
             return;
         }
 
         int keyCount = json.get("keyCount").asInt();
 
         if (keyCount <= 0) {
-            printGenerateSchnorrKeyUsageMsg("wrong key count - " + keyCount);
+            printGenerateSchnorrKeysUsageMsg("wrong key count - " + keyCount);
             return;
         }
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
-            printGenerateSchnorrKeyUsageMsg("wrong threshold");
+            printGenerateSchnorrKeysUsageMsg("wrong threshold");
             return;
         }
 
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > keyCount) {
-            printGenerateSchnorrKeyUsageMsg("wrong threshold - " + threshold);
+            printGenerateSchnorrKeysUsageMsg("wrong threshold - " + threshold);
             return;
         }
 
@@ -192,7 +202,8 @@ public class CommandProcessor {
         List<SchnorrSecret> secretKeys = new ArrayList<>();
 
         for (int i = 0; i < keyCount; i++ ) {
-            secretKeys.add(SchnorrKeyGenerator.getInstance().generateSecret(json.get("seed").asText().getBytes()));
+            secretKeys.add(SchnorrKeyGenerator.getInstance()
+                    .generateSecret(Bytes.concat(json.get("seed").asText().getBytes() , Ints.toByteArray(i))));
         }
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -217,20 +228,19 @@ public class CommandProcessor {
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                        "\tgenesisinfo {\n" +
-                            "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
-                            "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
-                            "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
-                            "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
-                            "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
-                            "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
-
-                        "\t}"
+                      "\tgenesisinfo {\n" +
+                      "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
+                      "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
+                      "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
+                      "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
+                      "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
+                      "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
+                      "\t}"
         );
         printer.print("Examples:\n" +
-                        "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
-                        "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
-                            "\t\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
+                      "\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
 
     private void processGenesisInfo(JsonNode json) {
@@ -257,7 +267,8 @@ public class CommandProcessor {
             printGenesisInfoUsageMsg("'secret' value size is wrong.");
             return;
         }
-        byte secretBytes[];
+
+        byte[] secretBytes;
         try {
             secretBytes = BytesUtils.fromHexString(secretHex);
         } catch (IllegalArgumentException e) {
@@ -272,7 +283,8 @@ public class CommandProcessor {
             printGenesisInfoUsageMsg("'vrfSecret' value size is wrong.");
             return;
         }
-        byte vrfSecretBytes[];
+
+        byte[] vrfSecretBytes;
         try {
             vrfSecretBytes = BytesUtils.fromHexString(vrfSecretHex);
         } catch (IllegalArgumentException e) {
@@ -308,8 +320,6 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            String ss1 = BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, infoBytes.length));
-
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
@@ -326,6 +336,9 @@ public class CommandProcessor {
                     sidechainCreation =  (SidechainCreation) output;
                 }
             }
+
+            if (sidechainCreation == null)
+                throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo.");
 
             ForgerBox forgerBox = sidechainCreation.getBox();
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
@@ -406,11 +419,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720, null, 0, null);
+                return new MainNetParams(scId, null, null, null, 1, 0,100, 120, 720, null, 0, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null);
+                return new TestNetParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null);
+                return new RegTestParams(scId, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
         }
         return null;
 
@@ -430,16 +443,16 @@ public class CommandProcessor {
 
 
             String conf = templateConf +
-                    "\nscorex {\n" +
-                        "\tgenesis {\n" +
-                            "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
-                            "\t\tscId = \"" + scId + "\"\n" +
-                            "\t\tpowData = \"" + powData + "\"\n" +
-                            "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
-                            "\t\tmcNetwork = " + mcNetworkName + "\n" +
-                            "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
-                        "\t}\n" +
-                    "}\n";
+                          "\nscorex {\n" +
+                          "\tgenesis {\n" +
+                          "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
+                          "\t\tscId = \"" + scId + "\"\n" +
+                          "\t\tpowData = \"" + powData + "\"\n" +
+                          "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
+                          "\t\tmcNetwork = " + mcNetworkName + "\n" +
+                          "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
+                          "\t}\n" +
+                          "}\n";
 
             Files.write(Paths.get(pathToResultConf), conf.getBytes());
 

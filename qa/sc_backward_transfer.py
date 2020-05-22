@@ -91,7 +91,40 @@ class SCBootstrap(SidechainTestFramework):
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 0, 2,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance*2)
 
+        mc_address = self.nodes[0].getnewaddress()
 
+        withdrawal_request = {"outputs": [ \
+                               { "publicKey": mc_address,
+                                 "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
+                              ]
+                             }
+        sc_node.withdraw_coins(json.dumps(withdrawal_request))
+
+        generate_next_blocks(sc_node, "first node", 1)
+        mc_block_id = self.nodes[0].generate(1) #height 222
+
+        withdrawal_request = {"outputs": [ \
+                               { "publicKey": mc_address,
+                                 "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
+                              ]
+                             }
+        sc_node.withdraw_coins(json.dumps(withdrawal_request))
+
+        generate_next_blocks(sc_node, "first node", 1)
+        mc_block_id = self.nodes[0].generate(3) #height 225
+
+        generate_next_blocks(sc_node, "first node", 1)
+
+        sc_best_block = sc_node.block_best()["result"]
+
+        # check all keys/boxes/balances are coherent with the default initialization
+        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+
+        for mc_bloc_reference_data in sc_best_block["block"]["mainchainBlockReferencesData"]:
+            if "backwardTransferCertificate" in mc_bloc_reference_data:
+                bt_certificate_exists = True
+
+        assert_true(bt_certificate_exists, "Backward transfer certificate not found.")
 
 if __name__ == "__main__":
     SCBootstrap().main()

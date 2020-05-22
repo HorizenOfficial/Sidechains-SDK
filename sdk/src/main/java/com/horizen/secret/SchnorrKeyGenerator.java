@@ -2,9 +2,9 @@ package com.horizen.secret;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibProvider.SchnorrFunctions.KeyType;
 import com.horizen.node.NodeWallet;
-import com.horizen.zendoocryptolib.SchnorrFunctions.KeyType;
-import com.horizen.zendoocryptolib.ZendooCryptoLibLoader;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.EnumMap;
@@ -28,7 +28,7 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
 
     @Override
     public SchnorrSecret generateSecret(byte[] seed) {
-        EnumMap<KeyType, byte[]> keys = ZendooCryptoLibLoader.schnorrFunctions().generateSchnorrKeys(seed);
+        EnumMap<KeyType, byte[]> keys = CryptoLibProvider.schnorrFunctions().generateSchnorrKeys(seed);
         return new SchnorrSecret(keys.get(KeyType.SECRET), keys.get(KeyType.PUBLIC));
     }
 

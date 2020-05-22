@@ -30,9 +30,10 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowMaxAdjustDown: Int = 32 // 32% adjustment down
     override val nPowMaxAdjustUp: Int = 16 // 16% adjustment up
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
-    override val schnorrPublicKeys: Seq[SchnorrProposition] = Seq()
+    override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
     override val signersThreshold: Int = 0
     override val provingKeyFilePath: String = ""
+    override val verificationKeyFilePath: String = ""
   }
 
   class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,
