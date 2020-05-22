@@ -3,9 +3,9 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.crypto.hash.Blake2b256;
-import com.horizen.cryptolibProvider.VrfFunctions.KeyType;
+import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
 import java.util.EnumMap;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import java.util.EnumMap;
 import java.util.Optional;
@@ -13,6 +13,14 @@ public interface VrfFunctions {
         VRF_PROOF,
         VRF_OUTPUT
     }
+
+    int vrfSecretKeyLength();
+
+    int vrfPublicKeyLen();
+
+    int vrfProofLen();
+
+    int vrfOutputLen();
 
     EnumMap<KeyType, byte[]> generatePublicAndSecretKeys(byte[] seed);
 

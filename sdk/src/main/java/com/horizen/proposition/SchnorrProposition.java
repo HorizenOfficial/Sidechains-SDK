@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.SchnorrProof;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 

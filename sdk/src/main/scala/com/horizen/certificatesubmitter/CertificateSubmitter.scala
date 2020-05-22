@@ -16,7 +16,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.cryptolibProvider.CryptoLibProvider
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier

@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -26,6 +27,6 @@ public class SchnorrPropositionSerializer implements PropositionSerializer<Schno
 
     @Override
     public SchnorrProposition parse(Reader reader) {
-        return SchnorrProposition.parseBytes(reader.getBytes(reader.remaining()));
+        return SchnorrProposition.parseBytes(reader.getBytes(CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength()));
     }
 }

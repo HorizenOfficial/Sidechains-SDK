@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.librustsidechains.FieldElement;

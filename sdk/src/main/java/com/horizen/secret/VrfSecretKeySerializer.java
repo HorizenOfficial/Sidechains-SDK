@@ -1,5 +1,6 @@
 package com.horizen.secret;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -25,6 +26,6 @@ public class VrfSecretKeySerializer implements SecretSerializer<VrfSecretKey> {
 
     @Override
     public VrfSecretKey parse(Reader reader) {
-        return VrfSecretKey.parse(reader.getBytes(reader.remaining()));
+        return VrfSecretKey.parse(reader.getBytes(CryptoLibProvider.vrfFunctions().vrfSecretKeyLength()));
     }
 }

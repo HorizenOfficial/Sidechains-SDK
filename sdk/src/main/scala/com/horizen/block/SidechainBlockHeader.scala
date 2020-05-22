@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
@@ -95,7 +96,6 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     w.putBytes(forgerBoxMerklePathBytes)
 
     val vrfProofBytes = obj.vrfProof.bytes // TODO: replace with VRFProofSerializer... later
-    w.putInt(vrfProofBytes.length)
     w.putBytes(vrfProofBytes)
 
     w.putBytes(obj.sidechainTransactionsMerkleRootHash)
@@ -124,7 +124,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     val forgerBoxMerklePathBytesLength: Int = r.getInt()
     val forgerBoxMerklePath: MerklePath = MerklePath.parseBytes(r.getBytes(forgerBoxMerklePathBytesLength))
 
-    val vrfProofBytesLength: Int = r.getInt()
+    val vrfProofBytesLength: Int = CryptoLibProvider.vrfFunctions.vrfProofLen()
     val vrfProof: VrfProof = VrfProof.parse(r.getBytes(vrfProofBytesLength))
 
     val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)

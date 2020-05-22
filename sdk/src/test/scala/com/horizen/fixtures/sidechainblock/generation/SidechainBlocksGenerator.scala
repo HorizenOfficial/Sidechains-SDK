@@ -22,7 +22,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.cryptolibProvider.{VrfFunctions, CryptoLibProvider}
+import com.horizen.cryptolibprovider.{VrfFunctions, CryptoLibProvider}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 

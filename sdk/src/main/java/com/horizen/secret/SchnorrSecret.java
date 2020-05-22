@@ -5,7 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 
 import java.util.Arrays;
 import java.util.Objects;
