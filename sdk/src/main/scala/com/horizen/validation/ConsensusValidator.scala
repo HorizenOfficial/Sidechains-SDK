@@ -7,7 +7,7 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
 import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, ModifierId}
 
 import scala.util.Try
 
@@ -46,7 +46,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
     val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
-    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, Some(previousFullConsensusEpochInfo), verifiedBlock.parentId, parentBlockInfo, history, Seq())
 
     verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
@@ -71,42 +71,75 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
+  /*
+      Visual schema for possible cases:
+      You can assume on different length of Consensus Epoch. For example, 7 or 9.
+      Block absolute slots: 3 - 12
+                                 |
+      Ommers slots:    [5    ,   7   ,   11]
+                        |        |        |
+      Subommers slots: [4]      [6]   [9  ,  10]
+                                       |
+      Subommers slots:                [8]
+      Ommer Container can include both the same consensus epoch ommers and/or previous consensus epoch ommers.
+      Inclusion, of ommers from 2 consensus epochs (or more) before is not valid, because it means,
+      that there is an empty epoch between Container and its parent, which is invalid case.
+      Most specific case when at some Ommers-level, there are both ommers from previous and current epoch.
+      In this case previous epoch ommers can lead to the current epoch Nonce different to the one known by our history.
+      It should be taken in consideration during Ommers VRF calculation,
+      so proper Nonce info should be used for such an Ommer with all sub-ommers recursively.
+   */
   private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,
-                                     currentFullConsensusEpochInfo: FullConsensusEpochInfo,
-                                     previousFullConsensusEpochInfo: FullConsensusEpochInfo,
-                                     history: SidechainHistory): Unit = {
+                                    currentFullConsensusEpochInfo: FullConsensusEpochInfo,
+                                    previousFullConsensusEpochInfoOpt: Option[FullConsensusEpochInfo],
+                                    bestKnownParentId: ModifierId,
+                                    bestKnownParentInfo: SidechainBlockInfo,
+                                    history: SidechainHistory,
+                                    previousEpochOmmersInfoAccumulator: Seq[(VrfOutput, ConsensusSlotNumber)]
+                                   ): Unit = {
     val ommers = ommersContainer.ommers
-    if (ommers.isEmpty)
+    if(ommers.isEmpty)
       return
 
     val ommersContainerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommersContainer.header.timestamp)
 
-    // Ommers can be from the same ConsensusEpoch as OmmersContainer or from previous epoch.
-    // If first part of Ommers is from previous epoch, they can have data, that will lead to different FullConsensusEpochInfo for current epoch.
-    // So the second part of Ommers should be verified against different FullConsensusEpochInfo: nonce part can be different
-    // With current Nonce calculation algorithm, it's not possible to retrieve MainchainHeaders with RefData, so no way to recalculate proper Nonce.
-    // Solutions: Nonce must be taken not from the whole MCRefs most PoW header, but like in original Ouroboros from the VRF, that is a part of SidechainBlockHeader.
-    var isPreviousEpochOmmer: Boolean = false
+    var accumulator: Seq[(VrfOutput, ConsensusSlotNumber)] = previousEpochOmmersInfoAccumulator
+    var previousOmmerEpochNumber: ConsensusEpochNumber = ommersContainerEpochNumber
+    var ommerCurrentFullConsensusEpochInfo = currentFullConsensusEpochInfo
+    var ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
+
     for(ommer <- ommers) {
-      val ommerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommer.header.timestamp)
-      // Fork occurs in previous consensus epoch
-      if(ommerEpochNumber < ommersContainerEpochNumber) {
-        isPreviousEpochOmmer = true
-        val vrfOutput = history.getVrfOutput(ommer.header, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
-          .getOrElse(throw new IllegalStateException(s"VRF check for block ${ommer.header.id} had been failed"))
-        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
-        verifyOmmers(ommer, previousFullConsensusEpochInfo, null, history)
+      val ommerEpochAndSlot: ConsensusEpochAndSlot = history.timestampToEpochAndSlot(ommer.header.timestamp)
+
+      if(ommerEpochAndSlot.epochNumber < previousOmmerEpochNumber) {
+        // First ommer is from previous consensus epoch to Ommer Container epoch.
+        ommerCurrentFullConsensusEpochInfo = previousFullConsensusEpochInfoOpt
+          .getOrElse(throw new IllegalStateException(s"Block ${ommersContainer.header.id} contains ommer two epochs before."))
+        // We are not allow to have an ommers 2 epoch before ommer container.
+        // It means that between block and its parent the whole epoch was skipped.
+        ommerPreviousFullConsensusEpochInfoOpt = None
+      } else if(ommerEpochAndSlot.epochNumber > previousOmmerEpochNumber) {
+        // Ommer switched the consensus epoch (previous ommer was from previous epoch).
+        // It means, that bestKnownParentId (parent of verified block) is also from previous epoch.
+        // So calculate the nonce again with passing info of all Ommers from previous epoch as well.
+        val nonce = history.calculateNonceForNonGenesisEpoch(bestKnownParentId, bestKnownParentInfo, accumulator)
+        ommerCurrentFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo, nonce)
+        ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
       }
-      else { // Equals
-        if(isPreviousEpochOmmer) {
-          // We Have Ommers form different epochs
-          throw new IllegalStateException("Ommers from both previous and current ConsensusEpoch are not supported.")
-        }
-        val vrfOutput = history.getVrfOutput(ommer.header, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
-          .getOrElse(throw new IllegalStateException(s"VRF check for block ${ommer.header.id} had been failed"))
-        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
-        verifyOmmers(ommer, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+
+      val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
+      verifyForgerBox(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
+
+      verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
+        bestKnownParentId, bestKnownParentInfo, history, accumulator)
+
+      // Add previous epoch ommer info to accumulated sequence.
+      if(ommerEpochAndSlot.epochNumber < ommersContainerEpochNumber) {
+        // prepend accumulator with ommer with more recent slot
+        accumulator = (ommerVrfOutput, ommerEpochAndSlot.slotNumber) +: accumulator
       }
+      previousOmmerEpochNumber = ommerEpochAndSlot.epochNumber
     }
   }
 
