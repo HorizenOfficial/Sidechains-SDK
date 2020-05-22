@@ -117,8 +117,7 @@ class SCBootstrap(SidechainTestFramework):
 
         sc_best_block = sc_node.block_best()["result"]
 
-        # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+        bt_certificate_exists = False
 
         for mc_bloc_reference_data in sc_best_block["block"]["mainchainBlockReferencesData"]:
             if "backwardTransferCertificate" in mc_bloc_reference_data:
