@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfKey
+    VrfAccount
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -192,7 +192,7 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 
     for i in range(len(secrets)):
         secret = secrets[i]
-        vrf_keys.append(VrfKey(secret["vrfSecret"], secret["vrfPublicKey"]))
+        vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
     return vrf_keys
 
 
@@ -221,8 +221,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
 
-    if bootstrap_info.vrf_key is not None:
-        genesis_secrets = [bootstrap_info.vrf_key.secret]
+    if bootstrap_info.genesis_vrf_account is not None:
+        genesis_secrets = [bootstrap_info.genesis_vrf_account.secret]
 
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
@@ -585,7 +585,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
                                                             sc_nodes_bootstrap_info.pow_data,
                                                             sc_nodes_bootstrap_info.network,
                                                             sc_nodes_bootstrap_info.withdrawal_epoch_length,
-                                                            sc_nodes_bootstrap_info.vrf_key)
+                                                            sc_nodes_bootstrap_info.genesis_vrf_account)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:

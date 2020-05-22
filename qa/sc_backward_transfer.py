@@ -98,7 +98,7 @@ class SCBootstrap(SidechainTestFramework):
                                  "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
                               ]
                              }
-        sc_node.withdraw_coins(json.dumps(withdrawal_request))
+        sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         generate_next_blocks(sc_node, "first node", 1)
         mc_block_id = self.nodes[0].generate(1) #height 222
@@ -108,7 +108,7 @@ class SCBootstrap(SidechainTestFramework):
                                  "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
                               ]
                              }
-        sc_node.withdraw_coins(json.dumps(withdrawal_request))
+        sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         generate_next_blocks(sc_node, "first node", 1)
         mc_block_id = self.nodes[0].generate(3) #height 225
