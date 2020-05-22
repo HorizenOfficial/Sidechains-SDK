@@ -102,8 +102,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
               val previousEndEpochBlockHash: Array[Byte] =
                 stateStorage
-                  .getLastWithdrawalCertificatePreviousMcBlockHashOpt
-                  .getOrElse{require(certificate.epochNumber == 1); params.preGenesisMainchainBlockHash}
+                  .getLastCertificateEndEpochMcBlockHashOpt
+                  .getOrElse{require(certificate.epochNumber == 1); params.parentHashOfGenesisMainchainBlock}
 
               if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.signersPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.verificationKeyFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))

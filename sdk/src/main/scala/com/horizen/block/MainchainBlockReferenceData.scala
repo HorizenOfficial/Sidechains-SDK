@@ -16,7 +16,7 @@ case class MainchainBlockReferenceData(
                                         @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
                                         mProof: Option[MerklePath],
                                         proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
-                                        backwardTransferCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
+                                        withdrawalEpochCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -72,7 +72,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.backwardTransferCertificate match {
+    obj.withdrawalEpochCertificate match {
       case Some(certificate) =>
         val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
         w.putInt(cb.length)

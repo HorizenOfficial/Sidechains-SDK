@@ -57,7 +57,7 @@ case class MainchainBlockReference(
           data.proofOfNoData._1.isDefined ||
           data.proofOfNoData._2.isDefined ||
           data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.backwardTransferCertificate.isDefined)
+          data.withdrawalEpochCertificate.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
     }
     else {
@@ -66,7 +66,7 @@ case class MainchainBlockReference(
       // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
       if (data.mProof.isDefined) {
         // Check for defined transaction and/or certificate.
-        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.backwardTransferCertificate.isEmpty)
+        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.withdrawalEpochCertificate.isEmpty)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
         // Check for empty neighbour proofs.
@@ -84,8 +84,8 @@ case class MainchainBlockReference(
           sidechainHashMap.addForwardTransferMerkleRootHash(sidechainId, mc2scTransactionsOutputsMerkleTree.rootHash())
         }
 
-        if (data.backwardTransferCertificate.isDefined)
-          sidechainHashMap.addCertificate(data.backwardTransferCertificate.get)
+        if (data.withdrawalEpochCertificate.isDefined)
+          sidechainHashMap.addCertificate(data.withdrawalEpochCertificate.get)
 
         val sidechainHash = sidechainHashMap.getSidechainCommitmentEntryHash(sidechainId)
 
@@ -96,7 +96,7 @@ case class MainchainBlockReference(
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
       } else { // Current sidechain was not mentioned in MainchainBlockReference.
         // Check for empty transaction and certificate.
-        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.backwardTransferCertificate.isDefined)
+        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.withdrawalEpochCertificate.isDefined)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
         // Check for at least one neighbour proof to be defined.

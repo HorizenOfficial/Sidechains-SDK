@@ -10,7 +10,7 @@ case class TestNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
                           override val sidechainGenesisBlockId: ModifierId = bytesToId(new Array[Byte](32)),
                           override val genesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
-                          override val preGenesisMainchainBlockHash: Array[Byte] = new Array[Byte](32),
+                          override val parentHashOfGenesisMainchainBlock: Array[Byte] = new Array[Byte](32),
                           override val genesisPoWData: Seq[(Int, Int)] = Seq(),
                           override val mainchainCreationBlockHeight: Int = 1,
                           override val withdrawalEpochLength: Int = 100,

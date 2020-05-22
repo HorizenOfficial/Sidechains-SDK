@@ -163,7 +163,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getLastWithdrawalCertificatePreviousMcBlockHashOpt: Option[Array[Byte]] = storage.get(lastWithdrawalCertificatePreviousMcBlockHashKey).asScala.map(_.data)
+  def getLastCertificateEndEpochMcBlockHashOpt: Option[Array[Byte]] = storage.get(lastWithdrawalCertificatePreviousMcBlockHashKey).asScala.map(_.data)
 
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,

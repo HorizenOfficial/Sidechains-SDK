@@ -513,7 +513,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainId: Array[Byte] = params.sidechainId
       override val sidechainGenesisBlockId: ModifierId = genesisSidechainBlock.id
       override val genesisMainchainBlockHash: Array[Byte] = params.genesisMainchainBlockHash
-      override val preGenesisMainchainBlockHash: Array[Byte] = params.preGenesisMainchainBlockHash
+      override val parentHashOfGenesisMainchainBlock: Array[Byte] = params.parentHashOfGenesisMainchainBlock
       override val genesisPoWData: Seq[(Int, Int)] = params.genesisPoWData
       override val mainchainCreationBlockHeight: Int = genesisSidechainBlock.mainchainBlockReferencesData.size + mainchainHeight
       override val sidechainGenesisBlockTimestamp: Block.Timestamp = genesisSidechainBlock.timestamp

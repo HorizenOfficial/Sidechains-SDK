@@ -37,7 +37,7 @@ class SidechainBlock(
   def forgerPublicKey: PublicKey25519Proposition = header.forgerBox.blockSignProposition()
 
   // Currently sidechain block can contain 0 or 1 certificate (this is checked in WithdrawalEpochValidator)
-  lazy val withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.backwardTransferCertificate).headOption
+  lazy val withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.withdrawalEpochCertificate).headOption
 
   override type M = SidechainBlock
 
