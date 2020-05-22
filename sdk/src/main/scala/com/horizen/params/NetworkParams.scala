@@ -41,6 +41,7 @@ trait NetworkParams {
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC
+  val parentHashOfGenesisMainchainBlock: Array[Byte] // hash of the block which are parent for genesis MainchainBlock
   val genesisPoWData: Seq[(Int, Int)] // Tuples with timestamps and bits values of <nPowAveragingWindow> blocks up-to <genesisMainchainBlockHash> block. From oldest MC block to genesis one.
   val mainchainCreationBlockHeight: Int // Height of the block which include SidechainCreationTx for current SC
   val sidechainGenesisBlockTimestamp: Block.Timestamp

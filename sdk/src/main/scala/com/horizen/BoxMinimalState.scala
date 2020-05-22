@@ -27,7 +27,7 @@ trait BoxMinimalState[P <: Proposition,
                    newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
                    consensusEpoch: ConsensusEpochNumber,
-                   containsBackwardTransferCertificate: Boolean): Try[BMS]
+                   withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

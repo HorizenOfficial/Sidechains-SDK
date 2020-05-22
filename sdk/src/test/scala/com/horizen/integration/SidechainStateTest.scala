@@ -3,14 +3,11 @@ package com.horizen.integration
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
-
-import scala.collection.JavaConverters._
 import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
-import com.horizen.{SidechainSettings, SidechainState, SidechainTypes, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
@@ -18,14 +15,16 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.{SidechainState, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.core.{bytesToId, bytesToVersion}
-import com.horizen.consensus._
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
@@ -117,7 +116,7 @@ class SidechainStateTest
       Seq[WithdrawalRequestBox](),
       forgingStakesToAppendSeq,
       initialConsensusEpoch,
-      false
+      None
     )
   }
 
@@ -176,6 +175,8 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
+
+    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     applyTry.get

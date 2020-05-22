@@ -30,11 +30,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.backwardTransferCertificate.isDefined)
+    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.withdrawalEpochCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000009572f35ecc6e319216b29046fdb6695ad93b3e5d77053285df4af03", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "5bf368ee4fc02f055e8ca5447a21b9758e6435b3214bc10b55f533cc9b3d1a6d", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -58,11 +58,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.backwardTransferCertificate.isDefined)
+    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.withdrawalEpochCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "00000000106843ee0119c6db92e38e8655452fd85f638f6640475e8c6a3a3582", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "493232e7d362852c8e3fe6aa5a48d6f6e01220f617c258db511ee2386b6362ea", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -85,11 +85,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mproof.isDefined)
+    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
     assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
     assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.backwardTransferCertificate.isDefined)
+    assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.withdrawalEpochCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
     assertEquals("Hash of previous block is different.", "0000000071076828a1d738dfde576b21ac4e28998ae7a026f631e57d7561a28b", BytesUtils.toHexString(block.get.header.hashPrevBlock))
     assertEquals("Merkle root hash is different.", "7169f926344ff99dbee02ed2429481bbbc0b84cb4773c1dcaee20458e0d0437a", BytesUtils.toHexString(block.get.header.hashMerkleRoot))
@@ -135,11 +135,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
 
     assertFalse("New Block occurred without SC mentioned inside, MProof expected to be undefined.",
-      mcblock.data.mproof.isDefined)
+      mcblock.data.mProof.isDefined)
     assertFalse("New Block occurred without SC mentioned inside, MC2SCAggTx expected to be undefined.",
       mcblock.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertFalse("New Block occurred without SC mentioned inside, Certificate expected to be undefined.",
-      mcblock.data.backwardTransferCertificate.isDefined)
+      mcblock.data.withdrawalEpochCertificate.isDefined)
   }
 
   @Test
@@ -158,8 +158,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcblock = mcblockTry.get
 
     assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock.data.mproof.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock.data.mProof.isEmpty)
     assertTrue("Block must not contain proof for left neighbour.", mcblock.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock.data.proofOfNoData._2.isEmpty)
 
@@ -195,8 +195,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock1.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock1.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -232,8 +232,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock2.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock2.data.mproof.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock2.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
 
@@ -257,8 +257,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock3.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock3.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -300,8 +300,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock1.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock1.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -327,8 +327,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock2.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock2.data.mproof.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock2.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock2.data.mProof.isEmpty)
     assertTrue("Block must contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isDefined)
     assertTrue("Block must contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isDefined)
 
@@ -346,8 +346,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock3.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock3.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -384,8 +384,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock1.data.mproof.isDefined)
+    assertTrue("Block must contain certificate.", mcblock1.data.withdrawalEpochCertificate.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
@@ -403,8 +403,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock2.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock2.data.mproof.isDefined)
+    assertTrue("Block must contain certificate.", mcblock2.data.withdrawalEpochCertificate.isDefined)
+    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
 
@@ -422,8 +422,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must contain certificate.", mcblock3.data.backwardTransferCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock3.data.mproof.isDefined)
+    assertTrue("Block must contain certificate.", mcblock3.data.withdrawalEpochCertificate.isDefined)
+    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
@@ -441,8 +441,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock4.semanticValidity(params4).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock4.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock4.data.mproof.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock4.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock4.data.mProof.isEmpty)
     assertTrue("Block must not contain proof for left neighbour.", mcblock4.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must contain proof for right neighbour.", mcblock4.data.proofOfNoData._2.isDefined)
 
@@ -460,8 +460,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block expected to be semantically valid", mcblock5.semanticValidity(params5).isSuccess)
 
     assertTrue("Block must not contain transaction.", mcblock5.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock5.data.backwardTransferCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock5.data.mproof.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock5.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock5.data.mProof.isEmpty)
     assertTrue("Block must contain proof for left neighbour.", mcblock5.data.proofOfNoData._1.isDefined)
     assertTrue("Block must not contain proof for right neighbour.", mcblock5.data.proofOfNoData._2.isEmpty)
   }
