@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.utils.Pair;
@@ -21,9 +21,6 @@ public interface ThresholdSignatureCircuit {
                                    long threshold,
                                    String provingKeyPath);
 
-    Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeysBytesList, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash,
-                        long threshold, long quality, byte[] proof, String verificationKeyPath);
+    Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeys, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long threshold, long quality, byte[] proof, String verificationKeyPath);
 
-    //For verifying schnorr public keys //sigproof threshold signature circuite
-    byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
 }

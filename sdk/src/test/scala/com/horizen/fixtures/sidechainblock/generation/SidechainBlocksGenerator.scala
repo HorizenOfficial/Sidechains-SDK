@@ -22,7 +22,7 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.cryptolibProvider.{VrfFunctions, CryptoLibProvider}
+import com.horizen.cryptolibprovider.{VrfFunctions, CryptoLibProvider}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -520,6 +520,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val sidechainId: Array[Byte] = params.sidechainId
       override val sidechainGenesisBlockId: ModifierId = genesisSidechainBlock.id
       override val genesisMainchainBlockHash: Array[Byte] = params.genesisMainchainBlockHash
+      override val parentHashOfGenesisMainchainBlock: Array[Byte] = params.parentHashOfGenesisMainchainBlock
       override val genesisPoWData: Seq[(Int, Int)] = params.genesisPoWData
       override val mainchainCreationBlockHeight: Int = genesisSidechainBlock.mainchainBlockReferencesData.size + mainchainHeight
       override val sidechainGenesisBlockTimestamp: Block.Timestamp = genesisSidechainBlock.timestamp

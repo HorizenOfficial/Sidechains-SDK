@@ -10,7 +10,6 @@ case class WithdrawalEpochCertificate
    sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
-   previousEndEpochBlockHash: Array[Byte] = Array(),
    proof: Array[Byte] = Array(),
    quality: Long,
    totalAmount: Long,
@@ -76,11 +75,8 @@ object WithdrawalEpochCertificate {
       currentOffset += o.size
     }
 
-    val nounce: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
-    currentOffset += 32
-
     new WithdrawalEpochCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, Array(), Array(), totalAmount, fee, quality, transactionOutputs, outputs)
+      sidechainId, epochNumber, endEpochBlockHash, Array(), totalAmount, fee, quality, transactionOutputs, outputs)
 
   }
 }

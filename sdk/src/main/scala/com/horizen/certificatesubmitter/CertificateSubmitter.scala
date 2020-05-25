@@ -16,7 +16,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.cryptolibProvider.CryptoLibProvider
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -77,6 +77,7 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
     val signersPublicKeys = params.signersPublicKeys
 
+    /*
     val actualSysDataConstant =
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
@@ -84,6 +85,7 @@ class CertificateSubmitter
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
     }
+    */
 
     val wallet = sidechainNodeView.vault
     val actualStoredPrivateKey = signersPublicKeys.map(pubKey => wallet.secret(pubKey)).size
@@ -113,7 +115,6 @@ class CertificateSubmitter
           val certificate: SendCertificateRequest = CertificateRequestCreator.create(
             dataForProofGeneration.processedEpochNumber,
             dataForProofGeneration.endWithdrawalEpochBlockHash,
-            dataForProofGeneration.prevEndWithdrawalEpochBlockHash,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,

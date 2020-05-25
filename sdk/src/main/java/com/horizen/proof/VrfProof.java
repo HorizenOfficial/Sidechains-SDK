@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.vrf.VrfOutput;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 

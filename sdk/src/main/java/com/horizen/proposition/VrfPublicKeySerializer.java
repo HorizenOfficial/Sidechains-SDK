@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -26,6 +27,6 @@ public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKe
 
     @Override
     public VrfPublicKey parse(Reader reader) {
-        return VrfPublicKey.parseBytes(reader.getBytes(reader.remaining()));
+        return VrfPublicKey.parseBytes(reader.getBytes(CryptoLibProvider.vrfFunctions().vrfPublicKeyLen()));
     }
 }

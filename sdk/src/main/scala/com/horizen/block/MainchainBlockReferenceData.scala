@@ -11,13 +11,12 @@ import scorex.util.serialization.{Reader, Writer}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash"))
 case class MainchainBlockReferenceData(
-                                   headerHash: Array[Byte],
-                                   sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                                   @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
-                                   mproof: Option[MerklePath],
+                                        headerHash: Array[Byte],
+                                        sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
+                                        @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
+                                        mProof: Option[MerklePath],
                                         proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
-                                        backwardTransferCertificate: Option[WithdrawalEpochCertificate]
-                                 ) extends BytesSerializable {
+                                        withdrawalEpochCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -47,7 +46,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.mproof match {
+    obj.mProof match {
       case Some(mp) =>
         w.putInt(mp.bytes().length)
         w.putBytes(mp.bytes())
@@ -73,7 +72,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.backwardTransferCertificate match {
+    obj.withdrawalEpochCertificate match {
       case Some(certificate) =>
         val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
         w.putInt(cb.length)

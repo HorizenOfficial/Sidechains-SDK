@@ -29,7 +29,6 @@ case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
-   previousEpochEndBlockHash: Array[Byte],
    proofBytes: Array[Byte],
    quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
@@ -58,7 +57,6 @@ object CertificateRequestCreator {
 
   def create(epochNumber: Int,
              endEpochBlockHash: Array[Byte],
-             previousEpochEndBlockHash: Array[Byte],
              proofBytes: Array[Byte],
              quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
@@ -67,7 +65,6 @@ object CertificateRequestCreator {
       params.sidechainId,
       epochNumber,
       endEpochBlockHash,
-      previousEpochEndBlockHash,
       proofBytes,
       quality,
       withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))

@@ -102,7 +102,6 @@
 			<version>4.2.2</version>
 		</dependency>
 
-
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -162,6 +161,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
 		<dependency>
 			<groupId>org.glassfish.tyrus</groupId>
@@ -169,6 +169,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
 		<dependency>
 			<groupId>org.iq80.leveldb</groupId>
@@ -242,7 +243,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.12.4</version>
 				<configuration>
-					<skipTests>true</skipTests>
+					<skipTests>false</skipTests>
 				</configuration>
 			</plugin>
 			<plugin>

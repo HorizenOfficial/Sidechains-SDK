@@ -3,7 +3,7 @@ package com.horizen.proof;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 

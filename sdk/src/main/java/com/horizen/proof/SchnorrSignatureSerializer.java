@@ -1,5 +1,6 @@
 package com.horizen.proof;
 
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -25,6 +26,6 @@ public class SchnorrSignatureSerializer implements ProofSerializer<SchnorrProof>
 
     @Override
     public SchnorrProof parse(Reader reader) {
-        return SchnorrProof.parse(reader.getBytes(reader.remaining()));
+        return SchnorrProof.parse(reader.getBytes(CryptoLibProvider.schnorrFunctions().schnorrSignatureLength()));
     }
 }

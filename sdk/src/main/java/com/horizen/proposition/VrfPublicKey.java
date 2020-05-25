@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
-import com.horizen.cryptolibProvider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;

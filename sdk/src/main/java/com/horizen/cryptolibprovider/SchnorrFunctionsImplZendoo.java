@@ -1,4 +1,4 @@
-package com.horizen.cryptolibProvider;
+package com.horizen.cryptolibprovider;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.schnorrnative.SchnorrKeyPair;
@@ -8,9 +8,9 @@ import com.horizen.schnorrnative.SchnorrSignature;
 
 import java.util.EnumMap;
 
-import static com.horizen.cryptolibProvider.FieldElementUtils.messageToFieldElement;
-import static com.horizen.cryptolibProvider.SchnorrFunctions.KeyType.PUBLIC;
-import static com.horizen.cryptolibProvider.SchnorrFunctions.KeyType.SECRET;
+import static com.horizen.cryptolibprovider.FieldElementUtils.messageToFieldElement;
+import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.PUBLIC;
+import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.SECRET;
 
 public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
 
@@ -61,5 +61,20 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
         publicKey.freePublicKey();
 
         return signatureIsValid;
+    }
+
+    @Override
+    public int schnorrSecretKeyLength() {
+        return SchnorrSecretKey.SECRET_KEY_LENGTH;
+    }
+
+    @Override
+    public int schnorrPublicKeyLength(){
+        return SchnorrPublicKey.PUBLIC_KEY_LENGTH;
+    }
+
+    @Override
+    public int schnorrSignatureLength() {
+        return SchnorrSignature.SIGNATURE_LENGTH;
     }
 }
