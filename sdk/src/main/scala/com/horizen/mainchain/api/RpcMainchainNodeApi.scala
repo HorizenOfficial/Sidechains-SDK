@@ -1,5 +1,7 @@
 package com.horizen.mainchain.api
 
+import java.io.{BufferedReader, InputStreamReader}
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.horizen.SidechainSettings
 import com.horizen.utils.BytesUtils
@@ -13,19 +15,26 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
     osname.contains("win")
   }
 
-  private val clientPath = sidechainSettings.websocket.zencliCommandLine +
-    sidechainSettings.genesisData.mcNetwork match {
-    case "regtest" => "-regtest "
-    case "testnet" => "-testnet "
-    case _ => ""
-  }
+  private val clientPath = sidechainSettings.websocket.zencliCommandLine + " " +
+    (sidechainSettings.genesisData.mcNetwork match {
+      case "regtest" => "-regtest "
+      case "testnet" => "-testnet "
+      case _ => ""
+    })
 
   private def callRpc(params: String) : String = {
+    System.out.println(clientPath + " " + params)
     val process = Runtime.getRuntime.exec(clientPath + " " + params)
 
-    val output = process.getOutputStream
+    val stdInput: BufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream))
 
-    output.toString
+    val stdError: BufferedReader = new BufferedReader(new InputStreamReader(process.getErrorStream))
+
+    val error = stdError.readLine()
+    if(error != null)
+      throw new IllegalStateException("Error: " + error)
+
+    stdInput.readLine
   }
 
   private def encloseJsonParameter(parameter: String): String = {
@@ -35,7 +44,7 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
       "'" + parameter + "'"
   }
 
-  private def encloseStringParameter(parameter: String): String ={
+  private def encloseStringParameter(parameter: String): String = {
     "\"" + parameter + "\""
   }
 
@@ -48,17 +57,16 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
 
   override def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse = {
     val objectMapper = new ObjectMapper()
-    val feeParam: String = if (!certificateRequest.subtractFeeFromAmount) {
-        " false " + certificateRequest.fee
-    } else ""
+
     val response = callRpc("send_certificate "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
       + certificateRequest.epochNumber + " "
-      + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash))
-      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers))
-      + feeParam
+      + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash)) + " "
+      + "\"[]\" " //encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers)) + " " // TODO: fix json serialization
+      + certificateRequest.fee
       )
 
+    System.out.println(response)
     SendCertificateResponse(BytesUtils.fromHexString(response))
   }
 }

@@ -93,9 +93,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     for (certificate <- mod.withdrawalEpochCertificateOpt) {
       getUnprocessedWithdrawalRequests(certificate.epochNumber) match {
         case Some(withdrawalRequests) =>
-          if (withdrawalRequests.size != certificate.outputs.size)
+          if (withdrawalRequests.size != certificate.backwardTransferOutputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-            for (o <- certificate.outputs)
+            for (o <- certificate.backwardTransferOutputs)
               if (!withdrawalRequests.exists(r => {
                 util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
                   r.value().equals(o.amount)
@@ -107,9 +107,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   .getLastCertificateEndEpochMcBlockHashOpt
                   .getOrElse{require(certificate.epochNumber == 1); params.parentHashOfGenesisMainchainBlock}
 
+              /* TODO: uncomment later, when possible
               if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, params.verificationKeyFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
-              }
+              }*/
 
         case None =>
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))

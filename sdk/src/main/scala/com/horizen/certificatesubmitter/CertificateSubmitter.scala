@@ -61,7 +61,9 @@ class CertificateSubmitter
 
   protected def checkSubmitter: Receive = {
     case SidechainAppEvents.SidechainApplicationStart => {
-      val submitterCheckingFunction: View => Unit = checkSubmitterMessage
+      val submitterCheckingFunction =
+        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Unit](checkSubmitterMessage)
+
       val checkAsFuture = (sidechainNodeViewHolderRef ? submitterCheckingFunction).asInstanceOf[Future[Unit]]
       checkAsFuture.onComplete{
         case Success(()) =>
@@ -75,6 +77,7 @@ class CertificateSubmitter
   }
 
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
+    return // TODO: remove later, when constant will become a part of sc creation output
     val signersPublicKeys = params.signersPublicKeys
 
     val actualSysDataConstant =
@@ -159,6 +162,8 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
 
+    // TODO: error in a code below. Uncomment and fix.
+    return DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, Seq())
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHash, previousEndEpochBlockHash)
 
     val sidechainWallet = sidechainNodeView.vault
@@ -173,18 +178,16 @@ class CertificateSubmitter
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     if (withdrawalEpochNumber == -1) {
-      history
-        .getMainchainBlockReferenceByHash(params.genesisMainchainBlockHash).asScala
-        .map(mainchainBlockReference => mainchainBlockReference.header.hashPrevBlock)
-        .get
+      params.parentHashOfGenesisMainchainBlock
     }
     else {
-      val mcHeight = params.mainchainCreationBlockHeight + withdrawalEpochNumber * params.withdrawalEpochLength - 1
+      val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
       history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
     }
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+    return new com.horizen.utils.Pair(Array[Byte](), 0L) // TODO: remove when possible
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 

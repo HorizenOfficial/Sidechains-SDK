@@ -9,13 +9,12 @@ case class WithdrawalEpochCertificate
    version: Int,
    sidechainId: Array[Byte],
    epochNumber: Int,
+   quality: Long,
    endEpochBlockHash: Array[Byte],
    proof: Array[Byte] = Array(),
-   quality: Long,
-   totalAmount: Long,
-   fee: Long,
+   transactionInputs: Seq[MainchainTransactionInput],
    transactionOutputs: Seq[MainchainTransactionOutput],
-   outputs: Seq[MainchainBackwardTransferCertificateOutput])
+   backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
   override type M = WithdrawalEpochCertificate
@@ -41,17 +40,28 @@ object WithdrawalEpochCertificate {
     val epochNumber: Int = BytesUtils.getReversedInt(certificateBytes, currentOffset)
     currentOffset += 4
 
+    val quality: Long = 1 // TODO: uncomment when possible
+    //val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
+    //currentOffset += 8
+
     val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
-    currentOffset += 8
+    val scProofSize: Int = 771 // TODO: get this value from zendoo interface
+    val scProof: Array[Byte] = new Array[Byte](scProofSize) // TODO: uncomment when possible
+    //val scProof: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + scProofSize))
+    //currentOffset += scProofSize
 
-    val totalAmount: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
-    currentOffset += 8
+    val transactionInputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    currentOffset += transactionInputCount.size()
 
-    val fee: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
-    currentOffset += 8
+    var transactionInputs: Seq[MainchainTransactionInput] = Seq[MainchainTransactionInput]()
+
+    while(transactionInputs.size < transactionInputCount.value()) {
+      val input: MainchainTransactionInput = MainchainTransactionInput.parse(certificateBytes, currentOffset)
+      transactionInputs = transactionInputs :+ input
+      currentOffset += input.size
+    }
 
     val transactionOutputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += transactionOutputCount.size()
@@ -64,19 +74,28 @@ object WithdrawalEpochCertificate {
       currentOffset += o.size
     }
 
-    val outputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
-    currentOffset += outputCount.size()
+    val backwardTransferOutputsCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    currentOffset += backwardTransferOutputsCount.size()
 
-    var outputs: Seq[MainchainBackwardTransferCertificateOutput] = Seq[MainchainBackwardTransferCertificateOutput]()
+    var backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput] = Seq[MainchainBackwardTransferCertificateOutput]()
 
-    while(outputs.size < outputCount.value()) {
+    while(backwardTransferOutputs.size < backwardTransferOutputsCount.value()) {
       val o: MainchainBackwardTransferCertificateOutput = MainchainBackwardTransferCertificateOutput.parse(certificateBytes, currentOffset)
-      outputs = outputs :+ o
+      backwardTransferOutputs = backwardTransferOutputs :+ o
       currentOffset += o.size
     }
 
-    new WithdrawalEpochCertificate(certificateBytes.slice(offset, currentOffset), version,
-      sidechainId, epochNumber, endEpochBlockHash, Array(), totalAmount, fee, quality, transactionOutputs, outputs)
+    new WithdrawalEpochCertificate(
+      certificateBytes.slice(offset, currentOffset),
+      version,
+      sidechainId,
+      epochNumber,
+      quality,
+      endEpochBlockHash,
+      scProof,
+      transactionInputs,
+      transactionOutputs,
+      backwardTransferOutputs)
 
   }
 }

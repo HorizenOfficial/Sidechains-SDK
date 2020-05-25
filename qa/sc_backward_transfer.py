@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 import json
+import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
@@ -49,6 +50,7 @@ class SCBootstrap(SidechainTestFramework):
         return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
+        mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         sc_best_block = sc_node.block_best()["result"]
@@ -97,7 +99,7 @@ class SCBootstrap(SidechainTestFramework):
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 0, 2,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance*2)
 
-        mc_address = self.nodes[0].getnewaddress()
+        mc_address = self.nodes[0].getnewaddress("", True)
 
         withdrawal_request = {"outputs": [ \
                                { "publicKey": mc_address,
@@ -107,6 +109,8 @@ class SCBootstrap(SidechainTestFramework):
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
         if "result" not in withdrawCoinsJson:
             fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
+        else:
+            print("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
 
         generate_next_blocks(sc_node, "first node", 1)
         mc_block_id = self.nodes[0].generate(1) #height 222
@@ -116,6 +120,13 @@ class SCBootstrap(SidechainTestFramework):
                                  "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
                               ]
                              }
+
+        withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        if "result" not in withdrawCoinsJson:
+            fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
+        else:
+            print("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
+
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         generate_next_blocks(sc_node, "first node", 1)
@@ -123,6 +134,13 @@ class SCBootstrap(SidechainTestFramework):
 
         generate_next_blocks(sc_node, "first node", 1)
 
+        generate_next_blocks(sc_node, "first node", 1)
+
+        attempts = 10
+        while (mc_node.getmempoolinfo()["size"] == 0 and attempts > 0):
+            print("Wait for certificate in mc mempool...")
+            time.sleep(1)
+            attempts -= 1
         sc_best_block = sc_node.block_best()["result"]
 
         bt_certificate_exists = False

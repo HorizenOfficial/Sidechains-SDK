@@ -41,22 +41,7 @@ object MainchainTransaction {
     currentOffset += inputsNumber.size()
 
     for (i <- 1 to inputsNumber.value().intValue()) {
-      val prevTxHash: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + 32)
-      currentOffset += 32
-
-      val prevTxOuputIndex: Int = BytesUtils.getInt(transactionBytes, currentOffset)
-      currentOffset += 4
-
-      val scriptLength: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
-      currentOffset += scriptLength.size()
-
-      val txScript: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
-      currentOffset += scriptLength.value().intValue()
-
-      val sequence: Int = BytesUtils.getInt(transactionBytes, currentOffset)
-      currentOffset += 4
-
-      // possible creation of MainchainTxInput(prevTxHash, prevTxOuputIndex, txScript, sequence)
+      currentOffset += MainchainTransactionInput.parse(transactionBytes, currentOffset).size
     }
 
     // parse outputs
