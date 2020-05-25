@@ -64,7 +64,7 @@ public class CommandProcessor {
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
                 break;
-            case "generateSchnorrKey":
+            case "generateSchnorrKeys":
                 processGenerateSchnorrKeys(command.data());
                 break;
             default:
@@ -162,7 +162,7 @@ public class CommandProcessor {
     private void printGenerateSchnorrKeysUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateSchnorrKey {\"seed\":\"my seed\", \"keyCount\":10, \"threshold\":5}" +
+                      "\tgenerateSchnorrKeys {\"seed\":\"my seed\", \"keyCount\":10, \"threshold\":5}" +
                       "\tthreshold parameter should be less or equal to keyCount.");
     }
 

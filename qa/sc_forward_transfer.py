@@ -23,6 +23,8 @@ Test:
     For the SC node:
         - verify that all keys/boxes/balances are coherent with the default initialization
         - verify the MC block is included
+        - create new forward transfer to sidechain
+        - verify that all keys/boxes/balances are changed
 """
 class SCBootstrap(SidechainTestFramework):
 

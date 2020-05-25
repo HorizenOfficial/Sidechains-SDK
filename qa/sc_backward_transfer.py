@@ -23,6 +23,12 @@ Test:
     For the SC node:
         - verify that all keys/boxes/balances are coherent with the default initialization
         - verify the MC block is included
+        - create new forward transfer to sidechain
+        - verify that all keys/boxes/balances are changed
+        - create two withdrawal requests in the sidechain
+        - mine blocks to withdrawal epoch end
+        - verify that backward transfer certificate is created in mainchain and then is returned back
+          to sidechain as part of mainchain block        
 """
 class SCBootstrap(SidechainTestFramework):
 

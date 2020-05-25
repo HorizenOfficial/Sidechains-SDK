@@ -93,11 +93,6 @@ def sync_sc_mempools(api_connections, wait_for=25):
 
 sidechainclient_processes = {}
 
-def enclose_json_parameter(json_string):
-    if sys.platform.startswith('win'):
-        json_string = json_string.replace('"', '\"')
-    return json_string
-
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
 Parameters:
@@ -221,13 +216,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
 
+    genesis_secrets = []
     if bootstrap_info.genesis_vrf_account is not None:
-        genesis_secrets = [bootstrap_info.genesis_vrf_account.secret]
+        genesis_secrets.append(bootstrap_info.genesis_vrf_account.secret)
 
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
-
-    gss = json.dumps(genesis_secrets)
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -237,7 +231,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': gss,
+        'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
