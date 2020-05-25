@@ -77,7 +77,6 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
     val signersPublicKeys = params.signersPublicKeys
 
-    /*
     val actualSysDataConstant =
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
@@ -85,7 +84,6 @@ class CertificateSubmitter
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
     }
-    */
 
     val wallet = sidechainNodeView.vault
     val actualStoredPrivateKey = signersPublicKeys.map(pubKey => wallet.secret(pubKey)).size

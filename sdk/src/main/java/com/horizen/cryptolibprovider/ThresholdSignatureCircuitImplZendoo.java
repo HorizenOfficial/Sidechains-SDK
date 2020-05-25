@@ -61,11 +61,29 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt, List<byte[]> schnorrPublicKeys, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long threshold, long quality, byte[] proof, String verificationKeyPath) {
+    public Boolean verifyProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long quality, byte[] proof, byte[] sysDataConstant, String verificationKeyPath) {
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
-        List<SchnorrPublicKey> spk = schnorrPublicKeys.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
 
-        return NaiveThresholdSigProof.verifyProof(backwardTransfers, spk, endEpochBlockHash, prevEndEpochBlockHash, threshold, quality, proof, verificationKeyPath);
+        FieldElement constant = FieldElement.deserialize(sysDataConstant);
+        boolean verificationResult =
+                NaiveThresholdSigProof.verifyProof(backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, constant, quality, proof, verificationKeyPath);
+
+        constant.freeFieldElement();
+
+        return verificationResult;
+    }
+
+    @Override
+    public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
+        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
+
+        FieldElement sysDataConstant = NaiveThresholdSigProof.getConstant(schnorrPublicKeys, threshold);
+        byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
+
+        sysDataConstant.freeFieldElement();
+        schnorrPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
+
+        return sysDataConstantBytes;
     }
 }

@@ -44,6 +44,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   override type NVCT = SidechainState
 
+  val sysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(params.signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
+
   // Note: emit tx.semanticValidity for each tx
   override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     if (!tx.semanticValidity())
@@ -105,7 +107,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   .getLastCertificateEndEpochMcBlockHashOpt
                   .getOrElse{require(certificate.epochNumber == 1); params.parentHashOfGenesisMainchainBlock}
 
-              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, params.signersPublicKeys.map(_.bytes()).asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, params.signersThreshold, certificate.quality, certificate.proof, params.verificationKeyFilePath)) {
+              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, params.verificationKeyFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
               }
 
