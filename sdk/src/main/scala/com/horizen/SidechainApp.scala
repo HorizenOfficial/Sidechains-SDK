@@ -183,7 +183,7 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
 
     for(secretSchnorr <- sidechainSettings.backwardTransferSettings.signersSecrets)
-      sidechainSecretStorage.add(SchnorrSecretSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
 

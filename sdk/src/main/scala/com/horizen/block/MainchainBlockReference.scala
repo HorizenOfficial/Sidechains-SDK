@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -212,8 +212,6 @@ object MainchainBlockReference {
           new SidechainCreation(creationOutput, tx.hash, indexInTx)
         case forwartTransferOutput: MainchainTxForwardTransferCrosschainOutput =>
           new ForwardTransfer(forwartTransferOutput, tx.hash, indexInTx)
-        case certifierLockOutput: MainchainTxCertifierLockCrosschainOutput =>
-          new CertifierLock(certifierLockOutput, tx.hash, indexInTx)
       }
     })
   }

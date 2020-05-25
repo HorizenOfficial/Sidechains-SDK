@@ -372,6 +372,9 @@ def random_transaction(nodes, amount, min_fee, fee_increment, fee_variants):
 
     return (txid, signresult["hex"], fee)
 
+def fail(message=""):
+    raise AssertionError(message)
+
 def assert_equal(expected, actual, message=""):
     if expected != actual:
         if message:

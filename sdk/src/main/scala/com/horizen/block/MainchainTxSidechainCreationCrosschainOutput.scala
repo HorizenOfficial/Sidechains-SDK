@@ -44,6 +44,7 @@ object MainchainTxSidechainCreationCrosschainOutput {
     currentOffset += customDataLength.size()
 
     val customData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customDataLength.value().intValue())
+    val cd: String = BytesUtils.toHexString(customData)
     currentOffset += customDataLength.value().intValue()
 
     new MainchainTxSidechainCreationCrosschainOutput(sidechainCreationOutputBytes.slice(offset, currentOffset),

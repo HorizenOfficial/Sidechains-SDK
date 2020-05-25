@@ -4,7 +4,7 @@ import json
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
+from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
@@ -104,7 +104,9 @@ class SCBootstrap(SidechainTestFramework):
                                  "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
                               ]
                              }
-        sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        if "result" not in withdrawCoinsJson:
+            fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
 
         generate_next_blocks(sc_node, "first node", 1)
         mc_block_id = self.nodes[0].generate(1) #height 222

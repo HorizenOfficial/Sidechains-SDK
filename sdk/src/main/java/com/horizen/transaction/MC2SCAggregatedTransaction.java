@@ -10,7 +10,6 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
-import com.horizen.transaction.mainchain.CertifierLockSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -38,7 +37,6 @@ public final class MC2SCAggregatedTransaction
             new DynamicTypedSerializer<>(
                 new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
                     put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)2, (ScorexSerializer)CertifierLockSerializer.getSerializer());
                     put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
                 }}, new HashMap<>()
             ));

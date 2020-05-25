@@ -37,7 +37,7 @@ object MainchainTransaction {
     currentOffset += 4
 
     // parse inputs
-    val inputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+    val inputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
     currentOffset += inputsNumber.size()
 
     for (i <- 1 to inputsNumber.value().intValue()) {
@@ -47,7 +47,7 @@ object MainchainTransaction {
       val prevTxOuputIndex: Int = BytesUtils.getInt(transactionBytes, currentOffset)
       currentOffset += 4
 
-      val scriptLength: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      val scriptLength: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += scriptLength.size()
 
       val txScript: Array[Byte] = transactionBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
@@ -60,7 +60,7 @@ object MainchainTransaction {
     }
 
     // parse outputs
-    val outputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+    val outputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
     currentOffset += outputsNumber.size()
 
     for (i <- 1 to outputsNumber.value().intValue()) {
@@ -71,7 +71,7 @@ object MainchainTransaction {
       var crosschainOutputs: Seq[MainchainTxCrosschainOutput] = Seq()
 
       // parse SidechainCreation outputs
-      val creationOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      val creationOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += creationOutputsNumber.size()
       for (i <- 1 to creationOutputsNumber.value().intValue()) {
         val output = MainchainTxSidechainCreationCrosschainOutput.create(transactionBytes, currentOffset).get
@@ -79,17 +79,8 @@ object MainchainTransaction {
         crosschainOutputs = crosschainOutputs :+ output
       }
 
-      // parse Certifier Lock outputs
-      val certifierLockOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
-      currentOffset += certifierLockOutputsNumber.size()
-      for (i <- 1 to certifierLockOutputsNumber.value().intValue()) {
-        val output = MainchainTxCertifierLockCrosschainOutput.create(transactionBytes, currentOffset).get
-        currentOffset += MainchainTxCertifierLockCrosschainOutput.CERTIFIER_LOCK_OUTPUT_SIZE
-        crosschainOutputs = crosschainOutputs :+ output
-      }
-
       // parse Forward Transfer outputs
-      val forwardTransferOutputsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      val forwardTransferOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += forwardTransferOutputsNumber.size()
       for (i <- 1 to forwardTransferOutputsNumber.value().intValue()) {
         val output = MainchainTxForwardTransferCrosschainOutput.create(transactionBytes, currentOffset).get

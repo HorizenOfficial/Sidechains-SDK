@@ -26,6 +26,6 @@ public class VrfSecretKeySerializer implements SecretSerializer<VrfSecretKey> {
 
     @Override
     public VrfSecretKey parse(Reader reader) {
-        return VrfSecretKey.parse(reader.getBytes(CryptoLibProvider.vrfFunctions().vrfSecretKeyLength()));
+        return VrfSecretKey.parse(reader.getBytes(reader.remaining()));
     }
 }
