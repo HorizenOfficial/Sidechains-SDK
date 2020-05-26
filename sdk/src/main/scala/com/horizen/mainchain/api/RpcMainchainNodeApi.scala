@@ -2,8 +2,9 @@ package com.horizen.mainchain.api
 
 import java.io.{BufferedReader, InputStreamReader}
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.SidechainSettings
+import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 
 class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
@@ -56,13 +57,16 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
   }
 
   override def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse = {
-    val objectMapper = new ObjectMapper()
+    val serializer = ApplicationJsonSerializer.getInstance() // TODO: maybe it's better to construct object mapper from scratch
+    serializer.setDefaultConfiguration()
+    val objectMapper = serializer.getObjectMapper
+    objectMapper.disable(SerializationFeature.INDENT_OUTPUT)
 
     val response = callRpc("send_certificate "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
       + certificateRequest.epochNumber + " "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash)) + " "
-      + "\"[]\" " //encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers)) + " " // TODO: fix json serialization
+      + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers)) + " "
       + certificateRequest.fee
       )
 

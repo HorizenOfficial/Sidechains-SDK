@@ -6,20 +6,19 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_balance, generate_next_blocks
+    start_sc_nodes, check_box_balance, check_wallet_balance, generate_next_blocks
 from SidechainTestFramework.sc_forging_util import *
 
 """
-Check the bootstrap feature.
+Check Certificate automatic creation and submission to MC:
+1. Creation of Certificate with no backward transfers.
+2. Creation of Certificate with multiple backward transfers.
 
-Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
-    - Mine some blocks to reach hard fork
-    - Create 1 SC node
-    - Extract genesis info
-    - Start SC node with that genesis info
+Configuration:
+    Start 1 MC node and 1 SC node (with default websocket configuration).
+    SC node connected to the first MC node.
 
 Test:
     For the SC node:
@@ -27,10 +26,14 @@ Test:
         - verify the MC block is included
         - create new forward transfer to sidechain
         - verify that all keys/boxes/balances are changed
-        - create two withdrawal requests in the sidechain
-        - mine blocks to withdrawal epoch end
-        - verify that backward transfer certificate is created in mainchain and then is returned back
-          to sidechain as part of mainchain block        
+        - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
+        - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
+        - check epoch 0 certificate with not backward transfers in the MC mempool
+        - mine 1 more MC block and forge 1 more SC block, check Certificate inclusion into SC block
+        - make 2 different withdrawals from SC
+        - reach next withdrawal epoch and verify that certificate for epoch 1 was added to MC mempool
+          and then to MC/SC blocks.
+        - verify epoch 1 certificate, verify backward transfers list    
 """
 class SCBootstrap(SidechainTestFramework):
 
@@ -139,13 +142,15 @@ class SCBootstrap(SidechainTestFramework):
         assert_equal(0, len(we0_sc_cert["backwardTransferOutputs"]), "Backward transfer amount in certificate is wrong.")
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        return
 
-        mc_address = self.nodes[0].getnewaddress("", True)
 
+        # Try to withdraw coins from SC to MC: 2 withdrawals with the same amount
+        mc_address1 = self.nodes[0].getnewaddress("", True)
+        bt_amount1 = ft_amount - 3
+        sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address,
-                                 "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
+                               { "publicKey": mc_address1,
+                                 "value": sc_bt_amount1 }
                               ]
                              }
         withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
@@ -154,12 +159,15 @@ class SCBootstrap(SidechainTestFramework):
         else:
             print("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
 
+        # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
-        mc_block_id = self.nodes[0].generate(1) #height 222
 
+        mc_address2 = self.nodes[0].getnewaddress("", True)
+        bt_amount2 = ft_amount - bt_amount1
+        sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address,
-                                 "value": self.sc_nodes_bootstrap_info.genesis_account_balance / 2 }
+                               { "publicKey": mc_address2,
+                                 "value": sc_bt_amount2 }
                               ]
                              }
 
@@ -171,27 +179,71 @@ class SCBootstrap(SidechainTestFramework):
 
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
-        generate_next_blocks(sc_node, "first node", 1)
-        mc_block_id = self.nodes[0].generate(3) #height 225
-
+        # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        generate_next_blocks(sc_node, "first node", 1)
+        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
+        we1_end_mcblock_hash = mc_node.generate(8)[7]
+        we1_end_scblock_id = generate_next_blocks(sc_node, "first node", 3)[2]
+        check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
+        # Generate first mc block of the next epoch
+        we2_1_mcblock_hash = mc_node.generate(1)[0]
+        print("End mc block hash in withdrawal epoch 1 = " + we2_1_mcblock_hash)
+        we2_1_scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcreference_presence(we2_1_mcblock_hash, we2_1_scblock_id, sc_node)
+
+        # Wait until Certificate will appear in MC node mempool
         attempts = 10
-        while (mc_node.getmempoolinfo()["size"] == 0 and attempts > 0):
+        while mc_node.getmempoolinfo()["size"] == 0 and attempts > 0:
             print("Wait for certificate in mc mempool...")
             time.sleep(1)
             attempts -= 1
-        sc_best_block = sc_node.block_best()["result"]
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
-        bt_certificate_exists = False
+        # Get Certificate for Withdrawal epoch 1 and verify it
+        we1_certHash = mc_node.getrawmempool()[0]
+        print("Withdrawal epoch 1 certificate hash = " + we1_certHash)
+        we1_cert = mc_node.getrawcertificate(we1_certHash, 1)
+        assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"],
+                     "Sidechain Id in certificate is wrong.")
+        assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
+        assert_equal(we1_end_mcblock_hash, we1_cert["cert"]["endEpochBlockHash"],
+                     "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
 
-        for mc_bloc_reference_data in sc_best_block["block"]["mainchainBlockReferencesData"]:
-            if "backwardTransferCertificate" in mc_bloc_reference_data:
-                bt_certificate_exists = True
+        # Generate MC block and verify that certificate is present
+        we2_2_mcblock_hash = mc_node.generate(1)[0]
+        assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
+        assert_equal(1, len(mc_node.getblock(we2_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
+        assert_equal(1, len(mc_node.getblock(we2_2_mcblock_hash)["cert"]),
+                     "MC block expected to contain 1 Certificate.")
+        assert_equal(we1_certHash, mc_node.getblock(we2_2_mcblock_hash)["cert"][0],
+                     "MC block expected to contain certificate.")
 
-        assert_true(bt_certificate_exists, "Backward transfer certificate not found.")
+        # Generate SC block and verify that certificate is synced back
+        scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcreference_presence(we2_2_mcblock_hash, scblock_id5, sc_node)
+
+        # Verify Certificate for epoch 1 on SC side
+        we1_sc_cert = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]["withdrawalEpochCertificate"]
+        assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_sc_cert["sidechainId"],
+                     "Sidechain Id in certificate is wrong.")
+        assert_equal(1, we1_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
+        assert_equal(we1_end_mcblock_hash, we1_sc_cert["endEpochBlockHash"],
+                     "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(2, len(we1_sc_cert["backwardTransferOutputs"]),
+                     "Backward transfer amount in certificate is wrong.")
+
+        assert_equal(mc_address1, we1_sc_cert["backwardTransferOutputs"][0]["pubKeyHash"], "First BT address is wrong.")
+        assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
+
+        assert_equal(mc_address2, we1_sc_cert["backwardTransferOutputs"][1]["pubKeyHash"], "Second BT address is wrong.")
+        assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
+
+        assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
+
+        # TODO: continue the flow and test ceased Sidechain case.
 
 if __name__ == "__main__":
     SCBootstrap().main()
