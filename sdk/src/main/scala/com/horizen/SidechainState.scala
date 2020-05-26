@@ -105,7 +105,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
               val previousEndEpochBlockHash: Array[Byte] =
                 stateStorage
                   .getLastCertificateEndEpochMcBlockHashOpt
-                  .getOrElse{require(certificate.epochNumber == 1); params.parentHashOfGenesisMainchainBlock}
+                  .getOrElse({
+                    require(certificate.epochNumber == 0, "Certificate epoch number > 0, but end previous epoch mc block hash was not found.")
+                    params.parentHashOfGenesisMainchainBlock
+                  })
 
               /* TODO: uncomment later, when possible
               if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, params.verificationKeyFilePath)) {

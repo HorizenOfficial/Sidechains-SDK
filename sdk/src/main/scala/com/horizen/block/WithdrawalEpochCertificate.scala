@@ -1,9 +1,13 @@
 package com.horizen.block
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("certificateBytes", "transactionInputs", "transactionOutputs"))
 case class WithdrawalEpochCertificate
   (certificateBytes: Array[Byte],
    version: Int,

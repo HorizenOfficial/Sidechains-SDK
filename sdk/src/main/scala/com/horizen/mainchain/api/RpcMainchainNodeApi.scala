@@ -66,7 +66,6 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
       + certificateRequest.fee
       )
 
-    System.out.println(response)
     SendCertificateResponse(BytesUtils.fromHexString(response))
   }
 }

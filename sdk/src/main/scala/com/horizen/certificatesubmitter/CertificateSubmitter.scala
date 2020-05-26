@@ -15,7 +15,7 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -121,8 +121,13 @@ class CertificateSubmitter
             dataForProofGeneration.withdrawalRequests,
             params)
 
-          mainchainApi.sendCertificate(certificate) //process return result here?
-          log.info(s"Backward transfer certificate was successfully created.")
+          try {
+            log.info(s"Backward transfer certificate was successfully created. Cert hash = " +
+              BytesUtils.toHexString(mainchainApi.sendCertificate(certificate).certificateId))
+          } catch {
+            case ex: Throwable => log.error("Creation of backward transfer certificate had been failed. " + ex)
+          }
+
         }
 
         case Success(None) =>
@@ -147,11 +152,13 @@ class CertificateSubmitter
 
     val withdrawalEpochInfo: WithdrawalEpochInfo = state.getWithdrawalEpochInfo
     if (WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
+      log.info("Can submit certificate, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       val processedWithdrawalEpochNumber = withdrawalEpochInfo.epoch - 1
       state.getUnprocessedWithdrawalRequests(processedWithdrawalEpochNumber)
         .map(unprocessedWithdrawalRequests => buildDataForProofGeneration(sidechainNodeView, processedWithdrawalEpochNumber, unprocessedWithdrawalRequests))
     }
     else {
+      log.info("Can't submit certificate, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       None
     }
   }

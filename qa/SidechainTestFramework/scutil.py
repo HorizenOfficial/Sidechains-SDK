@@ -210,6 +210,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
+    mc0datadir = os.path.join(dirname, "node0")
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
@@ -242,7 +243,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
-        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/")
+        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/") + " -datadir=" + mc0datadir.replace("\\","/") # NOTE: it always will call first MC node RPC. TODO: make it configurable.
     }
 
     configsData.append({
