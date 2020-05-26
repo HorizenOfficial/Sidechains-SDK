@@ -41,12 +41,18 @@
 			<version>${scala.version}</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
-		<dependency>
-			<groupId>io.circe</groupId>
-			<artifactId>circe-core_2.12</artifactId>
-			<version>0.9.0</version>
-		</dependency>
+        <dependency>
+            <groupId>com.horizen</groupId>
+            <artifactId>zendoo-sc-cryptolib</artifactId>
+            <version>0.2.1-SNAPSHOT</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
+        <dependency>
+            <groupId>io.circe</groupId>
+            <artifactId>circe-core_2.12</artifactId>
+            <version>0.9.0</version>
+        </dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
 		<dependency>
@@ -197,14 +203,7 @@
 			<artifactId>leveldbjni-all</artifactId>
 			<version>1.18.3</version>
 		</dependency>
-
-		<dependency>
-			<groupId>com.horizen</groupId>
-			<artifactId>zendoo-sc-cryptolib</artifactId>
-			<version>0.2-SNAPSHOT</version>
-		</dependency>
-
-	</dependencies>
+    </dependencies>
 
 	<build>
 		<plugins>
@@ -299,9 +298,21 @@
 					<include>withdrawalrequestbox_hex</include>
 					<include>nonce_calculation_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>
-					<include>boxmerklepathinfo_hex</include>
-					<include>sidechaincoretransaction_hex</include>
-					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
+                    <include>boxmerklepathinfo_hex</include>
+                    <include>sidechaincoretransaction_hex</include>
+                    <include>schnorr_sk01_hex</include>
+                    <include>schnorr_sk02_hex</include>
+                    <include>schnorr_sk03_hex</include>
+                    <include>schnorr_sk04_hex</include>
+                    <include>schnorr_sk05_hex</include>
+                    <include>schnorr_sk06_hex</include>
+                    <include>schnorr_sk07_hex</include>
+                    <include>schnorr_sk08_hex</include>
+                    <include>schnorr_sk09_hex</include>
+                    <include>schnorr_sk00_hex</include>
+                    <include>sample_proving_key_7_keys_with_threshold_5</include>
+                    <include>sample_vk_7_keys_with_threshold_5</include>
+                    <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
 					<include>mcblock273173</include>
