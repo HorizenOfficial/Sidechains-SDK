@@ -13,6 +13,7 @@ import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.PUBLIC;
 import static com.horizen.cryptolibprovider.SchnorrFunctions.KeyType.SECRET;
 
 public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
+
     @Override
     public EnumMap<KeyType, byte[]> generateSchnorrKeys(byte[] seed) {
         SchnorrKeyPair keyPair = SchnorrKeyPair.generate();

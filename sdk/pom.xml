@@ -34,6 +34,7 @@
 	</pluginRepositories>
 
 	<dependencies>
+
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
@@ -53,24 +54,24 @@
             <version>0.9.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>scorex-core_2.12</artifactId>
-            <version>2.0.0-RC6</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.whispersystems</groupId>
-                    <artifactId>curve25519-java</artifactId>
-                </exclusion>
-                <!-- NOTE: because of bug in Scorex RC6 maven dependencies, we should force to include
-                different version of circe-core -->
-                <exclusion>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_2.1</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scorex-core_2.12</artifactId>
+			<version>2.0.0-RC6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.whispersystems</groupId>
+					<artifactId>curve25519-java</artifactId>
+				</exclusion>
+				<!-- NOTE: because of bug in Scorex RC6 maven dependencies, we should force to include
+				different version of circe-core -->
+				<exclusion>
+					<groupId>io.circe</groupId>
+					<artifactId>circe-core_2.1</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
 		<dependency>
@@ -100,15 +101,14 @@
 			<version>4.2.2</version>
 		</dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-assistedinject</artifactId>
-            <version>4.2.2</version>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-assistedinject</artifactId>
+			<version>4.2.2</version>
+		</dependency>
 
-
-        <dependency>
+		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
@@ -167,6 +167,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
 		<dependency>
 			<groupId>org.glassfish.tyrus</groupId>
@@ -174,6 +175,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
 		<dependency>
 			<groupId>org.iq80.leveldb</groupId>
@@ -248,7 +250,7 @@
 				<artifactId>maven-install-plugin</artifactId>
 				<version>2.5.2</version>
 				<configuration>
-					<file>target/${project.build.finalName}.${project.packaging}</file>			
+					<file>target/${project.build.finalName}.${project.packaging}</file>
 					<pomFile>pom.xml</pomFile>
 				</configuration>
 				<executions>
@@ -260,7 +262,7 @@
 						<phase>package</phase>
 					</execution>
 				</executions>
-			</plugin>			
+			</plugin>
 		</plugins>
 		<testResources>
 			<testResource>
@@ -269,32 +271,32 @@
 					<include>publickey25519proposition_hex</include>
 					<include>privatekey25519_hex</include>
 					<include>regulartransaction_hex</include>
-                    <include>RegularTransactionSerializerTestVrfPublicKey111</include>
-                    <include>RegularTransactionSerializerTestVrfPublicKey221</include>
-                    <include>SidechainBlockInfoTestVrfOutput234</include>
-                    <include>SidechainBlockTestVrfProof908</include>
-                    <include>SidechainBlockTestVrfSecretKey908</include>
-                    <include>SidechainBlockHeaderTestVrfProof178</include>
-                    <include>SidechainBlockHeaderTestVrfSecretKey178</include>
-                    <include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
-                    <include>ForgerBoxSerializationTestVrfPublicKey901</include>
-                    <include>OmmerTestVrfProof143</include>
-                    <include>OmmerTestVrfSecretKey143</include>
-                    <include>regularbox_hex</include>
-                    <include>forgerrbox_hex</include>
+					<include>RegularTransactionSerializerTestVrfPublicKey111</include>
+					<include>RegularTransactionSerializerTestVrfPublicKey221</include>
+					<include>SidechainBlockInfoTestVrfOutput234</include>
+					<include>SidechainBlockTestVrfProof908</include>
+					<include>SidechainBlockTestVrfSecretKey908</include>
+					<include>SidechainBlockHeaderTestVrfProof178</include>
+					<include>SidechainBlockHeaderTestVrfSecretKey178</include>
+					<include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
+					<include>ForgerBoxSerializationTestVrfPublicKey901</include>
+					<include>OmmerTestVrfProof143</include>
+					<include>OmmerTestVrfSecretKey143</include>
+					<include>regularbox_hex</include>
+					<include>forgerrbox_hex</include>
 					<include>certifierrightbox_hex</include>
 					<include>sidechainblockinfo_hex</include>
 					<include>sidechainsyncinfo_hex</include>
-                    <include>sidechainblock_hex</include>
-                    <include>sidechainblockheader_hex</include>
-                    <include>ommer_hex</include>
+					<include>sidechainblock_hex</include>
+					<include>sidechainblockheader_hex</include>
+					<include>ommer_hex</include>
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
 					<include>mcblock473173_mainnet</include>
-                    <include>mcblock473174_mainnet</include>
-                    <include>mcblock473175_mainnet</include>
-                    <include>mcblock473176_mainnet</include>
+					<include>mcblock473174_mainnet</include>
+					<include>mcblock473175_mainnet</include>
+					<include>mcblock473176_mainnet</include>
 					<include>withdrawalrequestbox_hex</include>
-                    <include>nonce_calculation_hex</include>
+					<include>nonce_calculation_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>
                     <include>boxmerklepathinfo_hex</include>
                     <include>sidechaincoretransaction_hex</include>

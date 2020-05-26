@@ -180,7 +180,7 @@ class SidechainApp @Inject()
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
-      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
 
     for(secretSchnorr <- sidechainSettings.backwardTransferSettings.signersSecrets)
       sidechainSecretStorage.add(SchnorrSecretSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretSchnorr)))

@@ -3,7 +3,8 @@ import sys
 
 import json
 
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
+    VrfAccount
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -109,12 +110,15 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "withdrawalEpochLength": xxx
 }
 """
-def generate_genesis_data(genesis_info, genesis_secret):
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret):
     lib_separator = ":"
     if sys.platform.startswith('win'):
         lib_separator = ";"
 
-    jsonParameters = {"secret": genesis_secret, "info": genesis_info}
+    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info}
+
+    json_param = json.dumps(jsonParameters)
+
     javaPs = subprocess.Popen(["java", "-cp",
                                "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                "com.horizen.ScBootstrappingTool",
@@ -141,6 +145,7 @@ def generate_secrets(seed, number_of_accounts):
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+
         javaPs = subprocess.Popen(["java", "-cp",
                                    "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
                                    "com.horizen.ScBootstrappingTool",
@@ -152,6 +157,38 @@ def generate_secrets(seed, number_of_accounts):
         secret = secrets[i]
         accounts.append(Account(secret["secret"], secret["publicKey"]))
     return accounts
+
+
+"""
+Generate Vrf keys by calling ScBootstrappingTools with command "generateVrfKey"
+Parameters:
+ - seed
+ - number_of_accounts: the number of keys to be generated
+
+Output: an array of instances of VrfKey (see sc_bootstrap_info.py).
+"""
+
+def generate_vrf_secrets(seed, number_of_vrf_keys):
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
+
+    vrf_keys = []
+    secrets = []
+    for i in range(number_of_vrf_keys):
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+
+        javaPs = subprocess.Popen(["java", "-cp",
+                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
+                                   "com.horizen.ScBootstrappingTool",
+                                   "generateVrfKey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
+        scBootstrapOutput = javaPs.communicate()[0]
+        secrets.append(json.loads(scBootstrapOutput))
+
+    for i in range(len(secrets)):
+        secret = secrets[i]
+        vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
+    return vrf_keys
 
 
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
@@ -179,6 +216,13 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
 
+    genesis_secrets = []
+    if bootstrap_info.genesis_vrf_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_vrf_account.secret)
+
+    if bootstrap_info.genesis_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_account.secret)
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -187,7 +231,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': str('"'+bootstrap_info.genesis_account.secret+'"') if bootstrap_info.genesis_account is not None else '',
+        'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
@@ -417,13 +461,13 @@ Parameters:
 """
 def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
-    mc_blocks_json = sc_block["mainchainBlocks"]
+    mc_block_headers_json = sc_block["mainchainHeaders"]
     is_mac_block_included = False
 
-    for mc_block_json in mc_blocks_json:
+    for mc_block_header_json in mc_block_headers_json:
         expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
 
-        sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
+        sc_mc_block_merkleroot = mc_block_header_json["hashMerkleRoot"]
 
         if expected_mc_block_merkleroot == sc_mc_block_merkleroot:
             is_mac_block_included = True
@@ -445,7 +489,7 @@ def check_wallet_balance(sc_node, expected_wallet_balance):
 
 
 """
-For a given Account verify the number of related regular boxes and verify the sum of their balances.
+For a given Account verify the number of related boxes by type and verify the sum of their balances.
 
 Parameters:
  - sc_node: a sidechain node
@@ -453,14 +497,14 @@ Parameters:
  - expected_boxes_count: the number of expected boxes for that account
  - expected_balance: expected balance for that account
 """
-def check_regularbox_balance(sc_node, account, expected_boxes_count, expected_balance):
+def check_box_balance(sc_node, account, box_type, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
     boxes = response["result"]["boxes"]
     boxes_balance = 0
     boxes_count = 0
     pub_key = account.publicKey
     for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and box["typeId"] == 1:
+        if box["proposition"]["publicKey"] == pub_key and (box["typeId"] == box_type or box_type == 0):
             box_value = box["value"]
             assert_true(box_value > 0,
                         "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
@@ -534,7 +578,8 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
                                                             sc_nodes_bootstrap_info.sidechain_genesis_block_hex,
                                                             sc_nodes_bootstrap_info.pow_data,
                                                             sc_nodes_bootstrap_info.network,
-                                                            sc_nodes_bootstrap_info.withdrawal_epoch_length)
+                                                            sc_nodes_bootstrap_info.withdrawal_epoch_length,
+                                                            sc_nodes_bootstrap_info.genesis_vrf_account)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -555,18 +600,21 @@ Parameters:
 """
 def create_sidechain(sc_creation_info):
     accounts = generate_secrets(sc_creation_info.sidechain_id, 1)
+    vrf_keys = generate_vrf_secrets(sc_creation_info.sidechain_id, 1)
     genesis_account = accounts[0]
+    vrf_key = vrf_keys[0]
     sidechain_id = sc_creation_info.sidechain_id
     genesis_info = initialize_new_sidechain_in_mainchain(sidechain_id,
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     genesis_account.publicKey,
-                                    sc_creation_info.forward_amount)
+                                    sc_creation_info.forward_amount,
+                                    vrf_key.publicKey)
     print "Sidechain created with id: " + sidechain_id
-    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret)
+    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                           sc_creation_info.withdrawal_epoch_length)
+                           sc_creation_info.withdrawal_epoch_length, vrf_key)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.

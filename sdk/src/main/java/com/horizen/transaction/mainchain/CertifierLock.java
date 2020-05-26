@@ -35,16 +35,15 @@ public final class CertifierLock implements SidechainRelatedMainchainOutput<Cert
     }
 
     @Override
-    public Optional<CertifierRightBox> getBox() {
+    public CertifierRightBox getBox() {
         byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
         long nonce = BytesUtils.getLong(hash, 0);
-        return Optional.of(new CertifierRightBox(
+        return new CertifierRightBox(
                 new CertifierRightBoxData(
                         new PublicKey25519Proposition(output.propositionBytes()),
                         output.lockedAmount(),
                         output.activeFromWithdrawalEpoch()),
-                nonce)
-        );
+                nonce);
     }
 
     @Override
