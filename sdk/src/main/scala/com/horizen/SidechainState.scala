@@ -1,11 +1,13 @@
 package com.horizen
 
+import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
 
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -13,7 +15,6 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -45,6 +46,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   override type NVCT = SidechainState
 
   val sysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(params.signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
+
+  lazy val verificationKeyFullFilePath: String = {
+    if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
+      throw new IllegalStateException(s"Verification key file name is not set")
+    }
+
+    val verificationFile: File = new File(params.provingKeyFilePath)
+    if (!verificationFile.canRead) {
+      throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} is not exist or can't be read")
+    }
+    else {
+      log.info(s"Verification key file at location: ${verificationFile.getAbsolutePath}")
+      verificationFile.getAbsolutePath
+    }
+  }
 
   // Note: emit tx.semanticValidity for each tx
   override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
@@ -111,7 +127,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                   })
 
               /* TODO: uncomment later, when possible
-              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, params.verificationKeyFilePath)) {
+              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, verificationKeyFullFilePath)) {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
               }*/
 

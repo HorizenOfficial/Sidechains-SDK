@@ -1,5 +1,6 @@
 package com.horizen.block
 
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
 import scala.util.Try
@@ -48,7 +49,7 @@ object MainchainTxSidechainCreationCrosschainOutput {
     val customData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customDataLength.value().intValue())
     currentOffset += customDataLength.value().intValue()
 
-    val constantLength: Int = 96 // TODO: take it from zendoo interface
+    val constantLength: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.sysDataConstantLength()
     val constant: Array[Byte] = new Array[Byte](constantLength) // TODO: uncomment when possible
     //val constant: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength)
     //currentOffset += constantLength

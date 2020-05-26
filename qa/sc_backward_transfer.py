@@ -108,7 +108,7 @@ class SCBootstrap(SidechainTestFramework):
         attempts = 10
         while mc_node.getmempoolinfo()["size"] == 0 and attempts > 0:
             print("Wait for certificate in mc mempool...")
-            time.sleep(1)
+            time.sleep(10)
             attempts -= 1
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
@@ -197,7 +197,7 @@ class SCBootstrap(SidechainTestFramework):
         attempts = 10
         while mc_node.getmempoolinfo()["size"] == 0 and attempts > 0:
             print("Wait for certificate in mc mempool...")
-            time.sleep(1)
+            time.sleep(10)
             attempts -= 1
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 

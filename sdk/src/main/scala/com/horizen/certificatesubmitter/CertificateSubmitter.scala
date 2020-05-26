@@ -1,6 +1,7 @@
 package com.horizen.certificatesubmitter
 
 
+import java.io.File
 import java.util.Optional
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -9,6 +10,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -16,17 +18,17 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
+import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class CertificateSubmitter
   (settings: SidechainSettings,
@@ -45,8 +47,12 @@ class CertificateSubmitter
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
+  private val  genSysConstant = BytesUtils.fromHexString("caa59704047dcf4e6ac18fafe798915e8ca6584e9a6a90fab006e5fb872c3d4925457ed94bd052ca824494e452fe3cc420fababe75f7a6bda2e4d2d92dff8b25d58e2e5a5df57a02307953679970d35986e14ea50499240974cc208e01e70000")
+
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
+
+  private var provingFileAbsolutePath: String = _
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
@@ -62,28 +68,30 @@ class CertificateSubmitter
   protected def checkSubmitter: Receive = {
     case SidechainAppEvents.SidechainApplicationStart => {
       val submitterCheckingFunction =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Unit](checkSubmitterMessage)
+        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Try[Unit]](checkSubmitterMessage)
 
-      val checkAsFuture = (sidechainNodeViewHolderRef ? submitterCheckingFunction).asInstanceOf[Future[Unit]]
+      val checkAsFuture = (sidechainNodeViewHolderRef ? submitterCheckingFunction).asInstanceOf[Future[Try[Unit]]]
       checkAsFuture.onComplete{
-        case Success(()) =>
+        case Success(Success(_)) =>
           log.info(s"Backward transfer certificate submitter was successfully started.")
 
-        case Failure(ex) =>
-          log.info("Backward transfer certificate submitter failed to start due:" + ex)
+        case Success(Failure(ex)) =>
+          log.error("Backward transfer certificate submitter failed to start due:" + EOL + ex)
           throw ex
+
+        case Failure(ex) =>
+          log.error("Failed to check backward transfer certificate submitter due:" + EOL + ex)
       }
     }
   }
 
-  private def checkSubmitterMessage(sidechainNodeView: View): Unit = {
-    return // TODO: remove later, when constant will become a part of sc creation output
+  private def checkSubmitterMessage(sidechainNodeView: View): Try[Unit] = Try {
     val signersPublicKeys = params.signersPublicKeys
 
     val actualSysDataConstant =
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
-    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
+    val expectedSysDataConstant = genSysConstant//getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
     }
@@ -92,6 +100,19 @@ class CertificateSubmitter
     val actualStoredPrivateKey = signersPublicKeys.map(pubKey => wallet.secret(pubKey)).size
     if (actualStoredPrivateKey < params.signersThreshold) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected private keys size shall be at least ${params.signersThreshold} but actual is ${actualStoredPrivateKey}")
+    }
+
+    if (params.provingKeyFilePath.equalsIgnoreCase("")) {
+      throw new IllegalStateException(s"Proving key file name is not set")
+    }
+
+    val provingFile: File = new File(params.provingKeyFilePath)
+    if (!provingFile.canRead) {
+      throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
+    }
+    else {
+      provingFileAbsolutePath = provingFile.getAbsolutePath;
+      log.info(s"Found proving key file at location: ${provingFileAbsolutePath}")
     }
   }
 
@@ -127,11 +148,10 @@ class CertificateSubmitter
           } catch {
             case ex: Throwable => log.error("Creation of backward transfer certificate had been failed. " + ex)
           }
-
         }
 
         case Success(None) =>
-          log.error("Creation of backward transfer certificate had been skipped")
+          log.info("Creation of backward transfer certificate had been skipped")
 
         case Failure(ex) =>
           log.error("Creation of backward transfer certificate had been failed. " + ex)
@@ -169,8 +189,6 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
 
-    // TODO: error in a code below. Uncomment and fix.
-    return DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, Seq())
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHash, previousEndEpochBlockHash)
 
     val sidechainWallet = sidechainNodeView.vault
@@ -184,20 +202,22 @@ class CertificateSubmitter
   }
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    if (withdrawalEpochNumber == -1) {
-      params.parentHashOfGenesisMainchainBlock
-    }
-    else {
-      val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-      history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+    log.info(s"Request last MC block hash for withdrawal epoch number ${withdrawalEpochNumber}")
+
+    withdrawalEpochNumber match {
+      case -1 => params.parentHashOfGenesisMainchainBlock
+      case _  => {
+        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
+        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+      }
     }
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    return new com.horizen.utils.Pair(Array[Byte](), 0L) // TODO: remove when possible
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
+    log.info(s"Start generating proof for ${dataForProofGeneration.processedEpochNumber} withdrawal epoch number, it can take some time")
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
@@ -206,7 +226,7 @@ class CertificateSubmitter
       signersPublicKeysBytes.asJava,
       signaturesBytes.asJava,
       params.signersThreshold,
-      params.provingKeyFilePath)
+      provingFileAbsolutePath)
   }
 }
 

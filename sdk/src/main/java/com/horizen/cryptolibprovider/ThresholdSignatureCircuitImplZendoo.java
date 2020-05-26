@@ -75,6 +75,11 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
+    public int sysDataConstantLength() {
+        return PoseidonHash.HASH_LENGTH;
+    }
+
+    @Override
     public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
         List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
 
