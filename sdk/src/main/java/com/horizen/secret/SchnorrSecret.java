@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
+//@TODO add JSON serialization
 public class SchnorrSecret implements Secret {
     private final byte[] secretBytes;
     private final byte[] publicBytes;

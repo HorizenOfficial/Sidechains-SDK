@@ -6,12 +6,12 @@ public class ScBootstrappingTool {
     public static void main(String args[]) {
         MessagePrinter printer = new ConsolePrinter();
         CommandProcessor processor = new CommandProcessor(printer);
-        if(args.length>0)
+        if(args.length > 0)
             try {
-                String cmd = args[0];
+                StringBuilder cmd = new StringBuilder(args[0]);
                 for(int i=1; i<args.length; i++)
-                    cmd += " " + args[i];
-                processor.processCommand(cmd);
+                    cmd.append(" ").append(args[i]);
+                processor.processCommand(cmd.toString());
             }catch (Exception e){
                 printer.print(e.getMessage());
             }
