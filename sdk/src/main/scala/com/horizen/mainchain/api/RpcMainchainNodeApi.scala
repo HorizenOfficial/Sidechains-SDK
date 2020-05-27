@@ -65,9 +65,9 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
     val response = callRpc("send_certificate "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.sidechainId)) + " "
       + certificateRequest.epochNumber + " "
-      // + certificateRequest.quality + " "
+      + certificateRequest.quality + " "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash)) + " "
-      // + BytesUtils.toHexString(certificateRequest.proofBytes) + " "
+      + BytesUtils.toHexString(certificateRequest.proofBytes) + " "
       + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers)) + " "
       + certificateRequest.fee
       )

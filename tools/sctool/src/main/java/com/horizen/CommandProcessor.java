@@ -17,10 +17,12 @@ import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
+import com.horizen.proof.SchnorrProof;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
@@ -40,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CommandProcessor {
     private MessagePrinter printer;
@@ -197,14 +200,24 @@ public class CommandProcessor {
             return;
         }
 
+        //@TODO remove hardcoded value
+        if (threshold != 5 || keyCount != 7) {
+            printGenerateSchnorrKeysUsageMsg("Currently supported only 7 keys and threshold 5");
+            return;
+        }
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         List<SchnorrSecret> secretKeys = new ArrayList<>();
 
         for (int i = 0; i < keyCount; i++ ) {
             secretKeys.add(SchnorrKeyGenerator.getInstance()
-                    .generateSecret(Bytes.concat(json.get("seed").asText().getBytes() , Ints.toByteArray(i))));
+                    .generateSecret(Bytes.concat(json.get("seed").asText().getBytes(), Ints.toByteArray(i))));
         }
+
+        List<byte[]> publicKeysBytes = secretKeys.stream().map(SchnorrSecret::getPublicBytes).collect(Collectors.toList());
+        byte[] genSysConstant = CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold);
+        //byte[] verificationKey =
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         ObjectNode resJson = mapper.createObjectNode();
@@ -223,7 +236,6 @@ public class CommandProcessor {
         String res = resJson.toString();
         printer.print(res);
     }
-
 
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);

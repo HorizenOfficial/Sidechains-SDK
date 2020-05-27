@@ -64,6 +64,10 @@ object MainchainTransaction {
         crosschainOutputs = crosschainOutputs :+ output
       }
 
+      // dummy parse of Certifier lock amount for merge_support_branch
+      val certifierLockOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      currentOffset += certifierLockOutputsNumber.size()
+
       // parse Forward Transfer outputs
       val forwardTransferOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += forwardTransferOutputsNumber.size()

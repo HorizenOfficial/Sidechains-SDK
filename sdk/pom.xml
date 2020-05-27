@@ -44,7 +44,7 @@
         <dependency>
             <groupId>com.horizen</groupId>
             <artifactId>zendoo-sc-cryptolib</artifactId>
-            <version>0.2.1-SNAPSHOT</version>
+            <version>0.2.3-SNAPSHOT</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
