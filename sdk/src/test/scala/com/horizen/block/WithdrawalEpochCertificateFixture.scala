@@ -15,11 +15,10 @@ trait WithdrawalEpochCertificateFixture {
       rnd.nextInt,
       getBytes(),
       rnd.nextInt(),
+      rnd.nextLong(),
       previousMcBlockHashOpt.getOrElse(getBytes()),
       getBytes(),
-      rnd.nextLong(),
-      rnd.nextLong(),
-      rnd.nextLong(),
+      Seq(),
       Seq(),
       Seq())
   }

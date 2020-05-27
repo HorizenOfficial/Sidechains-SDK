@@ -32,13 +32,10 @@ case class SendCertificateRequest
    proofBytes: Array[Byte],
    quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
-   subtractFeeFromAmount: Boolean = false,
    fee: String = "0.00001")
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
   require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
-  require(backwardTransfers != null, "List of BackwardTransfers MUST be NOT NULL.")
-  require(backwardTransfers.nonEmpty, "List of BackwardTransfers MUST be not empty.")
 }
 
 case class SendCertificateResponse

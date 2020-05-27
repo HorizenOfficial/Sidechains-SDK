@@ -26,6 +26,6 @@ public class SchnorrSecretSerializer implements SecretSerializer<SchnorrSecret> 
 
     @Override
     public SchnorrSecret parse(Reader reader) {
-        return SchnorrSecret.parse(reader.getBytes(CryptoLibProvider.schnorrFunctions().schnorrSecretKeyLength()));
+        return SchnorrSecret.parse(reader.getBytes(reader.remaining()));
     }
 }
