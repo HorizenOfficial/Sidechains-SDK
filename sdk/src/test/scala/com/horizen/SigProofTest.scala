@@ -11,6 +11,7 @@ import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.{Test, Ignore}
 
 import scala.collection.JavaConverters._
 import scala.util.Random
@@ -36,12 +37,13 @@ class SigProofTest {
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit
-  //@Test
+  @Test
+  @Ignore
   def simpleCheck(): Unit = {
     val keyPairs = (0 to 6).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava
-    val provingKeyPath = new File(classLoader.getResource("sample_proving_key_7_keys_with_threshold_5").getFile).getAbsolutePath;
-    val verificationKeyPath = new File(classLoader.getResource("sample_vk_7_keys_with_threshold_5").getFile).getAbsolutePath;
+    val provingKeyPath = new File(classLoader.getResource("sample_proving_key_7_keys_with_threshold_5").getFile).getAbsolutePath
+    val verificationKeyPath = new File(classLoader.getResource("sample_vk_7_keys_with_threshold_5").getFile).getAbsolutePath
     val threshold = 5 //hardcoded value
 
     val sysConstant = sigCircuit.generateSysDataConstant(publicKeysBytes, threshold)
