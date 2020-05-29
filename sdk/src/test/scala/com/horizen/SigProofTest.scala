@@ -1,8 +1,8 @@
 package com.horizen
 
 import java.io.{BufferedReader, File, FileReader}
-import java.{lang, util}
 import java.util.Optional
+import java.{lang, util}
 
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
@@ -11,7 +11,7 @@ import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.Test
+import org.junit.{Ignore, Test}
 
 import scala.collection.JavaConverters._
 import scala.util.Random
@@ -37,6 +37,7 @@ class SigProofTest {
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit
+  @Ignore
   @Test
   def simpleCheck(): Unit = {
     val keyPairsLen = 7

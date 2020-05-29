@@ -46,6 +46,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   override type NVCT = SidechainState
 
   val sysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(params.signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
+  log.info(s"sysDataConstant in SidechainState is: ${BytesUtils.toHexString(sysDataConstant)}")
 
   lazy val verificationKeyFullFilePath: String = {
     if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
@@ -126,10 +127,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
                     params.parentHashOfGenesisMainchainBlock
                   })
 
-              /* TODO: uncomment later, when possible
-              if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, verificationKeyFullFilePath)) {
+              log.info(s"Verify backward transfer certificate with parameters: withdrawalRequests = ${withdrawalRequests.foreach(_.toString)}, certificate.endEpochBlockHash = ${BytesUtils.toHexString(certificate.endEpochBlockHash)}, previousEndEpochBlockHash = ${BytesUtils.toHexString(previousEndEpochBlockHash)}, certificate.quality = ${certificate.quality}, certificate.proof=${BytesUtils.toHexString(certificate.proof)}")
+              if (CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, verificationKeyFullFilePath)) {
+               log.info("Block contains successfully verified backward transfer certificate for epoch %d")
+              }
+              else {
                 throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
-              }*/
+              }
+
 
         case None =>
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
