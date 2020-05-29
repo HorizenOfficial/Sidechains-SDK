@@ -46,7 +46,6 @@ class SidechainNodeViewHolderTest1
       .mapTo[SidechainNodeView]
 
     assert(Await.result(nodeView, 5 seconds) != null)
-
   }
 
   test("Test2") {

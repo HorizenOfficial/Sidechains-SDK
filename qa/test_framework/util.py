@@ -475,7 +475,7 @@ Output: an array of two information:
 
 """
 def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdrawal_epoch_length,
-                                          public_key, forward_transfer_amount, vrf_public_key):
+                                          public_key, forward_transfer_amount, vrf_public_key, genSysConstant, verificationKey):
     number_of_blocks_to_enable_sc_logic = 219
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -483,7 +483,7 @@ def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdraw
         mainchain_node.generate(diff)
 
     custom_data = vrf_public_key
-    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, public_key, forward_transfer_amount, custom_data)
+    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
     mainchain_node.generate(1)

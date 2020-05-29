@@ -91,9 +91,12 @@ class CertificateSubmitter
     val actualSysDataConstant =
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
-    val expectedSysDataConstant = genSysConstant//getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
+    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
+    }
+    else {
+      log.info(s"sysDataConstant in Certificate submitter is: ${BytesUtils.toHexString(expectedSysDataConstant)}")
     }
 
     val wallet = sidechainNodeView.vault
@@ -143,7 +146,7 @@ class CertificateSubmitter
             params)
 
           try {
-            log.info(s"Backward transfer certificate request was successfully created fo epoch number ${certificateRequest.epochNumber}, try to send it to mainchain")
+            log.info(s"Backward transfer certificate request was successfully created fo epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
             val response: SendCertificateResponse = mainchainApi.sendCertificate(certificateRequest)
 
@@ -157,7 +160,7 @@ class CertificateSubmitter
           log.info("Creation of backward transfer certificate had been skipped")
 
         case Failure(ex) =>
-          log.error("Creation of backward transfer certificate had been failed. " + ex)
+          log.error("Error in creation of backward transfer certificate:" + ex)
       }
     }
   }
@@ -205,22 +208,23 @@ class CertificateSubmitter
   }
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    log.info(s"Request last MC block hash for withdrawal epoch number ${withdrawalEpochNumber}")
-
-    withdrawalEpochNumber match {
+    val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _  => {
         val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
         history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
       }
     }
+    log.info(s"Request last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} which are ${BytesUtils.toHexString(mcBlockHash)}")
+
+    mcBlockHash
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
-    log.info(s"Start generating proof for ${dataForProofGeneration.processedEpochNumber} withdrawal epoch number, it can take some time")
+    log.info(s"Start generating proof for ${dataForProofGeneration.processedEpochNumber} withdrawal epoch number, with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, endWithdrawalEpochBlockHash=${BytesUtils.toHexString(dataForProofGeneration.endWithdrawalEpochBlockHash)}, prevEndWithdrawalEpochBlockHash=${BytesUtils.toHexString(dataForProofGeneration.prevEndWithdrawalEpochBlockHash)}, signersThreshold=${params.signersThreshold}. It can a while")
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
