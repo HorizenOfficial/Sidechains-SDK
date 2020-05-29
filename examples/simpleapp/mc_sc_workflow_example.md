@@ -19,7 +19,8 @@ generatekey {"seed":"my seed"}
 {
 	"secret": "007efa9b064a86e6a99f9cff6c838e61c005ad9aac30e74efc50a0b9ec8270e7ad4a2437a1106a9b5912dfc2162180fe5758cfe449f45c72bfdee7ad928a570c0e",
 	"publicKey": "4a2437a1106a9b5912dfc2162180fe5758cfe449f45c72bfdee7ad928a570c0e"
-}```
+}
+```
 
 Result is key pair.
 
@@ -67,6 +68,7 @@ generateSchnorrKeys {"seed":"my seed", "keyCount":5, "threshold":3}
 **SC declaration in a MC node using `zen-cli`**
 
 Run zen node:
+
 ```
 zend.exe -regtest -websocket
 ```
