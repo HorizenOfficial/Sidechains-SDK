@@ -1,8 +1,7 @@
 package com.horizen.block
 
 import com.horizen.utils.BytesUtils
-
-import org.junit.Test
+import org.junit.{Ignore, Test}
 import org.scalatest.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 
@@ -10,6 +9,7 @@ import scala.io.Source
 
 class WithdrawalEpochCertificateTest extends JUnitSuite {
 
+  @Ignore
   @Test
   def testParseEmptyCertificate(): Unit = {
 
@@ -46,6 +46,7 @@ class WithdrawalEpochCertificateTest extends JUnitSuite {
     assertEquals("Count of backward transfer outputs is wrong.", 0, certificate.backwardTransferOutputs.size)
   }
 
+  @Ignore
   @Test
   def testParseNonEmptyCertificate(): Unit = {
 

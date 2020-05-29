@@ -67,7 +67,7 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
       + certificateRequest.epochNumber + " "
       + certificateRequest.quality + " "
       + encloseStringParameter(BytesUtils.toHexString(certificateRequest.endEpochBlockHash)) + " "
-      + BytesUtils.toHexString(certificateRequest.proofBytes) + " "
+      + encloseStringParameter(BytesUtils.toHexString(certificateRequest.proofBytes)) + " "
       + encloseJsonParameter(objectMapper.writeValueAsString(certificateRequest.backwardTransfers)) + " "
       + certificateRequest.fee
       )

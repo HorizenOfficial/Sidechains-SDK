@@ -6,18 +6,12 @@ import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Ed25519;
-import com.horizen.utils.Utils;
-import com.horizen.utils.Pair;
-import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
-import com.horizen.secret.VrfSecretKey;
+import com.horizen.utils.BytesUtils;
+import com.horizen.utils.Utils;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
 
@@ -64,7 +58,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     public byte[] getBackwardTransferPoseidonRootHash() {
-        return new byte[0];
+        return output.constant();
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {

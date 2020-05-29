@@ -44,17 +44,15 @@ object WithdrawalEpochCertificate {
     val epochNumber: Int = BytesUtils.getReversedInt(certificateBytes, currentOffset)
     currentOffset += 4
 
-    val quality: Long = 1 // TODO: uncomment when possible
-    //val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
-    //currentOffset += 8
+    val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
+    currentOffset += 8
 
     val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     val scProofSize: Int = 771 // TODO: get this value from zendoo interface
-    val scProof: Array[Byte] = new Array[Byte](scProofSize) // TODO: uncomment when possible
-    //val scProof: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + scProofSize))
-    //currentOffset += scProofSize
+    val scProof: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + scProofSize)
+    currentOffset += scProofSize
 
     val transactionInputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += transactionInputCount.size()
