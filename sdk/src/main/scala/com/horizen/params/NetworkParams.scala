@@ -34,7 +34,7 @@ trait NetworkParams {
   val signersThreshold: Int
   val provingKeyFilePath: String
   val verificationKeyFilePath: String
-
+  val calculatedSysDataConstant: Array[Byte]
 
   val maxHistoryRewritingLength: Int = 100
 

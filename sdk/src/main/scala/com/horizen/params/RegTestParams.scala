@@ -20,8 +20,9 @@ case class RegTestParams(
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
                           override val provingKeyFilePath: String = "",
-                          override val verificationKeyFilePath: String = ""
-                        ) extends NetworkParams {
+                          override val verificationKeyFilePath: String = "",
+                          override val calculatedSysDataConstant: Array[Byte] = Array()
+) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
   override val EquihashVarIntLength: Int = 1

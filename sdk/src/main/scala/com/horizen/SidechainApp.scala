@@ -15,6 +15,7 @@ import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
@@ -101,6 +102,9 @@ class SidechainApp @Inject()
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.backwardTransferSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
+  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.backwardTransferSettings.signersThreshold)
+  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
+
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -115,8 +119,8 @@ class SidechainApp @Inject()
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
-
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
   )
 
     case "testnet" => TestNetParams(
@@ -131,7 +135,8 @@ class SidechainApp @Inject()
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
 
     case "mainnet" => MainNetParams(
@@ -146,7 +151,8 @@ class SidechainApp @Inject()
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.backwardTransferSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.backwardTransferSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath
+      verificationKeyFilePath = sidechainSettings.backwardTransferSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

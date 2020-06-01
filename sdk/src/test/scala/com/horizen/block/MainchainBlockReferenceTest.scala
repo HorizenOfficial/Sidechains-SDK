@@ -272,8 +272,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   // to do: fix test and uncomment
-  @Test
   @Ignore
+  @Test
   def blockForwardTransfer2Sidechains(): Unit = {
 
     // Test: parse MC block with tx version -4 with forward transfers to two sidechains and no operation for one sidechain.

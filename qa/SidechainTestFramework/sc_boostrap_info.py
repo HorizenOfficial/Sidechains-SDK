@@ -142,13 +142,13 @@ SCBootstrapInfo: {
     "network":
     "withdrawal_epoch_length":
     "genesis_vrf_account": an instance of VrfAccount
-    "withdrawalCertificateData": an instance of WithdrawalCertificateData
+    "withdrawal_certificate_data": an instance of WithdrawalCertificateData
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, withdrawal_certificate_data=WithdrawalCertificateData):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, withdrawal_certificate_data):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
