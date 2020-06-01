@@ -47,8 +47,6 @@ class CertificateSubmitter
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  private val  genSysConstant = BytesUtils.fromHexString("caa59704047dcf4e6ac18fafe798915e8ca6584e9a6a90fab006e5fb872c3d4925457ed94bd052ca824494e452fe3cc420fababe75f7a6bda2e4d2d92dff8b25d58e2e5a5df57a02307953679970d35986e14ea50499240974cc208e01e70000")
-
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -91,9 +89,9 @@ class CertificateSubmitter
     val actualSysDataConstant =
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
 
-    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
+    val expectedSysDataConstant = params.calculatedSysDataConstant
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
-      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${expectedSysDataConstant.deep} but actual is ${actualSysDataConstant.deep}")
+      throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${BytesUtils.toHexString(expectedSysDataConstant)} but actual is ${BytesUtils.toHexString(actualSysDataConstant)}")
     }
     else {
       log.info(s"sysDataConstant in Certificate submitter is: ${BytesUtils.toHexString(expectedSysDataConstant)}")
@@ -146,7 +144,7 @@ class CertificateSubmitter
             params)
 
           try {
-            log.info(s"Backward transfer certificate request was successfully created fo epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+            log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
             val response: SendCertificateResponse = mainchainApi.sendCertificate(certificateRequest)
 

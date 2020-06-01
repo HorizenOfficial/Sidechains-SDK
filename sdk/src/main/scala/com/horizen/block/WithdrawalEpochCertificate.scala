@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -50,7 +51,7 @@ object WithdrawalEpochCertificate {
     val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val scProofSize: Int = 771 // TODO: get this value from zendoo interface
+    val scProofSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()
     val scProof: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + scProofSize)
     currentOffset += scProofSize
 

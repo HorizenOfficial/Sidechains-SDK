@@ -45,8 +45,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   override type NVCT = SidechainState
 
-  val sysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(params.signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
-  log.info(s"sysDataConstant in SidechainState is: ${BytesUtils.toHexString(sysDataConstant)}")
+  val sysDataConstant: Array[Byte] = params.calculatedSysDataConstant
 
   lazy val verificationKeyFullFilePath: String = {
     if (params.verificationKeyFilePath.equalsIgnoreCase("")) {

@@ -64,8 +64,8 @@ public class CommandProcessor {
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
                 break;
-            case "generateSchnorrKeys":
-                processGenerateSchnorrKeys(command.data());
+            case "generateProofInfo":
+                processGenerateProofInfo(command.data());
                 break;
             default:
                 printUnsupportedCommandMsg(command.name());
@@ -100,7 +100,7 @@ public class CommandProcessor {
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
                       "\tgenerateVrfKey <arguments>\n" +
-                      "\tgenerateSchnorrKeys <arguments>\n" +
+                      "\tgenerateProofInfo <arguments>\n" +
                       "\tgenesisinfo <arguments>\n" +
                       "\texit\n"
         );
@@ -159,47 +159,47 @@ public class CommandProcessor {
         printer.print(res);
     }
 
-    private void printGenerateSchnorrKeysUsageMsg(String error) {
+    private void printGenerateProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateSchnorrKeys {\"seed\":\"my seed\", \"keyCount\":7, \"threshold\":5}" +
+                      "\tgenerateProofInfo {\"seed\":\"my seed\", \"keyCount\":7, \"threshold\":5}" +
                       "\tthreshold parameter should be less or equal to keyCount.");
     }
 
-    private void processGenerateSchnorrKeys(JsonNode json) {
+    private void processGenerateProofInfo(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateSchnorrKeysUsageMsg("seed is not specified or has invalid format.");
+            printGenerateProofInfoUsageMsg("seed is not specified or has invalid format.");
             return;
         }
 
         if (!json.has("keyCount") || !json.get("keyCount").isInt()) {
-            printGenerateSchnorrKeysUsageMsg("wrong key count");
+            printGenerateProofInfoUsageMsg("wrong key count");
             return;
         }
 
         int keyCount = json.get("keyCount").asInt();
 
         if (keyCount <= 0) {
-            printGenerateSchnorrKeysUsageMsg("wrong key count - " + keyCount);
+            printGenerateProofInfoUsageMsg("wrong key count - " + keyCount);
             return;
         }
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
-            printGenerateSchnorrKeysUsageMsg("wrong threshold");
+            printGenerateProofInfoUsageMsg("wrong threshold");
             return;
         }
 
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > keyCount) {
-            printGenerateSchnorrKeysUsageMsg("wrong threshold - " + threshold);
+            printGenerateProofInfoUsageMsg("wrong threshold - " + threshold);
             return;
         }
 
         //@TODO remove hardcoded value after supporting various verification/proving files, actual file is generated for 7 keys
         if (keyCount != 7) {
-            printGenerateSchnorrKeysUsageMsg("Currently supported only 7 keys and threshold 5");
+            printGenerateProofInfoUsageMsg("Currently supported only 7 keys and threshold 5");
             return;
         }
 
@@ -437,14 +437,14 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null);
+            default:
+                throw new IllegalStateException("Unexpected network type: " + network);
         }
-        return null;
-
     }
 
     private void updateTemplateFile(

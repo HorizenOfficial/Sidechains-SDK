@@ -93,6 +93,17 @@ def sync_sc_mempools(api_connections, wait_for=25):
 
 sidechainclient_processes = {}
 
+
+
+def launch_bootstrap_tool(command_name, json_parameters):
+    json_param = json.dumps(json_parameters)
+    java_ps = subprocess.Popen(["java", "-jar",
+                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar",
+                               command_name, json_param], stdout=subprocess.PIPE)
+    sc_bootstrap_output = java_ps.communicate()[0]
+    jsone_node = json.loads(sc_bootstrap_output)
+    return jsone_node
+
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
 Parameters:
@@ -111,21 +122,8 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 }
 """
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
     jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info}
-
-    json_param = json.dumps(jsonParameters)
-    print json_param
-    javaPs = subprocess.Popen(["java", "-cp",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                               "com.horizen.ScBootstrappingTool",
-                               "genesisinfo", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-    scBootstrapOutput = javaPs.communicate()[0]
-    print scBootstrapOutput
-    jsonNode = json.loads(scBootstrapOutput)
+    jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
 
@@ -146,13 +144,7 @@ def generate_secrets(seed, number_of_accounts):
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-
-        javaPs = subprocess.Popen(["java", "-cp",
-                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                                   "com.horizen.ScBootstrappingTool",
-                                   "generatekey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-        scBootstrapOutput = javaPs.communicate()[0]
-        secrets.append(json.loads(scBootstrapOutput))
+        secrets.append(launch_bootstrap_tool("generatekey", jsonParameters))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -178,13 +170,7 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
     secrets = []
     for i in range(number_of_vrf_keys):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-
-        javaPs = subprocess.Popen(["java", "-cp",
-                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                                   "com.horizen.ScBootstrappingTool",
-                                   "generateVrfKey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-        scBootstrapOutput = javaPs.communicate()[0]
-        secrets.append(json.loads(scBootstrapOutput))
+        secrets.append(launch_bootstrap_tool("generateVrfKey", jsonParameters))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -194,7 +180,7 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
-Generate withdrawal certificate data calling ScBootstrappingTools with command "generateSchnorrKeys"
+Generate withdrawal certificate data calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
  - number_of_accounts: the number of schnorr keys to be generated
@@ -207,13 +193,7 @@ def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold
         lib_separator = ";"
 
     jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
-
-    javaPs = subprocess.Popen(["java", "-cp",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                               "com.horizen.ScBootstrappingTool",
-                               "generateSchnorrKeys", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-    scBootstrapOutput = javaPs.communicate()[0]
-    output = json.loads(scBootstrapOutput)
+    output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
