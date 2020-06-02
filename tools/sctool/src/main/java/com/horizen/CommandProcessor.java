@@ -199,7 +199,7 @@ public class CommandProcessor {
 
         //@TODO remove hardcoded value after supporting various verification/proving files, actual file is generated for 7 keys
         if (keyCount != 7) {
-            printGenerateProofInfoUsageMsg("Currently supported only 7 keys and threshold 5");
+            printGenerateProofInfoUsageMsg("Currently supported only 7 keys");
             return;
         }
 
