@@ -25,7 +25,6 @@ class MainchainTxSidechainCreationCrosschainOutput(
 
 object MainchainTxSidechainCreationCrosschainOutput {
   val OUTPUT_TYPE: Byte = 3.toByte
-  //val SIDECHAIN_CREATION_OUTPUT_SIZE = 36 // 32 + 4
 
   def create(sidechainCreationOutputBytes: Array[Byte], offset: Int): Try[MainchainTxSidechainCreationCrosschainOutput] = Try {
 
@@ -55,7 +54,7 @@ object MainchainTxSidechainCreationCrosschainOutput {
     val constant: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue())
     currentOffset += constantLength.value().intValue()
 
-    val certVkSize: Int = 1544 // TODO: take it from zendoo interface
+    val certVkSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.certVkSize()
     val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize)
     currentOffset += certVkSize
 

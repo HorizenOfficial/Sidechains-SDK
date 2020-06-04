@@ -98,4 +98,8 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return 771; //@TODO take it from JNI side
     }
 
+    @Override
+    public int certVkSize() {
+        return 1544; //@TODO take it from JNI side
+    }
 }

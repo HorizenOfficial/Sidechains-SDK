@@ -39,6 +39,6 @@ case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
-                              backwardTransferSettings: withdrawalEpochCertificateSettings,
+                              withdrawalEpochCertificateSettings: withdrawalEpochCertificateSettings,
                               wallet: WalletSettings
                             )

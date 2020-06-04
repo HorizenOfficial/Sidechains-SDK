@@ -1,11 +1,13 @@
-**Sidechains-SDK Alpha**
+**Sidechains-SDK Beta**
 -------------------
-Sidechains-SDK is a framework, that allows to create [Horizen](https://www.horizen.global/) blockchain compatible sidechains with custom business logic.  
+Sidechains are an appealing innovation devised to enable blockchain scalability and extensibility. The basic idea is simple yet powerful: construct a parallel chain – sidechain – with desired
+features like custom business logic, and provide a way to transfer coins between the mainchain and the sidechain
+Sidechains-SDK is a framework, that allows to create such sidechains with custom business logic for [Horizen](https://www.horizen.global/) blockchain. Detailed description mainchain / sidechain interaction could be found on next [whitepaper](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)  
 
-**Alpha features**
+**Beta features**
 1. Multiple sidechain nodes network.
-2. Mainchain synchronization: Cross-chain Transfer Protocol support for sidechain declaration and forward transfers.
-3. Basic Consensus (anyone can forge).
+2. Mainchain synchronization: Cross-chain Transfer Protocol support for sidechain declaration: forward and backward transfers.
+3. Proof-of-Stake consensus protocol for sidechain based on Ouroboros Praos consensus protocol.
 4. Built-in coins transferring operations inside sidechain.
 5. HTTP API for basic node operations.
 6. Possibility to declare custom Transactions/Boxes/Secrets/etc.
@@ -20,7 +22,7 @@ Sidechains-SDK is available and tested on Linux and Windows (64bit).
 
 **Requirements**
 
-Install Java 8 or newer, Scala 2.12.x, SBT 0.13.x
+Install Java 11 or newer, Scala 2.12.x, SBT 0.13.x
 
 **Interaction**
 
@@ -40,4 +42,4 @@ Project has a module maven structure and consists of 3 modules:
 
 **Examples**
 
-To have a sidechain node without any custom business logic run [Simple App](examples/simpleapp/readme.md) example.
+To have a sidechain node without any custom business logic run [Simple App](examples/simpleapp/mc_sc_workflow_example.md) example.
