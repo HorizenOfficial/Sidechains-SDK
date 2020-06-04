@@ -1,1 +1,1 @@
-java -cp "${project.build.finalName}.${project.packaging}:lib/*" com.horizen.examples.SimpleApp settings.conf
+java -jar com.horizen.examples.SimpleApp sc_settings.conf

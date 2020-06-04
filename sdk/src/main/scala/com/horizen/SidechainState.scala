@@ -45,8 +45,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   override type NVCT = SidechainState
 
-  val sysDataConstant: Array[Byte] = params.calculatedSysDataConstant
-
   lazy val verificationKeyFullFilePath: String = {
     if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
       throw new IllegalStateException(s"Verification key file name is not set")
@@ -108,32 +106,45 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
     for (certificate <- mod.withdrawalEpochCertificateOpt) {
       getUnprocessedWithdrawalRequests(certificate.epochNumber) match {
-        case Some(withdrawalRequests) =>
+        case Some(withdrawalRequests) => {
           if (withdrawalRequests.size != certificate.backwardTransferOutputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-            for (o <- certificate.backwardTransferOutputs)
-              if (!withdrawalRequests.exists(r => {
-                util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
-                  r.value().equals(o.amount)
-                }))
-              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
 
-              val previousEndEpochBlockHash: Array[Byte] =
-                stateStorage
-                  .getLastCertificateEndEpochMcBlockHashOpt
-                  .getOrElse({
-                    require(certificate.epochNumber == 0, "Certificate epoch number > 0, but end previous epoch mc block hash was not found.")
-                    params.parentHashOfGenesisMainchainBlock
-                  })
+          for (o <- certificate.backwardTransferOutputs) {
+            if (!withdrawalRequests.exists(r => {
+              util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
+                r.value().equals(o.amount)
+            })) {
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+            }
+          }
 
-              log.info(s"Verify backward transfer certificate with parameters: withdrawalRequests = ${withdrawalRequests.foreach(_.toString)}, certificate.endEpochBlockHash = ${BytesUtils.toHexString(certificate.endEpochBlockHash)}, previousEndEpochBlockHash = ${BytesUtils.toHexString(previousEndEpochBlockHash)}, certificate.quality = ${certificate.quality}, certificate.proof=${BytesUtils.toHexString(certificate.proof)}")
-              if (CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(withdrawalRequests.asJava, certificate.endEpochBlockHash, previousEndEpochBlockHash, certificate.quality, certificate.proof, sysDataConstant, verificationKeyFullFilePath)) {
-               log.info("Block contains successfully verified backward transfer certificate for epoch %d")
-              }
-              else {
-                throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
-              }
+          val previousEndEpochBlockHash: Array[Byte] =
+            stateStorage
+              .getLastCertificateEndEpochMcBlockHashOpt
+              .getOrElse({
+                require(certificate.epochNumber == 0, "Certificate epoch number > 0, but end previous epoch mc block hash was not found.")
+                params.parentHashOfGenesisMainchainBlock
+              })
 
+          log.info(s"Verify backward transfer certificate with parameters: withdrawalRequests = ${withdrawalRequests.foreach(_.toString)}, certificate.endEpochBlockHash = ${BytesUtils.toHexString(certificate.endEpochBlockHash)}, previousEndEpochBlockHash = ${BytesUtils.toHexString(previousEndEpochBlockHash)}, certificate.quality = ${certificate.quality}, certificate.proof=${BytesUtils.toHexString(certificate.proof)}")
+
+          val proofInCertificateIsValid = CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(
+            withdrawalRequests.asJava,
+            certificate.endEpochBlockHash,
+            previousEndEpochBlockHash,
+            certificate.quality,
+            certificate.proof,
+            params.calculatedSysDataConstant,
+            verificationKeyFullFilePath)
+
+          if (proofInCertificateIsValid) {
+            log.info("Block contains successfully verified backward transfer certificate for epoch %d")
+          }
+          else {
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
+          }
+        }
 
         case None =>
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))

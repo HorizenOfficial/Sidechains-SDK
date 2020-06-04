@@ -86,10 +86,9 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Try[Unit] = Try {
     val signersPublicKeys = params.signersPublicKeys
 
-    val actualSysDataConstant =
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, params.signersThreshold)
+    val actualSysDataConstant = params.calculatedSysDataConstant
+    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getBackwardTransferPoseidonRootHash
 
-    val expectedSysDataConstant = params.calculatedSysDataConstant
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${BytesUtils.toHexString(expectedSysDataConstant)} but actual is ${BytesUtils.toHexString(actualSysDataConstant)}")
     }

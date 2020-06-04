@@ -27,4 +27,6 @@ public interface ThresholdSignatureCircuit {
     int sysDataConstantLength();
 
     int proofSizeLength();
+
+    int certVkSize();
 }
