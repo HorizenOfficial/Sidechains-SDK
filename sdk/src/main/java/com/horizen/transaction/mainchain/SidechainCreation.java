@@ -57,7 +57,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         );
     }
 
-    public byte[] getBackwardTransferPoseidonRootHash() {
+    public byte[] genSysConstant() {
         return output.constant();
     }
 
