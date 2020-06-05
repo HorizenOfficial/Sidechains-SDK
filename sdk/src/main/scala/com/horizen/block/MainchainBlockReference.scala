@@ -247,7 +247,7 @@ object MainchainBlockReference extends ScorexLogging {
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {
-              log.info(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
+              log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
               val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
               certificates = certificates :+ c
               offset += c.size

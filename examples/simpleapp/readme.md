@@ -1,7 +1,7 @@
 **Simple App**
 ---------
 
-Simple app is a Java application that allows to run a pure Sidechain Node without any custom logic like custom boxes and transactions. Forward and Backward transactions are available from box.
+Simple app is a Java application that allows to run a pure Sidechain Node without any custom logic like custom boxes and transactions. Forward and Backward transfers are available out of the box.
 
 It is possible to run a SC node or nodes with or without real MC node connection.
 
@@ -38,7 +38,8 @@ Such a configuration is useful when you want just to test Sidechain logic and be
 
 **Running SimpleApp connected to the real MC node**
 
-Please read detailed the MC and SC workflow [example](mc_sc_workflow_example.md).
+That mode allow to use full Sidechain node functionality, i.e. create new Sidechains, synchronize Sidechain to Mainchain (Mainchain block references are included in Sidechain blocks), transfer coins from/to Mainchain and vice versa.
+Please read detailed [guide](mc_sc_workflow_example.md) how to setup that mode.
 
 **How to choose the address of the first forward transfers during creation?**
 
