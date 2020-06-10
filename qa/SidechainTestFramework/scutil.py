@@ -601,8 +601,8 @@ Parameters:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
 def create_sidechain(sc_creation_info):
-    accounts = generate_secrets(1, 1)
-    vrf_keys = generate_vrf_secrets(1, 1)
+    accounts = generate_secrets("seed", 1)
+    vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
     genesis_info = initialize_new_sidechain_in_mainchain(

@@ -73,7 +73,7 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
 object MainchainTxSidechainCreationCrosschainOutput {
   val OUTPUT_TYPE: Byte = 3.toByte
 
-  def calculateSidechainId(index: Int, transactionHash: Array[Byte]): Array[Byte] = {
+  def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
     BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(transactionHash), BytesUtils.reverseBytes(Ints.toByteArray(index))))
   }
 }

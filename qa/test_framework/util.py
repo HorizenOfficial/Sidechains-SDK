@@ -463,7 +463,6 @@ def get_coinbase_address(node, expected_utxos=None):
 """
 Perform SC creation, mine mainchain blocks, create genesis info.
 Parameters:
- - sidechain_id: id of the sidechain to be created
  - mainchain_node: the mainchain node
  - public_key: a public key
  - withdrawal_epoch_length
@@ -472,6 +471,7 @@ Parameters:
 Output: an array of two information:
  - the genesis info used for start the sidechain node
  - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
+ - created sidechain id
 
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length,

@@ -7,18 +7,12 @@ import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Ed25519;
 import com.horizen.utils.Utils;
-import com.horizen.utils.Pair;
-import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
-import com.horizen.secret.VrfSecretKey;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
 
@@ -84,10 +78,10 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;
 
-        int idx = BytesUtils.getInt(bytes, offset);
+        int index = BytesUtils.getInt(bytes, offset);
 
-        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(idx, txHash);
-        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, idx);
+        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(txHash, index);
+        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, index);
     }
 
     @Override

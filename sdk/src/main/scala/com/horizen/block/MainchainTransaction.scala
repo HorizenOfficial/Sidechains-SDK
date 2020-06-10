@@ -6,11 +6,20 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class MainchainTransaction(
-                          transactionsBytes: Array[Byte],
-                          version: Int,
-                          crosschainOutputsMap: Map[ByteArrayWrapper, Seq[MainchainTxCrosschainOutput]],
-                          val hash: Array[Byte]
+                            transactionsBytes: Array[Byte],
+                            version: Int,
+                            sidechainCreationOutputsData: Seq[MainchainTxSidechainCreationCrosschainOutputData],
+                            forwardTransferOutputs: Seq[MainchainTxForwardTransferCrosschainOutput]
                           ) {
+  val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
+
+  private val sidechainCreationOutputs = sidechainCreationOutputsData
+    .zipWithIndex
+    .map{case (outputData, index) => //However, mainchain use unsigned int
+      val sidechainId: ByteArrayWrapper = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(hash, index)
+      new MainchainTxSidechainCreationCrosschainOutput(sidechainId, outputData)}
+
+  private val crosschainOutputsMap = (sidechainCreationOutputs ++ forwardTransferOutputs).groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
 
   lazy val bytes: Array[Byte] = transactionsBytes.clone()
 
@@ -111,15 +120,6 @@ object MainchainTransaction {
     }
 
     val thisMainchainTransactionBytes = transactionBytes.slice(offset, currentOffset)
-    val mainchainTransactionHash = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(thisMainchainTransactionBytes))
-
-    val sidechainCreationOutputs = sidechainCreationOutputsData
-      .zipWithIndex
-      .map{case (output, index) => //However, mainchain use unsigned int
-        val sidechainId: ByteArrayWrapper = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(index, mainchainTransactionHash)
-        new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output)}
-
-    val crosschainOutputsMap = (sidechainCreationOutputs ++ forwardTransferOutputs).groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
-    new MainchainTransaction(thisMainchainTransactionBytes, version, crosschainOutputsMap, mainchainTransactionHash)
+    new MainchainTransaction(thisMainchainTransactionBytes, version, sidechainCreationOutputsData, forwardTransferOutputs)
   }
 }
