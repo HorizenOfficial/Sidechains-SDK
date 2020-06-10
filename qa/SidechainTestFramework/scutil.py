@@ -601,19 +601,19 @@ Parameters:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
 def create_sidechain(sc_creation_info):
-    accounts = generate_secrets(sc_creation_info.sidechain_id, 1)
-    vrf_keys = generate_vrf_secrets(sc_creation_info.sidechain_id, 1)
+    accounts = generate_secrets(1, 1)
+    vrf_keys = generate_vrf_secrets(1, 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    sidechain_id = sc_creation_info.sidechain_id
-    genesis_info = initialize_new_sidechain_in_mainchain(sidechain_id,
+    genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     genesis_account.publicKey,
                                     sc_creation_info.forward_amount,
                                     vrf_key.publicKey)
-    print "Sidechain created with id: " + sidechain_id
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
+    sidechain_id = genesis_info[2]
+
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key)

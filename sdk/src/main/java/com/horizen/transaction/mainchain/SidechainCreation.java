@@ -3,6 +3,7 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
+import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -77,14 +78,16 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         if(bytes.length < 40 + sidechainCreationSize)
             throw new IllegalArgumentException("Input data corrupted.");
 
-        MainchainTxSidechainCreationCrosschainOutput output = MainchainTxSidechainCreationCrosschainOutput.create(bytes, offset).get();
+        MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
         offset += sidechainCreationSize;
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;
 
         int idx = BytesUtils.getInt(bytes, offset);
-        return new SidechainCreation(output, txHash, idx);
+
+        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(idx, txHash);
+        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, idx);
     }
 
     @Override
