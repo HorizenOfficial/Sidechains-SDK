@@ -53,23 +53,7 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
 
     @Override
     public boolean verifyProof(byte[] message, byte[] publicKeyBytes, byte[] proofBytes) {
-        VRFPublicKey publicKey = VRFPublicKey.deserialize(publicKeyBytes);
-        VRFProof vrfProof = VRFProof.deserialize(proofBytes);
-        FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
-
-        FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
-
-        publicKey.freePublicKey();
-        vrfProof.freeProof();
-        messageAsFieldElement.freeFieldElement();
-
-        if (vrfOutput != null) {
-            vrfOutput.freeFieldElement();
-            return true;
-        }
-        else {
-            return false;
-        }
+        return proofToOutput(publicKeyBytes, message, proofBytes).isPresent();
     }
 
     @Override
@@ -89,19 +73,20 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
 
         FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
 
-        if (vrfOutput != null) {
-            byte[] vrfOutputBytes = vrfOutput.serializeFieldElement();
-
-            publicKey.freePublicKey();
-            vrfProof.freeProof();
-            messageAsFieldElement.freeFieldElement();
+        Optional<byte[]> output;
+        if(vrfOutput != null) {
+            output = Optional.of(vrfOutput.serializeFieldElement());
             vrfOutput.freeFieldElement();
-
-            return Optional.of(vrfOutputBytes);
         }
         else {
-            return Optional.empty();
+            output = Optional.empty();
         }
+
+        publicKey.freePublicKey();
+        vrfProof.freeProof();
+        messageAsFieldElement.freeFieldElement();
+
+        return output;
     }
 
     @Override

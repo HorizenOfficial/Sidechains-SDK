@@ -192,7 +192,7 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHash, previousEndEpochBlockHash)
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, BytesUtils.reverseBytes(endEpochBlockHash), BytesUtils.reverseBytes(previousEndEpochBlockHash))
 
     val sidechainWallet = sidechainNodeView.vault
     val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
@@ -225,8 +225,8 @@ class CertificateSubmitter
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.endWithdrawalEpochBlockHash,
-      dataForProofGeneration.prevEndWithdrawalEpochBlockHash,
+      BytesUtils.reverseBytes(dataForProofGeneration.endWithdrawalEpochBlockHash),
+      BytesUtils.reverseBytes(dataForProofGeneration.prevEndWithdrawalEpochBlockHash),
       signersPublicKeysBytes.asJava,
       signaturesBytes.asJava,
       params.signersThreshold,

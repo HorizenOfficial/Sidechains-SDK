@@ -19,9 +19,6 @@ import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
 import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
-    public static final byte SECRET_TYPE_ID = VrfPrivateKeySecretId.id();
-    private static final VrfSecretKeySerializer SERIALIZER = VrfSecretKeySerializer.getSerializer();
-
     private final byte[] secretBytes;
     private final byte[] publicBytes;
 
