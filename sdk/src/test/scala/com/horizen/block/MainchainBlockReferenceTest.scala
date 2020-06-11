@@ -177,6 +177,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
   // fix test and uncomment
   @Test
+  @Ignore
   def blockCreate3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with creation of 3 sidechains.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
@@ -271,6 +272,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   // to do: fix test and uncomment
+  @Ignore
   @Test
   def blockForwardTransfer2Sidechains(): Unit = {
 

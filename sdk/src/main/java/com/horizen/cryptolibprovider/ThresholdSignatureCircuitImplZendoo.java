@@ -74,10 +74,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return verificationResult;
     }
 
-    @Override
-    public int sysDataConstantLength() {
-        return PoseidonHash.HASH_LENGTH;
-    }
 
     @Override
     public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
@@ -90,5 +86,20 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         schnorrPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
 
         return sysDataConstantBytes;
+    }
+
+    @Override
+    public int sysDataConstantLength() {
+        return PoseidonHash.HASH_LENGTH;
+    }
+
+    @Override
+    public int proofSizeLength() {
+        return 771; //@TODO take it from JNI side
+    }
+
+    @Override
+    public int certVkSize() {
+        return 1544; //@TODO take it from JNI side
     }
 }

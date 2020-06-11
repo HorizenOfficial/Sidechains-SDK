@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import java.util
+import java.util.Arrays
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
@@ -14,6 +15,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
+import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -141,7 +143,7 @@ case class MainchainBlockReference(
   }
 }
 
-object MainchainBlockReference {
+object MainchainBlockReference extends ScorexLogging {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 2048 * 1024 //2048K
   val SC_CERT_BLOCK_VERSION = 3
@@ -245,6 +247,7 @@ object MainchainBlockReference {
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {
+              log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
               val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
               certificates = certificates :+ c
               offset += c.size
