@@ -6,6 +6,8 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import java.math.BigDecimal
 
+import com.horizen.utils.BytesUtils
+
 @JsonView(Array(classOf[Views.Default]))
 case class SidechainInfoResponse
   (sidechainId: Array[Byte],
@@ -64,6 +66,6 @@ object CertificateRequestCreator {
       endEpochBlockHash,
       proofBytes,
       quality,
-      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
+      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
   }
 }

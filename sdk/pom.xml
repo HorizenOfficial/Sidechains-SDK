@@ -204,12 +204,6 @@
 			<version>1.18.3</version>
 		</dependency>
 
-		<dependency>
-			<groupId>com.horizen</groupId>
-			<artifactId>zendoo-sc-cryptolib</artifactId>
-			<version>0.2.1-SNAPSHOT</version>
-		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -311,6 +305,7 @@
                     <include>schnorr_sk00_hex</include>
                     <include>sample_proving_key_7_keys_with_threshold_5</include>
                     <include>sample_vk_7_keys_with_threshold_5</include>
+					<include>pippo_vk</include>
                     <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->

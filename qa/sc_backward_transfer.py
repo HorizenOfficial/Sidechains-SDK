@@ -237,10 +237,12 @@ class SCBootstrap(SidechainTestFramework):
         assert_equal(2, len(we1_sc_cert["backwardTransferOutputs"]),
                      "Backward transfer amount in certificate is wrong.")
 
-        assert_equal(mc_address1, we1_sc_cert["backwardTransferOutputs"][0]["pubKeyHash"], "First BT address is wrong.")
+        reversed_pub_key_hash_0 = we1_sc_cert["backwardTransferOutputs"][0]["pubKeyHash"].decode('hex')[::-1].encode('hex')
+        assert_equal(mc_address1, reversed_pub_key_hash_0, "First BT address is wrong.")
         assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
 
-        assert_equal(mc_address2, we1_sc_cert["backwardTransferOutputs"][1]["pubKeyHash"], "Second BT address is wrong.")
+        reversed_pub_key_hash_1 = we1_sc_cert["backwardTransferOutputs"][1]["pubKeyHash"].decode('hex')[::-1].encode('hex')
+        assert_equal(mc_address2, reversed_pub_key_hash_1, "Second BT address is wrong.")
         assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")

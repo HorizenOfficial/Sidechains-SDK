@@ -38,15 +38,15 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val customData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customDataLength.value().intValue())
     currentOffset += customDataLength.value().intValue()
 
-    val constantLength: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.sysDataConstantLength()
-    val constant: Array[Byte] = new Array[Byte](constantLength)
-    //val constant: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength)
-    //currentOffset += constantLength
+    val constantLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    currentOffset += constantLength.size()
 
-    val certVkSize: Int = 1544 // TODO: take it from zendoo interface
-    val certVk: Array[Byte] = new Array[Byte](certVkSize) // TODO: uncomment when possible
-    //val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize)
-    //currentOffset += certVkSize
+    val constant: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue())
+    currentOffset += constantLength.value().intValue()
+
+    val certVkSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.certVkSize()
+    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize)
+    currentOffset += certVkSize
 
     new MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes.slice(offset, currentOffset),
       withdrawalEpochLength, amount, address, customData, constant, certVk)

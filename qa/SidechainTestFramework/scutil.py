@@ -136,10 +136,6 @@ Parameters:
 Output: an array of instances of Account (see sc_bootstrap_info.py).
 """
 def generate_secrets(seed, number_of_accounts):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
     accounts = []
     secrets = []
     for i in range(number_of_accounts):
@@ -162,10 +158,6 @@ Output: an array of instances of VrfKey (see sc_bootstrap_info.py).
 """
 
 def generate_vrf_secrets(seed, number_of_vrf_keys):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
     vrf_keys = []
     secrets = []
     for i in range(number_of_vrf_keys):
@@ -188,10 +180,6 @@ Parameters:
 Output: WithdrawalCertificateData (see sc_bootstrap_info.py).
 """
 def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
     jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
     output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
 
@@ -627,7 +615,7 @@ def create_sidechain(sc_creation_info):
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    withdrawal_certificate_data = generate_withdrawal_certificate_data(sc_creation_info.sidechain_id, 7, 5)
+    withdrawal_certificate_data = generate_withdrawal_certificate_data("seed", 7, 5)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
