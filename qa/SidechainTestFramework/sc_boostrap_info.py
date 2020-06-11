@@ -11,9 +11,8 @@ SCCreationInfo: {
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, sidechain_id="".zfill(64), forward_amount=100, withdrawal_epoch_length=1000):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000):
         self.mc_node = mc_node
-        self.sidechain_id = sidechain_id
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
 

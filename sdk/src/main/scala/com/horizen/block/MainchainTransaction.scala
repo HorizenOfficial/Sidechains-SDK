@@ -1,18 +1,27 @@
 package com.horizen.block
 
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt, _}
+
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-
 class MainchainTransaction(
-                          transactionsBytes: Array[Byte],
-                          version: Int,
-                          crosschainOutputsMap: Map[ByteArrayWrapper, Seq[MainchainTxCrosschainOutput]]
+                            transactionsBytes: Array[Byte],
+                            version: Int,
+                            sidechainCreationOutputsData: Seq[MainchainTxSidechainCreationCrosschainOutputData],
+                            forwardTransferOutputs: Seq[MainchainTxForwardTransferCrosschainOutput]
                           ) {
+  val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
+
+  private val sidechainCreationOutputs = sidechainCreationOutputsData
+    .zipWithIndex
+    .map{case (outputData, index) => //However, mainchain use unsigned int
+      val sidechainId: ByteArrayWrapper = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(hash, index)
+      new MainchainTxSidechainCreationCrosschainOutput(sidechainId, outputData)}
+
+  private val crosschainOutputsMap = (sidechainCreationOutputs ++ forwardTransferOutputs).groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
 
   lazy val bytes: Array[Byte] = transactionsBytes.clone()
-
-  lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
@@ -30,7 +39,6 @@ object MainchainTransaction {
   private val SC_TX_VERSION: Int = 0xFFFFFFFC // -4
 
   def create(transactionBytes: Array[Byte], offset: Int): Try[MainchainTransaction] = Try {
-    var crosschainOutputsMap: Map[ByteArrayWrapper, Seq[MainchainTxCrosschainOutput]] = Map() // key sidechainID
     var currentOffset: Int = offset
 
     val version = BytesUtils.getReversedInt(transactionBytes, currentOffset)
@@ -40,7 +48,7 @@ object MainchainTransaction {
     val inputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
     currentOffset += inputsNumber.size()
 
-    for (i <- 1 to inputsNumber.value().intValue()) {
+    for (_ <- 1 to inputsNumber.value().intValue()) {
       currentOffset += MainchainTransactionInput.parse(transactionBytes, currentOffset).size
     }
 
@@ -48,20 +56,21 @@ object MainchainTransaction {
     val outputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
     currentOffset += outputsNumber.size()
 
-    for (i <- 1 to outputsNumber.value().intValue()) {
+    for (_ <- 1 to outputsNumber.value().intValue()) {
       currentOffset += MainchainTransactionOutput.parse(transactionBytes, currentOffset).size
     }
 
-    if(version == SC_TX_VERSION) {
-      var crosschainOutputs: Seq[MainchainTxCrosschainOutput] = Seq()
+    val sidechainCreationOutputsData = ListBuffer[MainchainTxSidechainCreationCrosschainOutputData]()
+    val forwardTransferOutputs  = ListBuffer[MainchainTxForwardTransferCrosschainOutput]()
 
+    if(version == SC_TX_VERSION) {
       // parse SidechainCreation outputs
       val creationOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += creationOutputsNumber.size()
-      for (i <- 1 to creationOutputsNumber.value().intValue()) {
-        val output = MainchainTxSidechainCreationCrosschainOutput.create(transactionBytes, currentOffset).get
+      for (_ <- 1 to creationOutputsNumber.value().intValue()) {
+        val output = MainchainTxSidechainCreationCrosschainOutputData.create(transactionBytes, currentOffset).get
         currentOffset += output.size
-        crosschainOutputs = crosschainOutputs :+ output
+        sidechainCreationOutputsData += output
       }
 
       // dummy parse of Certifier lock amount for merge_support_branch
@@ -71,14 +80,11 @@ object MainchainTransaction {
       // parse Forward Transfer outputs
       val forwardTransferOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += forwardTransferOutputsNumber.size()
-      for (i <- 1 to forwardTransferOutputsNumber.value().intValue()) {
+      for (_ <- 1 to forwardTransferOutputsNumber.value().intValue()) {
         val output = MainchainTxForwardTransferCrosschainOutput.create(transactionBytes, currentOffset).get
         currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
-        crosschainOutputs = crosschainOutputs :+ output
+        forwardTransferOutputs += output
       }
-
-      // put data into crosschainOutputsMap
-      crosschainOutputsMap = crosschainOutputs.groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
     }
 
     // parse lockTime. TO DO: check. maybe need to use getInt
@@ -117,6 +123,7 @@ object MainchainTransaction {
       }
     }
 
-    new MainchainTransaction(transactionBytes.slice(offset, currentOffset), version, crosschainOutputsMap)
+    val thisMainchainTransactionBytes = transactionBytes.slice(offset, currentOffset)
+    new MainchainTransaction(thisMainchainTransactionBytes, version, sidechainCreationOutputsData, forwardTransferOutputs)
   }
 }

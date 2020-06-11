@@ -463,7 +463,6 @@ def get_coinbase_address(node, expected_utxos=None):
 """
 Perform SC creation, mine mainchain blocks, create genesis info.
 Parameters:
- - sidechain_id: id of the sidechain to be created
  - mainchain_node: the mainchain node
  - public_key: a public key
  - withdrawal_epoch_length
@@ -472,9 +471,10 @@ Parameters:
 Output: an array of two information:
  - the genesis info used for start the sidechain node
  - the height of the mainchain block at which the sidechain has been created (useful for future checks of mainchain block reference inclusion)
+ - created sidechain id
 
 """
-def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdrawal_epoch_length,
+def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length,
                                           public_key, forward_transfer_amount, vrf_public_key, genSysConstant, verificationKey):
     number_of_blocks_to_enable_sc_logic = 219
     number_of_blocks = mainchain_node.getblockcount()
@@ -483,11 +483,16 @@ def initialize_new_sidechain_in_mainchain(sidechain_id, mainchain_node, withdraw
         mainchain_node.generate(diff)
 
     custom_data = vrf_public_key
-    transaction_id = mainchain_node.sc_create(sidechain_id, withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
+    transaction_id = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
+    decoded_tx = mainchain_node.getrawtransaction(transaction_id, 1)
+
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
+    sidechain_id = decoded_tx['vsc_ccout'][0]['scid']
+    print "Sidechain created with Id: {0}".format(sidechain_id)
+
     mainchain_node.generate(1)
-    return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount()]
+    return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount(), sidechain_id]
 
 
 """
