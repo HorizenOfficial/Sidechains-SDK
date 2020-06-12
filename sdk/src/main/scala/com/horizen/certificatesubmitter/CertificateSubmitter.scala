@@ -87,7 +87,7 @@ class CertificateSubmitter
     val signersPublicKeys = params.signersPublicKeys
 
     val actualSysDataConstant = params.calculatedSysDataConstant
-    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).genSysConstant
+    val expectedSysDataConstant = getSidechainCreationTransaction(sidechainNodeView.history).getGenSysConstant
 
     if (actualSysDataConstant.deep != expectedSysDataConstant.deep) {
       throw new IllegalStateException(s"Incorrect configuration for backward transfer, expected SysDataConstant ${BytesUtils.toHexString(expectedSysDataConstant)} but actual is ${BytesUtils.toHexString(actualSysDataConstant)}")

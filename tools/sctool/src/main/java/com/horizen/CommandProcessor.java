@@ -30,7 +30,6 @@ import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
-import org.iq80.leveldb.util.FileUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

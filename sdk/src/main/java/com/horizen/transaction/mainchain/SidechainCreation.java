@@ -58,7 +58,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         );
     }
 
-    public byte[] genSysConstant() {
+    public byte[] getGenSysConstant() {
         return output.constant();
     }
 
