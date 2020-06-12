@@ -47,7 +47,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, websocket_port_by_mc_node_index(1)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
                                          sc_node_1_configuration, sc_node_2_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
