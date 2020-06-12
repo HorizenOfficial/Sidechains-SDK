@@ -35,7 +35,7 @@ Test:
           and then to MC/SC blocks.
         - verify epoch 1 certificate, verify backward transfers list    
 """
-class SCBootstrap(SidechainTestFramework):
+class SCBackwardTransfer(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
@@ -250,4 +250,4 @@ class SCBootstrap(SidechainTestFramework):
         # TODO: continue the flow and test ceased Sidechain case.
 
 if __name__ == "__main__":
-    SCBootstrap().main()
+    SCBackwardTransfer().main()

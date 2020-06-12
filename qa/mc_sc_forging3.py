@@ -42,7 +42,7 @@ Test:
 """
 
 
-class MCSCConnectedNodes(SidechainTestFramework):
+class MCSCForging3(SidechainTestFramework):
 
     number_of_mc_nodes = 3
     number_of_sidechain_nodes = 1
@@ -174,4 +174,4 @@ class MCSCConnectedNodes(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    MCSCConnectedNodes().main()
+    MCSCForging3().main()

@@ -26,7 +26,7 @@ Test:
         - create new forward transfer to sidechain
         - verify that all keys/boxes/balances are changed
 """
-class SCBootstrap(SidechainTestFramework):
+class SCForwardTransfer(SidechainTestFramework):
 
     sc_nodes_bootstrap_info=None
 
@@ -96,4 +96,4 @@ class SCBootstrap(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCBootstrap().main()
+    SCForwardTransfer().main()
