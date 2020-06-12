@@ -9,19 +9,30 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 
 Install Python 2.7
 
+**Additional settings**
+
+Setup two environment variables.
+
+Example for Linux environment:
+
+	```
+	BITCOINCLI="/home/user/zen/zen-cli"
+	BITCOIND="/home/user/zen/zend"
+	```
+
 **Execution**
 
 You can run all tests using command.
 
-        ```
-        python run_sc_tests.py
-        ```
+	```
+	python run_sc_tests.py
+	```
     
 Or run individual test using command
 
-        ```
-        python <test.py>
-        ```
+	```
+	python <test.py>
+	```
 
 **Template configuration files**
 
