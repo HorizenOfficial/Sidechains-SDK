@@ -3,20 +3,16 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
+import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.BytesUtils;
-import com.horizen.utils.Ed25519;
 import com.horizen.utils.Utils;
-import com.horizen.utils.Pair;
-import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
-import com.horizen.secret.VrfSecretKey;
+import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
 
@@ -39,9 +35,17 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public Optional<ForgerBox> getBox() {
-        // at the moment sc creation output doesn't create any new coins.
-        return Optional.of(getHardcodedGenesisForgerBox());
+    public ForgerBox getBox() {
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
+        long value = output.amount();
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+
+        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
+
+        byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
+        long nonce = BytesUtils.getLong(hash, 0);
+
+        return forgerBoxData.getBox(nonce);
     }
 
     @Override
@@ -54,6 +58,10 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         );
     }
 
+    public byte[] getGenSysConstant() {
+        return output.constant();
+    }
+
     public static SidechainCreation parseBytes(byte[] bytes) {
 
         int offset = 0;
@@ -64,14 +72,16 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         if(bytes.length < 40 + sidechainCreationSize)
             throw new IllegalArgumentException("Input data corrupted.");
 
-        MainchainTxSidechainCreationCrosschainOutput output = MainchainTxSidechainCreationCrosschainOutput.create(bytes, offset).get();
+        MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
         offset += sidechainCreationSize;
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;
 
-        int idx = BytesUtils.getInt(bytes, offset);
-        return new SidechainCreation(output, txHash, idx);
+        int index = BytesUtils.getInt(bytes, offset);
+
+        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(txHash, index);
+        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, index);
     }
 
     @Override
@@ -82,22 +92,4 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public int withdrawalEpochLength() {
         return output.withdrawalEpochLength();
     }
-
-
-
-    private static Pair<byte[], byte[]> genesisStakeKeys = Ed25519.createKeyPair("ThatForgerBoxShallBeGetFromGenesisBoxNotHardcoded".getBytes());
-    public static PrivateKey25519 genesisSecret = new PrivateKey25519(genesisStakeKeys.getKey(), genesisStakeKeys.getValue());
-    public static VrfSecretKey vrfGenesisSecretKey = VrfKeyGenerator.getInstance().generateSecret(genesisStakeKeys.getKey());
-    private static VrfPublicKey vrfPublicKey = vrfGenesisSecretKey.publicImage();
-
-    public static long initialValue = 10000000000L;
-    public static ForgerBox getHardcodedGenesisForgerBox() {
-        PublicKey25519Proposition proposition = genesisSecret.publicImage();
-        PublicKey25519Proposition blockSignProposition = genesisSecret.publicImage();
-        ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, initialValue, blockSignProposition, vrfPublicKey);
-        long nonce = 42L;
-
-        return forgerBoxData.getBox(nonce);
-    }
-
 }

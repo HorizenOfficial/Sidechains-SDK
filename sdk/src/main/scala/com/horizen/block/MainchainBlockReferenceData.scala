@@ -1,14 +1,12 @@
 package com.horizen.block
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.serialization.{JsonMerklePathOptionSerializer, JsonMerkleRootsSerializer, Views}
+import com.horizen.serialization.{JsonMerklePathOptionSerializer, Views}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.{ByteArrayWrapper, MerklePath}
+import com.horizen.utils.MerklePath
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-
-import scala.collection.mutable
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash"))
@@ -16,10 +14,9 @@ case class MainchainBlockReferenceData(
                                         headerHash: Array[Byte],
                                         sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
                                         @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
-                                   mproof: Option[MerklePath],
+                                        mProof: Option[MerklePath],
                                         proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
-                                        backwardTransferCertificate: Option[MainchainBackwardTransferCertificate]
-                                 ) extends BytesSerializable {
+                                        withdrawalEpochCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -49,7 +46,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.mproof match {
+    obj.mProof match {
       case Some(mp) =>
         w.putInt(mp.bytes().length)
         w.putBytes(mp.bytes())
@@ -75,7 +72,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.backwardTransferCertificate match {
+    obj.withdrawalEpochCertificate match {
       case Some(certificate) =>
         val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
         w.putInt(cb.length)
@@ -126,7 +123,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
 
     val certificateSize: Int = r.getInt()
 
-    val certificate: Option[MainchainBackwardTransferCertificate] = {
+    val certificate: Option[WithdrawalEpochCertificate] = {
       if (certificateSize > 0)
         Some(MainchainBackwardTransferCertificateSerializer.parseBytes(r.getBytes(certificateSize)))
       else

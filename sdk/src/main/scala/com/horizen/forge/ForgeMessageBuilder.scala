@@ -11,11 +11,11 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.MerklePath
-import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 import com.horizen.chain._
+import com.horizen.vrf.VrfOutput
 
 import scala.util.{Failure, Success, Try}
 

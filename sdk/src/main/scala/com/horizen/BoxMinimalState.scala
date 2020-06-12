@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.MainchainBackwardTransferCertificate
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.Box
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.proposition.Proposition
@@ -27,7 +27,7 @@ trait BoxMinimalState[P <: Proposition,
                    newVersion: VersionTag,
                    withdrawalEpochInfo: WithdrawalEpochInfo,
                    consensusEpoch: ConsensusEpochNumber,
-                   containsBackwardTransferCertificate: Boolean): Try[BMS]
+                   withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[BMS]
 
   override def validate(mod: M): Try[Unit]
 

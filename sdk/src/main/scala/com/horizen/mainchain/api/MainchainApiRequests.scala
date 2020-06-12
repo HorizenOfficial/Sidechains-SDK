@@ -6,6 +6,8 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import java.math.BigDecimal
 
+import com.horizen.utils.BytesUtils
+
 @JsonView(Array(classOf[Views.Default]))
 case class SidechainInfoResponse
   (sidechainId: Array[Byte],
@@ -29,14 +31,13 @@ case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
    endEpochBlockHash: Array[Byte],
+   proofBytes: Array[Byte],
+   quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
-   subtractFeeFromAmount: Boolean = false,
    fee: String = "0.00001")
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
   require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
-  require(backwardTransfers != null, "List of BackwardTransfers MUST be NOT NULL.")
-  require(backwardTransfers.nonEmpty, "List of BackwardTransfers MUST be not empty.")
 }
 
 case class SendCertificateResponse
@@ -53,10 +54,18 @@ object CertificateRequestCreator {
 
   val ZEN_COINS_DIVISOR: BigDecimal = new BigDecimal(100000000)
 
-  def create(epochNumber: Int, endEpochBlockHash: Array[Byte],
+  def create(epochNumber: Int,
+             endEpochBlockHash: Array[Byte],
+             proofBytes: Array[Byte],
+             quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              params: NetworkParams) : SendCertificateRequest = {
-    SendCertificateRequest(params.sidechainId, epochNumber, endEpochBlockHash,
-      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
+    SendCertificateRequest(
+      params.sidechainId,
+      epochNumber,
+      endEpochBlockHash,
+      proofBytes,
+      quality,
+      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
   }
 }

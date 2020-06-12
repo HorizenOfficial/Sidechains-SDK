@@ -1,10 +1,13 @@
 package com.horizen
 
+import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
-import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
+
+import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -42,6 +45,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   override type NVCT = SidechainState
 
+  lazy val verificationKeyFullFilePath: String = {
+    if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
+      throw new IllegalStateException(s"Verification key file name is not set")
+    }
+
+    val verificationFile: File = new File(params.provingKeyFilePath)
+    if (!verificationFile.canRead) {
+      throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} is not exist or can't be read")
+    }
+    else {
+      log.info(s"Verification key file at location: ${verificationFile.getAbsolutePath}")
+      verificationFile.getAbsolutePath
+    }
+  }
+
   // Note: emit tx.semanticValidity for each tx
   override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     if (!tx.semanticValidity())
@@ -64,7 +82,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     stateStorage.getWithdrawalRequests(epoch)
   }
 
-  def unprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
+  def getUnprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
     stateStorage.getUnprocessedWithdrawalRequests(epoch)
   }
 
@@ -86,17 +104,48 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     //Check content of the backward transfer certificate if it exists
     //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
     //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
-    for (certificate <- mod.mainchainBlockReferencesData.flatMap(_.backwardTransferCertificate)) {
-      unprocessedWithdrawalRequests(certificate.epochNumber) match {
-        case Some(withdrawalRequests) =>
-          if (withdrawalRequests.size != certificate.outputs.size)
+    for (certificate <- mod.withdrawalEpochCertificateOpt) {
+      getUnprocessedWithdrawalRequests(certificate.epochNumber) match {
+        case Some(withdrawalRequests) => {
+          if (withdrawalRequests.size != certificate.backwardTransferOutputs.size)
             throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-            for (o <- certificate.outputs)
-              if (!withdrawalRequests.exists(r => {
-                util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
-                  r.value().equals(o.amount)
-                }))
-              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+
+          for (o <- certificate.backwardTransferOutputs) {
+            if (!withdrawalRequests.exists(r => {
+              util.Arrays.equals(r.proposition().bytes(), BytesUtils.reverseBytes(o.pubKeyHash)) &&
+                r.value().equals(o.amount)
+            })) {
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+            }
+          }
+
+          val previousEndEpochBlockHash: Array[Byte] =
+            stateStorage
+              .getLastCertificateEndEpochMcBlockHashOpt
+              .getOrElse({
+                require(certificate.epochNumber == 0, "Certificate epoch number > 0, but end previous epoch mc block hash was not found.")
+                params.parentHashOfGenesisMainchainBlock
+              })
+
+          log.info(s"Verify backward transfer certificate with parameters: withdrawalRequests = ${withdrawalRequests.foreach(_.toString)}, certificate.endEpochBlockHash = ${BytesUtils.toHexString(certificate.endEpochBlockHash)}, previousEndEpochBlockHash = ${BytesUtils.toHexString(previousEndEpochBlockHash)}, certificate.quality = ${certificate.quality}, certificate.proof=${BytesUtils.toHexString(certificate.proof)}")
+
+          val proofInCertificateIsValid = CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(
+            withdrawalRequests.asJava,
+            BytesUtils.reverseBytes(certificate.endEpochBlockHash),
+            BytesUtils.reverseBytes(previousEndEpochBlockHash),
+            certificate.quality,
+            certificate.proof,
+            params.calculatedSysDataConstant,
+            verificationKeyFullFilePath)
+
+          if (proofInCertificateIsValid) {
+            log.info("Block contains successfully verified backward transfer certificate for epoch %d")
+          }
+          else {
+            throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
+          }
+        }
+
         case None =>
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
@@ -159,7 +208,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           timeStampToEpochNumber(mod.timestamp),
-          mod.mainchainBlockReferencesData.flatMap(_.backwardTransferCertificate).nonEmpty
+          mod.withdrawalEpochCertificateOpt
         )
       })
     }
@@ -174,7 +223,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB],
                             newVersion: VersionTag,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
-                            consensusEpoch: ConsensusEpochNumber, containsBackwardTransferCertificate: Boolean): Try[SidechainState] = Try {
+                            consensusEpoch: ConsensusEpochNumber, withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     applicationState.onApplyChanges(this,
       version.data,
@@ -190,7 +239,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch, containsBackwardTransferCertificate).get,
+            withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch, withdrawalEpochCertificateOpt).get,
           params,
           newVersion,
           appState
@@ -288,9 +337,9 @@ object SidechainState
       None
   }
 
-  private[horizen] def genesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
-                                    applicationState: ApplicationState,
-                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
+  private[horizen] def createGenesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
+                                          applicationState: ApplicationState,
+                                          genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
       new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)

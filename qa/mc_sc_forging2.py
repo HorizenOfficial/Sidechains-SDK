@@ -64,7 +64,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
                                          sc_node_1_configuration)
         bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
@@ -76,6 +76,9 @@ class MCSCConnectedNodes(SidechainTestFramework):
         mc_node1 = self.nodes[0]
         mc_node2 = self.nodes[1]
         sc_node1 = self.sc_nodes[0]
+
+        # Synchronize mc_node1 and mc_node2
+        self.sync_all()
 
         # Generate 1 SC block without any MC block info
         scblock_id0 = generate_next_blocks(sc_node1, "first node", 1)[0]
