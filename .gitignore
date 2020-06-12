@@ -4,3 +4,5 @@ target/
 scorex.log
 scorex-errors.log
 *.iml
+tools/sctool/dependency-reduced-pom.xml
+examples/simpleapp/dependency-reduced-pom.xml

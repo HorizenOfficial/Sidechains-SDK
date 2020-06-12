@@ -45,14 +45,6 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage) extends ScorexLog
       .map(byteArray => NonceConsensusEpochInfoSerializer.parseBytes(byteArray.data))
   }
 
-  def getNonceConsensusEpochInfoOrElseUpdate(epochId: ConsensusEpochId, supplier: => NonceConsensusEpochInfo): NonceConsensusEpochInfo = {
-    getNonceConsensusEpochInfo(epochId).getOrElse{
-      val newNonceInfo = supplier
-      addNonceConsensusEpochInfo(epochId, newNonceInfo)
-      newNonceInfo
-    }
-  }
-
   private def nextVersion: Array[Byte] = {
     val version = new Array[Byte](32)
     Random.nextBytes(version)

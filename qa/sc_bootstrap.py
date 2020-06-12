@@ -7,8 +7,8 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_regularbox_balance, \
-    check_mainchain_block_reference_info, check_wallet_balance
+    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
+    check_mainchain_block_reference_info, check_wallet_balance, check_box_balance
 
 """
 Check the bootstrap feature.
@@ -36,7 +36,7 @@ class SCBootstrap(SidechainTestFramework):
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, "1".zfill(64), 100, 1000), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, 1000), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
     def sc_setup_nodes(self):
@@ -60,7 +60,7 @@ class SCBootstrap(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_regularbox_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 1,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
 

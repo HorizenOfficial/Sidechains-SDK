@@ -1,6 +1,5 @@
 package com.horizen.validation
 
-import java.math.BigInteger
 import java.time.Instant
 import java.util.Random
 
@@ -17,7 +16,7 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
-  var rnd = new Random(42)
+  val rnd = new Random(20)
   val maximumAvailableShift = 2
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):
@@ -83,7 +82,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   @Test
   def nonGenesisBlockCheck(): Unit = {
-    val epochSizeInSlots = 10
+    val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
     val totalBlocks = epochSizeInSlots * 4
     val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], blocks) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
@@ -151,7 +150,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
-
     /////////// Forger box verification /////////////////
     println("Test blockGeneratedWithIncorrectForgerBoxBlockSignProposition")
     val blockGeneratedWithIncorrectForgerBoxBlockSignProposition = generateBlockWithIncorrectForgerBoxBlockSignProposition(lastGenerator)
@@ -216,7 +214,7 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   def generateBlockWithIncorrectNonce(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val corruptedRules = generationRules.copy(corruption = generationRules.corruption.copy(consensusNonceShift =  BigInteger.valueOf(42)))
+    val corruptedRules = generationRules.copy(corruption = generationRules.corruption.copy(consensusNonceShift =  42))
     generateBlock(corruptedRules, generator)._2
 
   }

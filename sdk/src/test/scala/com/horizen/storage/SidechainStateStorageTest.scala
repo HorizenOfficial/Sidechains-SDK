@@ -4,15 +4,13 @@ import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
 
 import com.google.common.primitives.{Ints, Longs}
-
-import scala.collection.JavaConverters._
 import com.horizen.SidechainTypes
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -20,6 +18,7 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.crypto.hash.Blake2b256
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -117,14 +116,14 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), forgingStakesToAppendSeq, consensusEpoch, false)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), forgingStakesToAppendSeq, consensusEpoch, None)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getRegularBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), Seq(), consensusEpoch, false)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), Seq(), consensusEpoch, None)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

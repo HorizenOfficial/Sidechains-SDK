@@ -4,6 +4,7 @@ import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
+import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -14,21 +15,30 @@ import scorex.util.{ModifierId, bytesToId, idToBytes}
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   setSeed(1000L)
 
-  val height = 100
+  val vrfGenerationSeed = 234
+  val vrfGenerationPrefix = "SidechainBlockInfoTest"
+
+  val height: Int = 100
   val score: Long = 1L << 32 + 1
   val parentId: ModifierId = getRandomModifier()
   val timestamp: Block.Timestamp = 567081L
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
-  val mainchainHeaderHashes = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
+  val mainchainHeaderHashes: Seq[MainchainHeaderHash] = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
     "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
-  val mainchainReferenceDataHeaderHashes = Seq("CEE50DFEC92130269861FB647BA5730425C79AC164F8A0E4003CF30990628D52", "0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")
+  val mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = Seq("CEE50DFEC92130269861FB647BA5730425C79AC164F8A0E4003CF30990628D52", "0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")
     .map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(10, 100)
+  //set to true if you want to update vrf related data
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfOutput(vrfGenerationPrefix, vrfGenerationSeed);
+  }
+  val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, vrfGenerationSeed);
+  val lastBlockIdInPreviousConsensusEpoch: ModifierId = parentId
 
   @Test
   def creation(): Unit = {
     val clonedParentId: ModifierId = bytesToId(idToBytes(parentId))
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
 
     assertEquals("SidechainBlockInfo height is different", height, info.height)
     assertEquals("SidechainBlockInfo score is different", score, info.score)
@@ -47,7 +57,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
   @Test
   def serialization(): Unit = {
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
     val bytes = info.bytes
 
 
@@ -71,8 +81,8 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", info.withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
 
-    // Set to true to regenerate regression data
-    if(false) {
+    //Set to true and run if you want to update regression data.
+    if (false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainblockinfo_hex"))
       out.write(BytesUtils.toHexString(bytes))
       out.close()
@@ -111,5 +121,11 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     for(index <- mcRefDataHeaderHashes.indices)
       assertEquals("SidechainBlockInfo reference data header hash is different", mainchainReferenceDataHeaderHashes(index), mcRefDataHeaderHashes(index))
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
+
+    //check equals and hash code
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mcHeaderHashes, mcRefDataHeaderHashes, withdrawalEpochInfo, Option((vrfOutput)), lastBlockIdInPreviousConsensusEpoch)
+
+    assert(serializedInfoTry.get == info)
+    assert(serializedInfoTry.get.hashCode() == info.hashCode())
   }
 }

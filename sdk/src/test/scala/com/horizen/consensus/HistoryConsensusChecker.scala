@@ -22,7 +22,7 @@ trait HistoryConsensusChecker extends CompanionsFixture {
 
     val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), companion, params)
     SidechainHistory
-      .genesisHistory(
+      .createGenesisHistory(
         sidechainHistoryStorage,
         new ConsensusDataStorage(new InMemoryStorageAdapter()),
         params,

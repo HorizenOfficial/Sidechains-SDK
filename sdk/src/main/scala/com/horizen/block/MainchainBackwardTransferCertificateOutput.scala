@@ -1,10 +1,12 @@
 package com.horizen.block
 
-import com.google.common.primitives.{Bytes, Ints, Longs}
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.util.serialization.{Reader, Writer}
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.serialization.Views
+import com.horizen.utils.{BytesUtils, Utils}
 
+
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("outputBytes"))
 case class MainchainBackwardTransferCertificateOutput
   (outputBytes: Array[Byte],
    pubKeyHash: Array[Byte],

@@ -1,6 +1,5 @@
 package com.horizen.fixtures.sidechainblock.generation
 
-import java.math.BigInteger
 import java.util.Random
 
 import com.horizen.fixtures.VrfGenerator
@@ -10,11 +9,11 @@ import com.horizen.proof.VrfProof
 case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     getOtherSidechainForgingData: Boolean = false,
                                     merklePathFromPreviousEpoch: Boolean = false,
-                                    consensusNonceShift: BigInteger = BigInteger.valueOf(0),
+                                    consensusNonceShift: Long = 0,
                                     consensusSlotShift: Int = 0,
                                     stakeCheckCorruption: Boolean = false,
                                     forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None,
-                                    forcedVrfProof: Option[VrfProof] = None
+                                    forcedVrfProof: Option[VrfProof] = None,
                                    ) {
   override def toString: String = {
     "CorruptedGenerationRules(" +
@@ -73,7 +72,7 @@ object CorruptedGenerationRules {
     }
 
     if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(consensusNonceShift = BigInteger.valueOf(rnd.nextLong()))
+      rule = rule.copy(consensusNonceShift = rnd.nextLong())
     }
 
     if (rnd.nextInt(100) < 3) {
@@ -85,7 +84,7 @@ object CorruptedGenerationRules {
     }
 
     if (rnd.nextInt(100) < 3) {
-      VrfGenerator.generateProof(rnd.nextInt())
+      rule = rule.copy(forcedVrfProof = Some(VrfGenerator.generateProof(rnd.nextInt())))
     }
 
     rule

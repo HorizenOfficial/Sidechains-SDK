@@ -5,9 +5,9 @@ import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject._
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
+import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -15,10 +15,12 @@ import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
-import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
+import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -42,6 +44,7 @@ import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
 
 import scala.util.Try
+
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -93,7 +96,14 @@ class SidechainApp @Inject()
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+
+  val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
+    .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+
+  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -101,28 +111,48 @@ class SidechainApp @Inject()
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
-    )
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
+  )
+
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
+
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -156,8 +186,13 @@ class SidechainApp @Inject()
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
-      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
+
+    for(secretSchnorr <- sidechainSettings.withdrawalEpochCertificateSettings.signersSecrets)
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
+
+
 
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
@@ -173,7 +208,9 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  val certificateSubmitter : ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  }
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
@@ -262,4 +299,6 @@ class SidechainApp @Inject()
     binder.install(new FactoryModuleBuilder()
       .build(classOf[SidechainCoreTransactionFactory]))
   }
+
+  actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

@@ -11,9 +11,8 @@ SCCreationInfo: {
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, sidechain_id="".zfill(64), forward_amount=100, withdrawal_epoch_length=1000):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000):
         self.mc_node = mc_node
-        self.sidechain_id = sidechain_id
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
 
@@ -93,7 +92,41 @@ class Account(object):
         self.secret = secret
         self.publicKey = publicKey
 
+"""
+A Vrf key.
+The JSON representation is only for documentation.
 
+VrfAccount : {
+    "vrfSecret":
+    "vrfPublicKey": "a public key"
+}
+"""
+class VrfAccount(object):
+
+    def __init__(self, secret, publicKey):
+        self.secret = secret
+        self.publicKey = publicKey
+
+"""
+Withdrawal certificate related data .
+The JSON representation is only for documentation.
+
+WithdrawalCertificateData : {
+    "threshold":
+    "genSysConstant":"5e7b..0000"
+    "verificationKey":"caa..000"
+    "schnorr_secrets": secret key in byte hex representation
+    "schnorr_public_keys": public key in byte hex representation
+}
+"""
+class WithdrawalCertificateData(object):
+
+    def __init__(self, threshold, genSysConstant, verificationKey, schnorr_secrets = [], schnorr_public_keys = []):
+        self.threshold = threshold
+        self.genSysConstant = genSysConstant
+        self.verificationKey = verificationKey
+        self.schnorr_secrets = schnorr_secrets
+        self.schnorr_public_keys = schnorr_public_keys
 """
 Information about sidechain network already bootstrapped.
 The JSON representation is only for documentation.
@@ -107,12 +140,14 @@ SCBootstrapInfo: {
     "pow_data":
     "network":
     "withdrawal_epoch_length":
+    "genesis_vrf_account": an instance of VrfAccount
+    "withdrawal_certificate_data": an instance of WithdrawalCertificateData
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, withdrawal_certificate_data):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -121,3 +156,5 @@ class SCBootstrapInfo(object):
         self.pow_data = pow_data
         self.network = network
         self.withdrawal_epoch_length = withdrawal_epoch_length
+        self.genesis_vrf_account = genesis_vrf_account
+        self.withdrawal_certificate_data = withdrawal_certificate_data
