@@ -1,45 +1,57 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
-import java.util.{List => JList, HashMap => JHashMap}
-import com.horizen.utils.Pair
+import java.util.{HashMap => JHashMap, List => JList}
+
 import akka.actor.ActorRef
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject.assistedinject.FactoryModuleBuilder
+import com.google.inject.name.Named
+import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.box.data.NoncedBoxDataSerializer
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.companion._
+import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
-import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
+import com.horizen.proof.ProofSerializer
+import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.TransactionSerializer
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import com.horizen.transaction._
+import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.network.message.MessageSpec
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.horizen.websocket._
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
-import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.websocket._
+import scorex.core.network.message.MessageSpec
+import scorex.core.network.PeerFeature
+import scorex.core.serialization.ScorexSerializer
+import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
+import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.util.Try
 import scala.collection.immutable.Map
+import scala.collection.mutable
 import scala.io.Source
-import com.google.inject.Inject
-import com.google.inject.name.Named
-import com.horizen.utils.BytesUtils
+import com.horizen.network.SidechainNodeViewSynchronizer
+
+import scala.util.Try
+
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
+   @Named("CustomBoxDataSerializers") val customBoxDataSerializers: JHashMap[JByte, NoncedBoxDataSerializer[SidechainTypes#SCBD]],
    @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
+   @Named("CustomProofSerializers") val customProofSerializers: JHashMap[JByte, ProofSerializer[SidechainTypes#SCPR]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
@@ -48,10 +60,12 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
+   @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
+   @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
-  extends Application with ScorexLogging
+  extends Application with ScorexLogging with Module
 {
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
@@ -61,8 +75,7 @@ class SidechainApp @Inject()
 
   private val storageList = mutable.ListBuffer[Storage]()
 
-  System.out.println(s"Starting application with settings \n$sidechainSettings")
-  log.debug(s"Starting application with settings \n$sidechainSettings")
+  log.info(s"Starting application with settings \n$sidechainSettings")
 
   override implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -74,38 +87,72 @@ class SidechainApp @Inject()
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  protected val sidechainBoxesDataCompanion: SidechainBoxesDataCompanion = SidechainBoxesDataCompanion(customBoxDataSerializers)
+  protected val sidechainProofsCompanion: SidechainProofsCompanion = SidechainProofsCompanion(customProofSerializers)
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion =
+    SidechainTransactionsCompanion(customTransactionSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
 
   // Deserialize genesis block bytes
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
+
+  val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
+    .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
+
+  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
+  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight,
-      sidechainSettings.genesisData.withdrawalEpochLength
-    )
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
+  )
+
     case "testnet" => TestNetParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
+
     case "mainnet" => MainNetParams(
-      BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
-      genesisBlock.id,
-      genesisBlock.mainchainBlocks.head.hash,
-      genesisPowData,
-      sidechainSettings.genesisData.mcBlockHeight,
-      sidechainSettings.genesisData.withdrawalEpochLength
+      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainGenesisBlockId = genesisBlock.id,
+      genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
+      genesisPoWData = genesisPowData,
+      mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
+      sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      signersPublicKeys = signersPublicKeys,
+      signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
+      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      calculatedSysDataConstant = calculatedSysDataConstant
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -131,31 +178,47 @@ class SidechainApp @Inject()
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
-
+  protected val consensusDataStorage = new ConsensusDataStorage(
+    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
+    registerStorage(consensusStorage))
+  protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
     for(secretHex <- sidechainSettings.wallet.genesisSecrets)
-      sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretHex)))
+
+    for(secretSchnorr <- sidechainSettings.withdrawalEpochCertificateSettings.signersSecrets)
+      sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
-  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(sidechainSettings, sidechainHistoryStorage,
-    sidechainStateStorage,
-    sidechainWalletBoxStorage, sidechainSecretStorage, sidechainWalletTransactionStorage, params, timeProvider,
-    applicationWallet, applicationState, genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
+
+  override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
+    sidechainSettings,
+    sidechainHistoryStorage,
+    consensusDataStorage,
+    sidechainStateStorage,
+    sidechainWalletBoxStorage,
+    sidechainSecretStorage,
+    sidechainWalletTransactionStorage,
+    forgingBoxesMerklePathStorage,
+    params, timeProvider,
+    applicationWallet,
+    applicationState,
+    genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+
+  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
+  }
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(NodeViewSynchronizerRef.props[SidechainTypes#SCBT, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
-      SidechainBlock, SidechainHistory, SidechainMemoryPool]
-      (networkControllerRef, nodeViewHolderRef,
-        SidechainSyncInfoMessageSpec, settings.network, timeProvider,
-        modifierSerializers
-      ))
+    actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
+        SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
@@ -179,12 +242,11 @@ class SidechainApp @Inject()
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
-  val sidechainBlockForgerActorRef: ActorRef = ForgerRef(sidechainSettings, nodeViewHolderRef, mainchainSynchronizer, sidechainTransactionsCompanion, params)
-
+  val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef(sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
 
   // Init API
@@ -196,11 +258,14 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, nodeViewHolderRef, apiRoute))
 
+  val injector: Injector = Guice.createInjector(this)
+  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
@@ -223,4 +288,17 @@ class SidechainApp @Inject()
     storageList += storage
     storage
   }
+
+  override def configure(binder: Binder): Unit = {
+    binder.bind(classOf[SidechainBoxesDataCompanion])
+      .toInstance(sidechainBoxesDataCompanion)
+
+    binder.bind(classOf[SidechainProofsCompanion])
+      .toInstance(sidechainProofsCompanion)
+
+    binder.install(new FactoryModuleBuilder()
+      .build(classOf[SidechainCoreTransactionFactory]))
+  }
+
+  actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

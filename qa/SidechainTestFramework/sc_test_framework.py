@@ -59,6 +59,10 @@ class SidechainTestFramework(BitcoinTestFramework):
         sync_blocks(self.nodes)
         sync_mempools(self.nodes)
 
+    def sync_nodes(self, mc_nodes):
+        sync_blocks(mc_nodes)
+        sync_mempools(mc_nodes)
+
     def join_network(self):
         pass
 
@@ -70,7 +74,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000), sc_node_1_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000), sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
     def sc_setup_network(self, split = False):
@@ -86,6 +90,10 @@ class SidechainTestFramework(BitcoinTestFramework):
     def sc_sync_all(self):
         sync_sc_blocks(self.sc_nodes)
         sync_sc_mempools(self.sc_nodes)
+
+    def sc_sync_nodes(self, sc_nodes):
+        sync_sc_blocks(sc_nodes)
+        sync_sc_mempools(sc_nodes)
 
     def sc_join_network(self):
         pass

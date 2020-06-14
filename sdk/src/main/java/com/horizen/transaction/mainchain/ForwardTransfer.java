@@ -5,6 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.box.RegularBox;
+import com.horizen.box.data.RegularBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
@@ -34,10 +35,14 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     @Override
-    public Optional<RegularBox> getBox() {
+    public RegularBox getBox() {
         byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
         long nonce = BytesUtils.getLong(hash, 0);
-        return Optional.of(new RegularBox(new PublicKey25519Proposition(output.propositionBytes()), nonce, output.amount()));
+        return new RegularBox(
+                new RegularBoxData(
+                        new PublicKey25519Proposition(output.propositionBytes()),
+                        output.amount()),
+                nonce);
     }
 
     @Override

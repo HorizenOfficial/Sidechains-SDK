@@ -10,11 +10,13 @@ import com.horizen.utils.Ed25519;
 
 import java.util.Arrays;
 
+import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
+
 
 public final class PrivateKey25519 implements Secret
 {
     public static final int KEY_LENGTH = Ed25519.keyLength();
-    public static final byte SECRET_TYPE_ID = 0;
+    private static final byte privateKey25519SecretId = PrivateKey25519SecretId.id();
 
     private byte[] _privateKeyBytes;
     private byte[] _publicKeyBytes;
@@ -34,7 +36,7 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public byte secretTypeId() {
-        return SECRET_TYPE_ID;
+        return privateKey25519SecretId;
     }
 
     @Override

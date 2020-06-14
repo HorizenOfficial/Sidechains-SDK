@@ -143,7 +143,7 @@ class ElementsChainTest extends JUnitSuite {
     checkBestElementIs(chainStorage, newId4, newData4, 4)
     assertEquals("Chain from shall be equal", Seq(), chainStorage.chainAfter(id4))
     assertEquals("Searching by predicate had been failed", Some(data3), chainStorage.getLastDataByPredicate(data => data.getParentId == data3.getParentId))
-    assertEquals("Searching by predicate had been failed", Some(data2), chainStorage.getLastDataByPredicateBeforeHeight(2)(data => data.getParentId == data2.getParentId))
+    assertEquals("Searching by predicate had been failed", Some(data2), chainStorage.getLastDataByPredicateTillHeight(2)(data => data.getParentId == data2.getParentId))
 
 
     val (newId2, newData2) = dataGenerator.setParentId(1).getNextData

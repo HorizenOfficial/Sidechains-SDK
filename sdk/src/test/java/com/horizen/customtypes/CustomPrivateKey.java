@@ -6,9 +6,6 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 
 import java.util.Arrays;
 
@@ -39,7 +36,7 @@ public class CustomPrivateKey implements Secret
     }
 
     @Override
-    public ProofOfKnowledgeProposition publicImage() {
+    public CustomPublicKeyProposition publicImage() {
         return new CustomPublicKeyProposition(_publicKeyBytes);
     }
 

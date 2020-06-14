@@ -41,6 +41,12 @@
 			<version>${scala.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>io.horizen</groupId>
+			<artifactId>zendoo-sc-cryptolib</artifactId>
+			<version>0.3.0</version>
+		</dependency>
+
         <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
         <dependency>
             <groupId>io.circe</groupId>
@@ -48,24 +54,24 @@
             <version>0.9.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
-        <dependency>
-            <groupId>org.scorexfoundation</groupId>
-            <artifactId>scorex-core_2.12</artifactId>
-            <version>2.0.0-RC6</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.whispersystems</groupId>
-                    <artifactId>curve25519-java</artifactId>
-                </exclusion>
-                <!-- NOTE: because of bug in Scorex RC6 maven dependencies, we should force to include
-                different version of circe-core -->
-                <exclusion>
-                    <groupId>io.circe</groupId>
-                    <artifactId>circe-core_2.1</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
+		<dependency>
+			<groupId>org.scorexfoundation</groupId>
+			<artifactId>scorex-core_2.12</artifactId>
+			<version>2.0.0-RC6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.whispersystems</groupId>
+					<artifactId>curve25519-java</artifactId>
+				</exclusion>
+				<!-- NOTE: because of bug in Scorex RC6 maven dependencies, we should force to include
+				different version of circe-core -->
+				<exclusion>
+					<groupId>io.circe</groupId>
+					<artifactId>circe-core_2.1</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
 		<dependency>
@@ -92,6 +98,13 @@
 		<dependency>
 			<groupId>com.google.inject</groupId>
 			<artifactId>guice</artifactId>
+			<version>4.2.2</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-assistedinject</artifactId>
 			<version>4.2.2</version>
 		</dependency>
 
@@ -154,6 +167,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
 		<dependency>
 			<groupId>org.glassfish.tyrus</groupId>
@@ -161,6 +175,7 @@
 			<version>1.15</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
 		<dependency>
 			<groupId>org.iq80.leveldb</groupId>
@@ -188,6 +203,7 @@
 			<artifactId>leveldbjni-all</artifactId>
 			<version>1.18.3</version>
 		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -224,18 +240,10 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.12.4</version>
-				<configuration>
-					<skipTests>false</skipTests>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>
 				<version>2.5.2</version>
 				<configuration>
-					<file>target/${project.build.finalName}.${project.packaging}</file>			
+					<file>target/${project.build.finalName}.${project.packaging}</file>
 					<pomFile>pom.xml</pomFile>
 				</configuration>
 				<executions>
@@ -247,7 +255,7 @@
 						<phase>package</phase>
 					</execution>
 				</executions>
-			</plugin>			
+			</plugin>
 		</plugins>
 		<testResources>
 			<testResource>
@@ -256,15 +264,48 @@
 					<include>publickey25519proposition_hex</include>
 					<include>privatekey25519_hex</include>
 					<include>regulartransaction_hex</include>
+					<include>RegularTransactionSerializerTestVrfPublicKey111</include>
+					<include>RegularTransactionSerializerTestVrfPublicKey221</include>
+					<include>SidechainBlockInfoTestVrfOutput234</include>
+					<include>SidechainBlockTestVrfProof908</include>
+					<include>SidechainBlockTestVrfSecretKey908</include>
+					<include>SidechainBlockHeaderTestVrfProof178</include>
+					<include>SidechainBlockHeaderTestVrfSecretKey178</include>
+					<include>ForgerBoxMerklePathInfoTestVrfPublicKey907</include>
+					<include>ForgerBoxSerializationTestVrfPublicKey901</include>
+					<include>OmmerTestVrfProof143</include>
+					<include>OmmerTestVrfSecretKey143</include>
 					<include>regularbox_hex</include>
+					<include>forgerrbox_hex</include>
 					<include>certifierrightbox_hex</include>
 					<include>sidechainblockinfo_hex</include>
 					<include>sidechainsyncinfo_hex</include>
+					<include>sidechainblock_hex</include>
+					<include>sidechainblockheader_hex</include>
+					<include>ommer_hex</include>
 					<include>mcblock530290_testnet3</include> <!-- block generated in testnet3 (with sidechain support) -->
-					<include>mcblock473173</include>
+					<include>mcblock473173_mainnet</include>
+					<include>mcblock473174_mainnet</include>
+					<include>mcblock473175_mainnet</include>
+					<include>mcblock473176_mainnet</include>
 					<include>withdrawalrequestbox_hex</include>
+					<include>nonce_calculation_hex</include>
 					<include>mcpublickeyhashproposition_hex</include>
-					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
+                    <include>boxmerklepathinfo_hex</include>
+                    <include>sidechaincoretransaction_hex</include>
+                    <include>schnorr_sk01_hex</include>
+                    <include>schnorr_sk02_hex</include>
+                    <include>schnorr_sk03_hex</include>
+                    <include>schnorr_sk04_hex</include>
+                    <include>schnorr_sk05_hex</include>
+                    <include>schnorr_sk06_hex</include>
+                    <include>schnorr_sk07_hex</include>
+                    <include>schnorr_sk08_hex</include>
+                    <include>schnorr_sk09_hex</include>
+                    <include>schnorr_sk00_hex</include>
+                    <include>sample_proving_key_7_keys_with_threshold_5</include>
+                    <include>sample_vk_7_keys_with_threshold_5</include>
+                    <!-- from https://explorer.zen-solutions.io/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
 					<include>mcblock501173</include>
 					<!-- from https://explorer.zen-solutions.io/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
 					<include>mcblock273173</include>
@@ -284,9 +325,14 @@
 					<include>mctx_v-4_single_ft</include>								<!-- generated on regtest on 15.10.2019 -->
 					<include>mctx_v-4_multiple_ft</include>								<!-- generated on regtest on 15.10.2019 -->
 					<include>mctx_v-4_sc_creation</include> 							<!-- generated on regtest on 15.10.2019 -->
-					<include>mcblock_sc_support_regtest_sc_creation</include> 			<!-- generated on regtest on 15.10.2019 -->
-					<include>mcblock_sc_support_regtest_multiple_sc_outputs</include>	<!-- generated on regtest on 15.10.2019 -->
 					<include>sc_node_holder_fixter_settings.conf</include>
+					<include>new_mc_blocks/mc_block_empty_sidechains</include>
+					<include>new_mc_blocks/mc_block_create_3_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_2_sidechains</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer</include>
+					<include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2</include>
+					<include>backward_transfer_certificate_empty</include>
+					<include>backward_transfer_certificate_non_empty</include>
 				</includes>
 			</testResource>
 		</testResources>

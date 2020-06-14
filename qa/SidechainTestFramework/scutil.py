@@ -3,7 +3,8 @@ import sys
 
 import json
 
-from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
+    VrfAccount, WithdrawalCertificateData
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -92,6 +93,17 @@ def sync_sc_mempools(api_connections, wait_for=25):
 
 sidechainclient_processes = {}
 
+
+
+def launch_bootstrap_tool(command_name, json_parameters):
+    json_param = json.dumps(json_parameters)
+    java_ps = subprocess.Popen(["java", "-jar",
+                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar",
+                               command_name, json_param], stdout=subprocess.PIPE)
+    sc_bootstrap_output = java_ps.communicate()[0]
+    jsone_node = json.loads(sc_bootstrap_output)
+    return jsone_node
+
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
 Parameters:
@@ -109,18 +121,9 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "withdrawalEpochLength": xxx
 }
 """
-def generate_genesis_data(genesis_info, genesis_secret):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
-    jsonParameters = {"secret": genesis_secret, "info": genesis_info}
-    javaPs = subprocess.Popen(["java", "-cp",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                               "com.horizen.ScBootstrappingTool",
-                               "genesisinfo", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-    scBootstrapOutput = javaPs.communicate()[0]
-    jsonNode = json.loads(scBootstrapOutput)
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret):
+    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info}
+    jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
 
@@ -133,20 +136,11 @@ Parameters:
 Output: an array of instances of Account (see sc_bootstrap_info.py).
 """
 def generate_secrets(seed, number_of_accounts):
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
-
     accounts = []
     secrets = []
     for i in range(number_of_accounts):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        javaPs = subprocess.Popen(["java", "-cp",
-                                   "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar" + lib_separator + "../tools/sctool/target/lib/*",
-                                   "com.horizen.ScBootstrappingTool",
-                                   "generatekey", json.dumps(jsonParameters)], stdout=subprocess.PIPE)
-        scBootstrapOutput = javaPs.communicate()[0]
-        secrets.append(json.loads(scBootstrapOutput))
+        secrets.append(launch_bootstrap_tool("generatekey", jsonParameters))
 
     for i in range(len(secrets)):
         secret = secrets[i]
@@ -154,7 +148,56 @@ def generate_secrets(seed, number_of_accounts):
     return accounts
 
 
+"""
+Generate Vrf keys by calling ScBootstrappingTools with command "generateVrfKey"
+Parameters:
+ - seed
+ - number_of_accounts: the number of keys to be generated
+
+Output: an array of instances of VrfKey (see sc_bootstrap_info.py).
+"""
+
+def generate_vrf_secrets(seed, number_of_vrf_keys):
+    vrf_keys = []
+    secrets = []
+    for i in range(number_of_vrf_keys):
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+        secrets.append(launch_bootstrap_tool("generateVrfKey", jsonParameters))
+
+    for i in range(len(secrets)):
+        secret = secrets[i]
+        vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
+    return vrf_keys
+
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
+
+"""
+Generate withdrawal certificate data calling ScBootstrappingTools with command "generateProofInfo"
+Parameters:
+ - seed
+ - number_of_accounts: the number of schnorr keys to be generated
+
+Output: WithdrawalCertificateData (see sc_bootstrap_info.py).
+"""
+def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold):
+    jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
+    output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
+
+    threshold = output["threshold"]
+    verification_key = output["verificationKey"]
+    gen_sys_constant = output["genSysConstant"]
+    schnorr_keys = output["schnorrKeys"]
+
+    schnorr_secrets = []
+    schnorr_public_keys = []
+    for i in range(len(schnorr_keys)):
+        keys = schnorr_keys[i]
+        schnorr_secrets.append(keys["schnorrSecret"])
+        schnorr_public_keys.append(keys["schnorrPublicKey"])
+
+
+    withdrawal_certificate_data = WithdrawalCertificateData(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
+    return withdrawal_certificate_data
 
 """
 Create directories for each node and configuration files inside them.
@@ -173,11 +216,19 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
+    mc0datadir = os.path.join(dirname, "node0")
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
     with open('./resources/template.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
+
+    genesis_secrets = []
+    if bootstrap_info.genesis_vrf_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_vrf_account.secret)
+
+    if bootstrap_info.genesis_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -187,7 +238,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
-        'GENESIS_SECRETS': str('"'+bootstrap_info.genesis_account.secret+'"') if bootstrap_info.genesis_account is not None else '',
+        'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
@@ -197,7 +248,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
-        'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts
+        'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
+        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/") + " -datadir=" + mc0datadir.replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
+        "THRESHOLD" : bootstrap_info.withdrawal_certificate_data.threshold,
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_public_keys),
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_secrets)
     }
 
     configsData.append({
@@ -417,13 +472,13 @@ Parameters:
 """
 def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
-    mc_blocks_json = sc_block["mainchainBlocks"]
+    mc_block_headers_json = sc_block["mainchainHeaders"]
     is_mac_block_included = False
 
-    for mc_block_json in mc_blocks_json:
+    for mc_block_header_json in mc_block_headers_json:
         expected_mc_block_merkleroot = expected_mc_block["merkleroot"]
 
-        sc_mc_block_merkleroot = mc_block_json["header"]["hashMerkleRoot"]
+        sc_mc_block_merkleroot = mc_block_header_json["hashMerkleRoot"]
 
         if expected_mc_block_merkleroot == sc_mc_block_merkleroot:
             is_mac_block_included = True
@@ -445,7 +500,7 @@ def check_wallet_balance(sc_node, expected_wallet_balance):
 
 
 """
-For a given Account verify the number of related regular boxes and verify the sum of their balances.
+For a given Account verify the number of related boxes by type and verify the sum of their balances.
 
 Parameters:
  - sc_node: a sidechain node
@@ -453,14 +508,14 @@ Parameters:
  - expected_boxes_count: the number of expected boxes for that account
  - expected_balance: expected balance for that account
 """
-def check_regularbox_balance(sc_node, account, expected_boxes_count, expected_balance):
+def check_box_balance(sc_node, account, box_type, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
     boxes = response["result"]["boxes"]
     boxes_balance = 0
     boxes_count = 0
     pub_key = account.publicKey
     for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and box["typeId"] == 1:
+        if box["proposition"]["publicKey"] == pub_key and (box["typeId"] == box_type or box_type == 0):
             box_value = box["value"]
             assert_true(box_value > 0,
                         "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
@@ -534,7 +589,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
                                                             sc_nodes_bootstrap_info.sidechain_genesis_block_hex,
                                                             sc_nodes_bootstrap_info.pow_data,
                                                             sc_nodes_bootstrap_info.network,
-                                                            sc_nodes_bootstrap_info.withdrawal_epoch_length)
+                                                            sc_nodes_bootstrap_info.withdrawal_epoch_length,
+                                                            sc_nodes_bootstrap_info.genesis_vrf_account,
+                                                            sc_nodes_bootstrap_info.withdrawal_certificate_data)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -554,19 +611,26 @@ Parameters:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
 def create_sidechain(sc_creation_info):
-    accounts = generate_secrets(sc_creation_info.sidechain_id, 1)
+    accounts = generate_secrets("seed", 1)
+    vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
-    sidechain_id = sc_creation_info.sidechain_id
-    genesis_info = initialize_new_sidechain_in_mainchain(sidechain_id,
+    vrf_key = vrf_keys[0]
+    withdrawal_certificate_data = generate_withdrawal_certificate_data("seed", 7, 5)
+    genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     genesis_account.publicKey,
-                                    sc_creation_info.forward_amount)
-    print "Sidechain created with id: " + sidechain_id
-    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret)
+                                    sc_creation_info.forward_amount,
+                                    vrf_key.publicKey,
+                                    withdrawal_certificate_data.genSysConstant,
+                                    withdrawal_certificate_data.verificationKey)
+
+    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
+    sidechain_id = genesis_info[2]
+
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                           sc_creation_info.withdrawal_epoch_length)
+                           sc_creation_info.withdrawal_epoch_length, vrf_key, withdrawal_certificate_data)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
@@ -580,10 +644,44 @@ Parameters:
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
 
-"""
-Utility method to generate sc blocks.
+def generate_forging_request(epoch, slot):
+    return json.dumps({"epochNumber": epoch, "slotNumber": slot})
 
-Return the output of the Api REST request /block/generate
-"""
-def sc_generate_blocks(sc_node, number=1):
-    return sc_node.block_generate(number=number)
+
+def get_next_epoch_slot(epoch, slot, slots_in_epoch):
+    next_slot = slot + 1
+    next_epoch = epoch
+
+    if next_slot > slots_in_epoch:
+        next_slot = 1
+        next_epoch += 1
+    return next_epoch, next_slot
+
+
+def generate_next_block(node, node_name):
+    forging_info = node.block_forgingInfo()["result"]
+    slots_in_epoch = forging_info["consensusSlotsInEpoch"]
+    best_slot = forging_info["bestSlotNumber"]
+    best_epoch = forging_info["bestEpochNumber"]
+
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+
+    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+
+    #"while" will break if whole epoch no generated block, due changed error code
+    while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
+        print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
+        next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
+        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+
+    assert_true(forge_result.has_key("result"), "Error during block generation for SC {0}".format(node_name))
+    block_id = forge_result["result"]["blockId"]
+    print("Successfully forged block with id {blockId}".format(blockId = block_id))
+    return forge_result["result"]["blockId"]
+
+
+def generate_next_blocks(node, node_name, blocks_count):
+    blocks_ids = []
+    for i in range(blocks_count):
+        blocks_ids.append(generate_next_block(node, node_name))
+    return blocks_ids

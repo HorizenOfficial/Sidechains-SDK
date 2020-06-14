@@ -1,6 +1,7 @@
 package com.horizen.node;
 
 import com.horizen.block.MainchainBlockReference;
+import com.horizen.block.MainchainHeader;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
@@ -34,4 +35,6 @@ public interface NodeHistory {
     Optional<MainchainBlockReferenceInfo> getMainchainBlockReferenceInfoByMainchainBlockHeight(int height);
 
     Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
+
+    Optional<MainchainHeader> getMainchainHeaderByHash(byte[] mainchainHeaderHash);
 }

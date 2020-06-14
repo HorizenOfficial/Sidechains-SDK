@@ -4,22 +4,19 @@ import java.time.Instant
 
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.{CompanionsFixture, ForgerBoxFixture, MainchainBlockReferenceFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.params.NetworkParams
-import com.horizen.secret.PrivateKey25519Creator
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.junit.Assert.assertEquals
 import scorex.util.bytesToId
-import java.util.{HashMap => JHashMap}
-
-import com.horizen.fixtures.MainchainBlockReferenceFixture
 
 
-class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture {
+class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with MainchainBlockReferenceFixture with CompanionsFixture {
 
-  val sidechainTransactionsCompanion = SidechainTransactionsCompanion(new JHashMap())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val params: NetworkParams = mock[NetworkParams]
   val withdrawalEpochLength: Int = 100
 
@@ -27,13 +24,19 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
   def getWithdrawalEpochInfo(): Unit = {
     Mockito.when(params.withdrawalEpochLength).thenReturn(withdrawalEpochLength)
 
-    // Test 1: block with no mc block references
+    // Test 1: block with no MainchainBlockReferenceData
+    val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(), // no mc block refs
+      Seq(), // no MainchainBlockReferenceData
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      Seq(),
+      Seq(),
+      forgerMeta1.blockSignSecret,
+      forgerBox1,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -49,13 +52,20 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
     )
 
 
-    // Test 2: block with 1 mc block ref
+    // Test 2: block with 1 MainchainBlockReferenceData
+    val (forgerBox2, forgerMeta2) = ForgerBoxFixture.generateForgerBox(322)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference()),
+      Seq(generateMainchainBlockReference().data),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      Seq(),
+      Seq(),
+      forgerMeta2.blockSignSecret,
+      forgerBox2,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -76,13 +86,20 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
     )
 
 
-    // Test 3: block with 2 mc block ref
+    // Test 3: block with 2 MainchainBlockReferenceData
+    val (forgerBox3, forgerMeta3) = ForgerBoxFixture.generateForgerBox(332)
+
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
       Instant.now.getEpochSecond - 10000,
-      Seq(generateMainchainBlockReference(), generateMainchainBlockReference()),
+      Seq(generateMainchainBlockReference().data, generateMainchainBlockReference().data),
       Seq(),
-      PrivateKey25519Creator.getInstance().generateSecret("genesis_seed%d".format(111).getBytes),
+      Seq(),
+      Seq(),
+      forgerMeta3.blockSignSecret,
+      forgerBox3,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
       sidechainTransactionsCompanion,
       null
     ).get
@@ -100,6 +117,34 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
     assertEquals("Epoch info expected to be the changed: epoch switch expected.",
       WithdrawalEpochInfo(2, 1),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength - 1), params)
+    )
+
+
+    // Test 4: block with no MainchainBlockReferenceData, but with 1 MainchainHeader
+    val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(328)
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      Instant.now.getEpochSecond - 10000,
+      Seq(), // no MainchainBlockReferenceData
+      Seq(),
+      Seq(generateMainchainBlockReference().header), // MainchainHeader has no impact on WithdrawalEpochInfo
+      Seq(),
+      forgerMeta4.blockSignSecret,
+      forgerBox4,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
+      sidechainTransactionsCompanion,
+      null
+    ).get
+
+    assertEquals("Epoch info expected to be the same as previous.",
+      WithdrawalEpochInfo(1, 1),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, 1), params)
+    )
+
+    assertEquals("Epoch info expected to be the changed: epoch switch expected.",
+      WithdrawalEpochInfo(2, 0),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(1, withdrawalEpochLength), params)
     )
   }
 

@@ -14,7 +14,7 @@ public abstract class ApplicationApiGroup {
 
     public abstract List<Route> getRoutes();
 
-    public final SidechainNodeView getSidechaiNodeView() throws Exception {
+    public final SidechainNodeView getSidechainNodeView() throws Exception {
         Try<SidechainNodeView> tryView = applicationNodeViewProvider.getSidechainNodeView();
         if (tryView.isSuccess())
             return tryView.get();

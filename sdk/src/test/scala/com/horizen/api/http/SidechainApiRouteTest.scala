@@ -1,25 +1,26 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.{lang, util}
+import java.util
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
-import akka.http.scaladsl.server.RouteConcatenation._
-import akka.http.scaladsl.server.Directives.{path, post, _}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
-import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
+import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.SidechainBlockFixture
-import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
+import com.horizen.consensus.ConsensusEpochAndSlot
+import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
+import com.horizen.forge.Forger
+import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.{RegularTransaction, TransactionSerializer}
+import com.horizen.transaction._
+import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -28,9 +29,9 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import scorex.core.network.{Incoming, Outgoing, PeerSpec}
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, bytesToId}
@@ -40,13 +41,13 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture {
+abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
-  val sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[lang.Byte, TransactionSerializer[SidechainTypes#SCBT]]())
+  val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val jsonChecker = new SidechainJSONBOChecker
 
@@ -74,6 +75,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
 
   val utilMocks = new SidechainNodeViewUtilMocks()
+
 
   val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
   val allBoxes = utilMocks.allBoxes
@@ -162,11 +164,26 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case TryGetBlockTemplate =>
-          if (sidechainApiMockConfiguration.getShould_forger_TryGetBlockTemplate_reply())
-            sender ! Try(genesisBlock)
-          else sender ! Failure(new Exception(s"Unable to collect information for block template creation."))
+        case Forger.ReceivableMessages.StopForging => {
+          if (sidechainApiMockConfiguration.should_blockActor_StopForging_reply) {
+            sender ! Success()
+          }
+          else {
+            sender ! Failure(new IllegalStateException("Stop forging error"))
+          }
+        }
+        case Forger.ReceivableMessages.StartForging => {
+          if (sidechainApiMockConfiguration.should_blockActor_StartForging_reply) {
+            sender ! Success()
+          }
+          else {
+            sender ! Failure(new IllegalStateException("Start forging error"))
+          }
+        }
 
+        case Forger.ReceivableMessages.GetForgingInfo => {
+          sender ! sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply
+        }
       }
       TestActor.KeepRunning
     }
@@ -177,6 +194,13 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   mockedSidechainBlockActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
+        case TryForgeNextBlockForEpochAndSlot(epoch, slot) => {
+          sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.get(ConsensusEpochAndSlot(epoch, slot)) match {
+            case Some(blockIdTry) => sender ! Future[Try[ModifierId]]{blockIdTry}
+            case None => sender ! Failure(new RuntimeException("Forge is failed"))
+          }
+        }
+
         case SubmitSidechainBlock(b) =>
           if (sidechainApiMockConfiguration.getShould_blockActor_SubmitSidechainBlock_reply()) sender ! Future[Try[ModifierId]](Try(genesisBlock.id))
           else sender ! Future[Try[ModifierId]](Failure(new Exception("Block actor not configured for submit the block.")))
@@ -196,7 +220,11 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   implicit def default() = RouteTestTimeout(3.second)
 
-  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef).route
+  val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
+  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
+
+  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef,
+    sidechainTransactionsCompanion, sidechainCoreTransactionFactory).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
@@ -210,7 +238,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
 
   protected def assertsOnSidechainErrorResponseSchema(msg: String, errorCode: String): Unit = {
     mapper.readTree(msg).get("error") match {
-      case error =>
+      case error: JsonNode =>
         assertEquals(1, error.findValues("code").size())
         assertEquals(1, error.findValues("description").size())
         assertEquals(1, error.findValues("detail").size())

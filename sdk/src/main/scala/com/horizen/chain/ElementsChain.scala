@@ -93,12 +93,12 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
     idToHeightMap = mutable.HashMap[ID, Int]()
   }
 
-  def getLastDataByPredicate(p: DATA => Boolean): Option[DATA] = getLastDataByPredicateBeforeHeight(height)(p)
+  def getLastDataByPredicate(p: DATA => Boolean): Option[DATA] = getLastDataByPredicateTillHeight(height)(p)
 
   @tailrec
-  final def getLastDataByPredicateBeforeHeight(height: Integer)(p: DATA => Boolean): Option[DATA] = {
+  final def getLastDataByPredicateTillHeight(height: Integer)(p: DATA => Boolean): Option[DATA] = {
     dataByHeight(height) match {
-      case Some(dataForHeight) => if (p(dataForHeight)) Some(dataForHeight) else getLastDataByPredicateBeforeHeight(height - 1)(p)
+      case Some(dataForHeight) => if (p(dataForHeight)) Some(dataForHeight) else getLastDataByPredicateTillHeight(height - 1)(p)
       case None => None
     }
   }

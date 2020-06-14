@@ -1,27 +1,27 @@
 package com.horizen
 
-import java.io.{File => JFile}
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.box.Box
-import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion}
+import com.horizen.box.{Box, ForgerBox}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
-import com.horizen.params.StorageParams
 import com.horizen.proposition.Proposition
-import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, Secret}
-import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage, SidechainWalletBoxStorage, SidechainWalletTransactionStorage, Storage}
+import com.horizen.secret.Secret
+import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import io.iohk.iodb.LSMStore
-import scorex.core.{VersionTag, bytesToVersion, idToVersion}
-import scorex.util.ScorexLogging
-import com.horizen.utils.BytesUtils
+import com.horizen.transaction.mainchain.SidechainCreation
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
+import scorex.core.VersionTag
+import com.horizen.utils._
+import scorex.util.ModifierId
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.Try
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.compat.java8.OptionConverters._
 
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -41,8 +41,13 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
   def publicKeys(): Set[P]
 }
 
-class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                        walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet)
+
+class SidechainWallet private[horizen] (seed: Array[Byte],
+                                        walletBoxStorage: SidechainWalletBoxStorage,
+                                        secretStorage: SidechainSecretStorage,
+                                        walletTransactionStorage: SidechainWalletTransactionStorage,
+                                        forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                        applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
                  SidechainTypes#SCBT,
@@ -110,36 +115,43 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
         (accMap, tx) => accMap ++ tx.boxIdsToOpen().asScala.map(boxId => boxId -> tx) ++
           tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
       }
-    
-    val newBoxes = changes.toAppend.filter(s => pubKeys.contains(s.box.proposition()))
-        .map(_.box)
-        .map { box =>
-               val boxTransaction = txBoxes(new ByteArrayWrapper(box.id()))
-               new WalletBox(box, boxTransaction.id, boxTransaction.timestamp())
-        }
+
+    val newBoxes = changes.toAppend.map(_.box)
+
+    val newWalletBoxes = newBoxes.withFilter(box => pubKeys.contains(box.proposition())).map( box => {
+      val boxTransaction = txBoxes(box.id())
+      new WalletBox(box, ModifierId @@ boxTransaction.id, boxTransaction.timestamp())
+    })
+
+    val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
+      .filter(forgerBox => pubKeys.contains(forgerBox.blockSignProposition()))
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
       .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
 
-    val transactions = (for (boxId <- (newBoxes.map(_.box.id()) ++ boxIdsToRemove))
+    val transactions = (for (boxId <- (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove))
       yield txBoxes(new ByteArrayWrapper(boxId))).distinct
 
-    walletBoxStorage.update(new ByteArrayWrapper(version), newBoxes.toList, boxIdsToRemove.toList).get
+    walletBoxStorage.update(new ByteArrayWrapper(version), newWalletBoxes.toList, boxIdsToRemove.toList).get
 
-    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions)
+    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions).get
 
-    applicationWallet.onChangeBoxes(version, newBoxes.map(_.box).toList.asJava,
-      boxIdsToRemove.toList.asJava)
+    // We keep forger boxes separate to manage forging stake delegation
+    forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
+
+    applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
     this
   }
 
-  // rollback BoxStore only. SecretStore must not changed
+  // rollback BoxStorage and TransactionsStorage only. SecretStorage must not change.
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
-    val version = BytesUtils.fromHexString(to)
-    walletBoxStorage.rollback(new ByteArrayWrapper(version)).get
-    applicationWallet.onRollback(version)
+    val version = new ByteArrayWrapper(BytesUtils.fromHexString(to))
+    walletBoxStorage.rollback(version).get
+    walletTransactionStorage.rollback(version).get
+    forgingBoxesInfoStorage.rollback(version).get
+    applicationWallet.onRollback(version.data)
     this
   }
 
@@ -192,26 +204,65 @@ class SidechainWallet private[horizen] (seed: Array[Byte], walletBoxStorage: Sid
   }
 
   override def walletSeed(): Array[Byte] = seed
+
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
+    val merkleTreeLeaves = epochInfo.forgersBoxIds.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
+
+    // Calculate merkle path for all delegated forgerBoxes
+    val forgerBoxMerklePathInfoSeq = forgingBoxesInfoStorage.getForgerBoxes.getOrElse(Seq()).map(forgerBox => {
+      ForgerBoxMerklePathInfo(
+        forgerBox,
+        epochInfo.forgersBoxIds.getMerklePathForLeaf(merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgerBox.id())))
+      )
+    })
+
+    forgingBoxesInfoStorage.updateForgerBoxMerklePathInfo(epochInfo.epoch, forgerBoxMerklePathInfoSeq).get
+    this
+  }
+
+  def getForgerBoxMerklePathInfoOpt(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
+    // For given epoch N we should get data from the ending of the epoch N-2.
+    // genesis block is the single and the last block of epoch 1 - that is a special case:
+    // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
+    val storedConsensusEpochNumber: ConsensusEpochNumber = requestedEpoch match {
+      case epoch if (epoch <= 2) => ConsensusEpochNumber @@ 1
+      case epoch => ConsensusEpochNumber @@ (epoch - 2)
+    }
+
+    forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
+  }
+
 }
 
 object SidechainWallet
 {
-  private[horizen] def restoreWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
+  private[horizen] def restoreWallet(seed: Array[Byte],
+                                     walletBoxStorage: SidechainWalletBoxStorage,
+                                     secretStorage: SidechainSecretStorage,
+                                     walletTransactionStorage: SidechainWalletTransactionStorage,
+                                     forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                     applicationWallet: ApplicationWallet) : Option[SidechainWallet] = {
 
     if (!walletBoxStorage.isEmpty)
-      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet))
+      Some(new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet))
     else
       None
   }
 
-  private[horizen] def genesisWallet(seed: Array[Byte], walletBoxStorage: SidechainWalletBoxStorage, secretStorage: SidechainSecretStorage,
-                                     walletTransactionStorage: SidechainWalletTransactionStorage, applicationWallet: ApplicationWallet,
-                                     genesisBlock: SidechainBlock) : Try[SidechainWallet] = Try {
+  private[horizen] def createGenesisWallet(seed: Array[Byte],
+                                           walletBoxStorage: SidechainWalletBoxStorage,
+                                           secretStorage: SidechainSecretStorage,
+                                           walletTransactionStorage: SidechainWalletTransactionStorage,
+                                           forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                           applicationWallet: ApplicationWallet,
+                                           genesisBlock: SidechainBlock,
+                                           consensusEpochInfo: ConsensusEpochInfo
+                                    ) : Try[SidechainWallet] = Try {
 
-    if (walletBoxStorage.isEmpty)
-      new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, applicationWallet)
-        .scanPersistent(genesisBlock)
+    if (walletBoxStorage.isEmpty) {
+      val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
+      genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
+    }
     else
       throw new RuntimeException("WalletBox storage is not empty!")
   }

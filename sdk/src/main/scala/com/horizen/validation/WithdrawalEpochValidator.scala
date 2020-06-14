@@ -18,18 +18,18 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
 
 
   private def validateGenesisBlock(block: SidechainBlock): Try[Unit] = Try {
-    // Verify that block contains only 1 MC block reference with a valid Sidechain Creation info
-    if(block.mainchainBlocks.size != 1)
+    // Verify that block contains only 1 MC block reference data with a valid Sidechain Creation info
+    if(block.mainchainBlockReferencesData.size != 1)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block should contain single MC block reference.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    val sidechainCreation = block.mainchainBlocks.head.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
+    val sidechainCreation = block.mainchainBlockReferencesData.head.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
     if(sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
   }
 
   private def validateBlock(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
-    for(mcblock <- block.mainchainBlocks) {
-      mcblock.sidechainRelatedAggregatedTransaction match {
+    for(data <- block.mainchainBlockReferencesData) {
+      data.sidechainRelatedAggregatedTransaction match {
         case Some(aggTx) =>
           if(aggTx.mc2scTransactionsOutputs().stream().anyMatch(output => output.isInstanceOf[SidechainCreation]))
             throw new IllegalArgumentException("Sidechain block validation failed for %s: non-genesis block contains Sidechain Creation output.".format(BytesUtils.toHexString(idToBytes(block.id))))
@@ -37,7 +37,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
       }
     }
 
-    history.storage.blockInfoById(block.parentId) match {
+    history.storage.blockInfoOptionById(block.parentId) match {
       case Some(parentBlockInfo) => // Parent block is present
         val blockEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
         if (blockEpochInfo.epoch > parentBlockInfo.withdrawalEpochInfo.epoch) { // epoch increased
@@ -52,5 +52,10 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
       case None =>
         throw new IllegalArgumentException("Sidechain block %s parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
     }
+
+    val backwardTransferCertificateCount = block.mainchainBlockReferencesData.flatMap(_.withdrawalEpochCertificate).size
+
+    if (backwardTransferCertificateCount > 1)
+      throw new IllegalArgumentException("Sidechain block must contain 0 or 1 backward transfer certificate, but contains %d certificates.".format(backwardTransferCertificateCount))
   }
 }

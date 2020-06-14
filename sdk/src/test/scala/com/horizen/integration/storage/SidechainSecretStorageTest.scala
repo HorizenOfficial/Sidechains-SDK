@@ -1,9 +1,13 @@
 package com.horizen.integration.storage
 
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
+
+import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import com.horizen.fixtures._
-import com.horizen.secret._
+import com.horizen.secret.{VrfKeyGenerator, _}
 import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage}
 import org.junit.Assert._
 import org.junit.Test
@@ -11,10 +15,6 @@ import org.scalatest.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
 import scala.util.Try
-import java.util.{HashMap => JHashMap}
-import java.lang.{Byte => JByte}
-
-import com.horizen.SidechainTypes
 
 class SidechainSecretStorageTest
   extends JUnitSuite
@@ -28,10 +28,16 @@ class SidechainSecretStorageTest
   val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
   val sidechainSecretsCompanionCore = SidechainSecretsCompanion(new JHashMap())
 
-  @Test def testCoreTypes(): Unit = {
+
+  @Test
+  def testCoreTypes(): Unit = {
+    testCoreType(getPrivateKey25519, getPrivateKey25519List(3).asScala.toList)
+    testCoreType(VrfKeyGenerator.getInstance().generateSecret("seed".getBytes()), getPrivateKey25519List(3).asScala.toList)
+  }
+
+
+  def testCoreType(secret: Secret, secretList: List[Secret]): Unit = {
     val sidechainSecretStorage = new SidechainSecretStorage(new IODBStoreAdapter(getStore()), sidechainSecretsCompanion)
-    val secret = getSecret()
-    val secretList = getSecretList(3).asScala.toList
     var res: Try[SidechainSecretStorage] = null
 
 
@@ -99,7 +105,7 @@ class SidechainSecretStorageTest
   def testCustomTypes() : Unit = {
     val (store1, dir) = getStoreWithPath()
     val ss1 = new SidechainSecretStorage(new IODBStoreAdapter(store1), sidechainSecretsCompanion)
-    val customSecret = getCustomSecret()
+    val customSecret = getCustomPrivateKey
     var exceptionThrown = false
     var ss2 : SidechainSecretStorage = null
     var customSecret2 : Option[Secret] = null

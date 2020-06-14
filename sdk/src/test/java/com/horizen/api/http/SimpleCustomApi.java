@@ -33,7 +33,7 @@ public class SimpleCustomApi extends ApplicationApiGroup {
                 Directives.post((() ->
                         Directives.extractRequestEntity(entity -> {
                             try {
-                                SidechainNodeView view = getSidechaiNodeView();
+                                SidechainNodeView view = getSidechainNodeView();
                                 RespAllSecret resp = new RespAllSecret();
                                 resp.setSecrets(view.getNodeWallet().allSecrets());
                                 return ApiResponseUtil.toResponseAsJava(resp);

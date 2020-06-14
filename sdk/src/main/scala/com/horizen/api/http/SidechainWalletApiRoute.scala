@@ -2,22 +2,22 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.SidechainTypes
-import com.horizen.secret.PrivateKey25519Creator
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
+import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.box.Box
+import com.horizen.proposition.{Proposition, VrfPublicKey}
+import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
+import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
-import JacksonSupport._
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.api.http.SidechainWalletRestScheme._
-import com.horizen.serialization.Views
-import akka.pattern.ask
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
-import com.horizen.box.Box
-import com.horizen.proposition.Proposition
-
 import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
@@ -25,7 +25,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("wallet")) {
-    allBoxes ~ balance ~ createSecret ~ allPublicKeys
+    allBoxes ~ balance ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
   }
 
   /**
@@ -34,15 +34,15 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def allBoxes: Route = (post & path("allBoxes")) {
     entity(as[ReqAllBoxes]) { body =>
       withNodeView { sidechainNodeView =>
-        var optBoxTypeClass = body.boxTypeClass
-        var wallet = sidechainNodeView.getNodeWallet
-        var idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+        val optBoxTypeClass = body.boxTypeClass
+        val wallet = sidechainNodeView.getNodeWallet
+        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
         if (optBoxTypeClass.isEmpty) {
-          var closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
+          val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxTypeClass.get).asSubclass(classOf[SidechainTypes#SCB])
-          var allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxTypeClass.get)
+          val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
         }
       }
@@ -56,13 +56,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqBalance]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optBoxType = body.boxType
+        val optBoxType = body.boxType
         if (optBoxType.isEmpty) {
-          var sumOfBalances: Long = wallet.allBoxesBalance()
+          val sumOfBalances: Long = wallet.allBoxesBalance()
           ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCB] = Class.forName(optBoxType.get).asSubclass(classOf[SidechainTypes#SCB])
-          var balance = wallet.boxesBalance(clazz)
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxType.get)
+          val balance = wallet.boxesBalance(clazz)
           ApiResponseUtil.toResponse(RespBalance(balance))
         }
       }
@@ -70,16 +70,35 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
+   * Create new Vrf secret and return corresponding public key
+   */
+  def createVrfSecret: Route = (post & path("createVrfSecret")) {
+    withNodeView { sidechainNodeView =>
+      //replace to VRFKeyGenerator.generateNextSecret(wallet)
+      val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
+      val public = secret.publicImage()
+
+      val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+      Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+        case Success(_) =>
+          ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", Some(e)))
+      }
+    }
+  }
+
+  /**
     * Create new secret and return corresponding address (public key)
     */
-  def createSecret: Route = (post & path("createSecret")) {
+  def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
     withNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
       val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
       val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreateSecret(secret.publicImage()))
+          ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", Some(e)))
       }
@@ -93,19 +112,29 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqAllPropositions]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        var optPropType = body.proptype
+        val optPropType = body.proptype
         if (optPropType.isEmpty) {
-          var listOfPropositions = wallet.allSecrets().asScala.map(s =>
+          val listOfPropositions = wallet.allSecrets().asScala.map(s =>
             s.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         } else {
-          var clazz: java.lang.Class[_ <: SidechainTypes#SCS] = Class.forName(optPropType.get).asSubclass(classOf[SidechainTypes#SCS])
-          var listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = getClassBySecretClassName(optPropType.get)
+          val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
             secret.publicImage().asInstanceOf[SidechainTypes#SCP])
           ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
         }
       }
     }
+  }
+
+  def getClassBySecretClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCS] = {
+    Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])}.
+      getOrElse(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
+  }
+
+  def getClassByBoxClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCB] = {
+    Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])}.
+      getOrElse(Class.forName("com.horizen.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
   }
 }
 
@@ -124,7 +153,10 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateSecret(proposition: Proposition) extends SuccessResponse
+  private[api] case class RespCreatePrivateKey25519(proposition: Proposition) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllPropositions(proptype: Option[String])
