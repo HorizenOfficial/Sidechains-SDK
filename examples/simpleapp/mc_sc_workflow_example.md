@@ -15,7 +15,7 @@ Build SDK components by using command (in the root of the SDK folder):
 
 Run Bootstrapping tool using command: 
 
-`java -jar tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.1-SNAPSHOT.jar`
+`java -jar tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.2.0.jar`
 
 All other command are performed as commands for Bootstrapping tool in next format: `"command name"  "parameters for command in JSON format"`.
 For any help you could use command `help`, for exit just print `exit`
@@ -319,6 +319,6 @@ Save changes into the file like `examples/simpleapp/src/main/resources/my_settin
 Run SimpleApp with the `my_settings.conf`:
 
 ```
-java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar /examples/simpleapp/src/main/resources/my_settings
+java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar /examples/simpleapp/src/main/resources/my_settings
 ```
 
