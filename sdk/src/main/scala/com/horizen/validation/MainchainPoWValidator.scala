@@ -1,21 +1,20 @@
 package com.horizen.validation
 
+import com.horizen.SidechainHistory
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock}
 import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.BytesUtils
-import scorex.core.block.BlockValidator
 import scorex.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 
-class MainchainPoWValidator(sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams) extends BlockValidator[SidechainBlock]{
-  override def validate(block: SidechainBlock): Try[Unit] = {
-    if(ProofOfWorkVerifier.checkNextWorkRequired(block, sidechainHistoryStorage, params)) {
+class MainchainPoWValidator(params: NetworkParams) extends HistoryBlockValidator {
+  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = {
+    if(ProofOfWorkVerifier.checkNextWorkRequired(block, history.storage, params)) {
       Success()
     }
-     else {
-      Failure (new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id)))))
+    else {
+      Failure(new IllegalArgumentException("Containing MC Blocks PoW difficulty is invalid for block %s".format(BytesUtils.toHexString(idToBytes(block.id)))))
     }
   }
 }

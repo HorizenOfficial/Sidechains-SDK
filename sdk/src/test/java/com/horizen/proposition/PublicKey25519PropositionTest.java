@@ -1,10 +1,9 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import static org.junit.Assert.*;
 
@@ -22,11 +21,11 @@ public class PublicKey25519PropositionTest {
     @Before
     public void beforeEachTest() {
         seed = "12345".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(seed);
-        privateKey = keyPair._1();
-        publicKey = keyPair._2();
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(seed);
+        privateKey = keyPair.getKey();
+        publicKey = keyPair.getValue();
         messageToSign = "message to sign".getBytes();
-        signature = Curve25519.sign(privateKey, messageToSign);
+        signature = Ed25519.sign(privateKey, messageToSign, publicKey);
     }
 
 
@@ -57,8 +56,8 @@ public class PublicKey25519PropositionTest {
         assertEquals("Propositions expected to be equal", true, prop1.equals(prop2));
 
         byte[] anotherSeed = "testseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        PublicKey25519Proposition prop3 = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        PublicKey25519Proposition prop3 = new PublicKey25519Proposition(keyPair.getValue());
 
         assertEquals("Propositions hash codes expected to be different", false, prop1.hashCode() == prop3.hashCode());
         assertEquals("Propositions expected to be different", false, prop1.equals(prop3));
@@ -93,8 +92,8 @@ public class PublicKey25519PropositionTest {
 
 
         byte[] anotherSeed = "testseed".getBytes();
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair(anotherSeed);
-        PublicKey25519Proposition prop2 = new PublicKey25519Proposition(keyPair._2());
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair(anotherSeed);
+        PublicKey25519Proposition prop2 = new PublicKey25519Proposition(keyPair.getValue());
 
         res = prop2.verify(messageToSign, signature);
         assertEquals("Signature expected to be NOT valid", false, res);

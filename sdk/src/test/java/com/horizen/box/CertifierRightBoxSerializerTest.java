@@ -1,61 +1,72 @@
 package com.horizen.box;
 
+import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.utils.BytesUtils;
+import com.horizen.utils.Ed25519;
+import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
-import java.io.File;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class CertifierRightBoxSerializerTest
+public class CertifierRightBoxSerializerTest extends BoxFixtureClass
 {
     CertifierRightBox box;
 
     @Before
     public void setUp() {
-        Tuple2<byte[], byte[]> keyPair = Curve25519.createKeyPair("12345".getBytes());
-        // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_bytes"
-        box = new CertifierRightBox(new PublicKey25519Proposition(keyPair._2()), 1000, 20, 10);
+        Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
+        // Note: current box bytes are also stored in "src/test/resources/certifierrightbox_hex"
+        box = getCertifierRightBox(new PublicKey25519Proposition(keyPair.getValue()), 1000, 20, 10);
+
+//     Uncomment and run if you want to update regression data.
+//        try {
+//            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/certifierrightbox_hex"));
+//            out.write(BytesUtils.toHexString(box.bytes()));
+//            out.close();
+//        } catch (Throwable e) {
+//        }
     }
 
     @Test
-    public void CertifierRightBoxSerializer_SerializationTest() {
+    public void serializationTest() {
         BoxSerializer<CertifierRightBox> serializer = box.serializer();
         byte[] bytes = serializer.toBytes(box);
         CertifierRightBox box2 = serializer.parseBytesTry(bytes).get();
-        assertEquals("Boxes expected to be equal", true, box.equals(box2));
+        assertEquals("Boxes expected to be equal", box, box2);
 
 
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
-        assertEquals("Failure during parsing expected", true, failureExpected);
+        assertTrue("Failure during parsing expected", failureExpected);
 
     }
 
     @Test
-    public void CertifierRightBoxSerializer_RegressionTest() {
+    public void regressionTest() {
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            File file = new File(classLoader.getResource("certifierrightbox_bytes").getFile());
-            bytes = Files.readAllBytes(file.toPath());
+            FileReader file = new FileReader(classLoader.getResource("certifierrightbox_hex").getFile());
+            bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {
-            assertEquals(e.toString(), true, false);
+            fail(e.toString());
             return;
         }
 
         BoxSerializer<CertifierRightBox> serializer = box.serializer();
         Try<CertifierRightBox> t = serializer.parseBytesTry(bytes);
-        assertEquals("Box serialization failed.", true, t.isSuccess());
+        assertTrue("Box serialization failed.", t.isSuccess());
 
         CertifierRightBox parsedBox = t.get();
-        assertEquals("Box is different to origin.", true, Arrays.equals(box.id(), parsedBox.id()));
-        assertEquals("Box is different to origin.", true, Arrays.equals(box.bytes(), parsedBox.bytes()));
+        assertTrue("Box is different to origin.", Arrays.equals(box.id(), parsedBox.id()));
+        assertTrue("Box is different to origin.", Arrays.equals(box.bytes(), parsedBox.bytes()));
     }
 }

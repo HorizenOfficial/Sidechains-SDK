@@ -10,5 +10,5 @@ trait ProofOfKnowledgeProposition[S <: Secret] extends Proposition
 
 public interface ProofOfKnowledgeProposition<S extends Secret> extends Proposition
 {
-
+    byte[] pubKeyBytes();
 }

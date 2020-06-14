@@ -11,6 +11,8 @@ import scala.util.control.Breaks._
 
 object ProofOfWorkVerifier {
 
+  private case class OmmersContainerNextWorkRequiredResult(isValid: Boolean, actualTimeBitsData: List[Tuple2[Int, Int]], actualBitsTotal: BigInteger)
+
   def checkProofOfWork(header: MainchainHeader, params: NetworkParams): Boolean = {
     val target: BigInteger = Utils.decodeCompactBits(UnsignedInts.toLong(header.bits))
     val hashTarget: BigInteger = new BigInteger(1, header.hash)
@@ -26,25 +28,21 @@ object ProofOfWorkVerifier {
     true
   }
 
-  // Check that PoW target (bits) is correct for all MainchainBlockReferences included into SidechainBlock.
+  // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
+  // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
   def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
-    if(block.mainchainBlocks.isEmpty)
+    if(block.mainchainHeaders.isEmpty)
       return true
-
-    // Check MainchainBlockReferences order in current block
-    for(i <- 1 until block.mainchainBlocks.size) {
-      if(!block.mainchainBlocks(i).header.hashPrevBlock.sameElements(block.mainchainBlocks(i-1).hash))
-        return false
-    }
 
     // Collect information of time and bits for last "params.nPowAveragingWindow + params.nMedianTimeSpan" MainchainBlockReferences
     // already presented in a current chain of SidechainBlocks.
     var timeBitsData = List[Tuple2[Int, Int]]()
-    var currentMCBlockReference = block.mainchainBlocks.head
+    // Take firt MC Ref header if exists, else get first nextMCHeader
+    var currentHeader = block.mainchainHeaders.head
     var currentBlock: SidechainBlock = block
     breakable {
       while (true) {
-        if (currentMCBlockReference.hash.sameElements(params.genesisMainchainBlockHash)) {
+        if (currentHeader.hash.sameElements(params.genesisMainchainBlockHash)) {
           // We reached the genesis MC block reference. So get the rest of (time, bits) pairs from genesis pow data.
           for(timeBitsTuple <- params.genesisPoWData.reverse) {
             timeBitsData = timeBitsTuple :: timeBitsData
@@ -60,13 +58,13 @@ object ProofOfWorkVerifier {
           case _ => return false
         }
 
-        // check for mainchain block references and their order, and collect data from them.
-        if(currentBlock.mainchainBlocks.nonEmpty) {
-          for(mcref <- currentBlock.mainchainBlocks.reverse) {
-            if(!mcref.hash.sameElements(currentMCBlockReference.header.hashPrevBlock))
+        // check for mainchain headers and their order, and collect data from them.
+        if(currentBlock.mainchainHeaders.nonEmpty) {
+          for(header <- currentBlock.mainchainHeaders.reverse) {
+            if(!header.hash.sameElements(currentHeader.hashPrevBlock))
               return false
-            timeBitsData = Tuple2[Int, Int](mcref.header.time, mcref.header.bits) :: timeBitsData
-            currentMCBlockReference = mcref
+            timeBitsData = Tuple2[Int, Int](header.time, header.bits) :: timeBitsData
+            currentHeader = header
             if(timeBitsData.size == params.nPowAveragingWindow + params.nMedianTimeSpan)
               break
           }
@@ -84,9 +82,22 @@ object ProofOfWorkVerifier {
       bitsTotal = bitsTotal.add(Utils.decodeCompactBits(UnsignedInts.toLong(timeBitsData(i)._2)))
     }
 
-    // verify next work for each MC block reference in the requested block
-    for(mcref <- block.mainchainBlocks) {
-      val timeData: Seq[Int] = timeBitsData.map(timeBitsData => timeBitsData._1)
+    // verify next work for each MainchainHeader in the requested block
+    if(!checkOmmersContainerNextWorkRequired(block, timeBitsData, bitsTotal, params).isValid)
+      return false
+
+    true
+  }
+
+  private def checkOmmersContainerNextWorkRequired(ommersContainer: OmmersContainer,
+                                                   initialTimeBitsData: List[Tuple2[Int, Int]],
+                                                   initialBitsTotal: BigInteger,
+                                                   params: NetworkParams): OmmersContainerNextWorkRequiredResult = {
+    var timeBitsData = initialTimeBitsData
+    var bitsTotal = initialBitsTotal
+
+    for(mainchainHeader <- ommersContainer.mainchainHeaders) {
+      val timeData: Seq[Int] = timeBitsData.map(data => data._1)
       val bitsAvg = bitsTotal.divide(BigInteger.valueOf(params.nPowAveragingWindow))
 
       val res = ProofOfWorkVerifier.calculateNextWorkRequired(
@@ -97,18 +108,29 @@ object ProofOfWorkVerifier {
 
       // TO DO: BigInteger has a higher precision than uint256 on divide operation, that's why our result can be bigger (a bit), than actual in nBits value
       // Precision should be decreased after any divide operation. See commented code in calculateNextWorkRequired and in BitcoinJ implementation.
-      if(Math.abs(res - mcref.header.bits) > 1)
-        return false
+      if(Math.abs(res - mainchainHeader.bits) > 1)
+        return OmmersContainerNextWorkRequiredResult(false, timeBitsData, bitsTotal)
 
       // subtract oldest MC block target data and add current one
       bitsTotal = bitsTotal
         .subtract(Utils.decodeCompactBits(UnsignedInts.toLong(timeBitsData(timeBitsData.size - params.nPowAveragingWindow)._2)))
-        .add(Utils.decodeCompactBits(UnsignedInts.toLong(mcref.header.bits)))
+        .add(Utils.decodeCompactBits(UnsignedInts.toLong(mainchainHeader.bits)))
       // remove oldest time/bits data info, append with current block info
-      timeBitsData = timeBitsData.drop(1) :+ Tuple2[Int, Int](mcref.header.time, mcref.header.bits)
+      timeBitsData = timeBitsData.tail :+ Tuple2[Int, Int](mainchainHeader.time, mainchainHeader.bits)
     }
 
-    true
+    // check Ommers NextWorkRequired one by one
+    var ommersTimeBitsData = initialTimeBitsData
+    var ommersBitsTotal = initialBitsTotal
+    for(ommer <- ommersContainer.ommers) {
+      val res: OmmersContainerNextWorkRequiredResult = checkOmmersContainerNextWorkRequired(ommer, ommersTimeBitsData, ommersBitsTotal, params)
+      if(!res.isValid)
+        return res
+      ommersTimeBitsData = res.actualTimeBitsData
+      ommersBitsTotal = res.actualBitsTotal
+    }
+
+    OmmersContainerNextWorkRequiredResult(true, timeBitsData, bitsTotal)
   }
 
   def geMedianTimePast(times: Seq[Int], index: Int, params: NetworkParams): Int = {

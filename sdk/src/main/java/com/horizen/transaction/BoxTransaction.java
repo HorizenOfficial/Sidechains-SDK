@@ -10,6 +10,8 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.utils.ByteArrayWrapper;
+import com.horizen.utils.BytesUtils;
+import scorex.crypto.hash.Blake2b256;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Collections;
@@ -40,7 +42,27 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("timestamp")
     public abstract long timestamp();
 
+    @JsonProperty("typeId")
+    public abstract byte transactionTypeId();
+
     public abstract boolean semanticValidity();
+
+    // Transaction Id must depend on the whole transaction content including proof
+    // Note: In future inside snarks id calculation will be different
+    @JsonProperty("id")
+    @Override
+    public String id() {
+        ByteArrayOutputStream proofsStream = new ByteArrayOutputStream();
+        for(BoxUnlocker<P> u : unlockers()) {
+            byte[] proofBytes = u.boxKey().bytes();
+            proofsStream.write(proofBytes, 0, proofBytes.length);
+        }
+
+        return BytesUtils.toHexString(Blake2b256.hash(Bytes.concat(
+                messageToSign(),
+                proofsStream.toByteArray()
+        )));
+    }
 
     public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {
         if(_boxIdsToOpen == null) {
@@ -54,7 +76,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
-
+    
     @Override
     public byte[] messageToSign() {
         ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();

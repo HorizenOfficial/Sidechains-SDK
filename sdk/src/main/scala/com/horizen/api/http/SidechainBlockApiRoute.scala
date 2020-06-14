@@ -2,29 +2,30 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainBlockErrorResponse._
+import com.horizen.api.http.SidechainBlockRestSchema._
+import com.horizen.block.SidechainBlock
+import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
+import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.ForgingInfo
+import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
-import akka.pattern.ask
-import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
-import com.horizen.forge.Forger.ReceivableMessages.TryGetBlockTemplate
-import com.horizen.block.SidechainBlock
-import com.horizen.utils.BytesUtils
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import JacksonSupport._
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainBlockErrorResponse._
-import com.horizen.api.http.SidechainBlockRestSchema._
-import com.horizen.serialization.Views
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getBlockTemplate ~ submitBlock ~ generateBlocks
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   /**
@@ -90,61 +91,47 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     }
   }
 
-  /**
-    * Return Sidechain block candidate for being next tip, already signed by Forger
-    * Note: see todos, think about returning an unsigned block
-    */
-  def getBlockTemplate: Route = (post & path("template")) {
-    val future = forgerRef ? TryGetBlockTemplate
-    val blockTemplateTry = Await.result(future, timeout.duration).asInstanceOf[Try[SidechainBlock]]
-    blockTemplateTry match {
-      case Success(block) =>
-        ApiResponseUtil.toResponse(RespTemplate(block, BytesUtils.toHexString(block.bytes)))
+  def startForging: Route = (post & path("startForging")) {
+    val future = forgerRef ? StartForging
+    val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+    result match {
+      case Success(_) =>
+        ApiResponseUtil.toResponse(RespStartForging)
       case Failure(e) =>
-        ApiResponseUtil.toResponse(ErrorBlockTemplate(s"Failed to get block template: ${e.getMessage}", None))
+        ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", None))
     }
   }
 
-  def submitBlock: Route = (post & path("submit")) {
-    entity(as[ReqSubmit]) { body =>
-      withNodeView { sidechainNodeView =>
-        var blockBytes: Array[Byte] = null
-        Try {
-          blockBytes = BytesUtils.fromHexString(body.blockHex)
-        } match {
-          case Success(_) =>
-            val future = sidechainBlockActorRef ? SubmitSidechainBlock(blockBytes)
-            val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
-            Await.result(submitResultFuture, timeout.duration) match {
-              case Success(id) =>
-                ApiResponseUtil.toResponse(RespSubmit(id))
-              case Failure(e) =>
-                ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
-            }
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorBlockNotAccepted(s"Block was not accepted: ${e.getMessage}", None))
-        }
+  def stopForging: Route = (post & path("stopForging")) {
+    val future = forgerRef ? StopForging
+    val result = Await.result(future, timeout.duration).asInstanceOf[Try[Unit]]
+    result match {
+      case Success(_) =>
+        ApiResponseUtil.toResponse(RespStopForging)
+      case Failure(e) =>
+        ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", None))
+    }
+  }
+
+  def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
+    entity(as[ReqGenerateByEpochAndSlot]){ body =>
+      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber))
+      val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
+      Await.result(submitResultFuture, timeout.duration) match {
+        case Success(id) =>
+          ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
       }
     }
   }
 
-  /**
-    * Returns ids of generated sidechain blocks.
-    * It should automatically asks MC nodes for new blocks in order to be referenced inside the generated blocks, and assigns them automatically to
-    * the newly generated blocks.
-    */
-  def generateBlocks: Route = (post & path("generate")) {
-    entity(as[ReqGenerate]) { body =>
-      withNodeView { sidechainNodeView =>
-        val future = sidechainBlockActorRef ? GenerateSidechainBlocks(body.number)
-        val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[Seq[ModifierId]]]]
-        Await.result(submitResultFuture, timeout.duration) match {
-          case Success(ids) =>
-            ApiResponseUtil.toResponse(RespGenerate(ids.map(id => id.asInstanceOf[String])))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
-        }
-      }
+  def getForgingInfo: Route = (post & path("forgingInfo")){
+    val future = forgerRef ? GetForgingInfo
+    val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
+    result match {
+      case Success(forgingInfo) => ApiResponseUtil.toResponse(RespForgingInfo(forgingInfo.consensusSecondsInSlot, forgingInfo.consensusSlotsInEpoch, forgingInfo.currentBestEpochAndSlot.epochNumber, forgingInfo.currentBestEpochAndSlot.slotNumber))
+      case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", None))
     }
   }
 
@@ -175,13 +162,22 @@ object SidechainBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBest(block: SidechainBlock, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespTemplate(block: SidechainBlock, blockHex: String) extends SuccessResponse
+  private[api] object RespStartForging extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] object RespStopForging extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int, consensusSlotsInEpoch: Int, bestEpochNumber: Int, bestSlotNumber: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSubmit(blockHex: String) {
@@ -197,7 +193,12 @@ object SidechainBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGenerate(blockIds: Seq[String]) extends SuccessResponse
+  private[api] case class RespGenerate(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] object RespGenerateSkipSlot extends SuccessResponse {
+    val result = "No block is generated due no eligible forger box are present, skip slot"
+  }
 
 }
 
@@ -223,4 +224,15 @@ object SidechainBlockErrorResponse {
     override val code: String = "0105"
   }
 
+  case class ErrorStartForging(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0106"
+  }
+
+  case class ErrorStopForging(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0107"
+  }
+
+  case class ErrorGetForgingInfo(description: String, exception: Option[Throwable]) extends ErrorResponse {
+    override val code: String = "0108"
+  }
 }

@@ -1,17 +1,22 @@
 package com.horizen.transaction;
 
+import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
-import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.RegularBoxData;
+import com.horizen.fixtures.BoxFixtureClass;
+import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class DefaultTransactionIncompatibilityCheckerTest {
+public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClass {
 
     @Test
     public void DefaultTransactionIncompatibilityCheckerTest_IncompatibilityTest() {
@@ -28,29 +33,29 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
         // Set inputs for 'newTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from1 = new ArrayList<>();
-        from1.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), pk1));
-        from1.add(new Pair<>(new RegularBox(pk2.publicImage(), 1, 10), pk2));
+        from1.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
+        from1.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 10), pk2));
 
         // Set inputs for 'currentTx1': compatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from2 = new ArrayList<>();
-        from2.add(new Pair<>(new RegularBox(pk3.publicImage(), 1, 10), pk3));
-        from2.add(new Pair<>(new RegularBox(pk4.publicImage(), 1, 10), pk4));
+        from2.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 10), pk3));
+        from2.add(new Pair<>(getRegularBox(pk4.publicImage(), 1, 10), pk4));
 
         // Set inputs for 'currentTx2': compatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from3 = new ArrayList<>();
-        from3.add(new Pair<>(new RegularBox(pk5.publicImage(), 1, 10), pk5));
-        from3.add(new Pair<>(new RegularBox(pk6.publicImage(), 1, 10), pk6));
+        from3.add(new Pair<>(getRegularBox(pk5.publicImage(), 1, 10), pk5));
+        from3.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
 
         // Set inputs for 'currentTx3': incompatible to 'nexTx'
         ArrayList<Pair<RegularBox, PrivateKey25519>> from4 = new ArrayList<>();
-        from4.add(new Pair<>(new RegularBox(pk1.publicImage(), 1, 10), pk1));
-        from4.add(new Pair<>(new RegularBox(pk6.publicImage(), 1, 10), pk6));
+        from4.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
+        from4.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
 
 
         // Set outputs, the same for all transactions
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
-        ArrayList<Pair<PublicKey25519Proposition, Long>> to = new ArrayList<>();
-        to.add(new Pair<>(pk7.publicImage(), 10L));
+        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new RegularBoxData(pk7.publicImage(), 10L));
 
         RegularTransaction newTx = RegularTransaction.create(from1, to, fee, timestamp);
         RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee, timestamp);
@@ -61,21 +66,20 @@ public class DefaultTransactionIncompatibilityCheckerTest {
 
 
         // Test 1: test against empty list
-        assertEquals("Transaction expected to be compatible to empty list", true,
-                checker.isTransactionCompatible(newTx, new ArrayList<>()));
+        assertTrue("Transaction expected to be compatible to empty list", checker.isTransactionCompatible(newTx, new ArrayList<>()));
 
 
         // Test 2: test against compatible list
         ArrayList<BoxTransaction> compatibleList = new ArrayList<>();
         compatibleList.add(currentTx1);
         compatibleList.add(currentTx2);
-        assertEquals("Transaction expected to be compatible to list", true, checker.isTransactionCompatible(newTx, compatibleList));
+        assertTrue("Transaction expected to be compatible to list", checker.isTransactionCompatible(newTx, compatibleList));
 
 
         // Test 3: test against incompatible list
         ArrayList<BoxTransaction> incompatibleList = new ArrayList<>();
         incompatibleList.add(currentTx1);
         incompatibleList.add(currentTx3);
-        assertEquals("Transaction expected to be incompatible to list", false, checker.isTransactionCompatible(newTx, incompatibleList));
+        assertFalse("Transaction expected to be incompatible to list", checker.isTransactionCompatible(newTx, incompatibleList));
     }
 }

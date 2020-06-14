@@ -1,31 +1,30 @@
 package com.horizen.box
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
-import scorex.crypto.signatures.Curve25519
 
-class CertifierRightBoxScalaTest
-  extends JUnitSuite
+class CertifierRightBoxScalaTest extends JUnitSuite with BoxFixture
 {
 
   @Test
   def testToJson(): Unit = {
     val seed = "12345".getBytes
-    val keyPair = Curve25519.createKeyPair(seed)
-    val privateKey = keyPair._1
-    val publicKey = keyPair._2
+    val keyPair = Ed25519.createKeyPair(seed)
+    val privateKey = keyPair.getKey
+    val publicKey = keyPair.getValue
 
     val proposition = new PublicKey25519Proposition(publicKey)
     val nonce = 12345
     val value = 10
     val minimumWithdrawalEpoch = 5
-    val box = new CertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch)
+    val box = getCertifierRightBox(proposition, nonce, value, minimumWithdrawalEpoch)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()

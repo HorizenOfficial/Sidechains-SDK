@@ -1,46 +1,47 @@
 package com.horizen.api.http
 
-import java.lang.Byte
-import java.util.function.Consumer
-import java.{lang, util}
+import java.lang
+import java.util.{Collections, ArrayList => JArrayList, List => JList}
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.box.{Box, RegularBox}
+import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.horizen.SidechainTypes
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.SidechainTransactionErrorResponse._
+import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import com.horizen.secret.PrivateKey25519
-import com.horizen.{SidechainTypes, transaction}
+import com.horizen.proof.Proof
+import com.horizen.proposition._
+import com.horizen.serialization.Views
 import com.horizen.transaction._
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
-import com.horizen.utils.Pair
 
-import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success}
-import JacksonSupport._
-import com.fasterxml.jackson.annotation.JsonView
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.horizen.api.http.SidechainTransactionErrorResponse._
-import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.serialization.Views
+import scala.util.control.Breaks._
+import scala.util.{Failure, Success, Try}
 
-
-case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef,
-                                        sidechainTransactionActorRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
+                                        sidechainNodeViewHolderRef: ActorRef,
+                                        sidechainTransactionActorRef: ActorRef,
+                                        companion: SidechainTransactionsCompanion,
+                                        sidechainCoreTransactionFactory: SidechainCoreTransactionFactory)
+                                       (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ findById ~ decodeTransactionBytes ~ createRegularTransaction ~ createRegularTransactionSimplified ~ sendCoinsToAddress ~ sendTransaction
+    allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
   }
-
-  private var companion: SidechainTransactionsCompanion = new SidechainTransactionsCompanion(new util.HashMap[Byte, TransactionSerializer[SidechainTypes#SCBT]]())
 
   /**
     * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
@@ -77,21 +78,21 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
 
-        def searchTransactionInMemoryPool(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInMemoryPool(id: String): Option[SidechainTypes#SCBT] = {
           var opt = memoryPool.getTransactionById(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlock(id: String, blockHash: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlock(id: String, blockHash: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        def searchTransactionInBlockchain(id: String): Option[_ <: Transaction] = {
+        def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
           var opt = history.searchTransactionInsideBlockchain(id)
           if (opt.isPresent)
             Option(opt.get())
@@ -102,8 +103,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         var format = body.format.getOrElse(false)
         var blockHash = body.blockHash.getOrElse("")
         var txIndex = body.transactionIndex.getOrElse(false)
-        var transaction: Option[Transaction] = None
-        var error: String = ???
+        var transaction: Option[SidechainTypes#SCBT] = None
+        var error: String = ""
 
 
         // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
@@ -167,11 +168,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   }
 
   /**
-    * Create and sign a regular transaction, specifying inputs and outputs.
+    * Create and sign a core transaction, specifying inputs and outputs.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
-  def createRegularTransaction: Route = (post & path("createRegularTransaction")) {
-    entity(as[ReqCreateRegularTransaction]) { body =>
+  def createCoreTransaction: Route = (post & path("createCoreTransaction")) {
+    entity(as[ReqCreateCoreTransaction]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
@@ -180,40 +181,57 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
         if (inputBoxes.length < body.transactionInputs.size) {
           ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
         } else {
-          var inSum: Long = 0
-          var outSum: Long = 0
+          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          body.regularOutputs.foreach(element =>
+            outputs.add(new RegularBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          )
 
-          val inputs: IndexedSeq[Pair[RegularBox, PrivateKey25519]] = inputBoxes.map(box => {
-            var secret = wallet.secretByPublicKey(box.proposition())
-            var privateKey = secret.get().asInstanceOf[PrivateKey25519]
-            wallet.secretByPublicKey(box.proposition()).get().asInstanceOf[PrivateKey25519]
-            new Pair(
-              box.asInstanceOf[RegularBox],
-              privateKey)
+          body.withdrawalRequests.foreach(element =>
+            outputs.add(new WithdrawalRequestBoxData(
+              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          )
+
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value),
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+            )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           }
-          ).toIndexedSeq
 
-          val outputs: IndexedSeq[Pair[PublicKey25519Proposition, lang.Long]] = body.transactionOutputs.map(element =>
-            new Pair(
-              PublicKey25519PropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value))
-          ).toIndexedSeq
+          val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
+          val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
+          val fee: Long = inputsTotalAmount - outputsTotalAmount
+          if(fee < 0) {
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
+              Some(new IllegalArgumentException("Total inputs amount is less then total outputs amount."))))
+          }
+          else try {
+            // Create unsigned tx
+            val boxIds = inputBoxes.map(_.id()).asJava
+            val timestamp = System.currentTimeMillis
+            // Create a list of fake proofs for further messageToSign calculation
+            val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
 
-          inputs.foreach(pair => inSum += pair.getKey.value())
-          outputs.foreach(pair => outSum += pair.getValue)
+            val unsignedTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, fakeProofs, fee, timestamp)
 
-          val fee: Long = inSum - outSum
+            // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
+            val messageToSign = unsignedTransaction.messageToSign()
+            val proofs = inputBoxes.map(box => {
+              wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+            })
 
-          try {
-            val regularTransaction = RegularTransaction.create(
-              JavaConverters.seqAsJavaList(inputs),
-              JavaConverters.seqAsJavaList(outputs),
-              fee, System.currentTimeMillis())
-
+            val transaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
             if (body.format.getOrElse(false))
-              ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
+              ApiResponseUtil.toResponse(TransactionDTO(transaction))
             else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
           } catch {
             case t: Throwable =>
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
@@ -224,94 +242,185 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
   }
 
   /**
-    * Create and sign a regular transaction, specifying outputs and fee.
+    * Create and sign a core transaction, specifying core outputs and fee. Search for and spend proper amount of regular coins.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
-  def createRegularTransactionSimplified: Route = (post & path("createRegularTransactionSimplified")) {
-    entity(as[ReqCreateRegularTransactionSimplified]) { body =>
+  def createCoreTransactionSimplified: Route = (post & path("createCoreTransactionSimplified")) {
+    entity(as[ReqCreateCoreTransactionSimplified]) { body =>
       withNodeView { sidechainNodeView =>
-        var outputList = body.transactionOutputs
+        var outputList = body.regularOutputs
+        var withdrawalRequestList = body.withdrawalRequests
+        var forgerOutputList = body.forgerOutputs
         var fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
-        try {
-          var regularTransaction = createRegularTransactionSimplified_(outputList, fee, wallet, sidechainNodeView)
-
-          if (body.format.getOrElse(false))
-            ApiResponseUtil.toResponse(TransactionDTO(regularTransaction))
-          else
-            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(regularTransaction))))
-        } catch {
-          case t: Throwable =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+        getChangeAddress(wallet) match {
+          case Some(changeAddress) =>
+            createCoreTransaction(classOf[RegularBox], outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
+              case Success(transaction) =>
+                if (body.format.getOrElse(false))
+                  ApiResponseUtil.toResponse(TransactionDTO(transaction))
+                else
+                  ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+            }
+          case None =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
+              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
         }
       }
     }
   }
 
-  // Note: method should return Try[RegularTransaction]
-  private def createRegularTransactionSimplified_(
-                                                   outputList: List[TransactionOutput], fee: Long, wallet: NodeWallet,
-                                                   sidechainNodeView: SidechainNodeView): RegularTransaction = {
-
-    val memoryPool = sidechainNodeView.getNodeMemoryPool
-    val boxIdsToExclude: ArrayBuffer[scala.Array[scala.Byte]] = ArrayBuffer[scala.Array[scala.Byte]]()
-
-    memoryPool.getTransactionsSortedByFee(memoryPool.getSize).forEach(new Consumer[transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]] {
-      override def accept(t: transaction.BoxTransaction[_ <: Proposition, _ <: Box[_ <: Proposition]]): Unit = {
-        t.boxIdsToOpen().forEach(new Consumer[ByteArrayWrapper] {
-          override def accept(t: ByteArrayWrapper): Unit = {
-            boxIdsToExclude += t.data
-          }
-        })
-      }
-    })
-
-    var outputs: java.util.List[Pair[PublicKey25519Proposition, lang.Long]] = outputList.map(element =>
-      new Pair(new PublicKey25519Proposition(BytesUtils.fromHexString(element.publicKey)), new lang.Long(element.value))).asJava
-
-    var tx: RegularTransaction = null
-    try {
-      tx = RegularTransactionCreator.create(wallet, outputs, wallet.allSecrets().get(0).asInstanceOf[PrivateKey25519].publicImage(), fee, boxIdsToExclude.asJava)
-    }
-    catch {
-      case e: Exception => log.error(s"RegularTransaction creaion error: ${e.getMessage}")
-        throw e
-    }
-    tx // to do: see note above
-  }
-
   /**
-    * Create and sign a regular transaction, specifying outputs and fee. Then validate and send the transaction.
+    * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
     * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
     */
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
     entity(as[ReqSendCoinsToAddress]) { body =>
       withNodeView { sidechainNodeView =>
-        var outputList = body.outputs
-        var fee = body.fee
+        val outputList = body.outputs
+        val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
-        try {
-          var regularTransaction = createRegularTransactionSimplified_(outputList, fee.getOrElse(0L), wallet, sidechainNodeView)
-          validateAndSendTransaction(regularTransaction)
-        } catch {
-          case t: Throwable =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+        getChangeAddress(wallet) match {
+          case Some(changeAddress) =>
+            createCoreTransaction(classOf[RegularBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
+              case Success(transaction) => validateAndSendTransaction(transaction)
+              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+            }
+          case None =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
+              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
         }
       }
     }
   }
 
-  private def validateAndSendTransaction(transaction: Transaction) = {
+  def withdrawCoins: Route = (post & path("withdrawCoins")) {
+    entity(as[ReqWithdrawCoins]) { body =>
+      withNodeView { sidechainNodeView =>
+        val withdrawalOutputsList = body.outputs
+        val fee = body.fee
+        val wallet = sidechainNodeView.getNodeWallet
+
+        getChangeAddress(wallet) match {
+          case Some(changeAddress) =>
+            createCoreTransaction(classOf[RegularBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
+              case Success(transaction) => validateAndSendTransaction(transaction)
+              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+            }
+          case None =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
+              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+        }
+      }
+    }
+  }
+
+  def makeForgerStake: Route = (post & path("makeForgerStake")) {
+    entity(as[ReqCreateForgerStake]) { body =>
+      withNodeView { sidechainNodeView =>
+        val forgerOutputsList = body.outputs
+        val fee = body.fee
+        val wallet = sidechainNodeView.getNodeWallet
+
+        getChangeAddress(wallet) match {
+          case Some(changeAddress) =>
+            createCoreTransaction(classOf[RegularBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
+              case Success(transaction) => validateAndSendTransaction(transaction)
+              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+            }
+          case None =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
+              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+        }
+      }
+    }
+  }
+
+  /**
+    * Create and sign a CoreTransaction, specifying inputs and outputs, add that transaction to the memory pool
+    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+    */
+  def spendForgingStake: Route = (post & path("spendForgingStake")) {
+    entity(as[ReqSpendForgingStake]) { body =>
+      withNodeView { sidechainNodeView =>
+        val wallet = sidechainNodeView.getNodeWallet
+        val inputBoxes = wallet.allBoxes().asScala
+          .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
+
+        if (inputBoxes.length < body.transactionInputs.size) {
+          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
+        } else {
+          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          body.regularOutputs.foreach(element =>
+            outputs.add(new RegularBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
+            )
+          )
+          body.forgerOutputs.foreach{element =>
+            val forgerBoxToAdd = new ForgerBoxData(
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              new lang.Long(element.value),
+              PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+              VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+            )
+
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+          }
+
+          val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
+          val outputsTotalAmount: Long = outputs.asScala.map(_.value()).sum
+          val fee: Long = inputsTotalAmount - outputsTotalAmount
+
+          try {
+            // Create unsigned tx
+            val boxIds = inputBoxes.map(_.id()).asJava
+            val timestamp = System.currentTimeMillis
+            // Create a list of fake proofs for further messageToSign calculation
+            val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
+            val unsignedTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, fakeProofs, fee, timestamp)
+
+            // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
+            val messageToSign = unsignedTransaction.messageToSign()
+            val proofs = inputBoxes.map(box => {
+              wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+            })
+
+            val transaction: SidechainCoreTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
+            val txRepresentation: (SidechainTypes#SCBT => SuccessResponse) =
+              if (body.format.getOrElse(false)) {
+                tx => TransactionDTO(tx)
+              } else {
+                tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
+              }
+            validateAndSendTransaction(transaction, txRepresentation)
+          } catch {
+            case t: Throwable =>
+              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+          }
+        }
+      }
+    }
+  }
+
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val defaultTransactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = {
+    transaction => TransactionIdDTO(transaction.id)
+  }
+
+  private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
+                                         transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
     withNodeView {
       sidechainNodeView =>
         val barrier = Await.result(
           sidechainTransactionActorRef ? BroadcastTransaction(transaction),
           settings.timeout).asInstanceOf[Future[Unit]]
         onComplete(barrier) {
-          case Success(result) =>
-            ApiResponseUtil.toResponse(TransactionIdDTO(transaction.id))
+          case Success(_) =>
+            ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
           case Failure(exp) =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
             )
@@ -337,6 +446,92 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings, 
     }
   }
 
+  // try to get the first PublicKey25519Proposition in the wallet
+  // None - if not present.
+  private def getChangeAddress(wallet: NodeWallet): Option[PublicKey25519Proposition] = {
+    wallet.allSecrets().asScala
+      .find(s => s.publicImage().isInstanceOf[PublicKey25519Proposition])
+      .map(_.publicImage().asInstanceOf[PublicKey25519Proposition])
+  }
+
+  private def createCoreTransaction(inputBoxesType: Class[_<: Box[_ <: Proposition]],
+                                    regularBoxDataList: List[TransactionOutput],
+                                    withdrawalRequestBoxDataList: List[TransactionOutput],
+                                    forgerBoxDataList: List[TransactionForgerOutput],
+                                    fee: Long,
+                                    changeAddress: PublicKey25519Proposition,
+                                    wallet: NodeWallet,
+                                    sidechainNodeView: SidechainNodeView): Try[SidechainCoreTransaction] = Try {
+
+    val memoryPool = sidechainNodeView.getNodeMemoryPool
+    val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
+
+    for(transaction <- memoryPool.getTransactionsSortedByFee(memoryPool.getSize).asScala)
+      for(id <- transaction.boxIdsToOpen().asScala)
+        boxIdsToExclude.add(id.data)
+
+    val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+    regularBoxDataList.foreach(element =>
+      outputs.add(new RegularBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+    )
+
+    withdrawalRequestBoxDataList.foreach(element =>
+      outputs.add(new WithdrawalRequestBoxData(
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+    )
+
+    forgerBoxDataList.foreach{element =>
+      val forgingBoxToAdd = new ForgerBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        new lang.Long(element.value),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
+        VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
+      )
+
+      outputs.add(forgingBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+    }
+
+
+    val outputsTotalAmount: Long = outputs.asScala.map(boxData => boxData.value()).sum
+    val inputsMinimumExpectedAmount: Long = outputsTotalAmount + fee
+    var inputsTotalAmount: Long = 0L
+
+    val boxes = ArrayBuffer[Box[Proposition]]()
+    breakable {
+      for (box: Box[Proposition] <- wallet.boxesOfType(inputBoxesType, boxIdsToExclude).asScala) {
+        boxes.append(box)
+        inputsTotalAmount += box.value()
+        if (inputsTotalAmount >= inputsMinimumExpectedAmount)
+          break
+      }
+    }
+
+
+    if(inputsTotalAmount < inputsMinimumExpectedAmount)
+      throw new IllegalArgumentException("Not enough balances in the wallet to create transaction.")
+
+    // Add change if need.
+    if(inputsTotalAmount > inputsMinimumExpectedAmount)
+      outputs.add(new RegularBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+
+    // Create unsigned tx
+    val boxIds = boxes.map(_.id()).asJava
+    val timestamp = System.currentTimeMillis
+    // Create a list of fake proofs for further messageToSign calculation
+    val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
+    val unsignedTransaction = sidechainCoreTransactionFactory.create(boxIds, outputs, fakeProofs, fee, timestamp)
+
+    // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
+    val messageToSign = unsignedTransaction.messageToSign()
+    val proofs = boxes.map(box => {
+      wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+    })
+
+    sidechainCoreTransactionFactory.create(boxIds, outputs, proofs.asJava, fee, timestamp)
+  }
 }
 
 
@@ -346,7 +541,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllTransactions(transactions: List[Transaction]) extends SuccessResponse
+  private[api] case class RespAllTransactions(transactions: List[SidechainTypes#SCBT]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
@@ -355,7 +550,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: Transaction) extends SuccessResponse
+  private[api] case class TransactionDTO(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
@@ -364,7 +559,7 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespDecodeTransactionBytes(transaction: Transaction) extends SuccessResponse
+  private[api] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCBT) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionInput(boxId: String)
@@ -373,23 +568,45 @@ object SidechainTransactionRestScheme {
   private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateRegularTransaction(transactionInputs: List[TransactionInput],
-                                                      transactionOutputs: List[TransactionOutput],
+  private[api] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
+                                                      regularOutputs: List[TransactionOutput],
+                                                      withdrawalRequests: List[TransactionOutput],
+                                                      forgerOutputs: List[TransactionForgerOutput],
                                                       format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
-    require(transactionOutputs.nonEmpty, "Empty outputs list")
+    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateRegularTransactionSimplified(transactionOutputs: List[TransactionOutput],
-                                                                @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Long,
-                                                                format: Option[Boolean]) {
-    require(transactionOutputs.nonEmpty, "Empty outputs list")
+  private[api] case class ReqCreateCoreTransactionSimplified(regularOutputs: List[TransactionOutput],
+                                                             withdrawalRequests: List[TransactionOutput],
+                                                             forgerOutputs: List[TransactionForgerOutput],
+                                                             @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
+                                                             format: Option[Boolean]) {
+    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
     require(fee >= 0, "Negative fee. Fee must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput], @JsonDeserialize(contentAs = classOf[java.lang.Long])fee: Option[Long]) {
+  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
+                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqWithdrawCoins(outputs: List[TransactionOutput],
+                                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(outputs.nonEmpty, "Empty outputs list")
+    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateForgerStake(outputs: List[TransactionForgerOutput],
+                                               @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
   }
@@ -399,6 +616,15 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],
+                                                      regularOutputs: List[TransactionOutput],
+                                                      forgerOutputs: List[TransactionForgerOutput],
+                                                      format: Option[Boolean]) {
+    require(transactionInputs.nonEmpty, "Empty inputs list")
+    require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
+  }
 
 }
 

@@ -1,9 +1,9 @@
 package com.horizen
 
-import java.io.{File, FileOutputStream}
-import java.nio.file.Files
+import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.utils.BytesUtils
 import org.scalatest.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
@@ -41,9 +41,12 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
       assertEquals("SidechainSyncInfo known block %d is different".format(i), info.knownBlockIds(i), serializedInfoTry.get.knownBlockIds(i))
 
 
-    /*val out = Some(new FileOutputStream("src/test/resources/sidechainsyncinfo_bytes"))
-    out.get.write(bytes)
-    out.get.close()*/
+
+//    Uncomment and run if you want to update regression data.
+//    val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainsyncinfo_hex"))
+//    out.write(BytesUtils.toHexString(bytes))
+//    out.close()
+
 
 
     // Test 2: try to deserialize broken bytes.
@@ -55,8 +58,8 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     var bytes: Array[Byte] = null
     try {
       val classLoader = getClass.getClassLoader
-      val file = new File(classLoader.getResource("sidechainsyncinfo_bytes").getFile)
-      bytes = Files.readAllBytes(file.toPath)
+      val file = new FileReader(classLoader.getResource("sidechainsyncinfo_hex").getFile)
+      bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
     }
     catch {
       case e: Exception =>

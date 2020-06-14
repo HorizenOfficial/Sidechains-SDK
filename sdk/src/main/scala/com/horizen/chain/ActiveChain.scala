@@ -4,9 +4,11 @@ import scorex.util.ModifierId
 
 import scala.collection.mutable.ArrayBuffer
 
-final class ActiveChain private(private val sidechainCache: ElementsChain[ModifierId, SidechainBlockInfo],
-                                private val mainchainCache: ElementsChain[MainchainBlockReferenceId, MainchainBlockReferenceData],
-                                private val mainchainCreationBlockHeight: Int = 1) {
+
+final class ActiveChain private(sidechainCache: ElementsChain[ModifierId, SidechainBlockInfo],
+                                mainchainHeadersCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
+                                mainchainReferenceDataCache: ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata],
+                                mainchainCreationBlockHeight: Int = 1) {
 
   require(mainchainCreationBlockHeight > 0, "Mainchain creation block height height shall be at least 1")
   private val mainchainCreationBlockHeightDifference = mainchainCreationBlockHeight - 1
@@ -31,88 +33,135 @@ final class ActiveChain private(private val sidechainCache: ElementsChain[Modifi
   def idByHeight(blockHeight: Int): Option[ModifierId] = sidechainCache.idByHeight(blockHeight)
 
   // Mainchain data retrieval
-  def mcHeightByMcId(mainChainReferenceId: MainchainBlockReferenceId): Option[Int] = mainchainCache.heightById(mainChainReferenceId).map(_ + mainchainCreationBlockHeightDifference)
+  def mcHeadersHeightByMcHash(mainchainHeaderHash: MainchainHeaderHash): Option[Int] = mainchainHeadersCache.heightById(mainchainHeaderHash).map(_ + mainchainCreationBlockHeightDifference)
 
-  def mcIdByMcHeight(mcHeight: Int): Option[MainchainBlockReferenceId] = mainchainCache.idByHeight(mcHeight - mainchainCreationBlockHeightDifference)
+  def mcRefDataHeightByMcHash(mainchainHeaderHash: MainchainHeaderHash): Option[Int] = mainchainReferenceDataCache.heightById(mainchainHeaderHash).map(_ + mainchainCreationBlockHeightDifference)
+
+  def mcHashByMcHeight(mcHeight: Int): Option[MainchainHeaderHash] = mainchainHeadersCache.idByHeight(mcHeight - mainchainCreationBlockHeightDifference)
 
   // Active chain store
-  def heightOfMc: Int = mainchainCache.height + mainchainCreationBlockHeightDifference
+  def heightOfMcHeaders: Int = mainchainHeadersCache.height + mainchainCreationBlockHeightDifference
 
-  def mcBlockReferenceDataByMcId(mainChainReferenceId: MainchainBlockReferenceId): Option[MainchainBlockReferenceData] = mainchainCache.dataById(mainChainReferenceId)
+  def heightOfMcReferencesData: Int = mainchainReferenceDataCache.height + mainchainCreationBlockHeightDifference
+
+  def mcHeaderMetadataByMcHash(mainchainHeaderHash: MainchainHeaderHash): Option[MainchainHeaderMetadata] = mainchainHeadersCache.dataById(mainchainHeaderHash)
+
+  def mcReferenceDataMetadataByMcHash(mainchainHeaderHash: MainchainHeaderHash): Option[MainchainHeaderMetadata] = mainchainReferenceDataCache.dataById(mainchainHeaderHash)
+
+  def bestMainchainHeaderHash: Option[MainchainHeaderHash] = mainchainHeadersCache.bestId
 
   // Mixed data retrieval
-  def heightByMcId(mcId: MainchainBlockReferenceId): Option[Int] = {
-    mainchainCache.dataById(mcId).map(_.sidechainHeight)
+  def heightByMcHeader(mainchainHeaderHash: MainchainHeaderHash): Option[Int] = {
+    mainchainHeadersCache.dataById(mainchainHeaderHash).map(_.sidechainHeight)
   }
 
-  def idByMcId(mcId: MainchainBlockReferenceId): Option[ModifierId] = {
-    heightByMcId(mcId).flatMap(sidechainCache.idByHeight)
+  def idByMcHeader(mainchainHeaderHash: MainchainHeaderHash): Option[ModifierId] = {
+    heightByMcHeader(mainchainHeaderHash).flatMap(sidechainCache.idByHeight)
   }
 
-  def setBestBlock(newBestId: ModifierId, newBestData: SidechainBlockInfo, mainchainParentId: Option[MainchainBlockReferenceId]): Unit = {
+  def heightByMcReferenceData(mainchainReferenceDataHeaderHash: MainchainHeaderHash): Option[Int] = {
+    mainchainReferenceDataCache.dataById(mainchainReferenceDataHeaderHash).map(_.sidechainHeight)
+  }
+
+  def idByMcReferenceData(mainchainReferenceDataHeaderHash: MainchainHeaderHash): Option[ModifierId] = {
+    heightByMcReferenceData(mainchainReferenceDataHeaderHash).flatMap(sidechainCache.idByHeight)
+  }
+
+  def setBestBlock(newBestId: ModifierId, newBestData: SidechainBlockInfo, mainchainParentHashOpt: Option[MainchainHeaderHash]): Unit = {
     if (height == 0) {
-      setGenesisBlock(newBestId, newBestData, mainchainParentId)
+      setGenesisBlock(newBestId, newBestData, mainchainParentHashOpt)
     }
     else {
-      setNonGenesisBlock(newBestId, newBestData, mainchainParentId)
+      setNonGenesisBlock(newBestId, newBestData, mainchainParentHashOpt)
     }
   }
 
-  private def setGenesisBlock(genesisBlockId: ModifierId, genesisBlockInfo: SidechainBlockInfo, mainchainParentId: Option[MainchainBlockReferenceId]): Unit = {
+  private def setGenesisBlock(genesisBlockId: ModifierId, genesisBlockInfo: SidechainBlockInfo, mainchainParentHashOpt: Option[MainchainHeaderHash]): Unit = {
     if (height != 0) throw new IllegalArgumentException("Try to set genesis block for non-empty active chain")
-    if (genesisBlockInfo.mainchainBlockReferenceHashes.isEmpty) throw new IllegalArgumentException("Mainchain block references shall be defined for genesis block")
-    if (mainchainParentId.isEmpty) throw new IllegalArgumentException ("Parent for mainchain creation block shall be set")
+    if (genesisBlockInfo.mainchainHeaderHashes.isEmpty) throw new IllegalArgumentException("Mainchain block headers must be defined for genesis block")
+    if (genesisBlockInfo.mainchainReferenceDataHeaderHashes.isEmpty) throw new IllegalArgumentException("Mainchain block reference data must be defined for genesis block")
+    if (mainchainParentHashOpt.isEmpty) throw new IllegalArgumentException ("Parent for mainchain creation block shall be set")
 
-    addToBothStorages(genesisBlockId, genesisBlockInfo, mainchainParentId)
+    // Parent for both first MainchainBlockReferenceData and MainchainHeader is the same for genesis block
+    addToStorages(genesisBlockId, genesisBlockInfo, mainchainParentHashOpt, mainchainParentHashOpt)
   }
 
-  private def setNonGenesisBlock(newBestId: ModifierId, newBestInfo: SidechainBlockInfo, givenMainchainParentId: Option[MainchainBlockReferenceId]): Unit = {
+  private def setNonGenesisBlock(newBestId: ModifierId, newBestInfo: SidechainBlockInfo, givenMainchainParentHashOpt: Option[MainchainHeaderHash]): Unit = {
     // check sidechain correctness
     val parentHeight = heightById(newBestInfo.getParentId).getOrElse(throw new IllegalArgumentException(s"Try to add unconnected sidechain block with id ${newBestId} to an active chain"))
 
-    // check mainchain correctness
-    val actualMainchainParentForNewBlock = getLastMainchainReferenceBeforeHeight(parentHeight).getOrElse(throw new IllegalStateException(s"New best block clear all mainchain references"))
+    // check mainchain headers correctness
+    val actualMainchainParentForNewBlock = getLastMainchainHeaderHashTillHeight(parentHeight).getOrElse(throw new IllegalStateException(s"New best block clear all mainchain headers"))
 
-    val mcReferencesIsEmpty = newBestInfo.mainchainBlockReferenceHashes.isEmpty
-    if (mcReferencesIsEmpty != givenMainchainParentId.isEmpty) {
-      throw new IllegalArgumentException(s"Active chain inconsistency: mainchain references isEmpty are ${mcReferencesIsEmpty} but mainchain parent isEmpty are ${givenMainchainParentId.isEmpty}")
+    val mcReferencesIsEmpty = newBestInfo.mainchainHeaderHashes.isEmpty
+    if (mcReferencesIsEmpty != givenMainchainParentHashOpt.isEmpty) {
+      throw new IllegalArgumentException(s"Active chain inconsistency: mainchain references isEmpty are ${mcReferencesIsEmpty} but mainchain parent isEmpty are ${givenMainchainParentHashOpt.isEmpty}")
     }
 
-    givenMainchainParentId.foreach{givenParentId =>
-      if(givenParentId != actualMainchainParentForNewBlock) {
-        throw new IllegalArgumentException("Try to add inconsistent mainchain block references")
+    givenMainchainParentHashOpt.foreach{givenParentHash =>
+      if(givenParentHash != actualMainchainParentForNewBlock) {
+        throw new IllegalArgumentException("Try to add inconsistent mainchain headers")
       }
     }
 
-    // cut both storages
+    // get actual MainchainReferenceData HeaderHash till parentHeight
+    val actualMainchainReferenceDataParentForNewBlock = getLastMainchainReferenceDataHeaderHashTillHeight(parentHeight)
+      .getOrElse(throw new IllegalStateException(s"New best block clear all mainchain references data header hashes"))
+
+    // check MainchainReferenceData correctness against MainchainHeaders
+    val mcDataHeight: Int = mcRefDataHeightByMcHash(actualMainchainReferenceDataParentForNewBlock).get
+    val mcHeaderHeight: Int = mcHeadersHeightByMcHash(actualMainchainParentForNewBlock).get
+    val missedRefDataHeaderHashes: Seq[MainchainHeaderHash] =
+      (mcDataHeight + 1 to mcHeaderHeight).flatMap(h => mcHashByMcHeight(h)) ++ newBestInfo.mainchainHeaderHashes
+    val expectedRefDataHeaderHashes = missedRefDataHeaderHashes.take(newBestInfo.mainchainReferenceDataHeaderHashes.size)
+    if(!expectedRefDataHeaderHashes.equals(newBestInfo.mainchainReferenceDataHeaderHashes))
+      throw new IllegalArgumentException("Try to add inconsistent mainchain reference data")
+
+
+    // cut storages
     sidechainCache.cutToId(newBestInfo.parentId)
-    mainchainCache.cutToId(actualMainchainParentForNewBlock)
+    mainchainHeadersCache.cutToId(actualMainchainParentForNewBlock)
+    mainchainReferenceDataCache.cutToId(actualMainchainReferenceDataParentForNewBlock)
 
     // add new data
-    addToBothStorages(newBestId, newBestInfo, Some(actualMainchainParentForNewBlock))
+    addToStorages(newBestId, newBestInfo, Some(actualMainchainParentForNewBlock), Some(actualMainchainReferenceDataParentForNewBlock))
   }
 
-  private def addToBothStorages(newTipId: ModifierId, newTipInfo: SidechainBlockInfo, parentForMainchain: Option[MainchainBlockReferenceId]): Unit = {
+  private def addToStorages(newTipId: ModifierId,
+                            newTipInfo: SidechainBlockInfo,
+                            mainchainHeaderParentHashOpt: Option[MainchainHeaderHash],
+                            mainchainRefDataParentHeaderHash: Option[MainchainHeaderHash]): Unit = {
     sidechainCache.appendData(newTipId, newTipInfo)
 
     val addedTipHeight = heightById(newTipId).getOrElse(throw new IllegalStateException("Added tip has no height"))
-    val preparedMainchainReferences = buildMainchainBlockReferences(addedTipHeight, newTipInfo.mainchainBlockReferenceHashes, parentForMainchain)
-    preparedMainchainReferences.foreach { case (id, data) => mainchainCache.appendData(id, data) }
+    val preparedMainchainHeadersInfo = buildMainchainHeadersInfo(addedTipHeight, newTipInfo.mainchainHeaderHashes, mainchainHeaderParentHashOpt)
+    preparedMainchainHeadersInfo.foreach { case (id, data) => mainchainHeadersCache.appendData(id, data) }
+
+    val preparedMainchainRefDataHeadersInfo = buildMainchainHeadersInfo(addedTipHeight, newTipInfo.mainchainReferenceDataHeaderHashes, mainchainRefDataParentHeaderHash)
+    preparedMainchainRefDataHeadersInfo.foreach { case (id, data) => mainchainReferenceDataCache.appendData(id, data) }
   }
 
-  private def getLastMainchainReferenceBeforeHeight(scHeight: Int): Option[MainchainBlockReferenceId] = {
+  private def getLastMainchainHeaderHashTillHeight(scHeight: Int): Option[MainchainHeaderHash] = {
     sidechainCache
-      .getLastDataByPredicateBeforeHeight(scHeight)(_.mainchainBlockReferenceHashes.nonEmpty)
-      .flatMap(scBlockInfo => scBlockInfo.mainchainBlockReferenceHashes.lastOption)
+      .getLastDataByPredicateTillHeight(scHeight)(_.mainchainHeaderHashes.nonEmpty)
+      .flatMap(scBlockInfo => scBlockInfo.mainchainHeaderHashes.lastOption)
   }
 
-  private def buildMainchainBlockReferences(sidechainHeight: Int, mainchainBlockHashes: Seq[MainchainBlockReferenceId], parentForMainchain: Option[MainchainBlockReferenceId]) = {
-    if (mainchainBlockHashes.nonEmpty) {
-      require(parentForMainchain.isDefined, "Active chain inconsistency: parent is not defined for new best non empty mainchain references")
+  private def getLastMainchainReferenceDataHeaderHashTillHeight(scHeight: Int): Option[MainchainHeaderHash] = {
+    sidechainCache
+      .getLastDataByPredicateTillHeight(scHeight)(_.mainchainReferenceDataHeaderHashes.nonEmpty)
+      .flatMap(scBlockInfo => scBlockInfo.mainchainReferenceDataHeaderHashes.lastOption)
+  }
 
-      val bufferForBuildingMainchainBlockReferences = (Seq[(MainchainBlockReferenceId, MainchainBlockReferenceData)](), parentForMainchain.get)
-      mainchainBlockHashes.foldLeft(bufferForBuildingMainchainBlockReferences) {
-        case ((data, parent), reference) => (data :+ (reference, MainchainBlockReferenceData(sidechainHeight, parent)), reference)
+  private def buildMainchainHeadersInfo(sidechainHeight: Int,
+                                        mainchainHeaderHashes: Seq[MainchainHeaderHash],
+                                        mainchainParentHashOpt: Option[MainchainHeaderHash]): Seq[(MainchainHeaderHash, MainchainHeaderMetadata)] = {
+    if (mainchainHeaderHashes.nonEmpty) {
+      require(mainchainParentHashOpt.isDefined, "Active chain inconsistency: parent is not defined for new best non empty mainchain references")
+
+      val bufferForBuildingMainchainHeaders = (Seq[(MainchainHeaderHash, MainchainHeaderMetadata)](), mainchainParentHashOpt.get)
+      mainchainHeaderHashes.foldLeft(bufferForBuildingMainchainHeaders) {
+        case ((data, parent), headerHash) => (data :+ (headerHash, MainchainHeaderMetadata(sidechainHeight, parent)), headerHash)
       }._1
     }
     else {
@@ -124,19 +173,26 @@ final class ActiveChain private(private val sidechainCache: ElementsChain[Modifi
 object ActiveChain {
   // In case of empty storage
   def apply(mainchainCreationBlockHeight: Int): ActiveChain = {
-    new ActiveChain(new ElementsChain[ModifierId, SidechainBlockInfo](), new ElementsChain[MainchainBlockReferenceId, MainchainBlockReferenceData](), mainchainCreationBlockHeight: Int)
+    new ActiveChain(
+      new ElementsChain[ModifierId, SidechainBlockInfo](),
+      new ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata](),
+      new ElementsChain[MainchainHeaderHash, MainchainHeaderMetadata](),
+      mainchainCreationBlockHeight: Int)
   }
 
   // In case of storage with blocks
-  def apply(blocksInfoData: ArrayBuffer[(ModifierId, SidechainBlockInfo)], mainchainParent: MainchainBlockReferenceId, mainchainCreationBlockHeight: Int): ActiveChain = {
-    require(blocksInfoData.head._2.mainchainBlockReferenceHashes.nonEmpty, "Incorrect data for creation Active chain: first block shall contains mainchain block references")
+  def apply(blocksInfoData: ArrayBuffer[(ModifierId, SidechainBlockInfo)], mainchainParentHash: MainchainHeaderHash, mainchainCreationBlockHeight: Int): ActiveChain = {
+    require(blocksInfoData.head._2.mainchainHeaderHashes.nonEmpty, "Incorrect data for creation Active chain: first block shall contains mainchain block references")
 
     val activeChain = ActiveChain(mainchainCreationBlockHeight)
 
-    blocksInfoData.foldLeft(Option(mainchainParent)) {
-      case (parent, (id, data)) =>
-        activeChain.addToBothStorages(id, data, parent)
-        data.mainchainBlockReferenceHashes.lastOption.orElse(parent)
+    blocksInfoData.foldLeft((Option(mainchainParentHash), Option(mainchainParentHash))) {
+      case ((mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHashOpt), (id, data)) =>
+        activeChain.addToStorages(id, data, mainchainHeaderParentHashOpt, mainchainRefDataParentHeaderHashOpt)
+
+        val newMainchainHeaderParentHashOpt = data.mainchainHeaderHashes.lastOption.orElse(mainchainHeaderParentHashOpt)
+        val newMainchainRefDataParentHeaderHashOpt = data.mainchainReferenceDataHeaderHashes.lastOption.orElse(mainchainRefDataParentHeaderHashOpt)
+        (newMainchainHeaderParentHashOpt, newMainchainRefDataParentHeaderHashOpt)
     }
     activeChain
   }

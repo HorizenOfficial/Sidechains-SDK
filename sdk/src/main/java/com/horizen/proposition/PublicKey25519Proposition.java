@@ -3,13 +3,13 @@ package com.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.serialization.Views;
+import com.horizen.utils.Ed25519;
 import scala.util.Try;
 
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.ScorexEncoding;
 
 import scorex.crypto.hash.Blake2b256;
-import scorex.crypto.signatures.Curve25519;
 import com.google.common.primitives.Bytes;
 
 import java.util.Arrays;
@@ -21,7 +21,7 @@ public final class PublicKey25519Proposition
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
-    public static final int KEY_LENGTH = Curve25519.KeyLength();;
+    public static final int KEY_LENGTH = Ed25519.keyLength();
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
     @JsonProperty("publicKey")
@@ -35,6 +35,7 @@ public final class PublicKey25519Proposition
         _pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
     }
 
+    @Override
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
     }
@@ -83,7 +84,7 @@ public final class PublicKey25519Proposition
     }
 
     public boolean verify(byte[] message, byte[] signature) {
-        return Curve25519.verify(signature, message, pubKeyBytes());
+        return Ed25519.verify(signature, message, pubKeyBytes());
     }
 
     // TO DO: should we return null if something going wrong or throw exception?

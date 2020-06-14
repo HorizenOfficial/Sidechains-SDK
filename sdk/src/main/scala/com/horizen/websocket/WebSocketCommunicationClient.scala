@@ -114,7 +114,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
             h._1.onEvent(resp)
           }
           catch {
-            case ex => log.error("Event parsing was failed by handler: " + ex.getMessage)
+            case ex: Throwable => log.error("Event parsing was failed by handler: " + ex.getMessage)
           }
         }
 
@@ -132,7 +132,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
           val resp = mapper.convertValue(json.get("responsePayload"), responseClazz)
           promise.success(resp)
         } catch {
-          case ex => promise.failure(ex)
+          case ex: Throwable => promise.failure(ex)
         }
 
       case None =>
