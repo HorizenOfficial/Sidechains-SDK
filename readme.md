@@ -23,8 +23,8 @@ Sidechains-SDK is available and tested on Linux and Windows (64bit).
 
 **Requirements**
 
-1. Java 8-12 (_there are some compilation issues in case of using Java 13+_)
-2. Scala 2.12.x
+1. Java 8 or newer (Java 11 recommended) 
+2. Scala 2.12.10+
 
 **Interaction**
 
