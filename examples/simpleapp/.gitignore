@@ -4,4 +4,9 @@ target/
 scorex.log
 scorex-errors.log
 src/main/resources/sc_settings_with_mc.conf
+.project
+.classpath
+.settings/
+.vscode/
+
 
