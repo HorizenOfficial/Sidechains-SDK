@@ -5,17 +5,15 @@ Sidechains are an innovation devised to enable blockchain scalability and extens
 Our Sidechains-SDK is a framework that supports the creation of such sidechains and their custom business logic, with the [Horizen](https://www.horizen.global/) blockchain as the "mainchain". Detailed description of the concept, the protocol, and details about mainchain / sidechain interaction can be found on the [Zendoo Whitepaper](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf).
 
 **Beta Preview features**
-1. Multiple sidechain nodes network.
-2. Mainchain synchronization: Cross-Chain Transfer Protocol support for sidechain declaration, forward transfers, backward transfer requests and withdrawal certificates.
-3. Withdrawal certificate with threshold signature zero-knowledge proof by using [zendoo-sc-cryptolib](https://github.com/ZencashOfficial/zendoo-sc-cryptolib)
-4. [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf) for sidechains, based on [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) consensus protocol - supporting forks both in Sidechain and Mainchain.
-5. Built-in coin transfer operations inside sidechain. 
-6. HTTP API for basic node operations. 
-7. Possibility to declare custom Transactions/Boxes/Secrets/etc.
-8. Possibility to extend/manage basic API.
-9. Web interface and command line tool for interaction with the Node.
-10. Sidechain Bootstrapping Tool to configure sidechain network according to mainchain network.
-11. Automatic forging support (enabled via HTTP API).
+1. Cross-Chain Transfer Protocol implementation to support Sidechain Declaration, Forward Transfers, Backward Transfer requests and Withdrawal Certificates;
+2. Basic zk-SNARK threshold signature verification circuit to authenticate Withdrawal Certificates. For more details see [zendoo-sc-cryptolib](https://github.com/ZencashOfficial/zendoo-sc-cryptolib);
+3. Full implementation of the [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf);
+4. Built-in transactions enabling coins transfers within the sidechain;
+5. HTTP API for basic node operations;
+6. Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain;
+7. Extensible node API interface;
+8. Command line tool to interact with the sidechain node;
+9. Sidechain Bootstrapping Tool to create and configure a new sidechain network.
 
 **Supported platforms**
 
@@ -23,7 +21,7 @@ Sidechains-SDK is available and tested on Linux and Windows (64bit).
 
 **Requirements**
 
-1. Java 8 to Java 12 (Java 11 recommended) 
+1. Java 8 or newer (Java 11 recommended) 
 2. Scala 2.12.10+
 
 **Interaction**
@@ -37,7 +35,7 @@ There are two ways to interact with the Node:
 
 **Project structure**
 
-Project has a module maven structure and consists of 4 modules:
+Project has a Maven module structure and consists of 4 modules:
 1) SDK - core of the Sidechains-SDK.
 2) ScBootstrappingTool - tool that supports the creation of a Sidechain configuration file that allows the synchronization with the mainchain network.
 3) Simple App - an example application, without any specific custom logic, that runs a Node, that can be either connected to the mainchain network, or isolated from it.
