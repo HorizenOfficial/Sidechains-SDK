@@ -17,11 +17,11 @@ Or if you want to run SimpleApp outside, than:
 2. Go to project root dir and execute in a command line:
     * For Windows:
         ```
-        java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0-SNAPSHOT.jar <path_to_config_file>
+        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
     * For Linux:
         ```
-        java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0-SNAPSHOT.jar <path_to_config_file>
+        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar:../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
     
 **Running SimpleApp isolated from MC**
