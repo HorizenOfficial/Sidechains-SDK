@@ -319,7 +319,12 @@ Save changes into the file like `examples/simpleapp/src/main/resources/my_settin
 **Step 12: Run Simple app**
 Run SimpleApp with the `my_settings.conf`:
 
+* For Windows:
+ ```
+    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp /examples/simpleapp/src/main/resources/my_settings.conf
 ```
-java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar /examples/simpleapp/src/main/resources/my_settings
+* For Linux:
+```
+    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar:../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp /examples/simpleapp/src/main/resources/my_settings.conf
 ```
 
