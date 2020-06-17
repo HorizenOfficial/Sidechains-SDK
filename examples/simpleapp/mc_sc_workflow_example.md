@@ -314,7 +314,7 @@ To be verified as owner of first Forger box and be able to forge new Sidechain b
 ```
 
 
-Save changes into the file like `.examples/simpleapp/src/main/resources/my_settings.conf`
+Save changes into the file like `./examples/simpleapp/src/main/resources/my_settings.conf`
 
 **Step 12: Run Simple app**
 Run SimpleApp with the `my_settings.conf`:
@@ -327,4 +327,3 @@ Run SimpleApp with the `my_settings.conf`:
 ```
     java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
-
