@@ -1,7 +1,7 @@
 **Simple App**
 ---------
 
-Simple app is a Java application that runs a basic Sidechain Node, able to receive and send coins from/to the mainchain ("Forward" and "Backward transfers"). It does not come with any application-specific code (e.g. custom boxes or transactions); that logic can be easily added to Simple App, and implement that way a complete, blockchain based distribute application.
+Simple app is a Java application that runs a basic Sidechain Node, able to receive and send coins from/to the mainchain ("Forward" and "Backward transfers"). It does not come with any application-specific code (e.g. custom boxes or transactions); that logic can be easily added to Simple App, and implement that way a complete, blockchain based distributed application.
 
 Simple App node(s) can also be run without a connection to mainchain.
 
@@ -10,7 +10,7 @@ Simple App node(s) can also be run without a connection to mainchain.
 
 You can run Simple App inside an IDE by just executing the SimpleApp class in the examples/simpleapp module.
 
-Othrwise, to run SimpleApp outside the IDE:
+Otherwise, to run SimpleApp outside the IDE:
 1. Build and package the project
     ```
     mvn package
