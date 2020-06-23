@@ -177,14 +177,13 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
   // fix test and uncomment
   @Test
-  @Ignore
   def blockCreate3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with creation of 3 sidechains.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
     //Check for sidechain 1
-    val scIdHex1 = "00000000000000000000000000000000000000000000000000000000deadbeeb"
+    val scIdHex1 = "8e87cf97de8f5f565c5cffeebb8f3db1abc6386bd6cb7143bf2e7c753587b023"
     val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
 
     val params1 = RegTestParams(scId1.data)
@@ -210,18 +209,18 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Output type must be SidechainCreation.", outputs1.get(0).isInstanceOf[SidechainCreation])
 
-    assertEquals("Block Hash is different.", "0ce5fd05abc00bf27466efca4a4fb8ac475bff2c7463dd6d0655e2754c282aa2", mcblock1.header.hashHex)
+    assertEquals("Block Hash is different.", "0b1bd6c4d1b49ff890fb944c3d0368b08f7f35c4cd9e9e5863e2ca02d70422bc", mcblock1.header.hashHex)
     assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "09534fc8c782a1bbe1acea143bb8a3438849ea2a4a8e2405e08b7ffa6bd7ccd3", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "fceec4f34d30346f40f3f47591d0ae38a4a05b4226b93afea47b5b4f3b7030c9", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "93ae3630ae1ebb8ce132a9ce47e15185f37ef081c8c8ff2c75c6868129e5d651", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1590737352, mcblock1.header.time)
+    assertEquals("Hash of previous block is different.", "0177ebdc383cfd354f309f9359cc7f2a1498d646255c47a086e958c09e51ab73", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "8a0e1948966e88212b2d8dee86ed5a4f52776046127cdb2e6374eb9d55163d83", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "28c429cd02099d838f7b0f9e46f62bca6a028e4a03353cb5fe89705ce42705e1", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
+    assertEquals("Block creation time is different", 1592902409, mcblock1.header.time)
     assertEquals("Block PoW bits is different.", "200f0f03", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "00003b5733c7aebe785177b66660c70390c756c849c2d08dea4a0fa277230021", BytesUtils.toHexString(mcblock1.header.nonce))
+    assertEquals("Block nonce is different.", "0000c3246648c0ba7a1891106a95dea59769f42d038aee1e9b910cd20d10001a", BytesUtils.toHexString(mcblock1.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
 
     //Check for sidechain 2
-    val scIdHex2 = "00000000000000000000000000000000000000000000000000000000deadbeed"
+    val scIdHex2 = "efad97d0a9ae9d846d11b7f93ba1f4329f8d4cd06708f054f880fbf7d78d9276"
     val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
 
     val params2 = RegTestParams(scId2.data)
@@ -246,7 +245,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("MC2SCAggTx outputs size is different", 1,outputs2.size())
 
     //Check for sidechain 3
-    val scIdHex3 = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    val scIdHex3 = "fe8e50b23fd4f5381d1c6926d390a0aa42620def790f197632ebd0c18ecd59b2"
     val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
 
     val params3 = RegTestParams(scId3.data)
@@ -272,7 +271,6 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   // to do: fix test and uncomment
-  @Ignore
   @Test
   def blockForwardTransfer2Sidechains(): Unit = {
 
@@ -281,7 +279,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
     //Check for sidechain 1
-    val scIdHex1 = "00000000000000000000000000000000000000000000000000000000deadbeeb"
+    val scIdHex1 = "8e87cf97de8f5f565c5cffeebb8f3db1abc6386bd6cb7143bf2e7c753587b023"
     val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
 
     val params1 = RegTestParams(scId1.data)
@@ -293,14 +291,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
-    assertEquals("Block Hash is different.", "015ad63f2d374defa22ad4c485504b303f051ec44f48f10bc7574bbe2874e9b4", mcblock1.header.hashHex)
+    assertEquals("Block Hash is different.", "0439d55792e68a0631feb970d33862408f11f045ced81ed24cdc307b5b75c1de", mcblock1.header.hashHex)
     assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "0ce5fd05abc00bf27466efca4a4fb8ac475bff2c7463dd6d0655e2754c282aa2", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "feab56386d33ea0a0f7b2fa84b0a860e4041d7b9bb9807e3f31d19abf85ef24a", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "1caf818bd855dfc7937fe438f607bea0f59a49ce6703dcf22a1045134d3ff2f1", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1590737709, mcblock1.header.time)
+    assertEquals("Hash of previous block is different.", "0b1bd6c4d1b49ff890fb944c3d0368b08f7f35c4cd9e9e5863e2ca02d70422bc", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "11bc587a319cb2a6ec25f3abd33848dee934b667fb034575e9dcf38ec06f094a", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
+    assertEquals("SCMap Merkle root hash is different.", "ac71a6407ed198df4f058addc3efd2a9201d782d877f253048b4cdafbaa495f2", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
+    assertEquals("Block creation time is different", 1592903375, mcblock1.header.time)
     assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "00006d2a761bcec1123b6cfea7d9425182c18c494f03f1c695a4295185e7000e", BytesUtils.toHexString(mcblock1.header.nonce))
+    assertEquals("Block nonce is different.", "0000d4a60f07f5789b4734ace8b4aad2779a0abf5d88c8381b1cf57318990020", BytesUtils.toHexString(mcblock1.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
@@ -318,7 +316,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Output type must be SidechainCreation.", outputs1.get(0).isInstanceOf[ForwardTransfer])
 
     //Check for sidechain 2
-    val scIdHex2 = "00000000000000000000000000000000000000000000000000000000deadbeed"
+    val scIdHex2 = "efad97d0a9ae9d846d11b7f93ba1f4329f8d4cd06708f054f880fbf7d78d9276"
     val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
 
     val params2 = RegTestParams(scId2.data)
@@ -337,7 +335,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isDefined)
 
     //Check for sidechain 3
-    val scIdHex3 = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    val scIdHex3 = "fe8e50b23fd4f5381d1c6926d390a0aa42620def790f197632ebd0c18ecd59b2"
     val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
 
     val params3 = RegTestParams(scId3.data)
@@ -357,7 +355,6 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
   }
 
-  @Ignore
   @Test
   def blockBackwardTransfer3Sidechains(): Unit = {
     // Test: parse MC block with tx version -4 with backward transfers to from 3 sidechains and forward transfer to 1 sidechain.
