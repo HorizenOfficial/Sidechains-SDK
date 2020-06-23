@@ -102,10 +102,11 @@ Save all outputs from previous steps and type `exit` for exit from Bootstrapping
 
 **Step 5: Clone and compile zen node**
 Compile MC sources with SC support code:	
-1. Clone Horizen core repository - https://github.com/ZencashOfficial/zen	
-2. Switch to the SC suport branch - `as/sc_development`	
+1. Clone Horizen core repository - https://github.com/ZencashOfficial/zend_oo/
+2. Switch to the SC suport branch - `sidechains_testnet`
 3. Build the Core for your platform using the guides in the repo.
 
+Note: The MC branch specified a separate Testnet configuration that supports Sidechains and CCTP logic.
 
 **Step 6: Setup local zen node**
 
@@ -313,12 +314,16 @@ To be verified as owner of first Forger box and be able to forge new Sidechain b
 ```
 
 
-Save changes into the file like `examples/simpleapp/src/main/resources/my_settings.conf`
+Save changes into the file like `./examples/simpleapp/src/main/resources/my_settings.conf`
 
 **Step 12: Run Simple app**
 Run SimpleApp with the `my_settings.conf`:
 
+* For Windows:
+ ```
+    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
-java -jar ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0-SNAPSHOT.jar /examples/simpleapp/src/main/resources/my_settings
+* For Linux:
 ```
-
+    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
+```
