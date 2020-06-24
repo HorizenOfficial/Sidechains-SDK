@@ -320,7 +320,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       // parameter 'format' = true
       val transactionInput: List[TransactionInput] = List(utilMocks.box_1.id(), utilMocks.box_2.id(), utilMocks.box_3.id()).map(id => TransactionInput(BytesUtils.toHexString(id)))
       val transactionOutput: List[TransactionOutput] = List(TransactionOutput(BytesUtils.toHexString(utilMocks.box_1.proposition().bytes), 30))
-      val withdrawalRequests: List[TransactionOutput] = List()
+      val withdrawalRequests: List[TransactionWithdrawalRequestOutput] = List()
       val forgerOutputs: List[TransactionForgerOutput] = List()
 
       Post(basePath + "createCoreTransaction")

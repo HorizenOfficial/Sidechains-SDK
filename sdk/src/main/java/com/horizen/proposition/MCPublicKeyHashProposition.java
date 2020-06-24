@@ -2,6 +2,8 @@ package com.horizen.proposition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.horizen.serialization.JsonBase58Serializer;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 
@@ -13,6 +15,7 @@ public final class MCPublicKeyHashProposition implements Proposition {
     public static final int KEY_LENGTH = 20;
 
     @JsonProperty("publicKey")
+    @JsonSerialize(using = JsonBase58Serializer.class)
     private byte[] pubKeyHashBytes;
 
     public MCPublicKeyHashProposition(byte[] bytes)

@@ -457,13 +457,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /transaction/createRegularTransaction:
+  /transaction/createCoreTransaction:
     post:
       tags:
         - transaction
-      summary: create and sign a regular transaction
-      description: Create and sign a regular transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
-      operationId: createRegularTransaction
+      summary: create and sign a Sidechain core transaction
+      description: Create and sign a Sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createCoreTransaction
       requestBody:
         content:
           application/json:
@@ -508,6 +508,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
+                        desctiption: base58 string - standard Horizen public key address
                       value:
                         type: integer
                         format: int64
@@ -556,13 +557,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /transaction/createRegularTransactionSimplified:
+  /transaction/createCoreTransactionSimplified:
     post:
       tags:
         - transaction
-      summary: create and sign a regular transaction
-      description: Create and sign a regular transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
-      operationId: createRegularTransactionSimplified
+      summary: create and sign a Sidechain core transaction
+      description: Create and sign a Sidechain core transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      operationId: createCoreTransactionSimplified
       requestBody:
         content:
           application/json:
@@ -597,6 +598,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
+                        desctiption: base58 string - standard Horizen public key address
                       value:
                         type: integer
                         format: int64
@@ -725,6 +727,7 @@ paths:
                       properties:
                         publicKey:
                           type: string
+                          desctiption: base58 string - standard Horizen public key address
                         value:
                           type: integer
                           format: int64
@@ -758,7 +761,7 @@ paths:
       tags:
         - transaction
       summary: create transaction with forger stake
-      description: Create and sign a regular transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      description: Create and sign a Sidechain core transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
       operationId: makeForgerStake
       requestBody:
         content:
@@ -815,8 +818,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: create and sign a forging stake spending transaction
-      description: Create and sign a forging stake spending transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      summary: create and sign sidechain core transaction
+      description: Create and sign sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
       operationId: spendForgingStake
       requestBody:
         content:

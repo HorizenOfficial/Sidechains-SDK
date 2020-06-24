@@ -1,7 +1,8 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.serialization.Views
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.horizen.serialization.{JsonBase58Serializer, Views}
 import com.horizen.utils.{BytesUtils, Utils}
 
 
@@ -9,7 +10,7 @@ import com.horizen.utils.{BytesUtils, Utils}
 @JsonIgnoreProperties(Array("outputBytes"))
 case class MainchainBackwardTransferCertificateOutput
   (outputBytes: Array[Byte],
-   pubKeyHash: Array[Byte],
+   @JsonSerialize(using = classOf[JsonBase58Serializer]) pubKeyHash: Array[Byte],
    amount: Long)
 {
 

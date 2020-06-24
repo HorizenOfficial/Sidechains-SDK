@@ -153,7 +153,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount1 = ft_amount - 3
         sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address1_hash,
+                               { "publicKey": mc_address1_standard,
                                  "value": sc_bt_amount1 }
                               ]
                              }
@@ -172,7 +172,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address2_hash,
+                               { "publicKey": mc_address2_standard,
                                  "value": sc_bt_amount2 }
                               ]
                              }
@@ -265,11 +265,11 @@ class SCBackwardTransfer(SidechainTestFramework):
                      "Backward transfer amount in certificate is wrong.")
 
         sc_pub_key_hash_1 = we1_sc_cert["backwardTransferOutputs"][0]["pubKeyHash"]
-        assert_equal(mc_address1_hash, sc_pub_key_hash_1, "First BT address is wrong.")
+        assert_equal(mc_address1_standard, sc_pub_key_hash_1, "First BT address is wrong.")
         assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
 
         sc_pub_key_hash_2 = we1_sc_cert["backwardTransferOutputs"][1]["pubKeyHash"]
-        assert_equal(mc_address2_hash, sc_pub_key_hash_2, "Second BT address is wrong.")
+        assert_equal(mc_address2_standard, sc_pub_key_hash_2, "Second BT address is wrong.")
         assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
