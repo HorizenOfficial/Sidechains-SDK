@@ -21,7 +21,7 @@ import scala.collection.JavaConverters._
 class SidechainStateStorageTest
   extends JUnitSuite
     with BoxFixture
-    with IODBStoreFixture
+    with StoreFixture
     with WithdrawalEpochCertificateFixture
     with SidechainTypes
 {
@@ -36,7 +36,7 @@ class SidechainStateStorageTest
 
   @Test
   def mainFlowTest() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
     // Verify that withdrawal epoch info and consensus info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
@@ -109,7 +109,7 @@ class SidechainStateStorageTest
 
   @Test
   def forgerStakesFlow(): Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
     // Verify that consensus info is not defined
     assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpochNumber.isEmpty)
@@ -200,7 +200,7 @@ class SidechainStateStorageTest
   @Test
   def withdrawalRequestsFlow() : Unit = {
     val rnd = new Random(90)
-    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
     // Verify that withdrawal requests info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
@@ -221,7 +221,7 @@ class SidechainStateStorageTest
       ).isSuccess
     )
 
-    assertEquals(sidechainStateStorage.getLastCertificateEndEpochMcBlockHashOpt, mod1mcBlockHashInCertificate)
+    assertEquals(sidechainStateStorage.getLastCertificateEndEpochMcBlockHashOpt.get.deep, mod1mcBlockHashInCertificate.get.deep)
 
     assertEquals("Version in storage must be - " + mod1Version,
       mod1Version, sidechainStateStorage.lastVersionId.get)
@@ -315,7 +315,7 @@ class SidechainStateStorageTest
 
   @Test
   def unprocessedWithdrawalRequestsFlow() : Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
     // Verify that withdrawal requests info is not defined
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
@@ -357,7 +357,7 @@ class SidechainStateStorageTest
 
   @Test
   def testExceptions(): Unit = {
-    val sidechainStateStorage = new SidechainStateStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
     val bList1 = getRegularBoxList(5).asScala.toSet
     val version1 = getVersion

@@ -18,7 +18,7 @@ import java.lang.{Byte => JByte}
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
   with BoxFixture
-  with IODBStoreFixture
+  with StoreFixture
   with SidechainTypes
 {
 
@@ -29,7 +29,7 @@ class SidechainWalletBoxStorageTest
 
   @Test
   def mainWorkflow() : Unit = {
-    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
 
     val wbList1 = getWalletBoxList(classOf[RegularBox], 3).asScala.toList
     val wbList2 = getWalletBoxList(classOf[CertifierRightBox], 3).asScala.toList
@@ -100,7 +100,7 @@ class SidechainWalletBoxStorageTest
 
   @Test
   def balances(): Unit = {
-    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
 
     // Test 1: Test balance for Box Type which is NOT present yet in the storage.
     assertEquals("Balance of RegularBoxes should be 0.", 0, sidechainWalletBoxStorage.getBoxesBalance(classOf[RegularBox]))
@@ -119,7 +119,7 @@ class SidechainWalletBoxStorageTest
 
   @Test
   def onUpdateExceptionResistance(): Unit = {
-    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(new IODBStoreAdapter(getStore()), sidechainBoxesCompanion)
+    val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
     val walletBox1 = getWalletBox(classOf[RegularBox])
     sidechainWalletBoxStorage.update(getVersion, List(walletBox1), List[Array[Byte]]())
 

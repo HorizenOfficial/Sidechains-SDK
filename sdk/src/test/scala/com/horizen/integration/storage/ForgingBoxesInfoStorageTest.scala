@@ -2,7 +2,7 @@ package com.horizen.integration.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
+import com.horizen.fixtures.{BoxFixture, StoreFixture}
 import com.horizen.storage.{ForgingBoxesInfoStorage, IODBStoreAdapter}
 import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -13,11 +13,11 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.box.ForgerBox
 
 
-class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with SidechainTypes with BoxFixture {
+class ForgingBoxesInfoStorageTest extends JUnitSuite with StoreFixture with SidechainTypes with BoxFixture {
 
   @Test
   def mainWorkflow(): Unit = {
-    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(new IODBStoreAdapter(getStore()))
+    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
 
     val updateVersion = getVersion
     val forgerBox = getForgerBox
@@ -66,7 +66,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with 
 
   @Test
   def updateForgerBoxes(): Unit = {
-    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(new IODBStoreAdapter(getStore()))
+    val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
 
     // Test 1: Update empty storage with 3 new forger boxes
     val version1 = getVersion

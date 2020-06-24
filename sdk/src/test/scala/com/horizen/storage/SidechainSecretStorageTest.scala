@@ -25,7 +25,7 @@ import scala.util.Try
 class SidechainSecretStorageTest
   extends JUnitSuite
   with SecretFixture
-  with IODBStoreFixture
+  with StoreFixture
   with MockitoSugar
   with SidechainTypes
 {
