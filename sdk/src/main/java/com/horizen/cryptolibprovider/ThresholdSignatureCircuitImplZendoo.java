@@ -8,6 +8,7 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.CreateProofResult;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
     private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
-        return new BackwardTransfer(box.proposition().bytes(), box.value());
+        return new BackwardTransfer(BytesUtils.reverseBytes(box.proposition().bytes()), box.value());
     }
 
     @Override
