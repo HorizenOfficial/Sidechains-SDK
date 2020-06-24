@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 import json
 import time
+import math
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
@@ -230,17 +231,24 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Check certificate BT entries
         assert_equal(bt_amount1, we1_cert["vout"][1]["value"], "First BT amount is wrong.")
-        assert_equal(bt_amount2, we1_cert["vout"][2]["value"], "First BT amount is wrong.")
+        assert_equal(bt_amount2, we1_cert["vout"][2]["value"], "Second BT amount is wrong.")
 
         cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]["addresses"][0]
         assert_equal(mc_address1_standard, cert_address_1, "First BT standard address is wrong.")
         cert_address_2 = we1_cert["vout"][2]["scriptPubKey"]["addresses"][0]
-        assert_equal(mc_address2_standard, cert_address_2, "First BT standard address is wrong.")
+        assert_equal(mc_address2_standard, cert_address_2, "Second BT standard address is wrong.")
 
         cert_address_hash_1 = we1_cert["vout"][1]["pubkeyhash"]
         assert_equal(mc_address1_hash, cert_address_hash_1, "First BT pub key hash address is wrong.")
         cert_address_hash_2 = we1_cert["vout"][2]["pubkeyhash"]
-        assert_equal(mc_address2_hash, cert_address_hash_2, "First BT pub key hash address is wrong.")
+        assert_equal(mc_address2_hash, cert_address_hash_2, "Second BT pub key hash address is wrong.")
+
+        # Check changes in balances in MC
+        # Note destination addresses also can contain some fees assigned to them during mining
+        assert_equal(bt_amount1, math.floor(mc_node.getreceivedbyaddress(mc_address1_standard)),
+                     "First BT amount expected to be found in MC wallet")
+        assert_equal(bt_amount2, math.floor(mc_node.getreceivedbyaddress(mc_address2_standard)),
+                     "Second BT amount expected to be found in MC wallet")
 
         # Generate SC block and verify that certificate is synced back
         scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
