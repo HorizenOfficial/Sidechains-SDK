@@ -49,6 +49,6 @@ class CertificateTest extends JUnitSuite {
     assertEquals("Certificate backward transfer amount is different.", 2, cert.backwardTransferOutputs.size)
     assertEquals("Amount for first backward transfer is wrong", 700000000, cert.backwardTransferOutputs.head.amount)
     assertEquals("Output bytes for first backward transfer are wrong", "0027b92900000000429575e060e663fc4047fcd976342f5a09381bd0", BytesUtils.toHexString(cert.backwardTransferOutputs.head.outputBytes))
-    assertEquals("Pub key hash for second backward transfer are wrong", "a1a69c439e033b0eb3feb4dcbdd54ad2a4bc715a", BytesUtils.toHexString(cert.backwardTransferOutputs(1).pubKeyHash))
+    assertEquals("Pub key hash for second backward transfer are wrong", "5a71bca4d24ad5bddcb4feb30e3b039e439ca6a1", BytesUtils.toHexString(cert.backwardTransferOutputs(1).pubKeyHash))
   }
 }
