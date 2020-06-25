@@ -1,16 +1,16 @@
 #!/usr/bin/env python2
 import sys
 from test_framework.util import assert_equal
-from mc_node_alive import MCNodeAlive
-from mc_sc_connected_nodes import MCSCConnectedNodes
-from mc_sc_forging1 import MCSCForging1
-from mc_sc_forging2 import MCSCForging2
-from mc_sc_forging3 import MCSCForging3
-from mc_sc_nodes_alive import MCSCNodesAlive
-from mc_sc_nodes_generation import MainchainSidechainNodeBlockGenerationTest
-from sc_backward_transfer import SCBackwardTransfer
-from sc_bootstrap import SCBootstrap
-from sc_forward_transfer import SCForwardTransfer
+from tests.mc_node_alive import MCNodeAlive
+from tests.mc_sc_connected_nodes import MCSCConnectedNodes
+from tests.mc_sc_forging1 import MCSCForging1
+from tests.mc_sc_forging2 import MCSCForging2
+from tests.mc_sc_forging3 import MCSCForging3
+from tests.mc_sc_nodes_alive import MCSCNodesAlive
+from tests.mc_sc_nodes_generation import MainchainSidechainNodeBlockGenerationTest
+from tests.sc_backward_transfer import SCBackwardTransfer
+from tests.sc_bootstrap import SCBootstrap
+from tests.sc_forward_transfer import SCForwardTransfer
 
 def run_test(test):
     try:
@@ -40,14 +40,14 @@ def run_tests(log_file):
     result = run_test(MCSCNodesAlive())
     assert_equal(0, result, "mc_sc_nodes_alive test failed!")
 
-    result = run_test(SCBackwardTransfer())
-    assert_equal(0, result, "sc_backward_transfer test failed!")
-
     result = run_test(SCBootstrap())
     assert_equal(0, result, "sc_bootstrap test failed!")
 
     result = run_test(SCForwardTransfer())
     assert_equal(0, result, "sc_forward_transfer test failed!")
+
+    result = run_test(SCBackwardTransfer())
+    assert_equal(0, result, "sc_backward_transfer test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")
