@@ -481,8 +481,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     withdrawalRequestBoxDataList.foreach(element =>
       outputs.add(new WithdrawalRequestBoxData(
-        // TODO: check order of bytes. Strange that mc rpc `getnewaddress` returns standard address with hash inside different to `getnewaddress "" true` hash
-        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.reverseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.publicKey, params))),
+        // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+        // different to `getnewaddress "" true` hash that is in BE endianness.
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.publicKey, params)),
         new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 

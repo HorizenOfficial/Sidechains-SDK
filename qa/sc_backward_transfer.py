@@ -150,6 +150,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         addresses = mc_node.listaddresses()
         mc_address1_hash = mc_node.getnewaddress("", True)
         mc_address1_standard = (set(mc_node.listaddresses()) - set(addresses)).pop()
+        print("First BT MC public key hash is {}".format(mc_address1_hash))
+        print("First BT MC public key address is {}".format(mc_address1_standard))
         bt_amount1 = ft_amount - 3
         sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
@@ -169,6 +171,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         addresses = mc_node.listaddresses()
         mc_address2_hash = self.nodes[0].getnewaddress("", True)
         mc_address2_standard = (set(mc_node.listaddresses()) - set(addresses)).pop()
+        print("Second BT MC public key hash is {}".format(mc_address2_hash))
+        print("Second BT MC public key address is {}".format(mc_address2_standard))
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \

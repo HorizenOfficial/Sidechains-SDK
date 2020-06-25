@@ -66,6 +66,7 @@ object CertificateRequestCreator {
       endEpochBlockHash,
       proofBytes,
       quality,
-      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(wrb.proposition().bytes(), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
+      // Note: we should send BT entries public key hashes in reversed BE endianness.
+      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
   }
 }
