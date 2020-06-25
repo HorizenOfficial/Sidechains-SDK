@@ -141,7 +141,7 @@ trait SidechainNodeViewHolderFixture
     val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
     val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
 
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory)
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params)
   }
 
 }
