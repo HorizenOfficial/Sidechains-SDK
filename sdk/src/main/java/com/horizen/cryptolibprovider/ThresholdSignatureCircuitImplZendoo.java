@@ -8,6 +8,7 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.CreateProofResult;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 
 import java.util.List;

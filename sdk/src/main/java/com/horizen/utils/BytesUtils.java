@@ -1,11 +1,14 @@
 package com.horizen.utils;
 
 import com.google.common.io.BaseEncoding;
+import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
-import com.horizen.utils.Pair;
-import scala.Int;
+import com.horizen.params.MainNetParams;
+import com.horizen.params.NetworkParams;
+
+import scorex.util.encode.Base58;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -189,5 +192,55 @@ public final class BytesUtils {
                 return true;
         }
         return false;
+    }
+
+    private static int HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH = 2;
+    private static int HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH = 20;
+    private static int HORIZEN_PUBLIC_KEY_ADDRESS_CHECKSUM_LENGTH = 4;
+
+    private static int HORIZEN_PUBLIC_KEY_ADDRESS_BASE58_Length = 35;
+
+    private static byte[] PUBLIC_KEY_MAINNET_PREFIX = BytesUtils.fromHexString("2089"); // "zn"
+    private static byte[] PUBLIC_KEY_MAINNET_PREFIX_OLD = BytesUtils.fromHexString("1CB8"); // "t1"
+
+    private static byte[] PUBLIC_KEY_TESTNET_PREFIX = BytesUtils.fromHexString("2098"); // "zt"
+    private static byte[] PUBLIC_KEY_TESTNET_PREFIX_OLD = BytesUtils.fromHexString("1D25"); // "tm"
+
+    public static byte[] fromHorizenPublicKeyAddress(String address, NetworkParams params) {
+        if(address.length() != HORIZEN_PUBLIC_KEY_ADDRESS_BASE58_Length)
+            throw new IllegalArgumentException(String.format("Incorrect Horizen public key address length $d", address.length()));
+
+        byte[] addressBytesWithChecksum = Base58.decode(address).get();
+        byte[] addressBytes = Arrays.copyOfRange(addressBytesWithChecksum, 0, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH + HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH);
+
+
+        // Check version
+        byte[] prefix = Arrays.copyOfRange(addressBytes, 0, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH);
+        if(params instanceof MainNetParams) {
+            if(!Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_MAINNET_PREFIX_OLD))
+                throw new IllegalArgumentException("Incorrect Horizen public key address format, MainNet format expected.");
+        }
+        else if(!Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX) && !Arrays.equals(prefix, PUBLIC_KEY_TESTNET_PREFIX_OLD))
+            throw new IllegalArgumentException("Incorrect Horizen public key address format, TestNet format expected.");
+
+        byte[] publicKeyHash = Arrays.copyOfRange(addressBytes, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH + HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH);
+
+        // Verify checksum
+        byte[] checksum = Arrays.copyOfRange(addressBytesWithChecksum, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH + HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH, addressBytesWithChecksum.length);
+        byte[] calculatedChecksum = Arrays.copyOfRange(Utils.doubleSHA256Hash(addressBytes), 0, HORIZEN_PUBLIC_KEY_ADDRESS_CHECKSUM_LENGTH);
+        if(!Arrays.equals(calculatedChecksum, checksum))
+            throw new IllegalArgumentException("Broken Horizen public key address: checksum is wrong.");
+
+        return publicKeyHash;
+    }
+
+    public static String toHorizenPublicKeyAddress(byte[] publicKeyHashBytes, NetworkParams params) {
+        if(publicKeyHashBytes.length != HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH)
+            throw new IllegalArgumentException("Incorrect Horizen public key address bytes length.");
+
+        byte[] prefix = params instanceof MainNetParams ? PUBLIC_KEY_MAINNET_PREFIX : PUBLIC_KEY_TESTNET_PREFIX;
+        byte[] addressBytes = Bytes.concat(prefix, publicKeyHashBytes);
+        byte[] checksum = Arrays.copyOfRange(Utils.doubleSHA256Hash(addressBytes), 0, HORIZEN_PUBLIC_KEY_ADDRESS_CHECKSUM_LENGTH);
+        return Base58.encode(Bytes.concat(addressBytes, checksum));
     }
 }

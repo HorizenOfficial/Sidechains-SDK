@@ -8,7 +8,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
-		<scala.version>2.12.8</scala.version>
+		<scala.version>2.12.10</scala.version>
 	</properties>
 
 	<repositories>
@@ -221,7 +221,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.0</version>
+				<version>3.8.1</version>
 				<configuration>
 				</configuration>
 			</plugin>
