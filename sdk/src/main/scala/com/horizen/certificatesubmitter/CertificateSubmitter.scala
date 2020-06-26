@@ -194,7 +194,10 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, BytesUtils.reverseBytes(endEpochBlockHash), BytesUtils.reverseBytes(previousEndEpochBlockHash))
+    // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
+    val endEpochBlockHashLE = BytesUtils.reverseBytes(endEpochBlockHash)
+    val previousEndEpochBlockHashLE = BytesUtils.reverseBytes(previousEndEpochBlockHash)
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHashLE, previousEndEpochBlockHashLE)
 
     val sidechainWallet = sidechainNodeView.vault
     val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
@@ -227,8 +230,8 @@ class CertificateSubmitter
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
-      BytesUtils.reverseBytes(dataForProofGeneration.endWithdrawalEpochBlockHash),
-      BytesUtils.reverseBytes(dataForProofGeneration.prevEndWithdrawalEpochBlockHash),
+      BytesUtils.reverseBytes(dataForProofGeneration.endWithdrawalEpochBlockHash), // Pass block hash in LE endianness
+      BytesUtils.reverseBytes(dataForProofGeneration.prevEndWithdrawalEpochBlockHash), // Pass block hash in LE endianness
       signersPublicKeysBytes.asJava,
       signaturesBytes.asJava,
       params.signersThreshold,

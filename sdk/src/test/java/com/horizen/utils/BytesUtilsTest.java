@@ -1,6 +1,9 @@
 package com.horizen.utils;
 
 import com.google.common.primitives.Ints;
+import com.horizen.params.MainNetParams;
+import com.horizen.params.NetworkParams;
+import com.horizen.params.TestNetParams;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -263,5 +266,103 @@ public class BytesUtilsTest {
         byte[] expectedRes = Ints.toByteArray(47148);
 
         assertEquals("Hex strings expected to be equal", true, Arrays.equals(expectedRes, BytesUtils.fromHexString(hex)));
+    }
+
+
+    @Test
+    public void fromHorizenPublicKeyAddress() {
+        // Test 1: valid MainNet addresses in MainNet network
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
+        String pubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK";
+        byte[] expectedPublicKeyHashBytesMainNet = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
+
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytesMainNet,
+                BytesUtils.fromHorizenPublicKeyAddress(pubKeyAddressMainNet, mainNetParams));
+
+
+        // Test 2: invalid MainNetAddress in MainNet network: broken checksum
+        String invalidPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4c1";
+        boolean exceptionOccurred = false;
+        try {
+            BytesUtils.fromHorizenPublicKeyAddress(invalidPubKeyAddressMainNet, mainNetParams);
+        } catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Invalid checksum Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+
+
+        // Test 3: invalid MainNetAddress in MainNet network: broken length
+        String invalidLengthPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4c";
+        exceptionOccurred = false;
+        try {
+            BytesUtils.fromHorizenPublicKeyAddress(invalidLengthPubKeyAddressMainNet, mainNetParams);
+        } catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Invalid length Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+
+
+        // Test 4: TestNetAddress in MainNet network
+        String invalidNetworkPubKeyAddress = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi"; // from testnet
+        exceptionOccurred = false;
+        try {
+            BytesUtils.fromHorizenPublicKeyAddress(invalidNetworkPubKeyAddress, mainNetParams);
+        } catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+
+
+        // Test 5: valid TestNet addresses in TestNet network
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
+        String pubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";
+        byte[] expectedPublicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
+        assertArrayEquals("Horizen base 58 check address expected to have different public key hash.",
+                expectedPublicKeyHashBytesTestNet,
+                BytesUtils.fromHorizenPublicKeyAddress(pubKeyAddressTestNet, testNetParams));
+
+
+        // Test 6: MainNetAddress in TestNet network
+        invalidNetworkPubKeyAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK"; // from testnet
+        exceptionOccurred = false;
+        try {
+            BytesUtils.fromHorizenPublicKeyAddress(invalidNetworkPubKeyAddress, testNetParams);
+        } catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Invalid network Horizen base 58 check address expected to throw exception during parsing.", exceptionOccurred);
+    }
+
+    @Test
+    public void toHorizenPublicKeyAddress() {
+        // Test 1: valid MainNet addresses in MainNet network
+        NetworkParams mainNetParams = new MainNetParams(null, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
+        byte[] publicKeyHashBytesMainNet = BytesUtils.fromHexString("7843a3fcc6ab7d02d40946360c070b13cf7b9795");
+        String expectedPubKeyAddressMainNet = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK";
+
+        assertEquals("Public key hash bytes expected to lead to different Horizen base 58 check address.",
+                expectedPubKeyAddressMainNet,
+                BytesUtils.toHorizenPublicKeyAddress(publicKeyHashBytesMainNet, mainNetParams));
+
+
+        // Test 2: valid TestNet addresses in TestNet network
+        NetworkParams testNetParams = new TestNetParams(null, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
+        byte[] publicKeyHashBytesTestNet = BytesUtils.fromHexString("c34e9f61c39bf4fa6225fcf715b59c195c12a6d7");
+        String expectedPubKeyAddressTestNet = "ztkxeiFhYTS5sueyWSMDa8UiNr5so6aDdYi";
+
+        assertEquals("Public key hash bytes expected to lead to different Horizen base 58 check address.",
+                expectedPubKeyAddressTestNet,
+                BytesUtils.toHorizenPublicKeyAddress(publicKeyHashBytesTestNet, testNetParams));
+
+
+        // Test 3: invalid public key hash bytes length
+        boolean exceptionOccurred = false;
+        try {
+            BytesUtils.toHorizenPublicKeyAddress(new byte[21], testNetParams);
+        } catch (IllegalArgumentException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Invalid length Horizen public key hash expected to throw exception during parsing.", exceptionOccurred);
     }
 }

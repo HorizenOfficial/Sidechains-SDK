@@ -18,6 +18,7 @@ import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
 import com.horizen.forge.Forger
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
@@ -223,8 +224,9 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
   val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
 
+  val params = MainNetParams()
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef,
-    sidechainTransactionsCompanion, sidechainCoreTransactionFactory).route
+    sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
