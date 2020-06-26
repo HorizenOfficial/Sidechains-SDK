@@ -328,7 +328,7 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
-def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
     """
     Start a SC node and returns API connection to it
     """
@@ -342,20 +342,25 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         binary = "../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
-    sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+    if print_output_to_file:
+        with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
+            sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
+    else:
+        sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
     return proxy
 
 
-def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
+def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False):
     """
     Start multiple SC clients, return connections to them
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
-    nodes = [start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes)]
+    nodes = [start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file) for i in range(num_nodes)]
     wait_for_sc_node_initialization(nodes)
     return nodes
 
