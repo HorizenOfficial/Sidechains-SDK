@@ -203,7 +203,7 @@ class Demo(SidechainTestFramework):
 
         # Do BT
         self.pause()
-        mc_address = self.nodes[0].getnewaddress("", True)
+        mc_address = self.nodes[0].getnewaddress("")
         bt_amount = 2  # Zen
         withdrawal_request = {"outputs": [
             {"publicKey": mc_address,
