@@ -30,7 +30,7 @@ Otherwise, to run SimpleApp outside the IDE:
     
 **Running Simple App isolated from Mainchain**
 
-You can use the predefined [sc_settings.conf](./src/main/resourse/sc_settings.conf "sc_settings.conf") configuration file, which contains some genesis data that will start a node with a first mainchain block reference and some coins transferred to the sidechain.
+You can use the predefined [sc_settings.conf](./src/main/resources/sc_settings.conf "sc_settings.conf") configuration file, which contains some genesis data that will start a node with a first mainchain block reference and some coins transferred to the sidechain.
 
 Since there will be no real mainchain node running, with the mainchain block reference included by the genesis just made up, the sidechain will not receive any subsequent mainchain information; the sidecahin will run stand-alone, "isolated".
 
