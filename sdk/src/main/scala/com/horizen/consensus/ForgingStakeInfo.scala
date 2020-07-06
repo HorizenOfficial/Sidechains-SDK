@@ -1,34 +1,47 @@
 package com.horizen.consensus
 
-import scorex.core.NodeViewModifier
+import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.utils.Utils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-case class ForgingStakeInfo(boxId: Array[Byte], value: Long) extends BytesSerializable {
-  require(boxId.length == NodeViewModifier.ModifierIdSize, "BoxId length is wrong.")
-  require(value >= 0, "Value expected to be non negative.")
+case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,
+                            vrfPublicKey: VrfPublicKey,
+                            stakeAmount: Long) extends BytesSerializable {
+  require(stakeAmount >= 0, "stakeAmount expected to be non negative.")
 
   override type M = ForgingStakeInfo
 
   override def serializer: ScorexSerializer[ForgingStakeInfo] = ForgingStakeInfoSerializer
 
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case info: ForgingStakeInfo => boxId.sameElements(info.boxId) && value == info.value
-      case _ => false
-    }
-  }
+  def hash: Array[Byte] = Utils.doubleSHA256Hash(
+    Bytes.concat(blockSignPublicKey.bytes(), vrfPublicKey.bytes(), Longs.toByteArray(stakeAmount))
+  )
 }
 
 object ForgingStakeInfoSerializer extends ScorexSerializer[ForgingStakeInfo]{
   override def serialize(obj: ForgingStakeInfo, w: Writer): Unit = {
-    w.putBytes(obj.boxId)
-    w.putLong(obj.value)
+    val blockSignPublicKeyBytes = PublicKey25519PropositionSerializer.getSerializer.toBytes(obj.blockSignPublicKey)
+    w.putInt(blockSignPublicKeyBytes.length)
+    w.putBytes(blockSignPublicKeyBytes)
+
+    val vrfPublicKeyBytes = VrfPublicKeySerializer.getSerializer.toBytes(obj.vrfPublicKey)
+    w.putInt(vrfPublicKeyBytes.length)
+    w.putBytes(vrfPublicKeyBytes)
+
+    w.putLong(obj.stakeAmount)
   }
 
   override def parse(r: Reader): ForgingStakeInfo = {
-    val boxId = r.getBytes(NodeViewModifier.ModifierIdSize)
-    val value = r.getLong()
-    ForgingStakeInfo(boxId, value)
+    val blockSignPublicKeyBytesLength = r.getInt()
+    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parseBytes(r.getBytes(blockSignPublicKeyBytesLength))
+
+    val vrfPublicKeyBytesLength = r.getInt()
+    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parseBytes(r.getBytes(vrfPublicKeyBytesLength))
+
+    val stakeAmount = r.getLong()
+
+    ForgingStakeInfo(blockSignPublicKey, vrfPublicKey, stakeAmount)
   }
 }

@@ -8,14 +8,14 @@ import com.horizen.block.SidechainBlock
 import com.horizen.box._
 import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
 import com.horizen.companion._
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.customtypes._
 import com.horizen.fixtures._
 import com.horizen.proposition._
 import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
 import com.horizen.storage._
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath, MerkleTree, Pair}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, MerkleTree, Pair}
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 import org.junit._
@@ -25,6 +25,7 @@ import org.scalatest.mockito._
 import scorex.core.{VersionTag, bytesToId}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
+import scala.collection.JavaConverters._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -612,7 +613,10 @@ class SidechainWalletTest
 
 
     val storedForgerBox: ForgerBox = boxList.last.box.asInstanceOf[ForgerBox]
-    val storedMerklePathSeq: Seq[ForgerBoxMerklePathInfo] = Seq(ForgerBoxMerklePathInfo(storedForgerBox, new MerklePath(new JArrayList())))
+    val storedMerklePathSeq: Seq[ForgingStakeMerklePathInfo] = Seq(ForgingStakeMerklePathInfo(
+      ForgingStakeInfo(storedForgerBox.blockSignProposition(), storedForgerBox.vrfPubKey(), storedForgerBox.value()),
+      new MerklePath(new JArrayList())
+    ))
 
 
     // Note: consensus epoch calculation starts from 1 and contain only genesis block as the end of it.
@@ -621,7 +625,7 @@ class SidechainWalletTest
     var expectedEpochInfo: ConsensusEpochNumber = ConsensusEpochNumber @@ 1
 
     // Verify epoch number and return predefined merklePathSeq
-    Mockito.when(mockedForgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(
+    Mockito.when(mockedForgingBoxesMerklePathStorage.getForgingStakeMerklePathInfoForEpoch(
       ArgumentMatchers.any[ConsensusEpochNumber]()))
       .thenAnswer(answer => {
         val epoch = answer.getArgument(0).asInstanceOf[ConsensusEpochNumber]
@@ -630,19 +634,19 @@ class SidechainWalletTest
         Some(storedMerklePathSeq)
       })
 
-    var forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(secondEpoch).get
+    var forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingStakeMerklePathInfoOpt(secondEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
 
     // Test 2: third epoch info - should request for the first epoch from storage
     val thirdEpoch = ConsensusEpochNumber @@ 3
     expectedEpochInfo = ConsensusEpochNumber @@ 1
-    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(thirdEpoch).get
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingStakeMerklePathInfoOpt(thirdEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
 
     // Test 3: fifth epoch info - should request for the third epoch from storage
     val fifthEpoch = ConsensusEpochNumber @@ 5
     expectedEpochInfo = ConsensusEpochNumber @@ 3
-    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgerBoxMerklePathInfoOpt(fifthEpoch).get
+    forgingBoxMerklePathInfoSeq = sidechainWallet.getForgingStakeMerklePathInfoOpt(fifthEpoch).get
     assertEquals("Merkle path seq size expected to be different.", storedMerklePathSeq.size, forgingBoxMerklePathInfoSeq.size)
   }
 
@@ -663,32 +667,33 @@ class SidechainWalletTest
       mockedApplicationWallet)
 
 
-    val forgerBox1 = getForgerBox
-    val forgerBox2 = getForgerBox
-    val forgerBox3 = getForgerBox
+    val forgerBoxes: Seq[ForgerBox] = getForgerBoxList(3).asScala
+    val forgingStakeInfo: Seq[ForgingStakeInfo] = forgerBoxes.groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
+      .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
+      .toSeq
 
     val epochNumber: ConsensusEpochNumber = ConsensusEpochNumber @@ 3
-    val merkleTree: MerkleTree = MerkleTree.createMerkleTree(util.Arrays.asList(forgerBox1.id(), forgerBox2.id(), forgerBox3.id()))
-    val forgersStake: Long = forgerBox1.value() + forgerBox2.value() + forgerBox3.value()
+    val merkleTree: MerkleTree = MerkleTree.createMerkleTree(forgingStakeInfo.map(_.hash).asJava)
+    val forgersStake: Long = forgingStakeInfo.map(_.stakeAmount).sum
 
     val epochInfo: ConsensusEpochInfo = ConsensusEpochInfo(epochNumber, merkleTree, forgersStake)
 
     // Mock the list of delegated ForgerBoxes
     Mockito.when(mockedForgingBoxesInfoStorage.getForgerBoxes)
-      .thenReturn(Some(Seq(forgerBox1)))
+      .thenReturn(Some(Seq(forgerBoxes.head)))
 
     // Verify epoch number and return predefined merklePathSeq
-    Mockito.when(mockedForgingBoxesInfoStorage.updateForgerBoxMerklePathInfo(
+    Mockito.when(mockedForgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Seq[ForgerBoxMerklePathInfo]]()))
+      ArgumentMatchers.any[Seq[ForgingStakeMerklePathInfo]]()))
       .thenAnswer(answer => {
         val epoch = answer.getArgument(0).asInstanceOf[ConsensusEpochNumber]
-        val boxMerklePathInfoSeq = answer.getArgument(1).asInstanceOf[Seq[ForgerBoxMerklePathInfo]]
+        val forgingStakeMerklePathInfoSeq = answer.getArgument(1).asInstanceOf[Seq[ForgingStakeMerklePathInfo]]
 
         assertEquals("Different epoch number request expected.", epochNumber, epoch)
-        assertEquals("Different merkle path seq size expected.", 1, boxMerklePathInfoSeq.size)
-        assertEquals("Different box id applied.", forgerBox1, boxMerklePathInfoSeq.head.forgerBox)
-        assertArrayEquals("Wrong merkle path applied.", merkleTree.rootHash(), boxMerklePathInfoSeq.head.merklePath.apply(forgerBox1.id()))
+        assertEquals("Different merkle path seq size expected.", 1, forgingStakeMerklePathInfoSeq.size)
+        val forgingStakeMerklePathInfo = forgingStakeMerklePathInfoSeq.head
+        assertArrayEquals("Wrong merkle path applied.", merkleTree.rootHash(), forgingStakeMerklePathInfo.merklePath.apply(forgingStakeMerklePathInfo.forgingStakeInfo.hash))
 
         Success(mockedForgingBoxesInfoStorage)
       })

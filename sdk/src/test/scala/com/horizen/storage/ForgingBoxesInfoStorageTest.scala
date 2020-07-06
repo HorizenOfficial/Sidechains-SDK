@@ -1,9 +1,9 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath, Pair}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
@@ -94,9 +94,10 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
     // Prepare data to update.
     val epochNumber = ConsensusEpochNumber @@ 100
+    val forgerBox = getForgerBox
     val boxMerklePathInfoSeq = Seq(
-      ForgerBoxMerklePathInfo(
-        getForgerBox,
+      ForgingStakeMerklePathInfo(
+        ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value()),
         new MerklePath(new JArrayList())
       )
     )
@@ -116,7 +117,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
       assertEquals("Store update(...) actual list to update size expected to be different.", 1, actualToUpdate.size())
       assertEquals("Different toUpdate epoch key expected.", forgingBoxesInfoStorage.epochKey(epochNumber), actualToUpdate.get(0).getKey)
       assertEquals("Different toUpdate value expected.",
-        new ByteArrayWrapper(forgingBoxesInfoStorage.forgerBoxMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava)),
+        new ByteArrayWrapper(forgingBoxesInfoStorage.forgingStakeMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava)),
         actualToUpdate.get(0).getValue)
 
       assertEquals("Store update(...) actual list to remove size expected to be different.", 1, actualToRemove.size())
@@ -132,10 +133,10 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
 
     // Test 1: successful update of physical Store
-    assertTrue("Update expected to be successful.", forgingBoxesInfoStorage.updateForgerBoxMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isSuccess)
+    assertTrue("Update expected to be successful.", forgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isSuccess)
 
 
     // Test 2: failed to update of physical Store
-    assertTrue("Update expected to fail.", forgingBoxesInfoStorage.updateForgerBoxMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isFailure)
+    assertTrue("Update expected to fail.", forgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isFailure)
   }
 }

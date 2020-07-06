@@ -2,6 +2,7 @@ package com.horizen
 
 import java.util
 import java.util.{Optional => JOptional}
+
 import com.horizen.block.{MainchainBackwardTransferCertificate, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus._
@@ -9,7 +10,7 @@ import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.SidechainStateStorage
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
@@ -20,7 +21,11 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
+                                       forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                       val params: NetworkParams,
+                                       override val version: VersionTag,
+                                       applicationState: ApplicationState)
   extends
     BoxMinimalState[SidechainTypes#SCP,
                     SidechainTypes#SCB,
@@ -38,7 +43,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       case None => true
     }
   },
-    s"Specified version is invalid. ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
+    s"Specified version is invalid. StateStorage version ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
+
+  require({
+    forgerBoxStorage.lastVersionId match {
+      case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
+      case None => true
+    }
+  },
+    s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
 
   override type NVCT = SidechainState
 
@@ -48,9 +61,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       throw new Exception("Transaction is semantically invalid.")
   }
 
-  // get closed box from State storage
+  // get closed box from storages
   override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
-    stateStorage.getBox(boxId)
+    stateStorage
+      .getBox(boxId)
+      .orElse(forgerBoxStorage.getForgerBox(boxId).asInstanceOf[Option[SidechainTypes#SCB]])
   }
 
   override def getClosedBox(boxId: Array[Byte]): JOptional[Box[_ <: Proposition]] = {
@@ -181,16 +196,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       changes.toAppend.map(_.box).asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
-        val boxesToUpdate = changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox]).toSet
+        val boxesToUpdate = changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox] && !box.isInstanceOf[ForgerBox]).toSet
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
         val withdrawalRequestsToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
           .map(_.asInstanceOf[WithdrawalRequestBox])
-        val forgingStakesToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[ForgerBox])
-          .map(box => ForgingStakeInfo(box.id(), box.value()))
+        val forgerBoxesToAppend = changes.toAppend.withFilter(_.box.isInstanceOf[ForgerBox]).map(_.box.asInstanceOf[ForgerBox])
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch, containsBackwardTransferCertificate).get,
+            withdrawalRequestsToAppend, consensusEpoch, containsBackwardTransferCertificate).get,
+          forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           params,
           newVersion,
           appState
@@ -211,7 +226,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState)
+      case Success(appState) => new SidechainState(
+        stateStorage.rollback(new ByteArrayWrapper(version)).get,
+        forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
+        params,
+        to,
+        appState)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -229,29 +249,32 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    // TO DO: should be changed, when we will change the structure of SidechainCreation output in MC Tx
-    // TO DO: missed forging stake should cause IllegalStateException
-    val forgingStakes: Seq[ForgingStakeInfo] = stateStorage.getForgingStakesInfo match {
-      case seq if seq.isDefined && seq.get.nonEmpty =>
-        seq.get
-      case _ => // just a mock for now
-        // Note: at least one ForgingStakeInfo must be present. Now NOT, because CreationOutput doesn't return forging box.
-        Seq(ForgingStakeInfo(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000001"), 0L))
+    val forgingStakes: Seq[ForgingStakeInfo] = getForgingStakesInfoSeq
+    if(forgingStakes.isEmpty) {
+        throw new IllegalStateException("ForgerStakes list can't be empty.")
     }
 
-    (stateStorage.getConsensusEpochNumber, stateStorage.getForgingStakesAmount) match {
-      case (Some(consensusEpochNumber), Some(forgingStakesAmount)) =>
+    stateStorage.getConsensusEpochNumber match {
+      case Some(consensusEpochNumber) =>
         val lastBlockInEpoch = bytesToId(stateStorage.lastVersionId.get.data) // we use block id as version
         val consensusEpochInfo = ConsensusEpochInfo(
           consensusEpochNumber,
-          MerkleTree.createMerkleTree(forgingStakes.map(info => info.boxId).asJava),
-          forgingStakesAmount
+          MerkleTree.createMerkleTree(forgingStakes.map(info => info.hash).asJava),
+          forgingStakes.map(_.stakeAmount).sum
         )
 
         (lastBlockInEpoch, consensusEpochInfo)
       case _ =>
         throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
     }
+  }
+
+  private def getForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
+    forgerBoxStorage.getAllForgerBoxes
+      .view
+      .groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
+      .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
+      .toSeq
   }
 }
 
@@ -280,20 +303,25 @@ object SidechainState
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  private[horizen] def restoreState(stateStorage: SidechainStateStorage, params: NetworkParams, applicationState: ApplicationState) : Option[SidechainState] = {
+  private[horizen] def restoreState(stateStorage: SidechainStateStorage,
+                                    forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                    params: NetworkParams,
+                                    applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+      Some(new SidechainState(stateStorage, forgerBoxStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     else
       None
   }
 
-  private[horizen] def genesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
+  private[horizen] def genesisState(stateStorage: SidechainStateStorage,
+                                    forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                    params: NetworkParams,
                                     applicationState: ApplicationState,
-                                    genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
+                                    genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+      new SidechainState(stateStorage, forgerBoxStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")

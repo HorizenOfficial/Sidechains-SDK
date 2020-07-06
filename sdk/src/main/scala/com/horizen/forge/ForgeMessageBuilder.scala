@@ -10,7 +10,7 @@ import com.horizen.proof.VrfProof
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.MerklePath
+import com.horizen.utils.{ForgingStakeMerklePathInfo, MerklePath}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -57,23 +57,23 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
         val sidechainWallet = nodeView.vault
 
-        // Get ForgerBoxes and MerklePaths from wallet and order them by stake decreasing.
-        val forgerBoxMerklePathInfoSeq: Seq[(ForgerBox, MerklePath)]
-        = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
-          .sortWith(_.forgerBox.value() > _.forgerBox.value())
-          .map(d => (d.forgerBox, d.merklePath))
+        // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
+        val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo]
+        = sidechainWallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+          .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
-        val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof)]
-        = forgerBoxMerklePathInfoSeq.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
+        val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof)]
+        = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))
 
-        val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof)] =
-          ownedForgingDataView.filter{case(forgerBox, merklePath, privateKey25519, vrfProof) => vrfProofCheckAgainstStake(vrfProof, forgerBox.vrfPubKey(), vrfMessage, forgerBox.value(), totalStake)}
+        val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof)] =
+          ownedForgingDataView.filter{case(forgingStakeMerklePathInfo, _, vrfProof) =>
+            vrfProofCheckAgainstStake(vrfProof, forgingStakeMerklePathInfo.forgingStakeInfo.vrfPublicKey, vrfMessage, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)}
 
         val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
         val forgingResult = eligibleForgerOpt
-          .map{case (forgerBox, merklePath, privateKey25519, vrfProof) =>
-            forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgerBox, merklePath, privateKey25519, vrfProof)}
+          .map{case (forgingStakeMerklePathInfo, privateKey25519, vrfProof) =>
+            forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof)}
           .getOrElse(SkipSlot)
 
         log.info(s"Forge result is: $forgingResult")
@@ -83,12 +83,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   private def getSecretsAndProof(wallet: SidechainWallet,
                                  vrfMessage: VrfMessage,
-                                 forgerBox: ForgerBox,
-                                 merklePath: MerklePath): Option[(ForgerBox, MerklePath, PrivateKey25519, VrfProof)] = {
+                                 forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo): Option[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof)] = {
     for {
-      blockSignPrivateKey <- wallet.secret(forgerBox.blockSignProposition()).asInstanceOf[Option[PrivateKey25519]]
-      vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
-    } yield (forgerBox, merklePath, blockSignPrivateKey, vrfSecret.prove(vrfMessage))
+      blockSignPrivateKey <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.blockSignPublicKey).asInstanceOf[Option[PrivateKey25519]]
+      vrfSecret <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.vrfPublicKey).asInstanceOf[Option[VrfSecretKey]]
+    } yield (forgingStakeMerklePathInfo, blockSignPrivateKey, vrfSecret.prove(vrfMessage))
   }
 
   private def checkNextEpochAndSlot(parentBlockTimestamp: Long,
@@ -177,8 +176,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
                          branchPointInfo: BranchPointInfo,
-                         forgerBox: ForgerBox,
-                         forgerBoxMerklePath: MerklePath,
+                         forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                          blockSignPrivateKey: PrivateKey25519,
                          vrfProof: VrfProof): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
@@ -232,9 +230,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       mainchainHeaders,
       ommers,
       blockSignPrivateKey,
-      forgerBox,
+      null,// TODO: forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
-      forgerBoxMerklePath,
+      forgingStakeMerklePathInfo.merklePath,
       companion,
       params)
 
