@@ -17,6 +17,7 @@ import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, Withd
 import com.horizen.box.{Box, NoncedBox, RegularBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
+import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition._
 import com.horizen.serialization.Views
@@ -34,7 +35,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef,
                                         companion: SidechainTransactionsCompanion,
-                                        sidechainCoreTransactionFactory: SidechainCoreTransactionFactory)
+                                        sidechainCoreTransactionFactory: SidechainCoreTransactionFactory,
+                                        params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute with SidechainTypes {
 
@@ -456,7 +458,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   private def createCoreTransaction(inputBoxesType: Class[_<: Box[_ <: Proposition]],
                                     regularBoxDataList: List[TransactionOutput],
-                                    withdrawalRequestBoxDataList: List[TransactionOutput],
+                                    withdrawalRequestBoxDataList: List[TransactionWithdrawalRequestOutput],
                                     forgerBoxDataList: List[TransactionForgerOutput],
                                     fee: Long,
                                     changeAddress: PublicKey25519Proposition,
@@ -479,7 +481,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     withdrawalRequestBoxDataList.foreach(element =>
       outputs.add(new WithdrawalRequestBoxData(
-        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+        // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+        // different to `getnewaddress "" true` hash that is in BE endianness.
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.publicKey, params)),
         new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
@@ -568,12 +572,15 @@ object SidechainTransactionRestScheme {
   private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class TransactionWithdrawalRequestOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
                                                       regularOutputs: List[TransactionOutput],
-                                                      withdrawalRequests: List[TransactionOutput],
+                                                      withdrawalRequests: List[TransactionWithdrawalRequestOutput],
                                                       forgerOutputs: List[TransactionForgerOutput],
                                                       format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
@@ -582,7 +589,7 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateCoreTransactionSimplified(regularOutputs: List[TransactionOutput],
-                                                             withdrawalRequests: List[TransactionOutput],
+                                                             withdrawalRequests: List[TransactionWithdrawalRequestOutput],
                                                              forgerOutputs: List[TransactionForgerOutput],
                                                              @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
                                                              format: Option[Boolean]) {
@@ -598,7 +605,7 @@ object SidechainTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqWithdrawCoins(outputs: List[TransactionOutput],
+  private[api] case class ReqWithdrawCoins(outputs: List[TransactionWithdrawalRequestOutput],
                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")

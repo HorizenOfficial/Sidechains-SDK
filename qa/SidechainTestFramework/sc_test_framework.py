@@ -74,7 +74,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, "1".zfill(64), 600, 1000), sc_node_1_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000), sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
 
     def sc_setup_network(self, split = False):
@@ -111,7 +111,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
-        parser.add_option("--scjarpath", dest="scjarpath", default="../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default="../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default="../examples/simpleapp/target/tmp",
                           help="Root directory for datadirs")

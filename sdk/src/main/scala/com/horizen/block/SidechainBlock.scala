@@ -24,17 +24,18 @@ import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion"))
-class SidechainBlock(
-                      override val header: SidechainBlockHeader,
+class SidechainBlock(override val header: SidechainBlockHeader,
                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                       override val mainchainHeaders: Seq[MainchainHeader],
                       override val ommers: Seq[Ommer],
-                      companion: SidechainTransactionsCompanion
-                     )
+                      companion: SidechainTransactionsCompanion)
   extends OmmersContainer with Block[SidechainTypes#SCBT]
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgerBox.blockSignProposition()
+
+  // Currently sidechain block can contain 0 or 1 certificate (this is checked in WithdrawalEpochValidator)
+  lazy val withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.withdrawalEpochCertificate).headOption
 
   override type M = SidechainBlock
 

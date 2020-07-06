@@ -5,8 +5,9 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
+import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, ModifierId}
 
 import scala.util.Try
 
@@ -31,37 +32,35 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     }
   }
 
+
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(verifiedBlock.parentId)
+    val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
     verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
 
-    val verifiedBlockInfo = history.blockToBlockInfo(verifiedBlock)
-      .getOrElse(throw new IllegalArgumentException(s"Parent is missing for block ${verifiedBlock.id}")) //currently it is only reason if blockInfo is not calculated
-    val fullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.id, verifiedBlockInfo)
+    val currentConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
 
-    val slotNumber = history.timeStampToSlotNumber(verifiedBlock.timestamp)
-    val message = buildVrfMessage(slotNumber, fullConsensusEpochInfo.nonceConsensusEpochInfo)
+    val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
+      .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
-    verifyVrf(history, verifiedBlock.header, message)
-    verifyForgerBox(verifiedBlock.header, fullConsensusEpochInfo.stakeConsensusEpochInfo, message)
+    verifyForgerBox(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
 
-    val previousEpochLastBlockId = lastBlockIdInEpochId(history.getPreviousConsensusEpochIdForBlock(verifiedBlock.id, verifiedBlockInfo))
-    val previousFullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(previousEpochLastBlockId, history.blockInfoById(previousEpochLastBlockId))
-    verifyOmmers(verifiedBlock, fullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+    val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
+    val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
+    verifyOmmers(verifiedBlock, currentConsensusEpochInfo, Some(previousFullConsensusEpochInfo), verifiedBlock.parentId, parentBlockInfo, history, Seq())
 
     verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
 
-  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
+  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, timeConverter: TimeToEpochSlotConverter): Unit = {
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
 
-    val absoluteSlotNumberForVerifiedBlock = history.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
-    val absoluteSlotNumberForParentBlock = history.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
+    val absoluteSlotNumberForVerifiedBlock = timeConverter.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
+    val absoluteSlotNumberForParentBlock = timeConverter.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
     if (absoluteSlotNumberForVerifiedBlock <= absoluteSlotNumberForParentBlock) throw new IllegalArgumentException("Block absolute slot number is equal or less than parent block")
 
-    val epochNumberForVerifiedBlock = history.timeStampToEpochNumber(verifiedBlockTimestamp)
-    val epochNumberForParentBlock = history.timeStampToEpochNumber(parentBlockTimestamp)
-    if(epochNumberForVerifiedBlock - epochNumberForParentBlock> 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
+    val epochNumberForVerifiedBlock = timeConverter.timeStampToEpochNumber(verifiedBlockTimestamp)
+    val epochNumberForParentBlock = timeConverter.timeStampToEpochNumber(parentBlockTimestamp)
+    if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
   private def verifyTimestampInFuture(verifiedBlockTimestamp: Block.Timestamp, history: SidechainHistory): Unit = {
@@ -72,59 +71,80 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
+  /*
+      Visual schema for possible cases:
+      You can assume on different length of Consensus Epoch. For example, 7 or 9.
+      Block absolute slots: 3 - 12
+                                 |
+      Ommers slots:    [5    ,   7   ,   11]
+                        |        |        |
+      Subommers slots: [4]      [6]   [9  ,  10]
+                                       |
+      Subommers slots:                [8]
+      Ommer Container can include both the same consensus epoch ommers and/or previous consensus epoch ommers.
+      Inclusion, of ommers from 2 consensus epochs (or more) before is not valid, because it means,
+      that there is an empty epoch between Container and its parent, which is invalid case.
+      Most specific case when at some Ommers-level, there are both ommers from previous and current epoch.
+      In this case previous epoch ommers can lead to the current epoch Nonce different to the one known by our history.
+      It should be taken in consideration during Ommers VRF calculation,
+      so proper Nonce info should be used for such an Ommer with all sub-ommers recursively.
+   */
   private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,
-                                     currentFullConsensusEpochInfo: FullConsensusEpochInfo,
-                                     previousFullConsensusEpochInfo: FullConsensusEpochInfo,
-                                     history: SidechainHistory): Unit = {
+                                    currentFullConsensusEpochInfo: FullConsensusEpochInfo,
+                                    previousFullConsensusEpochInfoOpt: Option[FullConsensusEpochInfo],
+                                    bestKnownParentId: ModifierId,
+                                    bestKnownParentInfo: SidechainBlockInfo,
+                                    history: SidechainHistory,
+                                    previousEpochOmmersInfoAccumulator: Seq[(VrfOutput, ConsensusSlotNumber)]
+                                   ): Unit = {
     val ommers = ommersContainer.ommers
     if(ommers.isEmpty)
       return
 
     val ommersContainerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommersContainer.header.timestamp)
 
-    // Ommers can be from the same ConsensusEpoch as OmmersContainer or from previous epoch.
-    // If first part of Ommers is from previous epoch, they can have data, that will lead to different FullConsensusEpochInfo for current epoch.
-    // So the second part of Ommers should be verified against different FullConsensusEpochInfo: nonce part can be different
-    // With current Nonce calculation algorithm, it's not possible to retrieve MainchainHeaders with RefData, so no way to recalculate proper Nonce.
-    // Solutions: Nonce must be taken not from the whole MCRefs most PoW header, but like in original Ouroboros from the VRF, that is a part of SidechainBlockHeader.
-    var isPreviousEpochOmmer: Boolean = false
+    var accumulator: Seq[(VrfOutput, ConsensusSlotNumber)] = previousEpochOmmersInfoAccumulator
+    var previousOmmerEpochNumber: ConsensusEpochNumber = ommersContainerEpochNumber
+    var ommerCurrentFullConsensusEpochInfo = currentFullConsensusEpochInfo
+    var ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
+
     for(ommer <- ommers) {
-      val ommerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommer.header.timestamp)
-      val ommerSlotNumber: ConsensusSlotNumber = history.timeStampToSlotNumber(ommer.header.timestamp)
-      // Fork occurs in previous consensus epoch
-      if(ommerEpochNumber < ommersContainerEpochNumber) {
-        isPreviousEpochOmmer = true
-        val message = buildVrfMessage(ommerSlotNumber, previousFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        verifyVrf(history, ommer.header, message)
-        verifyForgerBox(ommer.header, previousFullConsensusEpochInfo.stakeConsensusEpochInfo, message)
+      val ommerEpochAndSlot: ConsensusEpochAndSlot = history.timestampToEpochAndSlot(ommer.header.timestamp)
 
-        verifyOmmers(ommer, previousFullConsensusEpochInfo, null, history)
+      if(ommerEpochAndSlot.epochNumber < previousOmmerEpochNumber) {
+        // First ommer is from previous consensus epoch to Ommer Container epoch.
+        ommerCurrentFullConsensusEpochInfo = previousFullConsensusEpochInfoOpt
+          .getOrElse(throw new IllegalStateException(s"Block ${ommersContainer.header.id} contains ommer two epochs before."))
+        // We are not allow to have an ommers 2 epoch before ommer container.
+        // It means that between block and its parent the whole epoch was skipped.
+        ommerPreviousFullConsensusEpochInfoOpt = None
+      } else if(ommerEpochAndSlot.epochNumber > previousOmmerEpochNumber) {
+        // Ommer switched the consensus epoch (previous ommer was from previous epoch).
+        // It means, that bestKnownParentId (parent of verified block) is also from previous epoch.
+        // So calculate the nonce again with passing info of all Ommers from previous epoch as well.
+        val nonce = history.calculateNonceForNonGenesisEpoch(bestKnownParentId, bestKnownParentInfo, accumulator)
+        ommerCurrentFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo, nonce)
+        ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
       }
-      else { // Equals
-        if(isPreviousEpochOmmer) {
-          // We Have Ommers form different epochs
-          throw new IllegalStateException("Ommers from both previous and current ConsensusEpoch are not supported.")
-        }
-        val message = buildVrfMessage(ommerSlotNumber, currentFullConsensusEpochInfo.nonceConsensusEpochInfo)
-        verifyVrf(history, ommer.header, message)
-        verifyForgerBox(ommer.header, currentFullConsensusEpochInfo.stakeConsensusEpochInfo, message)
 
-        verifyOmmers(ommer, currentFullConsensusEpochInfo, previousFullConsensusEpochInfo, history)
+      val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
+        .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
+      verifyForgerBox(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
+
+      verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
+        bestKnownParentId, bestKnownParentInfo, history, accumulator)
+
+      // Add previous epoch ommer info to accumulated sequence.
+      if(ommerEpochAndSlot.epochNumber < ommersContainerEpochNumber) {
+        // prepend accumulator with ommer with more recent slot
+        accumulator = (ommerVrfOutput, ommerEpochAndSlot.slotNumber) +: accumulator
       }
-    }
-
-  }
-
-  private[horizen] def verifyVrf(history: SidechainHistory, header: SidechainBlockHeader, message: VrfMessage): Unit = {
-
-    val vrfIsCorrect = header.forgerBox.vrfPubKey().verify(message, header.vrfProof)
-    if(!vrfIsCorrect) {
-      throw new IllegalStateException(s"VRF check for block ${header.id} had been failed")
+      previousOmmerEpochNumber = ommerEpochAndSlot.epochNumber
     }
   }
 
   //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, message: VrfMessage): Unit = {
+  private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgerBoxMerklePath.bytes().deep.mkString}")
 
     val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgerBoxMerklePath.apply(header.forgerBox.id()))
@@ -134,9 +154,8 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     }
 
     val value = header.forgerBox.value()
-    val vrfPublicKey = header.forgerBox.vrfPubKey()
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(header.vrfProof, vrfPublicKey, message, value, stakeConsensusEpochInfo.totalStake)
+    val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${header.id} is not enough for to be forger.")

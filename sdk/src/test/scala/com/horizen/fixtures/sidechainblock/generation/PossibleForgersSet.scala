@@ -2,20 +2,18 @@ package com.horizen.fixtures.sidechainblock.generation
 import java.math.BigInteger
 import java.util.{Random, ArrayList => JArrayList}
 
-import com.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
-import com.horizen.utils._
-import com.horizen.consensus._
+import com.horizen.consensus.{ConsensusSlotNumber, NonceConsensusEpochInfo, StakeConsensusEpochInfo, _}
 import com.horizen.proof.VrfProof
+import com.horizen.utils._
+import com.horizen.vrf.VrfOutput
 
 import scala.collection.immutable.TreeMap
 
 
 class PossibleForgersSet(forgers: Set[PossibleForger]) {
-  private val ordering: Ordering[SidechainForgingData] = Ordering.by{forgingData: SidechainForgingData =>
-    new BigInteger(forgingData.key.bytes())
-  }
+  private val ordering: Ordering[SidechainForgingData] = Ordering[(Long, BigInteger)].on(x => (x.forgerBox.value(), new BigInteger(x.forgerId)))
 
-  val forgingDataToPossibleForger: TreeMap[SidechainForgingData, PossibleForger] = TreeMap(forgers.map(pf => (pf.forgingData.copy(), pf.copy())).toArray:_*)(ordering)
+  val forgingDataToPossibleForger: TreeMap[SidechainForgingData, PossibleForger] = TreeMap(forgers.map(pf => (pf.forgingData.copy(), pf.copy())).toArray:_*)(ordering.reverse)
   require(forgingDataToPossibleForger.size == forgers.size)
 
   def getRandomPossibleForger(rnd: Random): PossibleForger = forgers.toSeq(rnd.nextInt(forgers.size))
@@ -24,19 +22,19 @@ class PossibleForgersSet(forgers: Set[PossibleForger]) {
 
   def getNotSpentSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.filter{case (forgingData, possibleForger) => possibleForger.isNotSpent}.keys.to
 
-  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof)] = {
+  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof, VrfOutput)] = {
     val vrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
     forgingDataToPossibleForger
       .values
-      .toStream
-      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map(proof => (forger, proof))} //get eligible forgers
+      .view
+      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map{case (proof, vrfOutput) => (forger, proof, vrfOutput)}} //get eligible forgers
       .headOption
   }
 
   def finishCurrentEpoch(): (PossibleForgersSet, StakeConsensusEpochInfo) = {
     val possibleForgersForNextEpoch: Seq[PossibleForger] = getPossibleForgersForNextEpoch
 
-    val totalStake = possibleForgersForNextEpoch.map(_.forgingData.forgerBox.value()).sum
+    val totalStake = possibleForgersForNextEpoch.withFilter(_.isNotSpent).map(_.forgingData.forgerBox.value()).sum
     val merkleTreeForEndOfEpoch: MerkleTree = buildMerkleTree(possibleForgersForNextEpoch.map(_.forgingData.forgerBox.id()))
     val merkleTreeForEndOfEpochRootHash = merkleTreeForEndOfEpoch.rootHash()
 

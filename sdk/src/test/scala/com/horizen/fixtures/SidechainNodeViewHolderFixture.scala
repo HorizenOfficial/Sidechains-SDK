@@ -61,6 +61,7 @@ trait SidechainNodeViewHolderFixture
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -70,6 +71,7 @@ trait SidechainNodeViewHolderFixture
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -79,6 +81,7 @@ trait SidechainNodeViewHolderFixture
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
+      parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
@@ -142,7 +145,7 @@ trait SidechainNodeViewHolderFixture
     val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
     val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
 
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory)
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params)
   }
 
 }

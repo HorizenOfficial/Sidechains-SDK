@@ -1,84 +1,70 @@
 **Simple App**
 ---------
 
-Simple app is a Java application that allows to run a pure Sidechain Node without any custom logic.
+Simple app is a Java application that runs a basic Sidechain Node, able to receive and send coins from/to the mainchain ("Forward" and "Backward transfers"). It does not come with any application-specific code (e.g. custom boxes or transactions); that logic can be easily added to Simple App, and implement that way a complete, blockchain based distributed application.
 
-It is possible to run a SC node or nodes with or without real MC node connection.
+Simple App node(s) can also be run without a connection to mainchain.
+
 
 **Execution**
 
-You can run Simple App inside IDE just executing SimpleApp class in examples/simpleapp module.
+You can run Simple App inside an IDE by just executing the SimpleApp class in the examples/simpleapp module.
 
-Or if you want to run SimpleApp outside, than:
+Otherwise, to run SimpleApp outside the IDE:
 1. Build and package the project
     ```
     mvn package
     ```
-2. Go to project root dir and execute in a command line:
-    * For Windows:
+2. Go to the project root directory and execute in a command line:
+    * (Windows)
         ```
-        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
-    * For Linux:
+    * (Linux)
         ```
-        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.1-SNAPSHOT.jar:../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+        java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
+
     
-**Running SimpleApp isolated from MC**
+**Running Simple App isolated from Mainchain**
 
-To run application you can use predefined configuration file placed into `./examples/simpleapp/src/main/resourse/sc_settings_with_mc.conf`
+You can use the predefined [sc_settings.conf](./examples/simpleapp/src/main/resourse/sc_settings.conf "sc_settings.conf") configuration file, which contains some genesis data that will start a node with a first mainchain block reference and some coins transferred to the sidechain.
 
-This config already contains some genesis data that will start a node with a first MC Block Reference and some coins transferred to current SC node.
+Since there will be no real mainchain node running, with the mainchain block reference included by the genesis just made up, the sidechain will not receive any subsequent mainchain information; the sidecahin will run stand-alone, "isolated".
 
-Why it is "isolated"? Because inside SC genesis block declared a MC Block Reference that has no way to continue the mainchain. So all next SC blocks will not have any new MC data.
-
-Such a configuration is useful when you want just to test Sidechain logic and behaviour without any interaction with a Mainchain network.
+Such a configuration is useful to test a sidechain's logic and behaviour, without any interaction with the mainchain network.
 
 
-**Running SimpleApp connected to the real MC node**
+**Running Simple App connected to a Mainchain node**
 
-To run SC with a connection with a real MC node do the following steps:
+This configuration allows the full use of sidechain node functionalities, i.e. create new sidechains, synchronize a sidechain with the mainchain (i.e. mainchain block references are included in sidechain blocks), transfer coins from/to mainchain and vice versa.
+Please find [here](mc_sc_workflow_example.md) a detailed guide on how to setup up this complete configuration.
 
-1. Compile MC sources with SC support code:
-    * clone Horizen core repository - https://github.com/ZencashOfficial/zen
-    * switch to the SC suport branch - `as/sc_development`
-    * build the Core for your platform using the guides in the repo.
-2. Run MC node in a `regtest` mode with a `-websocket` flag. 
-3. Generate at least 220 blocks to enable SC support.
-4. Declare the new SC using `sc_create` RPC method, where you will specify new SC id and first forward transfers.
-5. Generate 1 more block, that includes the transaction previously generated.
-6. Get SC genesis info from MC for your SC ID using `getscgenesisinfo` RPC method.
-7. Run ScBootstrapping tool and execute a command `genesisinfo`, where the result from previous RPC method should be placed as well as a secret, that will be used to sign the SC genesis block.
-8. Use the result data and update configuration file with it. You can use configuration files from `./examples/simpleapp/src/main/resourse/` as an example of resulting structure of the file.
-9. Run SimpleApp node with the configuration file you created. Your SC node will be connected to the MC node.
-10. If new MC blocks will appear, than the next SC blocks will automatically include the references to MC blocks inside. Maximum number of MC Block Refs per SC Block is 3.
 
-[The MC and SC workflow example](mc_sc_workflow_example.md).
+**How to choose the address of the first forward transfers**
 
-**How to choose the address of the first forward transfers during creation?**
+The `sc_create` RPC method specifies two public keys, that are part of the Vrf and the ed25519 keypairs. To generate a new pair of secret-public keys, you can use the `generatekey` and `generateVrfKey` ScBootstrappingTool commands: e.g. `generatekey {"seed":"myuniqueseed"}` and `generateVrfKey {"seed":"my seed"}`
 
-Address you specified in `sc_create` RPC method is a public key defined in SC.
-To generate a new pair of secret-public keys you can use ScBootstrappingTool command `generatekey`.
+Then you can put the newly generated public keys as destinations in `sc_create`, and the secret ones into the configuration file, in the `wallet.genesisSecrets` section. 
 
-For example `generatekey {"seed":"myuniqueseed"}`
+Please note: if you do not specify `genesisSecrets` properly, you will not see that balance in the wallet. 
 
-Then you can put public part as a destination of `sc_create` and secret into configuration file in a section `wallet.genesisSecrets`. Note: if you will not specify `genesisSecrets` properly, you will not see that balances in the wallet. 
 
-**How to choose the secret in ScBootstrapping `genesisinfo` command?**
+**How to choose the secret in ScBootstrapping `genesisinfo` command**
+Just use a secret generated by the `generatekey` command.
 
-Just use any secret you want generated by `generatekey` command.
 
-**SC related RPC commands in a MC**
-1. `sc_create "scid" withdrawalEpochLength [{"address":... ,"amount":...,...},...]` - to create a new SC
-2. `sc_send "scid"  "address" amount` - to send single forward transfer to desired address in a proper sidechain.
-3. `sc_sendmany [{"address":... ,"amount":...,"scid":,...},...]` - to send multiple transfers to different addresses/sidechains
+**Sidechain-related RPC commands in Mainchain**
+1. `sc_create "scid" withdrawalEpochLength "address" amount "verification key" "vrfPublickKey" "genSysConstant"` - to create a new sidechain, please refer to [example](mc_sc_workflow_example.md) for more details.
+2. `sc_send "scid"  "address" amount "sidechainId"` - to send a single forward transfer to a specific address in a sidechain.
+3. `sc_sendmany [{"address":... ,"amount":...,"scid":,...},...]` - to send multiple transfers to different addresses/sidechains.
 
-For more info look into the MC repository and guides.
+For more info please check the horizen mainchein ("zend") repository and guides.
+
 
 **Sidechain HTTP API**
 
-Node API address specified in configuration file in a section `network.bindAddress`.
-
-Description of all basic API with example is placed in a simple web interface, to reach it just type `network.bindAddress` in any browser.
+The node API address is specified in the configuration file, `network.bindAddress` section.
+The description of all basic API, with examples, is available as a simple web interface; just type `network.bindAddress` in any browser to access it.
 
 

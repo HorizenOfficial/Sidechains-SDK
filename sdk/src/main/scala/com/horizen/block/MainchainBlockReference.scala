@@ -1,12 +1,13 @@
 package com.horizen.block
 
 import java.util
+import java.util.Arrays
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.{CertifierLock, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -14,6 +15,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
+import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -53,20 +55,20 @@ case class MainchainBlockReference(
 
     if (util.Arrays.equals(header.hashScTxsCommitment, params.zeroHashBytes)) {
       // If there is not SC related outputs in MC block, then proofs, AggTx and Certificate expected to be not defined.
-      if (data.mproof.isDefined ||
+      if (data.mProof.isDefined ||
           data.proofOfNoData._1.isDefined ||
           data.proofOfNoData._2.isDefined ||
           data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.backwardTransferCertificate.isDefined)
+          data.withdrawalEpochCertificate.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
     }
     else {
       val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
       // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
-      if (data.mproof.isDefined) {
+      if (data.mProof.isDefined) {
         // Check for defined transaction and/or certificate.
-        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.backwardTransferCertificate.isEmpty)
+        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.withdrawalEpochCertificate.isEmpty)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
         // Check for empty neighbour proofs.
@@ -84,19 +86,19 @@ case class MainchainBlockReference(
           sidechainHashMap.addForwardTransferMerkleRootHash(sidechainId, mc2scTransactionsOutputsMerkleTree.rootHash())
         }
 
-        if (data.backwardTransferCertificate.isDefined)
-          sidechainHashMap.addCertificate(data.backwardTransferCertificate.get)
+        if (data.withdrawalEpochCertificate.isDefined)
+          sidechainHashMap.addCertificate(data.withdrawalEpochCertificate.get)
 
         val sidechainHash = sidechainHashMap.getSidechainCommitmentEntryHash(sidechainId)
 
-        if (!util.Arrays.equals(header.hashScTxsCommitment, data.mproof.get.apply(sidechainHash)))
+        if (!util.Arrays.equals(header.hashScTxsCommitment, data.mProof.get.apply(sidechainHash)))
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
 
         if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
       } else { // Current sidechain was not mentioned in MainchainBlockReference.
         // Check for empty transaction and certificate.
-        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.backwardTransferCertificate.isDefined)
+        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.withdrawalEpochCertificate.isDefined)
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
         // Check for at least one neighbour proof to be defined.
@@ -141,7 +143,7 @@ case class MainchainBlockReference(
   }
 }
 
-object MainchainBlockReference {
+object MainchainBlockReference extends ScorexLogging {
   // TO DO: check size
   val MAX_MAINCHAIN_BLOCK_SIZE: Int = 2048 * 1024 //2048K
   val SC_CERT_BLOCK_VERSION = 3
@@ -178,7 +180,7 @@ object MainchainBlockReference {
 
         certificates.foreach(c => sidechainHashMap.addCertificate(c))
 
-        val certificate: Option[MainchainBackwardTransferCertificate] = certificates.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+        val certificate: Option[WithdrawalEpochCertificate] = certificates.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
 
         val data: MainchainBlockReferenceData =
           if (scIds.isEmpty) {
@@ -212,15 +214,13 @@ object MainchainBlockReference {
           new SidechainCreation(creationOutput, tx.hash, indexInTx)
         case forwartTransferOutput: MainchainTxForwardTransferCrosschainOutput =>
           new ForwardTransfer(forwartTransferOutput, tx.hash, indexInTx)
-        case certifierLockOutput: MainchainTxCertifierLockCrosschainOutput =>
-          new CertifierLock(certifierLockOutput, tx.hash, indexInTx)
       }
     })
   }
 
   // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
   private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
-    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[MainchainBackwardTransferCertificate])] = Try {
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate])] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -239,7 +239,7 @@ object MainchainBlockReference {
           offset += tx.size
         }
 
-        var certificates: Seq[MainchainBackwardTransferCertificate] = Seq[MainchainBackwardTransferCertificate]()
+        var certificates: Seq[WithdrawalEpochCertificate] = Seq[WithdrawalEpochCertificate]()
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
@@ -247,7 +247,8 @@ object MainchainBlockReference {
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {
-              val c: MainchainBackwardTransferCertificate = MainchainBackwardTransferCertificate.parse(mainchainBlockBytes, offset)
+              log.debug(s"Parse Mainchain certificate: ${BytesUtils.toHexString(util.Arrays.copyOfRange(mainchainBlockBytes, offset, mainchainBlockBytes.length))}")
+              val c: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(mainchainBlockBytes, offset)
               certificates = certificates :+ c
               offset += c.size
             }

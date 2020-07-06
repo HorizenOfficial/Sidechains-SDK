@@ -236,6 +236,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     forgingBoxesInfoStorage.getForgingStakeMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
+
 }
 
 object SidechainWallet
@@ -253,20 +254,18 @@ object SidechainWallet
       None
   }
 
-  private[horizen] def genesisWallet(seed: Array[Byte],
-                                     walletBoxStorage: SidechainWalletBoxStorage,
-                                     secretStorage: SidechainSecretStorage,
-                                     walletTransactionStorage: SidechainWalletTransactionStorage,
-                                     forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-                                     applicationWallet: ApplicationWallet,
-                                     genesisBlock: SidechainBlock,
-                                     consensusEpochInfo: ConsensusEpochInfo) : Try[SidechainWallet] = Try {
+  private[horizen] def createGenesisWallet(seed: Array[Byte],
+                                           walletBoxStorage: SidechainWalletBoxStorage,
+                                           secretStorage: SidechainSecretStorage,
+                                           walletTransactionStorage: SidechainWalletTransactionStorage,
+                                           forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
+                                           applicationWallet: ApplicationWallet,
+                                           genesisBlock: SidechainBlock,
+                                           consensusEpochInfo: ConsensusEpochInfo
+                                    ) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
-      //remove it as well after fix SidechainCreation
-      genesisWallet.addSecret(SidechainCreation.genesisSecret)
-      genesisWallet.addSecret(SidechainCreation.vrfGenesisSecretKey)
       genesisWallet.scanPersistent(genesisBlock).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else

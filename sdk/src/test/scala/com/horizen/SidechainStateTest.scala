@@ -2,32 +2,30 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.box.{RegularBox, WithdrawalRequestBox}
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box._
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
+import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
-import org.junit._
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
+import org.junit._
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.mockito.{ArgumentMatchers, Mockito}
 import scorex.core.{bytesToId, bytesToVersion}
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Success}
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
+import scala.util.{Random, Success}
 
 
 class SidechainStateTest
@@ -91,8 +89,6 @@ class SidechainStateTest
 
   @Test
   def testStateless(): Unit = {
-    var exceptionThrown = false
-
     // Set base Secrets data
     secretList.clear()
     secretList ++= getPrivateKey25519List(5).asScala
@@ -151,6 +147,8 @@ class SidechainStateTest
 
     //Test validate(Block)
     val mockedBlock = mock[SidechainBlock]
+
+    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -225,7 +223,7 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[ConsensusEpochNumber](),
-      ArgumentMatchers.any[Boolean]()))
+      ArgumentMatchers.any[Option[WithdrawalEpochCertificate]]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -233,14 +231,14 @@ class SidechainStateTest
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
-        val containsBackwardTransferCertificate = answer.getArgument[Boolean](6)
+        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
         // Verify consensus epoch number
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
         // Verify certificate presence
-        assertFalse("Certificate expected to be absent.", containsBackwardTransferCertificate)
+        assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
 
 
         stateVersion += version
@@ -294,6 +292,8 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
+
+    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())).thenReturn(true)

@@ -4,17 +4,35 @@ import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 
 import com.horizen.fixtures.{CompanionsFixture, ForgerBoxGenerationMetadata, SidechainBlockFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.proposition.VrfPublicKey
+import com.horizen.secret.VrfSecretKey
 import com.horizen.utils.BytesUtils
 import com.horizen.validation.InvalidSidechainBlockHeaderException
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue, fail => jFail}
+import com.horizen.vrf.VrfGeneratedDataProvider
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 import scala.util.{Failure, Success}
 
 class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with SidechainBlockFixture {
+  val vrfGenerationDataSeed = 178
+  val vrfGenerationPrefix = "SidechainBlockHeaderTest"
+  //set to true for update vrf related data
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed)
+    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
+  }
 
-  val header: SidechainBlockHeader = createUnsignedBlockHeader(123L)._1
+  val vrfKeyPair: Option[(VrfSecretKey, VrfPublicKey)] = {
+    val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationDataSeed)
+    val publicKey: VrfPublicKey = secret.publicImage();
+    Option((secret, publicKey))
+  }
+
+  val vrfProofOpt = Option(VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationDataSeed))
+  val header: SidechainBlockHeader =
+    createUnsignedBlockHeader(123L, vrfKeyPair, vrfProofOpt)._1
   val params: NetworkParams = MainNetParams()
 
   @Test

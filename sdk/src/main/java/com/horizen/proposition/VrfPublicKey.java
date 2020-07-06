@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.VrfProof;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
-import com.horizen.vrf.VrfLoader;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -21,12 +22,11 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     }
 
     public boolean verify(byte[] message, VrfProof proof) {
-        return VrfLoader.vrfFunctions().verifyProof(message, pubKeyBytes(), proof.bytes());
+        return CryptoLibProvider.vrfFunctions().verifyProof(message, pubKeyBytes(), proof.bytes());
     }
 
-    //Do we need that function at all?
     public boolean isValid() {
-        return VrfLoader.vrfFunctions().publicKeyIsValid(pubKeyBytes());
+        return CryptoLibProvider.vrfFunctions().publicKeyIsValid(pubKeyBytes());
     }
 
     @JsonProperty("publicKey")
@@ -65,7 +65,7 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     @Override
     public String toString() {
         return "VrfPublicKey{" +
-                "publicBytes=" + Arrays.toString(publicBytes) +
+                "publicBytes=" + ByteUtils.toHexString(publicBytes) +
                 '}';
     }
 }

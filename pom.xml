@@ -2,32 +2,16 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.horizen</groupId>
 	<artifactId>Sidechains</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<version>0.2.0</version>
 	<inceptionYear>2018</inceptionYear>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
-		<scala.version>2.12.8</scala.version>
+		<scala.version>2.12.10</scala.version>
 	</properties>
 
-	<packaging>pom</packaging>	
-
-	<repositories>
-		<repository>
-			<id>scala-tools.org</id>
-			<name>Scala-Tools Maven2 Repository</name>
-			<url>http://scala-tools.org/repo-releases</url>
-		</repository>
-	</repositories>
-
-	<pluginRepositories>
-		<pluginRepository>
-			<id>scala-tools.org</id>
-			<name>Scala-Tools Maven2 Repository</name>
-			<url>http://scala-tools.org/repo-releases</url>
-		</pluginRepository>
-	</pluginRepositories>
+	<packaging>pom</packaging>
 
 	<modules>
 		<module>sdk</module>

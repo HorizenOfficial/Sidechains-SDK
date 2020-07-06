@@ -10,7 +10,7 @@ public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposi
 {
     byte[] hash();
 
-    Optional<B> getBox();
+    B getBox();
 
     @Override
     byte[] bytes();

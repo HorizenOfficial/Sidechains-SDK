@@ -4,10 +4,14 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
+import com.horizen.consensus.{ConsensusEpochAndSlot, intToConsensusEpochNumber, intToConsensusSlotNumber}
+import com.horizen.forge
 import com.horizen.serialization.SerializationUtil
 import org.junit.Assert._
+import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success}
 
 class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
 
@@ -196,6 +200,115 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", None).code)
+      }
+    }
+
+    "Successfully reply at /stopForging" in {
+      sidechainApiMockConfiguration.should_blockActor_StopForging_reply = true
+
+      Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
+    "Failed reply at /stopForging" in {
+      sidechainApiMockConfiguration.should_blockActor_StopForging_reply = false
+
+      Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", None).code)
+      }
+    }
+
+    "Successfully reply at /startForging" in {
+      sidechainApiMockConfiguration.should_blockActor_StartForging_reply = true
+
+      Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
+    "Failed reply at /startForging" in {
+      sidechainApiMockConfiguration.should_blockActor_StartForging_reply = false
+
+      Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", None).code)
+      }
+    }
+
+    "Successfully reply at /generate (2,1)" in {
+      val successBlockId = bytesToId("firstBlock".getBytes())
+      sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.put(
+        ConsensusEpochAndSlot(intToConsensusEpochNumber(2), intToConsensusSlotNumber(1)), Success(successBlockId))
+
+      Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 1}") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result => {
+            assertEquals(1, result.elements().asScala.length)
+            assertTrue(result.get("blockId").isTextual)
+            val blockId = result.get("blockId").asText()
+            assertEquals(blockId, successBlockId)
+          }
+        }
+      }
+    }
+
+    "Success forge reply with failed future at /generate (2,2)" in {
+      sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.put(
+        ConsensusEpochAndSlot(intToConsensusEpochNumber(2), intToConsensusSlotNumber(2)), Failure(new IllegalArgumentException))
+
+      Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 2}") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", None).code)
+      }
+    }
+
+    "Failed forge reply at /generate (2,3)" in {
+      Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 3}") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.InternalServerError.intValue //@TODO fix it, to avoid Internal Server error?
+      }
+    }
+
+    "Successfully reply at /forgingInfo" in {
+      val expectedConsensusSecondsInSlot = 1000
+      val expectedConsensusSlotsInEpoch = 60
+      val expectedEpochNumber = intToConsensusEpochNumber(5)
+      val expectedSlotNumber = intToConsensusSlotNumber(6)
+      val expectedBestEpochAndSlot = ConsensusEpochAndSlot(expectedEpochNumber, expectedSlotNumber)
+
+      sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply =
+        Success(forge.ForgingInfo(expectedConsensusSecondsInSlot, expectedConsensusSlotsInEpoch, expectedBestEpochAndSlot))
+
+      Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        mapper.readTree(entityAs[String]).get("result") match {
+          case result => {
+            assertEquals(4, result.elements().asScala.length)
+            assertEquals(expectedConsensusSecondsInSlot, result.get("consensusSecondsInSlot").asInt())
+            assertEquals(expectedConsensusSlotsInEpoch, result.get("consensusSlotsInEpoch").asInt())
+            assertEquals(expectedEpochNumber, result.get("bestEpochNumber").asInt())
+            assertEquals(expectedSlotNumber, result.get("bestSlotNumber").asInt())
+          }
+        }
+      }
+    }
+
+    "Failed reply at /forgingInfo" in {
+      sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply = Failure(new IllegalArgumentException)
+
+      Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", None).code)
       }
     }
   }

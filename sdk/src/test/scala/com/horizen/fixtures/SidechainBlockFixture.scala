@@ -12,15 +12,16 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.Proposition
-import com.horizen.secret.VrfKeyGenerator
+import com.horizen.proposition.{Proposition, VrfPublicKey}
+import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
+import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Random, Try}
 
 
 class SemanticallyInvalidSidechainBlock(block: SidechainBlock, companion: SidechainTransactionsCompanion)
@@ -79,11 +80,14 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
                              parentOpt: Option[Block.BlockId] = None,
                              mcParent: Option[ByteArrayWrapper] = None,
                              timestampOpt: Option[Block.Timestamp] = None,
-                             includeReference: Boolean = true
+                             includeReference: Boolean = true,
+                             vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
+                             vrfProofOpt: Option[VrfProof] = None
                             ): SidechainBlock = {
-    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed)
+    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(basicSeed, vrfKeysOpt)
     val vrfKey = VrfKeyGenerator.getInstance().generateSecret(Array.fill(32)(basicSeed.toByte))
-    val vrfProof = vrfKey.prove("Some non random string as input".getBytes)
+    val vrfMessage = "Some non random string as input".getBytes
+    val vrfProof = vrfProofOpt.getOrElse(vrfKey.prove(vrfMessage).getKey)
 
     val parent = parentOpt.getOrElse(bytesToId(new Array[Byte](32)))
     val timestamp = timestampOpt.getOrElse(Instant.now.getEpochSecond - 10000)
@@ -113,7 +117,10 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
   def generateGenesisBlockInfo(genesisMainchainHeaderHash: Option[Array[Byte]] = None,
                                genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
-                               timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
+                               timestamp: Option[Block.Timestamp] = None,
+                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34)
+                              ): SidechainBlockInfo = {
+    val blockId = bytesToId(new Array[Byte](32))
     SidechainBlockInfo(
       1,
       1,
@@ -122,21 +129,14 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       validity,
       Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))),
       Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainReferenceDataHeaderHash.getOrElse(new Array[Byte](32)))),
-      WithdrawalEpochInfo(1, 1)
+      WithdrawalEpochInfo(1, 1),
+      Option(vrfOutput),
+      blockId
     )
   }
 
   def changeBlockInfoValidity(blockInfo: SidechainBlockInfo, validity: ModifierSemanticValidity): SidechainBlockInfo = {
-    SidechainBlockInfo(
-      blockInfo.height,
-      blockInfo.score,
-      blockInfo.parentId,
-      blockInfo.timestamp,
-      validity,
-      blockInfo.mainchainHeaderHashes,
-      blockInfo.mainchainReferenceDataHeaderHashes,
-      WithdrawalEpochInfo(blockInfo.withdrawalEpochInfo.epoch, blockInfo.withdrawalEpochInfo.lastEpochIndex)
-    )
+    blockInfo.copy(semanticValidity = validity)
   }
 
   def generateBlockInfo(block: SidechainBlock,
@@ -153,7 +153,9 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       validity,
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params)
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
+      Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),
+      block.parentId
     )
   }
 
@@ -186,7 +188,11 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
 
   val blockGenerationDelta = 10
 
-  def generateNextSidechainBlock(sidechainBlock: SidechainBlock, companion: SidechainTransactionsCompanion, params: NetworkParams, basicSeed: Long = 123177L): SidechainBlock = {
+  def generateNextSidechainBlock(sidechainBlock: SidechainBlock,
+                                 companion: SidechainTransactionsCompanion,
+                                 params: NetworkParams,
+                                 basicSeed: Long = 123177L,
+                                 timestampDelta: Long = blockGenerationDelta): SidechainBlock = {
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + blockGenerationDelta,

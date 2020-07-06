@@ -6,10 +6,13 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfSecretKey;
 import com.horizen.serialization.Views;
-import com.horizen.vrf.VrfLoader;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.vrf.VrfOutput;
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.horizen.proof.CoreProofsIdsEnum.VrfProofId;
 
@@ -19,18 +22,18 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     private final byte[] proofBytes;
 
     public VrfProof(byte[] proof) {
-        Objects.requireNonNull(proof, "Public key can't be null");
+        Objects.requireNonNull(proof, "Vrf proof can't be null");
 
         proofBytes = Arrays.copyOf(proof, proof.length);
     }
 
-    public byte[] proofToVRFHash(VrfPublicKey publicKey, byte[] message) {
-        return VrfLoader.vrfFunctions().vrfProofToVrfHash(publicKey.pubKeyBytes(), message, proofBytes);
+    public Optional<VrfOutput> proofToVrfOutput(VrfPublicKey publicKey, byte[] message) {
+        return CryptoLibProvider.vrfFunctions().proofToOutput(publicKey.pubKeyBytes(), message, proofBytes).map(VrfOutput::new);
     }
 
     @Override
     public boolean isValid(VrfPublicKey proposition, byte[] message) {
-        return VrfLoader.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
+        return CryptoLibProvider.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
     }
 
     @JsonProperty("vrfProof")
@@ -64,5 +67,12 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
 
     public static VrfProof parse(byte[] bytes) {
         return new VrfProof(bytes);
+    }
+
+    @Override
+    public String toString() {
+        return "VrfProof{" +
+                "proofBytes=" + ByteUtils.toHexString(proofBytes) +
+                '}';
     }
 }

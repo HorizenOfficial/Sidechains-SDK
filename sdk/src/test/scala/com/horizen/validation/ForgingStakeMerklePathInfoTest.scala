@@ -9,17 +9,26 @@ import com.horizen.box.ForgerBox
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, MerklePath, Pair}
+import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
 class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
+  val vrfGenerationSeed = 907
+  val vrfGenerationPrefix = "ForgerBoxMerklePathInfoTest"
+
+  //uncomment if you want update vrf related data
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
+  }
+
   val forgerBox: ForgerBox = getForgerBox(
     getPrivateKey25519("123".getBytes()).publicImage(),
     1000L,
     100L,
     getPrivateKey25519("456".getBytes()).publicImage(),
-    getVRFPublicKey(222L)
+    VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
   )
   val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
 

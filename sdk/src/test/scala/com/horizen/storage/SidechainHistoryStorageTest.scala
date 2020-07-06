@@ -7,7 +7,7 @@ import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
+import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
@@ -400,7 +400,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           tipNewValidity,
           activeChainBlockInfoList.last.mainchainHeaderHashes,
           activeChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
-          activeChainBlockInfoList.last.withdrawalEpochInfo
+          activeChainBlockInfoList.last.withdrawalEpochInfo,
+          activeChainBlockInfoList.last.vrfOutputOpt,
+          activeChainBlockList.last.parentId
         ).bytes)
     ))
 
@@ -417,7 +419,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkTipNewValidity,
           forkChainBlockInfoList.last.mainchainHeaderHashes,
           forkChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
-          forkChainBlockInfoList.last.withdrawalEpochInfo
+          forkChainBlockInfoList.last.withdrawalEpochInfo,
+          forkChainBlockInfoList.last.vrfOutputOpt,
+          forkChainBlockList.last.parentId,
         ).bytes)
     ))
 
@@ -476,7 +480,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       ModifierSemanticValidity.Valid,
       SidechainBlockInfo.mainchainHeaderHashesFromBlock(newBestBlock),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
-      WithdrawalEpochInfo(1, 2)
+      WithdrawalEpochInfo(1, 2),
+      Option(VrfGenerator.generateVrfOutput(12)),
+      newBestBlock.parentId,
     )
     val newBestBlockToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     newBestBlockToUpdate.add(new Pair(

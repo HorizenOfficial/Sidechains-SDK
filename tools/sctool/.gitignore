@@ -3,3 +3,7 @@ out/
 target/
 scorex.log
 scorex-errors.log
+.project
+.classpath
+.settings/
+.vscode/

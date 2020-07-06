@@ -29,8 +29,8 @@ object GenerationRules {
         Set(allNotSpentForgerData.toSeq(rnd.nextInt(allNotSpentForgerData.size)))
       }
       else {
-        val deleteSize = if (allNotSpentForgerData.size > 100) 3 else 1
-        allNotSpentForgerData.toSeq.sortBy(_.forgerBox.value())(Ordering[Long].reverse).take(deleteSize).toSet
+        val deleteSize = if (allNotSpentForgerData.size > 100) 10 else 1
+        allNotSpentForgerData.toSeq.sortBy(_.forgerBox.value())(Ordering[Long]).take(deleteSize).toSet
       }
 
     require((removedForgingData -- allNotSpentForgerData).isEmpty)
