@@ -16,6 +16,7 @@ import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
+import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -358,6 +359,7 @@ public class CommandProcessor {
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo.");
 
             ForgerBox forgerBox = sidechainCreation.getBox();
+            ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
             VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
@@ -373,7 +375,7 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
-                    forgerBox,
+                    forgingStakeInfo,
                     vrfProof,
                     mp,
                     sidechainTransactionsCompanion,

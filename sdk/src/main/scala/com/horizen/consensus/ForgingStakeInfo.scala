@@ -1,11 +1,14 @@
 package com.horizen.consensus
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.serialization.Views
 import com.horizen.utils.Utils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
+@JsonView(Array(classOf[Views.Default]))
 case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,
                             vrfPublicKey: VrfPublicKey,
                             stakeAmount: Long) extends BytesSerializable {
@@ -18,6 +21,9 @@ case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,
   def hash: Array[Byte] = Utils.doubleSHA256Hash(
     Bytes.concat(blockSignPublicKey.bytes(), vrfPublicKey.bytes(), Longs.toByteArray(stakeAmount))
   )
+
+  override def toString: String = "%s(blockSignPublicKey: %s, vrfPublicKey: %s, stakeAmount: %d)"
+    .format(this.getClass.toString, blockSignPublicKey, vrfPublicKey, stakeAmount)
 }
 
 object ForgingStakeInfoSerializer extends ScorexSerializer[ForgingStakeInfo]{
