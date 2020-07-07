@@ -1,20 +1,19 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.utils.ByteArrayWrapper
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 import java.util.{ArrayList => JArrayList}
 
-import com.horizen.box.ForgerBox
+import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 import com.horizen.utils.{Pair => JPair}
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
-class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
+class SidechainStateForgerBoxStorage(storage: Storage)
     extends ScorexLogging
     with SidechainTypes
 {
@@ -22,8 +21,8 @@ class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: 
   // Key - byte array box Id
 
   require(storage != null, "Storage must be NOT NULL.")
-  require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
+  private val forgerBoxSerializer: ForgerBoxSerializer = ForgerBoxSerializer.getSerializer
 
   def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
@@ -32,10 +31,10 @@ class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: 
   def getForgerBox(boxId: Array[Byte]): Option[ForgerBox] = {
     storage.get(calculateKey(boxId)).asScala match {
       case Some(baw) =>
-        sidechainBoxesCompanion.parseBytesTry(baw.data) match {
-          case Success(box) => Option(box.asInstanceOf[ForgerBox])
+        forgerBoxSerializer.parseBytesTry(baw.data) match {
+          case Success(box) => Option(box)
           case Failure(exception) =>
-            log.error("Error while WalletBox parsing.", exception)
+            log.error("SidechainStateForgerBoxStorage: Error while ForgerBox parsing.", exception)
             Option.empty
         }
       case _ => Option.empty
@@ -45,7 +44,7 @@ class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: 
   def getAllForgerBoxes: Seq[ForgerBox] = {
     storage.getAll
       .asScala
-      .map(pair => sidechainBoxesCompanion.parseBytes(pair.getValue.data).asInstanceOf[ForgerBox])
+      .map(pair => forgerBoxSerializer.parseBytes(pair.getValue.data))
   }
 
   def update(version: ByteArrayWrapper,
@@ -54,17 +53,16 @@ class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: 
     require(forgerBoxUpdateSeq != null, "List of ForgerBoxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
 
-
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     // Update boxes data
-    for (r <- boxIdsRemoveSet)
-      removeList.add(calculateKey(r.data))
+    for (id <- boxIdsRemoveSet)
+      removeList.add(calculateKey(id.data))
 
-    for (b <- forgerBoxUpdateSeq)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
-        new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))))
+    for (box <- forgerBoxUpdateSeq)
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(box.id()),
+        new ByteArrayWrapper(forgerBoxSerializer.toBytes(box))))
 
     storage.update(version, updateList, removeList)
 
@@ -75,9 +73,12 @@ class SidechainStateForgerBoxStorage(storage: Storage, sidechainBoxesCompanion: 
     storage.lastVersionID().asScala
   }
 
+  def rollbackVersions: Seq[ByteArrayWrapper] = {
+    storage.rollbackVersions().asScala.toList
+  }
 
   def rollback(version: ByteArrayWrapper): Try[SidechainStateForgerBoxStorage] = Try {
-    require(version != null, "Version to rollback to must be NOT NULL.")
+    require(version != null, "SidechainStateForgerBoxStorage: Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     this
   }

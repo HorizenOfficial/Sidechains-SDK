@@ -596,7 +596,7 @@ class SidechainWalletTest
   }
 
   @Test
-  def testGetForgingBoxMerklePath(): Unit = {
+  def testGetForgingStakeMerklePath(): Unit = {
     val mockedWalletBoxStorage: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
@@ -667,10 +667,20 @@ class SidechainWalletTest
       mockedApplicationWallet)
 
 
-    val forgerBoxes: Seq[ForgerBox] = getForgerBoxList(3).asScala
+
+    val vrfPubKey1 = getVRFPublicKey(112233L)
+    val vrfPubKey2 = getVRFPublicKey(445566L)
+    val privateKey25519 = secretList.head.asInstanceOf[PrivateKey25519]
+    // forger boxes: first two boxes must be aggregated to the single ForgingStakeInfo
+    val forgerBoxes: Seq[ForgerBox] = Seq(
+      getForgerBox(privateKey25519.publicImage(), 100L, 100L, privateKey25519.publicImage(), vrfPubKey1),
+      getForgerBox(privateKey25519.publicImage(), 100L, 200L, privateKey25519.publicImage(), vrfPubKey1),
+      getForgerBox(privateKey25519.publicImage(), 100L, 700L, privateKey25519.publicImage(), vrfPubKey2)
+    )
     val forgingStakeInfo: Seq[ForgingStakeInfo] = forgerBoxes.groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
       .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
       .toSeq
+      .sortWith(_.stakeAmount > _.stakeAmount)
 
     val epochNumber: ConsensusEpochNumber = ConsensusEpochNumber @@ 3
     val merkleTree: MerkleTree = MerkleTree.createMerkleTree(forgingStakeInfo.map(_.hash).asJava)
@@ -679,8 +689,9 @@ class SidechainWalletTest
     val epochInfo: ConsensusEpochInfo = ConsensusEpochInfo(epochNumber, merkleTree, forgersStake)
 
     // Mock the list of delegated ForgerBoxes
+    // Skip second item, so Wallet has no info about ForgingStakeInfo for the first two ForgerBoxes.
     Mockito.when(mockedForgingBoxesInfoStorage.getForgerBoxes)
-      .thenReturn(Some(Seq(forgerBoxes.head)))
+      .thenReturn(Some(Seq(forgerBoxes.head, forgerBoxes.last)))
 
     // Verify epoch number and return predefined merklePathSeq
     Mockito.when(mockedForgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(
@@ -691,9 +702,12 @@ class SidechainWalletTest
         val forgingStakeMerklePathInfoSeq = answer.getArgument(1).asInstanceOf[Seq[ForgingStakeMerklePathInfo]]
 
         assertEquals("Different epoch number request expected.", epochNumber, epoch)
+        // We expect the forging stake merkle path data only for the second Forging stake,
+        // because we have no info for the first Forging stake boxes in the Wallet
         assertEquals("Different merkle path seq size expected.", 1, forgingStakeMerklePathInfoSeq.size)
         val forgingStakeMerklePathInfo = forgingStakeMerklePathInfoSeq.head
-        assertArrayEquals("Wrong merkle path applied.", merkleTree.rootHash(), forgingStakeMerklePathInfo.merklePath.apply(forgingStakeMerklePathInfo.forgingStakeInfo.hash))
+        assertArrayEquals("Wrong merkle path applied.", merkleTree.rootHash(),
+          forgingStakeMerklePathInfo.merklePath.apply(forgingStakeMerklePathInfo.forgingStakeInfo.hash))
 
         Success(mockedForgingBoxesInfoStorage)
       })

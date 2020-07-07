@@ -297,7 +297,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    val forgingStakes: Seq[ForgingStakeInfo] = getForgingStakesInfoSeq
+    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
     if(forgingStakes.isEmpty) {
         throw new IllegalStateException("ForgerStakes list can't be empty.")
     }
@@ -317,12 +317,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def getForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
+  // Note: we consider ordering of the result to keep it deterministic for all Nodes.
+  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     forgerBoxStorage.getAllForgerBoxes
       .view
       .groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
       .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
       .toSeq
+      .sortWith(_.stakeAmount > _.stakeAmount)
   }
 }
 

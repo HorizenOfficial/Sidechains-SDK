@@ -175,9 +175,7 @@ class SidechainApp @Inject()
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
     sidechainBoxesCompanion)
-  protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(
-    registerStorage(forgerBoxStorage),
-    sidechainBoxesCompanion)
+  protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),

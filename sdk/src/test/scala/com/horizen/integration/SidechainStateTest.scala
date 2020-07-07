@@ -43,7 +43,7 @@ class SidechainStateTest
   var stateForgerBoxStorage: SidechainStateForgerBoxStorage = _
   var initialVersion: ByteArrayWrapper = _
 
-  var initialForgerBox: ForgerBox = _
+  var initialForgerBoxes: Seq[ForgerBox] = _
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val secretList = new ListBuffer[PrivateKey25519]()
   val params = MainNetParams()
@@ -96,8 +96,15 @@ class SidechainStateTest
     boxList.clear()
     boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
 
-    initialForgerBox = getForgerBox(secretList.head.publicImage(), 100L, 100L, secretList.head.publicImage(), getVRFPublicKey(1L))
-    boxList += initialForgerBox
+    // Initialize forger boxes: first two must be aggregated to the ForgingStakeInfo
+    val vrfPubKey1 = getVRFPublicKey(112233L)
+    val vrfPubKey2 = getVRFPublicKey(445566L)
+    initialForgerBoxes = Seq(
+      getForgerBox(secretList.head.publicImage(), 100L, 100L, secretList.head.publicImage(), vrfPubKey1),
+      getForgerBox(secretList.head.publicImage(), 100L, 200L, secretList.head.publicImage(), vrfPubKey1),
+      getForgerBox(secretList.head.publicImage(), 100L, 700L, secretList.head.publicImage(), vrfPubKey2)
+    )
+    boxList ++= initialForgerBoxes.asInstanceOf[Seq[SidechainTypes#SCB]]
 
     // Init SidechainStateStorage with boxList
     val tmpDir = tempDir()
@@ -123,10 +130,10 @@ class SidechainStateTest
     stateForgerBoxesDir.mkdirs()
     val forgerBoxesStore = getStore(stateForgerBoxesDir)
 
-    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(forgerBoxesStore), sidechainBoxesCompanion)
+    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(forgerBoxesStore))
     stateForgerBoxStorage.update(
       initialVersion,
-      Seq(initialForgerBox),
+      initialForgerBoxes,
       Set()
     )
   }
@@ -155,8 +162,27 @@ class SidechainStateTest
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
     assertEquals("Consensus epoch info modifier id should be different.", bytesToId(initialVersion.data), modId)
     assertEquals("Consensus epoch info epoch number should be different.", initialConsensusEpoch, consensusEpochInfo.epoch)
-    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 1, consensusEpochInfo.forgingStakeInfoTree.leaves().size())
-    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value(), consensusEpochInfo.forgersStake)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.",
+      2, consensusEpochInfo.forgingStakeInfoTree.leaves().size())
+    // Note we expect to have deterministic order of leaves: by total stake decreasing
+    val expectedMerkleTreeLeaves = Seq(
+      ForgingStakeInfo(
+        initialForgerBoxes.last.blockSignProposition(),
+        initialForgerBoxes.last.vrfPubKey(),
+        initialForgerBoxes.last.value()
+      ).hash,
+      ForgingStakeInfo(
+        initialForgerBoxes.head.blockSignProposition(),
+        initialForgerBoxes.head.vrfPubKey(),
+        initialForgerBoxes.head.value() + initialForgerBoxes(1).value()
+      ).hash
+    )
+    assertEquals("Consensus epoch info stake ids merkle tree leaves are wrong.",
+      expectedMerkleTreeLeaves.map(new ByteArrayWrapper(_)),
+      consensusEpochInfo.forgingStakeInfoTree.leaves().asScala.map(new ByteArrayWrapper(_)))
+
+    assertEquals("Consensus epoch info epoch total stake should be different.",
+      initialForgerBoxes.map(_.value()).sum, consensusEpochInfo.forgersStake)
   }
 
   @Test
@@ -190,7 +216,6 @@ class SidechainStateTest
     Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
-    applyTry.get
     assertTrue("ApplyChanges for block must be successful.",
       applyTry.isSuccess)
 
@@ -215,8 +240,10 @@ class SidechainStateTest
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
     assertEquals("Consensus epoch info modifier id should be different.", bytesToId(newVersion.data), modId)
     assertEquals("Consensus epoch info epoch number should be different.", 2, consensusEpochInfo.epoch)
-    assertEquals("Consensus epoch info stake ids merkle tree size should be different.", 2, consensusEpochInfo.forgingStakeInfoTree.leavesNumber)
-    assertEquals("Consensus epoch info epoch total stake should be different.", initialForgerBox.value() + forgerOutputsAmount, consensusEpochInfo.forgersStake)
+    assertEquals("Consensus epoch info stake ids merkle tree size should be different.",
+      3, consensusEpochInfo.forgingStakeInfoTree.leavesNumber)
+    assertEquals("Consensus epoch info epoch total stake should be different.",
+      initialForgerBoxes.map(_.value()).sum + forgerOutputsAmount, consensusEpochInfo.forgersStake)
 
 
     // Test rollback

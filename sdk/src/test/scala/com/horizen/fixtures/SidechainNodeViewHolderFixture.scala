@@ -100,8 +100,7 @@ trait SidechainNodeViewHolderFixture
     getStorage(),
     sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(
-    getStorage(),
-    sidechainBoxesCompanion)
+    getStorage())
   val sidechainHistoryStorage = new SidechainHistoryStorage(
     getStorage(),
     sidechainTransactionsCompanion, params)
