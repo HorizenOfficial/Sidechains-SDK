@@ -19,10 +19,12 @@ public class StorageTest {
     @Test
     public void testStorage() {
         VersionedLevelDbStorageAdapter s = storageFixture.getStorage();
-        assertTrue("Storage expected to be empty.", s.isEmpty());
 
+        //Test empty storage
+        assertTrue("Storage expected to be empty.", s.isEmpty());
         assertFalse("Version of empty storage shall be none", s.lastVersionID().isPresent());
 
+        //Test updating storage with empty values
         ByteArrayWrapper version0 = storageFixture.getVersion();
         List<Pair<ByteArrayWrapper,ByteArrayWrapper>> u0 = new ArrayList<>();
         s.update(version0, u0, new ArrayList<>());
@@ -30,6 +32,7 @@ public class StorageTest {
         assertEquals("No keys are expected after update with empty values", 0, keysAfterFirstUpdate.size());
         assertEquals("last version shall be as expected after empty update", version0, s.lastVersionID().get());
 
+        //Test updating storage with non-empty values
         int firstUpdateSize = 3;
         ByteArrayWrapper version1 = storageFixture.getVersion();
         List<Pair<ByteArrayWrapper,ByteArrayWrapper>> u1 = storageFixture.getKeyValueList(firstUpdateSize);
@@ -43,6 +46,7 @@ public class StorageTest {
         assertEquals("Storage must have two versions", 2, s.rollbackVersions().size());
         assertTrue("Storage must have specified versions", s.rollbackVersions().containsAll(Arrays.asList(version0, version1)));
 
+        //Test replacing values in storage to empty values
         ByteArrayWrapper version2 = storageFixture.getVersion();
         List<Pair<ByteArrayWrapper,ByteArrayWrapper>> u2 = new ArrayList<>();
 
@@ -59,6 +63,7 @@ public class StorageTest {
         assertTrue("Storage must have specified versions", s.rollbackVersions().containsAll(Arrays.asList(version0, version1, version2)));
 
 
+        //Test partial replacing values in storage
         ByteArrayWrapper version3 = storageFixture.getVersion();
         List<ByteArrayWrapper> r = new ArrayList<>();
 
@@ -76,6 +81,7 @@ public class StorageTest {
         assertEquals("Storage must have specified version.", version3, s.lastVersionID().get());
         assertEquals("Storage must have four versions.", 4, s.rollbackVersions().size());
 
+        //Test storage rollback
         s.rollback(version2);
 
         assertEquals("Storage must contain 3 items.", 3, s.getAll().size());
@@ -84,6 +90,7 @@ public class StorageTest {
         assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
         assertEquals("Storage must have two versions.", 3, s.rollbackVersions().size());
 
+        //Test adding/removing duplicated values
         try {
             List<ByteArrayWrapper> duplicatedRemove = new ArrayList<>(r);
             duplicatedRemove.add(r.get(0));
@@ -92,7 +99,9 @@ public class StorageTest {
             s.update(duplicatedRemoveVersion, new ArrayList<>(), duplicatedRemove);
             fail("The same value in remove shall thrown exception");
         }
-        catch (Exception ex) {}
+        catch (Exception ex) {
+            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+        }
 
         try {
             List<Pair<ByteArrayWrapper,ByteArrayWrapper>> duplicatedUpdated = new ArrayList<>(u2);
@@ -102,19 +111,35 @@ public class StorageTest {
             s.update(duplicatedUpdatedVersion, duplicatedUpdated, new ArrayList<>());
             fail("The same value in update shall thrown exception");
         }
-        catch (Exception ex) {}
+        catch (Exception ex) {
+            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+        }
 
+        //Try to update with already exist version
         try {
             s.update(version2, u2, new ArrayList<>());
             fail("already exist version in update shall thrown exception");
         }
-        catch (Exception ex) {}
+        catch (Exception ex) {
+            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+        }
 
+        //Try to update to non exist version
         try {
             s.rollback(storageFixture.getVersion());
             fail("Non exist version in rollback shall thrown exception");
         }
-        catch (Exception ex) {}
+        catch (Exception ex) {
+            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+        }
+
+
+
+        //Try to remove non-exist values
+        List<Pair<ByteArrayWrapper,ByteArrayWrapper>> nonExistValues = storageFixture.getKeyValueList(5);
+        ByteArrayWrapper nonExistValuesVersion = storageFixture.getVersion();
+        s.update(nonExistValuesVersion, new ArrayList<>(), Collections.singletonList(storageFixture.getKeyValue().getKey()));
+        assertEquals("Storage must have specified version.", nonExistValuesVersion, s.lastVersionID().get());
     }
 
     @Test
