@@ -25,7 +25,6 @@ trait StoreFixture {
   Runtime.getRuntime.addShutdownHook(new Thread() {
     override def run(): Unit = {
       storages.foreach(_.close())
-      storages.foreach(_.close())
       tempFiles.flatMap(_.listFiles()).filter(_.exists()).foreach(_.delete())
     }
   })
