@@ -7,7 +7,7 @@ import scala.collection.JavaConverters._
 
 class ApplicationApiRouteTest extends SidechainApiRouteTest {
 
-  override val basePath = "/simpleApi/"
+  override val basePath = "/customSecret/"
 
   "The Api should to" should {
 
@@ -19,9 +19,9 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "reply at /allSecrets" in {
+    "reply at /getAllSecretByEmptyHttpBody" in {
 
-      Post(basePath + "allSecrets") ~> applicationApiRoute ~> check {
+      Post(basePath + "getAllSecretByEmptyHttpBody") ~> applicationApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -35,13 +35,6 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
             })
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
-      }
-
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
-      Post(basePath + "allSecrets") ~> applicationApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], new ErrorAllSecrets("", None).code())
       }
     }
   }
