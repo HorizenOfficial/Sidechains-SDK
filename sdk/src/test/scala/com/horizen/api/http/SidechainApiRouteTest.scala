@@ -10,7 +10,7 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
 import com.google.inject.{Guice, Injector}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -100,6 +100,9 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case GetDataFromCurrentSidechainNodeView(f) =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
+            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case ApplyFunctionOnNodeView(f) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
         case LocallyGeneratedSecret(_) =>
