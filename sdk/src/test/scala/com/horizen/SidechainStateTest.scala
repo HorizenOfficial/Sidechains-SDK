@@ -6,7 +6,7 @@ import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, Withdrawa
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.box.{RegularBox, WithdrawalRequestBox, _}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
@@ -32,7 +32,7 @@ class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {

@@ -21,9 +21,9 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.IODBStorageUtil;
 import com.horizen.storage.Storage;
 import com.horizen.state.*;
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
@@ -32,7 +32,7 @@ import com.horizen.utils.Pair;
 public class SimpleAppModule
     extends AbstractModule
 {
-    private SettingsReader settingsReader;
+    private final SettingsReader settingsReader;
 
     public SimpleAppModule(String userSettingsFileName) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
@@ -52,13 +52,14 @@ public class SimpleAppModule
         ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
         ApplicationState defaultApplicationState = new DefaultApplicationState();
 
-        File secretStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/secret");
-        File walletBoxStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/wallet");
-        File walletTransactionStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletTransaction");
-        File walletForgingBoxesInfoStorage = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletForgingStake");
-        File stateStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/state");
-        File historyStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/history");
-        File consensusStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/consensusData");
+        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        File secretStore = new File(dataDirAbsolutePath + "/secret");
+        File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
+        File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
+        File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
+        File stateStore = new File(dataDirAbsolutePath + "/state");
+        File historyStore = new File(dataDirAbsolutePath + "/history");
+        File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
 
 
 
@@ -100,27 +101,28 @@ public class SimpleAppModule
                 .annotatedWith(Names.named("ApplicationState"))
                 .toInstance(defaultApplicationState);
 
+        int storageMaxRollbackDepth = 720 * 2 + 1; //two consensus epochs length + 1
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(IODBStorageUtil.getStorage(secretStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletTransactionStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletForgingBoxesInfoStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(IODBStorageUtil.getStorage(stateStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(IODBStorageUtil.getStorage(historyStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, storageMaxRollbackDepth));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(IODBStorageUtil.getStorage(consensusStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, storageMaxRollbackDepth));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))

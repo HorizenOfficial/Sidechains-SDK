@@ -5,6 +5,7 @@ import java.io.File
 import com.horizen.utils.Pair
 import java.util.{ArrayList => JArrayList, List => JList}
 
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.storage.{IODBStoreAdapter, Storage}
 import io.iohk.iodb.LSMStore
 import io.iohk.iodb.Store
@@ -13,32 +14,30 @@ import com.horizen.utils.ByteArrayWrapper
 import scala.util.Random
 import scala.collection.mutable.ListBuffer
 
-trait IODBStoreFixture {
+trait StoreFixture {
 
   val keySize = 32
   val valueSize = 256
   val versionSize = 32
-  val stores : ListBuffer[Tuple2[File, LSMStore]] = new ListBuffer()
+  val storages: ListBuffer[Storage] = new ListBuffer()
+  val tempFiles: ListBuffer[File] = new ListBuffer()
 
   Runtime.getRuntime.addShutdownHook(new Thread() {
     override def run(): Unit = {
-      for (s <- stores) {
-        s._2.close()
-        for (f <- s._1.listFiles())
-          f.delete()
-        s._1.delete()
-      }
+      storages.foreach(_.close())
+      tempFiles.flatMap(_.listFiles()).filter(_.exists()).foreach(_.delete())
     }
   })
 
   def tempDir(): File = {
-    val dir = new File(System.getProperty("java.io.tmpdir") + File.separator + "iodb" + Math.random())
+    val dir = new File(System.getProperty("java.io.tmpdir") + File.separator + "sidechain_storage" + Math.random())
     dir.mkdirs()
     dir
   }
 
   def tempFile(): File = {
     val ret = new File(System.getProperty("java.io.tmpdir") + File.separator + "iodb" + Math.random())
+    tempFiles.append(ret)
     ret.deleteOnExit()
     ret
   }
@@ -51,26 +50,26 @@ trait IODBStoreFixture {
     dir.delete()
   }
 
-  def getStore() : Store = {
+  private def getLSMStore() : Store = {
     val dir = tempDir()
     val store = new LSMStore(dir, keySize)
-    stores.append(Tuple2(dir, store))
     store
   }
 
-  def getStoreWithPath() : (Store, File) = {
-    val dir = tempDir()
-    val store = new LSMStore(dir, keySize)
-    stores.append(Tuple2(dir, store))
-    (store, dir)
+  def getLsmStorage(): Storage = {
+    val storage = new IODBStoreAdapter(getLSMStore())
+    storages.append(storage)
+    storage
   }
 
-  def getStore (dir: File) : Store = {
-    new LSMStore(dir, keySize)
+  def getStorage(): VersionedLevelDbStorageAdapter = {
+    getStorage(tempFile())
   }
 
-  def getStorage(): Storage = {
-    new IODBStoreAdapter(getStore())
+  def getStorage(pathToDB: File): VersionedLevelDbStorageAdapter = {
+    val storage = new VersionedLevelDbStorageAdapter(pathToDB, 999)
+    storages.append(storage)
+    storage
   }
 
   def getValue : ByteArrayWrapper = {
@@ -108,4 +107,4 @@ trait IODBStoreFixture {
 
 }
 
-class IODBStoreFixtureClass extends IODBStoreFixture
+class StoreFixtureClass extends StoreFixture
