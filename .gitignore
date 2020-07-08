@@ -11,3 +11,5 @@ examples/simpleapp/dependency-reduced-pom.xml
 .settings/
 .vscode/
 sidechain_tasklist.md
+genesis_private.md
+gb.json
