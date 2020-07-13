@@ -9,6 +9,7 @@ import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
 import com.horizen.node.SidechainNodeView;
+import com.horizen.transaction.SidechainCoreTransactionFactory;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import static akka.http.javadsl.server.Directives.*;
 
 public abstract class ApplicationApiGroup {
     private FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView;
+    private SidechainCoreTransactionFactory sidechainCoreTransactionFactory;
 
     public abstract String basePath();
 
@@ -31,6 +33,16 @@ public abstract class ApplicationApiGroup {
 
     public final void setFunctionsApplierOnSidechainNodeView(FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView) {
         this.functionsApplierOnSidechainNodeView = functionsApplierOnSidechainNodeView;
+    }
+
+    public SidechainCoreTransactionFactory getSidechainCoreTransactionFactory()
+    {
+        return sidechainCoreTransactionFactory;
+    }
+
+    public void setSidechainCoreTransactionFactory(SidechainCoreTransactionFactory sidechainCoreTransactionFactory)
+    {
+        this.sidechainCoreTransactionFactory = sidechainCoreTransactionFactory;
     }
 
     protected static Route buildRoutForApiResponse(ApiResponse data) {
