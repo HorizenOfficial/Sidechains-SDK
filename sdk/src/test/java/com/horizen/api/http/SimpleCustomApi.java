@@ -1,9 +1,6 @@
 package com.horizen.api.http;
 
-import akka.http.javadsl.marshallers.jackson.Jackson;
-import akka.http.javadsl.model.HttpEntity;
 import akka.http.javadsl.server.Route;
-import akka.http.javadsl.unmarshalling.Unmarshaller;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.node.SidechainNodeView;
 import com.horizen.secret.Secret;
