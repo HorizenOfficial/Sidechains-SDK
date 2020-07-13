@@ -484,7 +484,6 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
 
     custom_data = vrf_public_key
     sc_create_res = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
-    print(sc_create_res)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
