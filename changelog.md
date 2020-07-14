@@ -1,4 +1,4 @@
-**Beta Preview changes**
+**Beta changes**
 1. Mainchain synchronization: added backward transfer support with Withdrawal certificate with threshold signature zero-knowledge proof by using [zendoo-sc-cryptolib](https://github.com/ZencashOfficial/zendoo-sc-cryptolib)
 2. Added [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)  for sidechain based on [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) consensus protocol which supporting forks in Sidechain and Mainchain. Autoforging for Sidechain node is added as well.
 3. Reworked Transactions structure: introduced SidechainCoreTranscation, Boxes structure was improved/changed now two types of boxes are present by default: regular box and forger box. Forger box is used for consensus forger selection.
