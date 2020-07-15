@@ -47,10 +47,10 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
   }
 
   private def encloseJsonParameter(parameter: String): String = {
-    //if (isOsWindows)
+    if (isOsWindows)
       "\"" + parameter.replace("\"", "\\\"") + "\""
-   // else
-   //   "'" + parameter + "'"
+    else
+      parameter
   }
 
   private def encloseStringParameter(parameter: String): String = {
