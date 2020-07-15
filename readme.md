@@ -13,7 +13,8 @@ Our Sidechains-SDK is a framework that supports the creation of such sidechains 
 6. Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain;
 7. Extensible node API interface;
 8. Command line tool to interact with the sidechain node;
-9. Sidechain Bootstrapping Tool to create and configure a new sidechain network.
+9. Sidechain Bootstrapping Tool to create and configure a new sidechain network;
+10. Graphical Wallet allowing easy sidechain creations, fordward transfers to sidechain, list of existing sidechains and more: [Sphere by Horizen](https://github.com/ZencashOfficial/Sphere_by_Horizen_Sidechain_Testnet/releases/tag/desktop-v2.0.0-beta-sidechain-testnet).
 
 **Supported platforms**
 
