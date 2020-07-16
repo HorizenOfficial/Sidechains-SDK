@@ -98,7 +98,7 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.2.0-SNAPSHOT.jar",
+                               "../tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.2.1.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     jsone_node = json.loads(sc_bootstrap_output)
@@ -230,6 +230,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
+    zencliArgs = []
+    zencliArgs.append("-datadir=" + mc0datadir.replace("\\", "/"))
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -249,7 +251,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
-        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/") + " -datadir=" + mc0datadir.replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
+        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
+        "ZEN_CLI_ARGS": json.dumps(zencliArgs),
         "THRESHOLD" : bootstrap_info.withdrawal_certificate_data.threshold,
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_secrets)
@@ -339,7 +342,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.0-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.1.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     if print_output_to_file:

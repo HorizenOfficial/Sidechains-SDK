@@ -80,17 +80,17 @@ class Demo(SidechainTestFramework):
         self.pause()
 
         # Create Tx and Block
-        transaction_id = mc_node.sc_create(withdrawal_epoch_length,
+        sc_create_res = mc_node.sc_create(withdrawal_epoch_length,
                                            genesis_account.publicKey,
                                            sc_creation_info.forward_amount,
                                            withdrawal_certificate_data.verificationKey,
                                            custom_data,
                                            withdrawal_certificate_data.genSysConstant)
 
-        decoded_tx = mc_node.getrawtransaction(transaction_id, 1)
+        transaction_id = sc_create_res["txid"]
         print "Sidechain creation transaction Id - {0}".format(transaction_id)
 
-        sidechain_id = decoded_tx['vsc_ccout'][0]['scid']
+        sidechain_id = sc_create_res["scid"]
         print "Sidechain created with Id -  {0}\n".format(sidechain_id)
 
         print "Generating Block with sidechain creation transaction..."
@@ -258,6 +258,8 @@ class Demo(SidechainTestFramework):
             json.dumps(sc_balance, indent=4, sort_keys=True)))
         boxes_balances = sc_node.wallet_allBoxes()["result"]
         print("\nSC wallet boxes: {}".format(json.dumps(boxes_balances, indent=4, sort_keys=True)))
+
+        self.pause()
 
     def pause(self):
         raw_input("Press the <ENTER> key to continue...")
