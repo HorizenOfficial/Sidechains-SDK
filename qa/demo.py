@@ -8,7 +8,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import start_sc_nodes, \
-    generate_secrets, generate_vrf_secrets, generate_withdrawal_certificate_data, \
+    generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
     bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool
 
 """
@@ -62,20 +62,20 @@ class Demo(SidechainTestFramework):
         vrf_keys = generate_vrf_secrets("seed", 1)
         genesis_account = accounts[0]
         vrf_key = vrf_keys[0]
-        withdrawal_certificate_data = generate_withdrawal_certificate_data("seed", 7, 5)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5)
 
         custom_data = vrf_key.publicKey
         print("Running sc_create RPC call on MC node:\n" +
               'sc_create {} "{}" {} "{}" "{}" "{}"'.format(withdrawal_epoch_length,
                                                            genesis_account.publicKey,
                                                            sc_creation_info.forward_amount,
-                                                           withdrawal_certificate_data.verificationKey,
+                                                           certificate_proof_info.verificationKey,
                                                            custom_data,
-                                                           withdrawal_certificate_data.genSysConstant))
+                                                           certificate_proof_info.genSysConstant))
         print(
             "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount in Zen - {}\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
                 withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount,
-                withdrawal_certificate_data.verificationKey, custom_data, withdrawal_certificate_data.genSysConstant))
+                certificate_proof_info.verificationKey, custom_data, certificate_proof_info.genSysConstant))
 
         self.pause()
 
@@ -83,9 +83,9 @@ class Demo(SidechainTestFramework):
         sc_create_res = mc_node.sc_create(withdrawal_epoch_length,
                                            genesis_account.publicKey,
                                            sc_creation_info.forward_amount,
-                                           withdrawal_certificate_data.verificationKey,
+                                           certificate_proof_info.verificationKey,
                                            custom_data,
-                                           withdrawal_certificate_data.genSysConstant)
+                                           certificate_proof_info.genSysConstant)
 
         transaction_id = sc_create_res["txid"]
         print "Sidechain creation transaction Id - {0}".format(transaction_id)
@@ -124,7 +124,7 @@ class Demo(SidechainTestFramework):
 
         sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                                genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                               sc_creation_info.withdrawal_epoch_length, vrf_key, withdrawal_certificate_data)
+                               sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info)
 
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)
@@ -203,7 +203,7 @@ class Demo(SidechainTestFramework):
 
         # Do BT
         self.pause()
-        mc_address = self.nodes[0].getnewaddress("")
+        mc_address = mc_node.getnewaddress("")
         bt_amount = 2  # Zen
         withdrawal_request = {"outputs": [
             {"publicKey": mc_address,
@@ -233,22 +233,31 @@ class Demo(SidechainTestFramework):
                 print("Wait for withdrawal certificate in MC memory pool...")
             time.sleep(10)
             attempts -= 1
-            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         certHash = mc_node.getrawmempool()[0]
         print("Withdrawal certificate hash - " + certHash)
         cert = mc_node.getrawcertificate(certHash, 1)
         print("Withdrawal certificate - {}".format(json.dumps(cert, indent=4, sort_keys=True, default=str)))
-        # TODO: check mc balances before and after block inclusion
 
         self.pause()
 
+        # Check MC balance for BT destination address before Certificate inclusion
+        mc_balance_before_cert = mc_node.getreceivedbyaddress(mc_address)
+        print("\nMC address {} balance before Certificate inclusion is = {:.8f} Zen.".format(mc_address, mc_balance_before_cert))
 
-        # Gen SC block to sync back certificate
+        self.pause()
+
+        # Generate MC block to include the certificate
         print("\nGenerating 1 more MC block to include Withdrawal certificate in the chain...")
         mc_block_4 = mc_node.generate(1)[0]
         print "MC Block id - {}\n".format(mc_block_4)
+
+        self.pause()
+
+        # Check MC balance for BT destination address before Certificate inclusion
+        mc_balance_after_cert = mc_node.getreceivedbyaddress(mc_address)
+        print("\nMC address {} balance after Certificate inclusion is = {:.8f} Zen.".format(mc_address, mc_balance_after_cert))
 
         self.pause()
 

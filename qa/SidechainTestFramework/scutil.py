@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, WithdrawalCertificateData
+    VrfAccount, CertificateProofInfo
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -172,14 +172,14 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
-Generate withdrawal certificate data calling ScBootstrappingTools with command "generateProofInfo"
+Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
  - number_of_accounts: the number of schnorr keys to be generated
 
-Output: WithdrawalCertificateData (see sc_bootstrap_info.py).
+Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
-def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold):
+def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold):
     jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
     output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
 
@@ -196,8 +196,8 @@ def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold
         schnorr_public_keys.append(keys["schnorrPublicKey"])
 
 
-    withdrawal_certificate_data = WithdrawalCertificateData(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
-    return withdrawal_certificate_data
+    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
+    return certificate_proof_info
 
 """
 Create directories for each node and configuration files inside them.
@@ -253,9 +253,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
         "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
         "ZEN_CLI_ARGS": json.dumps(zencliArgs),
-        "THRESHOLD" : bootstrap_info.withdrawal_certificate_data.threshold,
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_secrets)
+        "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
     }
 
     configsData.append({
@@ -599,7 +599,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
                                                             sc_nodes_bootstrap_info.network,
                                                             sc_nodes_bootstrap_info.withdrawal_epoch_length,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
-                                                            sc_nodes_bootstrap_info.withdrawal_certificate_data)
+                                                            sc_nodes_bootstrap_info.certificate_proof_info)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -623,22 +623,22 @@ def create_sidechain(sc_creation_info):
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    withdrawal_certificate_data = generate_withdrawal_certificate_data("seed", 7, 5)
+    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     genesis_account.publicKey,
                                     sc_creation_info.forward_amount,
                                     vrf_key.publicKey,
-                                    withdrawal_certificate_data.genSysConstant,
-                                    withdrawal_certificate_data.verificationKey)
+                                    certificate_proof_info.genSysConstant,
+                                    certificate_proof_info.verificationKey)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                           sc_creation_info.withdrawal_epoch_length, vrf_key, withdrawal_certificate_data)
+                           sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
