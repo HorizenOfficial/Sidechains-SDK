@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     MCConnectionInfo, SCBootstrapInfo
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
     bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool
@@ -14,7 +14,7 @@ from SidechainTestFramework.scutil import start_sc_nodes, \
 """
 Demo flow of how to bootstrap SC network and start SC nodes.
 
-Configuration: 1 MC node
+Configuration: 2 MC nodes
 
 Test:
     - Bootstrap SC network
@@ -25,8 +25,17 @@ Test:
 """
 class Demo(SidechainTestFramework):
 
+    def setup_chain(self):
+        initialize_chain_clean(self.options.tmpdir, 2)
+
+    def setup_network(self, split = False):
+        # Setup nodes and connect them
+        self.nodes = self.setup_nodes()
+        connect_nodes_bi(self.nodes, 0, 1)
+        self.sync_all()
+
     def setup_nodes(self):
-        return start_nodes(1, self.options.tmpdir)
+        return start_nodes(2, self.options.tmpdir)
 
     def sc_setup_chain(self):
         return
@@ -38,9 +47,14 @@ class Demo(SidechainTestFramework):
         return
 
     def run_test(self):
+        coin = 100000000
         # Activate Sidechains fork
         mc_node = self.nodes[0]
-        mc_node.generate(220)
+        mc_node_miner = self.nodes[1]
+        mc_node.generate(20)  # Generate first 20 block by main MC node to get some reward coins
+        self.sync_all()
+        mc_node_miner.generate(200)  # Generate the rest by another node.
+        self.sync_all()
         print("MC Node started.")
 
         mc_height = mc_node.getblockcount()
@@ -73,8 +87,8 @@ class Demo(SidechainTestFramework):
                                                            custom_data,
                                                            certificate_proof_info.genSysConstant))
         print(
-            "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount in Zen - {}\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
-                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount,
+            "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount - {} ({} Zen)\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
+                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * coin,  sc_creation_info.forward_amount,
                 certificate_proof_info.verificationKey, custom_data, certificate_proof_info.genSysConstant))
 
         self.pause()
@@ -146,11 +160,15 @@ class Demo(SidechainTestFramework):
 
         self.pause()
 
+        # MC balance before FT
+        print("\n MC total balance before Forward Transfer is {} Zen".format(mc_node.getbalance()))
+
+        self.pause()
 
         # Do FT
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount = 5
-        print("\nCreating Forward Transfer with {} Zen to Sidechain:\n".format(ft_amount) +
+        print("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * coin, ft_amount) +
               'sc_send "{}" {} "{}"'.format(sc_address, ft_amount, sc_bootstrap_info.sidechain_id))
 
         self.pause()
@@ -158,15 +176,22 @@ class Demo(SidechainTestFramework):
         ft_tx_id = mc_node.sc_send(sc_address, ft_amount, sc_bootstrap_info.sidechain_id)
         print("\nFT transaction id - {}".format(ft_tx_id))
 
+
         # Generate MC block and SC block and check that FT appears in SC node wallet
         print "Generating MC Block with Forward Transfer..."
-        mcblock_hash1 = mc_node.generate(1)[0]
+        self.sync_all()
+        mcblock_hash1 = mc_node_miner.generate(1)[0]
+        self.sync_all()
         print "MC Block id - {}\n".format(mcblock_hash1)
         print "Generating SC Block to include MC Block Forward Transfer..."
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
 
         self.pause()
 
+        # MC balance after FT
+        print("\n MC total balance after Forward Transfer is {} Zen".format(mc_node.getbalance()))
+
+        self.pause()
 
         # Check balance changes
         sc_balance = sc_node.wallet_balance()["result"]
@@ -180,9 +205,8 @@ class Demo(SidechainTestFramework):
 
 
         # Do inchain coins send
-        coin = 100000000
         sc_send_amount = 1  # Zen
-        print("\nSending {} Zen inside sidechain...".format(sc_send_amount))
+        print("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * coin, sc_send_amount))
         sc_address = sc_node.wallet_allPublicKeys()["result"]["propositions"][-1]["publicKey"]
         print(sc_address)
         self.send_coins(sc_node, sc_address, sc_send_amount * coin, 100)
@@ -211,7 +235,7 @@ class Demo(SidechainTestFramework):
         ]
         }
 
-        print("\nCreating Backward Transfer request to withdraw {} Zen to the Mainchain...".format(bt_amount))
+        print("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(bt_amount * coin, bt_amount))
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         print "Generating SC Block with Backward Transfer request transaction..."
