@@ -102,7 +102,7 @@ Save all outputs from previous steps and type `exit` for exit from Bootstrapping
 
 **Step 5: Clone and compile zen node**
 Compile MC sources with SC support code:	
-1. Clone Horizen core repository - https://github.com/ZencashOfficial/zend_oo/
+1. Clone Horizen core repository - https://github.com/HorizenOfficial/zend_oo/
 2. Switch to the SC suport branch - `sidechains_testnet`
 3. Build the Core for your platform using the guides in the repo.
 
