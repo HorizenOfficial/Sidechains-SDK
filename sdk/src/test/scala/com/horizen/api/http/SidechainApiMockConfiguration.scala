@@ -33,6 +33,8 @@ class SidechainApiMockConfiguration {
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
   private var should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = true
+  private var should_nodeViewHolder_ApplyFunctionOnNodeView_reply = true
+  private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
 
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
@@ -109,4 +111,12 @@ class SidechainApiMockConfiguration {
   def getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(): Boolean = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply
 
   def setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = value
+
+  def getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply(): Boolean = should_nodeViewHolder_ApplyFunctionOnNodeView_reply
+
+  def setShould_nodeViewHolder_ApplyFunctionOnNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_ApplyFunctionOnNodeView_reply = value
+
+  def getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply(): Boolean = should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply
+
+  def setShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = value
 }

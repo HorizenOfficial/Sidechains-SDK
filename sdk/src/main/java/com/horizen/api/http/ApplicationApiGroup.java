@@ -10,9 +10,9 @@ import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
 import com.horizen.node.SidechainNodeView;
 import com.horizen.transaction.SidechainCoreTransactionFactory;
+import scala.Some;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -45,7 +45,7 @@ public abstract class ApplicationApiGroup {
         this.sidechainCoreTransactionFactory = sidechainCoreTransactionFactory;
     }
 
-    protected static Route buildRoutForApiResponse(ApiResponse data) {
+    protected static Route buildRouteForApiResponse(ApiResponse data) {
         try {
             return ApiResponseUtil.toResponseAsJava(data);
         }
@@ -58,13 +58,13 @@ public abstract class ApplicationApiGroup {
 
     /*
      * Create AKKA route by embedding functionToBind which take input parameter T into AKKA Directives, functionToBind's result of type <T> shall be converted to Route, compose functions
-     * functionToBind and buildRoutForApiResponse, i.e. apply function buildRoutForApiResponse on result of functionToBind
+     * functionToBind and buildRouteForApiResponse, i.e. apply function buildRouteForApiResponse on result of functionToBind
      */
-    protected final <T> Route bindPostRequest(String path, Function<T, ApiResponse> functionToBind, Class<T> clazz) {
-        Unmarshaller<HttpEntity, T> unmarshaller = Jackson.unmarshaller(clazz);
+    protected final <T> Route bindPostRequest(String path, Function<T, ApiResponse> functionToBind, Class<T> requestBodyClazz) {
+        Unmarshaller<HttpEntity, T> unmarshaller = Jackson.unmarshaller(requestBodyClazz);
         return Directives.path(path,
             () -> Directives.post(
-                () -> entity(unmarshaller, functionToBind.andThen(ApplicationApiGroup::buildRoutForApiResponse))));
+                () -> entity(unmarshaller, functionToBind.andThen(ApplicationApiGroup::buildRouteForApiResponse))));
     }
 
     /**
@@ -87,7 +87,7 @@ public abstract class ApplicationApiGroup {
                 () -> requestEntityEmpty(
                     () -> onSuccess(CompletableFuture.supplyAsync(
                         () -> applyFunctionOnSidechainNodeView(functionToBind)),
-                        ApplicationApiGroup::buildRoutForApiResponse))));
+                        ApplicationApiGroup::buildRouteForApiResponse))));
     }
 
     private ApiResponse applyFunctionOnSidechainNodeView(Function<SidechainNodeView, ApiResponse> func) {
@@ -96,7 +96,7 @@ public abstract class ApplicationApiGroup {
             return getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
         }
         catch (Exception e) {
-            return new InternalExceptionApiErrorResponse(Optional.of(e));
+            return new InternalExceptionApiErrorResponse(Some.apply(e));
         }
     }
 
@@ -106,27 +106,12 @@ public abstract class ApplicationApiGroup {
             return getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);
         }
         catch (Exception e) {
-            return new InternalExceptionApiErrorResponse(Optional.of(e));
+            return new InternalExceptionApiErrorResponse(Some.apply(e));
         }
     }
 
     public static <T, U, R> Function<T, R> secondArgumentPartialApply(BiFunction<T, U, R> f, U x) {
         Function<T, R> partialAppliedFunction = y -> f.apply(y, x);
         return partialAppliedFunction;
-    }
-
-    public static class InternalExceptionApiErrorResponse implements InternalErrorResponse {
-        private final Optional<Throwable> exception;
-
-        public InternalExceptionApiErrorResponse(Optional<Throwable> exception)
-        {
-            this.exception = exception;
-        }
-
-        @Override
-        public Optional<Throwable> exception()
-        {
-            return exception;
-        }
     }
 }

@@ -1,11 +1,9 @@
 package com.horizen.api.http
 
-import java.util.Optional
-
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.serialization.Views
 
-trait ApiResponse {
+private[horizen] trait ApiResponse {
 
 }
 
@@ -19,9 +17,12 @@ trait ErrorResponse extends ApiResponse {
   val exception: Option[Throwable]
 }
 
-trait InternalErrorResponse extends ApiResponse{
-  val exception: Optional[Throwable]
+abstract class InternalErrorResponse extends ErrorResponse{
+  override val description: String = "Unexpected exception during request processing"
+  override val code: String = "500"
 }
+
+class InternalExceptionApiErrorResponse(override val exception: Option[Throwable]) extends InternalErrorResponse
 
 /**
   * General structure of core Api responses.
