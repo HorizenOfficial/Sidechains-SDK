@@ -88,7 +88,7 @@ public class CommandProcessor {
         // Check for file flag
         if(commandArguments.startsWith("-f ")) {
             // Remove '-f', possible around whitespaces and/or quotes
-            String filePath = commandArguments.replaceAll("^.f\\s*\"*|\"$", "");
+            String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
             // Try to open and read data from file
             BufferedReader reader = null;
             try {
