@@ -18,7 +18,8 @@ import scala.compat.java8.OptionConverters._
 *    1. Why we use ByteArrayWrapper instead of Array[Byte]?
 *    2. We need iterator over the storage
 * */
-class VersionedLevelDbStorageAdapter(pathToDB: File, keepVersions: Int) extends Storage{
+class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
+  private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
   private val dataBase: VersionedLDBKVStore = createDb(pathToDB)
   private val versionsKey: ByteArrayWrapper = new ByteArrayWrapper(dataBase.VersionsKey)
 
@@ -58,19 +59,19 @@ class VersionedLevelDbStorageAdapter(pathToDB: File, keepVersions: Int) extends 
     require(toUpdateAsScala.map(_.getKey).toSet.size == toUpdateAsScala.size, "duplicate key in `toUpdate`")
     require(toRemoveAsScala.toSet.size == toRemoveAsScala.size, "duplicate key in `toRemove`")
 
-    require(!versionIsExistInStorage(version), "Version is already exist in storage")
+    require(!isVersionExist(version), "Version is already exist in storage")
 
     val convertedToUpdate = toUpdateAsScala.map(pair => (pair.getKey.data, pair.getValue.data))
     val convertedToRemove = toRemoveAsScala.map(_.data)
     dataBase.update(convertedToUpdate, convertedToRemove)(version)
   }
 
-  def versionIsExistInStorage(versionForSearch: ByteArrayWrapper): Boolean = {
+  private def isVersionExist(versionForSearch: ByteArrayWrapper): Boolean = {
     dataBase.versions.map(byteArrayToWrapper).contains(versionForSearch)
   }
 
   override def rollback(versionID: ByteArrayWrapper): Unit = {
-    if (versionIsExistInStorage(versionID)) {
+    if (isVersionExist(versionID)) {
       dataBase.rollbackTo(versionID)
     }
     else {
@@ -82,12 +83,12 @@ class VersionedLevelDbStorageAdapter(pathToDB: File, keepVersions: Int) extends 
 
   override def close(): Unit = dataBase.close()
 
-  def createDb(path: File): VersionedLDBKVStore = {
+  private def createDb(path: File): VersionedLDBKVStore = {
     path.mkdirs()
     val options = new Options()
     options.createIfMissing(true)
     val db = factory.open(path, options)
-    new VersionedLDBKVStore(db, keepVersions)
+    new VersionedLDBKVStore(db, versionsToKeep)
   }
 
   override def isEmpty: Boolean = dataBase.versions.isEmpty

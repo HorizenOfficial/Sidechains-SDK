@@ -67,7 +67,7 @@ trait StoreFixture {
   }
 
   def getStorage(pathToDB: File): VersionedLevelDbStorageAdapter = {
-    val storage = new VersionedLevelDbStorageAdapter(pathToDB, 999)
+    val storage = new VersionedLevelDbStorageAdapter(pathToDB)
     storages.append(storage)
     storage
   }

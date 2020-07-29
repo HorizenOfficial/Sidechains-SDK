@@ -101,28 +101,28 @@ public class SimpleAppModule
                 .annotatedWith(Names.named("ApplicationState"))
                 .toInstance(defaultApplicationState);
 
-        int storageMaxRollbackDepth = 720 * 2 + 1; //two consensus epochs length + 1
+
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(secretStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(stateStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(historyStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore, storageMaxRollbackDepth));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
