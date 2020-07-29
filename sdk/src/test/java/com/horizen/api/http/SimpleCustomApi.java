@@ -65,6 +65,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
         throw new IllegalStateException();
     }
 
+    @JsonView(Views.Default.class)
     public static class GetSecretRequest {
         private int secretCount;
 

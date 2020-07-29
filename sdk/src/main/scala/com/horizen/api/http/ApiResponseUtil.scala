@@ -33,10 +33,6 @@ object ApiResponseUtil {
         val exceptionMessage: String = e.exception.map(Throwables.getStackTraceAsString).getOrElse("")
         Directives.complete(StatusCodes.OK, HttpEntities.create(ContentTypes.APPLICATION_JSON, SerializationUtil.serializeErrorWithResult(e.code, e.description, exceptionMessage)))
       }
-      case e: InternalErrorResponse => {
-        val exceptionMessage: String = e.exception.asScala.map(exception => Throwables.getStackTraceAsString(exception)).getOrElse("")
-        Directives.complete(StatusCodes.OK, HttpEntities.create(ContentTypes.APPLICATION_JSON, SerializationUtil.serializeErrorWithResult("Internal error", "Unexpected exception during request processing", exceptionMessage)))
-      }
     }
   }
 }
