@@ -31,9 +31,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -71,21 +69,46 @@ public class CommandProcessor {
         }
     }
 
-    // Command structure is: command_name [json_argument]
+    // Command structure is:
+    // 1) <command name>
+    // 1) <command name> <json argument>
+    // 2) <command name> -f <path to file with json argument>
     private Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
         if(inputData.length == 0)
             throw new IOException(String.format("Error: unrecognized input structure '%s'.%nSee 'help' for usage guideline.", input));
 
         ObjectMapper objectMapper = new ObjectMapper();
-        if(inputData.length != 2)
+        // Check for command without arguments
+        if(inputData.length == 1)
             return new Command(inputData[0], objectMapper.createObjectNode());
+
+        String jsonData;
+        String commandArguments = inputData[1].trim();
+        // Check for file flag
+        if(commandArguments.startsWith("-f ")) {
+            // Remove '-f', possible around whitespaces and/or quotes
+            String filePath = commandArguments.replaceAll("^.f\\s*\"*|\"$", "");
+            // Try to open and read data from file
+            BufferedReader reader = null;
+            try {
+                FileReader file = new FileReader(filePath);
+                reader = new BufferedReader(file);
+            } catch (FileNotFoundException e) {
+                throw new IOException(String.format("Error: Input data file '%s' not found.%nSee 'help' for usage guideline.", filePath));
+            }
+            jsonData = reader.readLine();
+            reader.close();
+        }
+        else {
+            jsonData = commandArguments;
+        }
 
         JsonNode jsonNode;
         try {
-            jsonNode = objectMapper.readTree(inputData[1]);
+            jsonNode = objectMapper.readTree(jsonData);
         } catch (Exception e) {
-            throw new IOException(String.format("Error: Invalid input data format '%s'. Json expected.%nSee 'help' for usage guideline.", inputData[1]));
+            throw new IOException(String.format("Error: Invalid input data format '%s'. Json expected.%nSee 'help' for usage guideline.", jsonData));
         }
 
         return new Command(inputData[0], jsonNode);
@@ -95,6 +118,7 @@ public class CommandProcessor {
         printer.print("Usage:\n" +
                       "\tFrom command line: <program name> <command name> [<json data>]\n" +
                       "\tFor interactive mode: <command name> [<json data>]\n" +
+                      "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
                       "Supported commands:\n" +
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
