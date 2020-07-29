@@ -15,6 +15,7 @@ Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zend
 * Extensible node API interface
 * Command-line tool to interact with the sidechain node
 * Sidechain Bootstrapping Tool to create and configure a new sidechain network
+* Graphical Wallet allowing easy sidechain creations, forward transfers to sidechain, list of existing sidechains and more: [Sphere by Horizen](https://github.com/HorizenOfficial/Sphere_by_Horizen_Sidechain_Testnet/releases/tag/desktop-v2.0.0-beta-sidechain-testnet).
 
 **Supported platforms**
 
