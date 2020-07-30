@@ -87,8 +87,30 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages
-      .GetDataFromCurrentSidechainNodeView(f) => sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
+      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+    }
+    catch {
+      case e: Exception => sender() ! akka.actor.Status.Failure(e)
+    }
+  }
+
+  protected def applyFunctionOnNodeView: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(function) => try {
+      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+    }
+    catch {
+      case e: Exception => sender() ! akka.actor.Status.Failure(e)
+    }
+  }
+
+  protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(function, functionParameter) => try {
+      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()), functionParameter)
+    }
+    catch {
+      case e: Exception => sender() ! akka.actor.Status.Failure(e)
+    }
   }
 
   protected def processLocallyGeneratedSecret: Receive = {
@@ -106,9 +128,13 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
-  override def receive: Receive = getCurrentSidechainNodeViewInfo orElse
-    processLocallyGeneratedSecret orElse
-    super.receive
+  override def receive: Receive = {
+      applyFunctionOnNodeView orElse
+      applyBiFunctionOnNodeView orElse
+      getCurrentSidechainNodeViewInfo orElse
+      processLocallyGeneratedSecret orElse
+      super.receive
+  }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
@@ -132,7 +158,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
               case Success(newState) =>
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
-                
+
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
@@ -257,6 +283,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
+    case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
+    case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
   }
 }

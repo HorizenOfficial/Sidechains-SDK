@@ -348,7 +348,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
             try {
               BytesUtils.fromHexString(result.get("transactionBytes").asText())
             } catch {
-              case _ => fail()
+              case _: Throwable => fail()
             }
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
@@ -466,7 +466,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
             try {
               BytesUtils.fromHexString(result.get("transactionId").asText())
             } catch {
-              case _ => fail()
+              case _: Throwable => fail()
             }
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
