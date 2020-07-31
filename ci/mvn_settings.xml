@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <servers>
+    <server>
+      <id>ossrh</id>
+      <username>${env.CONTAINER_OSSRH_JIRA_USERNAME}</username>
+      <password>${env.CONTAINER_OSSRH_JIRA_PASSWORD}</password>
+    </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>ossrh</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <gpg.executable>gpg2</gpg.executable>
+        <gpg.keyname>${env.CONTAINER_GPG_KEY_NAME}</gpg.keyname>
+        <gpg.passphrase>${env.CONTAINER_GPG_PASSPHRASE}</gpg.passphrase>
+      </properties>
+    </profile>
+  </profiles>
+</settings>
