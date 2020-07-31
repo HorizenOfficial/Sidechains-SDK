@@ -15,7 +15,7 @@ Build SDK components by using command (in the root of the SDK folder):
 
 Run Bootstrapping tool using command: 
 
-`java -jar tools/sctool/target/Sidechains-SDK-ScBootstrappingTools-0.2.1.jar`
+`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.2.jar`
 
 All other command are performed as commands for Bootstrapping tool in next format: `"command name"  "parameters for command in JSON format"`.
 For any help you could use command `help`, for exit just print `exit`
@@ -280,9 +280,9 @@ Run SimpleApp with the `my_settings.conf`:
 
 * For Windows:
  ```
-    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.1.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.2.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
 * For Linux:
 ```
-    java -cp ./examples/simpleapp/target/Sidechains-SDK-simpleapp-0.2.1.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.2.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
