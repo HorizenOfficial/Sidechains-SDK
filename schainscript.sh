@@ -151,7 +151,7 @@ function main()
 function islatestzend()
 {
 	
-	localzendv=$("$zenpath"/./zend --version | grep version | cut -d' ' -f4 | sed "s/-[^-]*$//")
+	localzendv=$("$zenpath"/./zend --version | grep version | cut -d' ' -f4 | cut -f1,2 -d'-' )
 	to_log "localzendv= $localzendv" "RAWOUTPUT"
 	latestzendv=$(curl -s "https://api.github.com/repos/HorizenOfficial/zend_oo/releases/latest" | jq -r '.tag_name')
 	to_log "latestzendv= $latestzendv" "RAWOUTPUT"
