@@ -229,7 +229,7 @@ class SidechainStateTest
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
-        val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
+        val withdrawalRequestAppendSeq = answer.getArgument(4).asInstanceOf[Seq[WithdrawalRequestBox]]
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
         val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
 

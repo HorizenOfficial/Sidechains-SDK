@@ -39,21 +39,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with ScorexLogging
     with TimeToEpochSlotConverter
 {
-  require({
-    stateStorage.lastVersionId match {
-      case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
-      case None => true
-    }
-  },
-    s"Specified version is invalid. StateStorage version ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
 
-  require({
-    forgerBoxStorage.lastVersionId match {
-      case Some(storageVersion) => storageVersion.data.sameElements(versionToBytes(version))
-      case None => true
-    }
-  },
-    s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != ${version}")
+  checkVersion()
 
   override type NVCT = SidechainState
 
@@ -70,6 +57,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       log.info(s"Verification key file at location: ${verificationFile.getAbsolutePath}")
       verificationFile.getAbsolutePath
     }
+  }
+
+  private def checkVersion(): Unit = {
+    val versionBytes = versionToBytes(version)
+
+    require({
+      stateStorage.lastVersionId match {
+        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
+        case None => true
+      }
+    },
+      s"Specified version is invalid. StateStorage version ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+
+    require({
+      forgerBoxStorage.lastVersionId match {
+        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
+        case None => true
+      }
+    },
+      s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
   }
 
   // Note: emit tx.semanticValidity for each tx
@@ -239,16 +246,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
                             consensusEpoch: ConsensusEpochNumber, withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
+    val boxesToAppend = changes.toAppend.map(_.box)
+
     applicationState.onApplyChanges(this,
       version.data,
-      changes.toAppend.map(_.box).asJava,
+      boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
-        val boxesToUpdate = changes.toAppend.map(_.box).filter(box => !box.isInstanceOf[WithdrawalRequestBox] && !box.isInstanceOf[ForgerBox]).toSet
+        val boxesToUpdate = boxesToAppend.filter(box => !box.isInstanceOf[WithdrawalRequestBox] && !box.isInstanceOf[ForgerBox]).toSet
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
-        val withdrawalRequestsToAppend = changes.toAppend.map(_.box).filter(box => box.isInstanceOf[WithdrawalRequestBox])
-          .map(_.asInstanceOf[WithdrawalRequestBox])
-        val forgerBoxesToAppend = changes.toAppend.withFilter(_.box.isInstanceOf[ForgerBox]).map(_.box.asInstanceOf[ForgerBox])
+        val withdrawalRequestsToAppend = boxesToAppend.withFilter(box => box.isInstanceOf[WithdrawalRequestBox]).map(_.asInstanceOf[WithdrawalRequestBox])
+        val forgerBoxesToAppend = boxesToAppend.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet,
@@ -297,7 +305,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
+    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq()
     if(forgingStakes.isEmpty) {
         throw new IllegalStateException("ForgerStakes list can't be empty.")
     }
@@ -318,13 +326,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   // Note: we consider ordering of the result to keep it deterministic for all Nodes.
-  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
-    forgerBoxStorage.getAllForgerBoxes
-      .view
-      .groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
-      .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
-      .toSeq
-      .sortWith(_.stakeAmount > _.stakeAmount)
+  // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
+  private def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
+    ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
   }
 }
 

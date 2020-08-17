@@ -677,10 +677,8 @@ class SidechainWalletTest
       getForgerBox(privateKey25519.publicImage(), 100L, 200L, privateKey25519.publicImage(), vrfPubKey1),
       getForgerBox(privateKey25519.publicImage(), 100L, 700L, privateKey25519.publicImage(), vrfPubKey2)
     )
-    val forgingStakeInfo: Seq[ForgingStakeInfo] = forgerBoxes.groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
-      .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
-      .toSeq
-      .sortWith(_.stakeAmount > _.stakeAmount)
+    val forgingStakeInfo: Seq[ForgingStakeInfo] = ForgingStakeInfo.fromForgerBoxes(forgerBoxes)
+      .sorted(Ordering[ForgingStakeInfo].reverse) // the sort is needed for test determinism only.
 
     val epochNumber: ConsensusEpochNumber = ConsensusEpochNumber @@ 3
     val merkleTree: MerkleTree = MerkleTree.createMerkleTree(forgingStakeInfo.map(_.hash).asJava)

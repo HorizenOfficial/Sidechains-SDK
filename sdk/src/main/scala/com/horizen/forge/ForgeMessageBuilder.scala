@@ -57,8 +57,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val sidechainWallet = nodeView.vault
 
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
-    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo]
-    = sidechainWallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
+      sidechainWallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
       .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
     val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]

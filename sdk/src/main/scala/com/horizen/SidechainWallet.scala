@@ -207,11 +207,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes
-    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = forgingBoxesInfoStorage.getForgerBoxes.getOrElse(Seq())
-      .view
-      .groupBy(box => (box.blockSignProposition(), box.vrfPubKey()))
-      .map{ case ((blockSignKey, vrfKey), forgerBoxes) => ForgingStakeInfo(blockSignKey, vrfKey, forgerBoxes.map(_.value()).sum) }
-      .flatMap(forgingStakeInfo => {
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
+      ForgingStakeInfo.fromForgerBoxes(forgingBoxesInfoStorage.getForgerBoxes.getOrElse(Seq())).flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
           case -1 => None // May occur in case if Wallet doesn't contain information about all boxes for given blockSignKey and vrfKey
           case index => Some(ForgingStakeMerklePathInfo(
@@ -219,7 +216,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
             epochInfo.forgingStakeInfoTree.getMerklePathForLeaf(index)
           ))
         }
-      }).toSeq
+      })
 
     forgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(epochInfo.epoch, forgingStakeMerklePathInfoSeq).get
     this
