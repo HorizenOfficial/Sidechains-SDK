@@ -59,28 +59,35 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
       sidechainWallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
-      .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
+        .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
-    val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
-    = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))
+    if (forgingStakeMerklePathInfoSeq.isEmpty) {
+      NoForgingStake
+    } else {
+      val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))
 
-    val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
-    = ownedForgingDataView.filter{case(forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)}
+      val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+      }
 
 
-    val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
+      val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
-    val forgingResult = eligibleForgerOpt
-      .map{case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-        forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof)}
-      .getOrElse(SkipSlot)
-
-    log.info(s"Forge result is: $forgingResult")
-    forgingResult
+      val forgingResult = eligibleForgerOpt
+        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof)
+        }
+        .getOrElse(SkipSlot)
+      forgingResult
     }
+  }
     match {
-      case Success(result) => result
+      case Success(result) => {
+        log.info(s"Forge result is: $result")
+        result
+      }
       case Failure(ex) => {
         log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:" , ex)
         ForgeFailed(ex)

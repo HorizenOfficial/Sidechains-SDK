@@ -678,6 +678,8 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
 
     #"while" will break if whole epoch no generated block, due changed error code
     while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
+        if("no forging stake" in forge_result["error"]["description"]):
+            raise AssertionError("No forging stake for the epoch")
         print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))

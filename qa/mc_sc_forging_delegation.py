@@ -3,7 +3,7 @@
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
-from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
+from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     connect_sc_nodes, check_wallet_balance, check_box_balance, generate_next_block
@@ -55,8 +55,8 @@ class MCSCForgingDelegation(SidechainTestFramework):
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 100, 1000),
                                          sc_node_1_configuration, sc_node_2_configuration)
-        # rewind sc genesis block timestamp for 3 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, 720*120*3)
+        # rewind sc genesis block timestamp for 5 consensus epochs
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, 720*120*5)
 
     def sc_setup_nodes(self):
         # Start 2 SC nodes
@@ -139,6 +139,46 @@ class MCSCForgingDelegation(SidechainTestFramework):
                      "Forging stake block sign key is wrong.")
         assert_equal(stakeInfo["vrfPublicKey"]["publicKey"], sc_node2_vrf_address,
                      "Forging stake vrf key is wrong.")
+
+        # spend forger box of 100 Zen for SC node 1
+        all_forger_boxes_req = {"boxTypeClass": "ForgerBox"}
+        forger_box_id = sc_node1.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"][0]["id"]
+        spend_forger_stakes_req = {
+            "transactionInputs" : [
+                {
+                "boxId": forger_box_id
+                }
+            ],
+            "regularOutputs": [
+                {
+                    "publicKey": sc_node1_address,
+                    "value": self.sc_nodes_bootstrap_info.genesis_account_balance * 100000000  # in Satoshi
+                }
+            ],
+            "forgerOutputs": []
+        }
+
+        tx_hex = sc_node1.transaction_spendForgingStake(json.dumps(spend_forger_stakes_req))
+        if "result" not in tx_hex:
+            fail("spend forger stake failed: " + json.dumps(tx_hex))
+        else:
+            print("Forget stake was spend: " + json.dumps(tx_hex))
+
+        # Generate one more SC block on SC node 1 to include transaction
+        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+
+        # Generate SC block on SC node 1 for the next consensus epoch - must be successful
+        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+
+        # Generate SC block on SC node 1 for the next consensus epoch.
+        # Must fail, because of all forger stakes were spent 2 consensus epochs before.
+        exception_occurs = False
+        try:
+            generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+        except:
+            exception_occurs = True
+        finally:
+            assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
 
 
 if __name__ == "__main__":
