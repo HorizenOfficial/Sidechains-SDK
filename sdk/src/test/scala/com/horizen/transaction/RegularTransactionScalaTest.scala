@@ -57,7 +57,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
       assertEquals("Transaction id json value must be the same.",
         ScorexEncoder.default.encode(transaction.id), id)
     } catch {
-      case _ => fail("Transaction id doesn't not found in json.")
+      case _: Throwable => fail("Transaction id doesn't not found in json.")
     }
 
     try {
@@ -65,7 +65,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
       assertEquals("Transaction fee json value must be the same.",
         transaction.fee(), fee_parsed)
     } catch {
-      case _ => fail("Transaction fee doesn't not found in json.")
+      case _: Throwable => fail("Transaction fee doesn't not found in json.")
     }
 
     try {
@@ -73,7 +73,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
       assertEquals("Transaction timestamp json value must be the same.",
         transaction.timestamp(), timestamp_parsed)
     } catch {
-      case _ => fail("Transaction timestamp doesn't not found in json.")
+      case _: Throwable => fail("Transaction timestamp doesn't not found in json.")
     }
 
     try {
@@ -82,10 +82,10 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
         assertEquals("Count of transaction unlockers in json must be the same.",
           transaction.unlockers().size(), inputsNode.size)
       } catch {
-        case _ => fail("Transaction unlockers in json have invalid format.")
+        case _: Throwable => fail("Transaction unlockers in json have invalid format.")
       }
     } catch {
-      case _ => fail("Transaction unlockers do not found in json.")
+      case _: Throwable => fail("Transaction unlockers do not found in json.")
     }
 
     try {
@@ -94,10 +94,10 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
         assertEquals("Count of transaction new boxes in json must be the same.",
           transaction.newBoxes().size(), newBoxesNode.size)
       } catch {
-        case _ => fail("Transaction newBoxes in json have invalid format.")
+        case _: Throwable => fail("Transaction newBoxes in json have invalid format.")
       }
     } catch {
-      case _ => fail("Transaction new boxes do not found in json.")
+      case _: Throwable => fail("Transaction new boxes do not found in json.")
     }
 
   }
