@@ -162,6 +162,8 @@ As a result id of block with Sidechain transaction will be printed:
 
 Now mainchain contains created Sidechain. 
 
+Skip that step, in case if you run your Sidechain in testnet or mainnet, because Mainchain block with declared Sidechain creation transaction will be mined automatically
+
 **Step 9: Get information from mainchain for forming genesis Sidechain block**
 Sidechain now is created in mainchain, but for starting Sidechain configuration file must be supplemented with genesis Sidechain block and with some additional parameters.
 Genesis info for further using in ScBootstrappingTool could be extracted by next command:
@@ -178,7 +180,7 @@ Example output:
 **Step 10: forming Sidechain genesis block in hex string form by Bootstraping tool**
 Run again the Bootstrapping tool and execute the `genesisinfo` command with next parameters:
 1. `"info": "02c...000"` is output from step 9
-2. `"secret": "003...2ac"` any key (included one generated on step 3)
+2. `"secret": "003...2ac"` any ed25519 key (included one generated on step 3)
 3. `"vrfSecret": "030...000"` any Vrf key (included one generated on step 3)
 
 Example:
