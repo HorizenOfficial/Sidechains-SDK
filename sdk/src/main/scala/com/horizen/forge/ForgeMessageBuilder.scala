@@ -62,7 +62,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
     if (forgingStakeMerklePathInfoSeq.isEmpty) {
-      NoForgingStake
+      NoOwnedForgingStake
     } else {
       val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))

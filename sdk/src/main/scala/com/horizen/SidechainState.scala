@@ -20,6 +20,7 @@ import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, 
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 
@@ -248,18 +249,28 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     val boxesToAppend = changes.toAppend.map(_.box)
 
+    val withdrawalRequestsToAppend: ListBuffer[WithdrawalRequestBox] = ListBuffer()
+    val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
+    val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
+
+    boxesToAppend.foreach(box => {
+      if(box.isInstanceOf[ForgerBox])
+        forgerBoxesToAppend.append(box)
+      else if(box.isInstanceOf[WithdrawalRequestBox])
+        withdrawalRequestsToAppend.append(box)
+      else
+        otherBoxesToAppend.append(box)
+    })
+
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
-        val boxesToUpdate = boxesToAppend.filter(box => !box.isInstanceOf[WithdrawalRequestBox] && !box.isInstanceOf[ForgerBox]).toSet
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
-        val withdrawalRequestsToAppend = boxesToAppend.withFilter(box => box.isInstanceOf[WithdrawalRequestBox]).map(_.asInstanceOf[WithdrawalRequestBox])
-        val forgerBoxesToAppend = boxesToAppend.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
 
         new SidechainState(
-          stateStorage.update(version, withdrawalEpochInfo, boxesToUpdate, boxIdsToRemoveSet,
+          stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
             withdrawalRequestsToAppend, consensusEpoch, withdrawalEpochCertificateOpt).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           params,
