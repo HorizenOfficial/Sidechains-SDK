@@ -30,6 +30,8 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 * Python 2.7
 * Maven
 
+On Linux operation systems Sidechain requires to set environment variable `MALLOC_CHECK_` to 3 as well.
+
 **Interaction**
 
 Each node has an API server bound to the `address:port` specified in a configuration file. The node also starts the Swagger server.
