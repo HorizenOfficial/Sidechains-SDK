@@ -30,7 +30,8 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 * Python 2.7
 * Maven
 
-On Linux operation systems Sidechain requires to set environment variable `MALLOC_CHECK_` to 3 as well.
+On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
+While our investigation is still ongoing, we found that setting the environment variable MALLOC_CHECK_=1 just before starting the node is a sufficiently good workaround.
 
 **Interaction**
 
