@@ -1,23 +1,53 @@
+
+#Known Issues
+#Datadir is not working but implemented in script
+#Not everything in config is working yet but most should work. Everything thats tested not working is marked
+
+
+
+
+
 #!/bin/bash
 set -e
 
-#non changable inside program
+#Mostly tested(ive tested it for the most part but should be checked)
 #-------------------------------------------------------------#
-jsontemplateurl="https://gist.githubusercontent.com/ponta9/76cda76b4576dc9e0152835afdee3564/raw/4280c4a0e0d1ef73735d81f9581bf532b7d7cfe0/template.conf"
+configfile=mysetting.conf
+submitterisenabled=true
 
-#folder for scripts and savedata
-logs=scriptdata
+nodename="testNode1"
+agentname="2-Hop"
 
-#jar file name before version
-boostrapfilename=sidechains-sdk-scbootstrappingtools-
-sdkappfilename=sidechains-sdk-simpleapp-
+connectiontimeout="100 milliseconds"
+reconnectiondelay="1 seconds"
+reconnectionmaxattempts=1
+#-------------------------------------------------------------#
 
+#IMPLEMENTED BUT NOT TESTED
+#-------------------------------------------------------------#
+#custom data dir for zend/zen-cli leave empty else
+#uses -datdir argument.
+zendatadir=
 #only used to delete regtest folder
-zenfolder=$HOME/.zen
+mainzendatafolder=$HOME/.zen
 
+#NOT IMPLEMENTED SETTINGS
+#-------------------------------------------------------------#
+#restApi
+apikeyhash=""
+
+
+#network
+
+knownpeers=[]
+
+#withdrawalEpochCertificate
+signersThreshold=5
+provingKeyFilePath=""
+verificationKeyFilePath=""
 #-------------------------------------------------------------#
 
-#changable inside the program
+#CHANGABLE INSIDE PROGRAM
 #-------------------------------------------------------------#
 
 #zen network. leave blank if you want mainnet
@@ -28,14 +58,18 @@ initamount=1
 withdrawepochlength=10
 websocketip="localhost:8888"
 rpcip="127.0.0.1:9085"
-
+netbindaddress="127.0.0.1:9084"
 
 #where sidechain data should reside
-scdatafolder=/tmp/scorex/data
-
+scdatadir=/tmp/scorex/data/blockchain
+sclogdir=/tmp/scorex/data/log
 #zend and zen-cli path. /usr/bin/ for precompiled
 zenpath=/usr/bin/
 
+#NOT WORKING
+#custom data dir for zend/zen-cli leave empty else
+#uses -datdir argument
+zendatadir=
 
 
 #folder where your sdk is located
@@ -44,12 +78,62 @@ sdkfolder=$HOME/Sidechains-SDK
 #folder where your sdkconfig is going to end up
 sdkconfigfolder=$sdkfolder/examples/simpleapp/src/main/resources
 
+#folder for scripts and savedata
+logs=scriptdata
+function usage()
+{
+  echo "Options: \n
+  -h, --help                  Display this help message and exit. \n
+  -c, --config configpath     Custom config file path \n
+    Where 'configpath' is the path to the script config file. \n
+  -l, --logdir logpath        Custom log folder path \n
+    Where 'logpath' is the path to logdir. "
+}
+
+while [[ -n "$1" ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -c | --config)
+      echo "Using provided configfile"
+      shift; configpath="$1"
+      if [[ ! -e "$configpath" ]];then
+          print "Config does not exist. configpath=$configpath"
+          exit 1
+      fi
+      . "$configpath"
+      ;;
+    -l | --logdir)
+      echo "log folder path"
+      shift; logs="$1"
+      ;;
+    -* | --*)
+    usage
+    echo "Unknown option $1"
+    exit 1
+      ;;
+  esac
+  shift
+
+done
+#-------------------------------------------------------------#
+#non changable inside program
+#-------------------------------------------------------------#
+jsontemplateurl="https://gist.githubusercontent.com/ponta9/76cda76b4576dc9e0152835afdee3564/raw/4280c4a0e0d1ef73735d81f9581bf532b7d7cfe0/template.conf"
+
+
+
+#jar file name before version
+boostrapfilename=sidechains-sdk-scbootstrappingtools-
+sdkappfilename=sidechains-sdk-simpleapp-
+
+
+
 #Path to bootstraptool
 bootstraptool=$sdkfolder/tools/sctool/target
-
 #-------------------------------------------------------------#
-
-
 
 declare -A KEYS
 
@@ -203,7 +287,7 @@ function versiontests()
 	
 	bootstrapjar="$boostrapfilename""$latestprojectv".jar
 	sdkappjar="$sdkappfilename""$localprojectv".jar
-	
+
 	#Check if updated boostrap tool or sdkapp exists
 	if [[ ! -e "$bootstraptool/$bootstrapjar" || ! -e "$sdkfolder/examples/simpleapp/target/$sdkappjar" ]]; then
 		print "Sdkapp or boostrap is not up to date. running a maven build"
@@ -292,6 +376,11 @@ function checkconfig()
     exit 1
   fi
 
+  if [[ ! -z $zendatadir ]]; then
+      mainzendatafolder="$zendatadir"
+      zendatadir="-dataDir=$zendatadir"
+  fi
+  
   islatestzend
   
   versiontests
@@ -314,12 +403,13 @@ function declaresidechain()
   promt
   if [[ $REPLY =~ ^[yY]$ ]]; then
     print ""
-    print "Are you sure you want to delete data in: $scdatafolder and $zenfolder/regtest?"
+    print "Are you sure you want to delete data in: $scdatadir and $sclogdir and $mainzendatafolder/regtest?"
     promt
     if [[ $REPLY =~ ^[yY]$ ]]; then
       print "Deleting old sidechain data"
-      rm -rf "$scdatafolder"
-      rm -rf "$zenfolder"/regtest
+      rm -rf "$scdatadir"
+      rm -rf "$sclogdir"
+      rm -rf "$mainzendatafolder"/regtest
     fi
   fi 
   #-------------------------------------------------------------#
@@ -497,29 +587,38 @@ function configuresidechain()
   print "Configuration is done. Program will now try to start sdkapp and its automatic forger" "\033[32m"
   print "----------------------------------------------------"
 
-
-  print "Opening a new scren with name Scapp and running schainapp there"
-  print "screen -dmS Scapp java -cp $sdkfolder/./examples/simpleapp/target/$sdkappjar:$sdkfolder/./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp $sdkconfigfolder/./mysetting.conf"
-  
-  screen -dmS Scapp java -cp "$sdkfolder"/./examples/simpleapp/target/"$sdkappjar":"$sdkfolder"/./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp "$sdkconfigfolder"/./mysetting.conf 2> >(exit_log)
-  print "to access the screen run the command screen -r Scapp"
-  #-------------------------------------------------------------#
-
-  #Starting forger
-  #-------------------------------------------------------------#
-  print "Starting forger with curl"
-  sleep 10
-  
-  to_log 'curl -X POST "http://"$rpcip"/block/startForging" -H "accept: application/json" ' "COMMAND"
-  curl -X POST "http://$rpcip/block/startForging" -H "accept: application/json" 2> >(exit_log)
-  
-  print ""
-  print "Do you want to open the screen?"
-
+  print "Do you want to start the Sidechain?"
   promt
   if [[ $REPLY =~ ^[yY]$ ]]; then
-    screen -r Scapp 2> >(exit_log)
+    print "Opening a new scren with name Scapp and running schainapp there"
+    print "screen -dmS Scapp java -cp $sdkfolder/./examples/simpleapp/target/$sdkappjar:$sdkfolder/./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp $sdkconfigfolder/./$configfile"
+  
+    screen -dmS Scapp java -cp "$sdkfolder"/./examples/simpleapp/target/"$sdkappjar":"$sdkfolder"/./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp "$sdkconfigfolder"/./"$configfile" 2> >(exit_log)
+    print "to access the screen run the command screen -r Scapp"
+    #-------------------------------------------------------------#
+
+    #Starting forger
+    #-------------------------------------------------------------#
+    print "Do you want to start the forger?"
+
+    promt
+    if [[ $REPLY =~ ^[yY]$ ]]; then
+      print "Starting forger with curl"
+      sleep 10
+      to_log 'curl -X POST "http://"$rpcip"/block/startForging" -H "accept: application/json" ' "COMMAND"
+      curl -X POST "http://$rpcip/block/startForging" -H "accept: application/json" 2> >(exit_log)
+    fi
+  
+    print ""
+    print "Do you want to open the screen with?"
+
+    promt
+    if [[ $REPLY =~ ^[yY]$ ]]; then
+      screen -r Scapp 2> >(exit_log)
+    fi
   fi
+
+  
   print "All done"
   #-------------------------------------------------------------#
 }
@@ -549,14 +648,14 @@ function zendstart()
   #If network is empty then dont run zend with it
   if [[ -z $network ]]; then
 
-    to_log "$zenpath/./zend -websocket -daemon " "COMMAND"
-    "$zenpath"/./zend -websocket -daemon
+    to_log "$zenpath/./zend -websocket -daemon $zendatadir " "COMMAND"
+    "$zenpath"/./zend -websocket -daemon $zendatadir
     returnvalue="$?"
 
   else
 
-    to_log "$zenpath/./zend $network -websocket -daemon " "COMMAND"
-    "$zenpath"/./zend "$network" -websocket -daemon 
+    to_log "$zenpath/./zend $network -websocket -daemon $zendatadir " "COMMAND"
+    "$zenpath"/./zend "$network" -websocket -daemon $zendatadir
     returnvalue="$?"
 
   fi
@@ -566,8 +665,8 @@ function zendstart()
 
 function cli()
 {
-  to_log "$zenpath/./zen-cli $network $*" "COMMAND"
-  OUT=$(eval "$zenpath"/./zen-cli "$network" "$@" )
+  to_log "$zenpath/./zen-cli $network $zendatadir $*" "COMMAND"
+  OUT=$(eval "$zenpath"/./zen-cli "$network" "$zendatadir" "$@" )
   local returnvalue="$?"
 
   to_log "$OUT" "RAWOUTPUT"
@@ -597,6 +696,7 @@ function promt()
   to_log "$REPLY" "READ"
 }
 
+#Prints config values
 function print_config()
 {
 
@@ -605,13 +705,22 @@ function print_config()
   print "withdrawepochlength=$withdrawepochlength"
   print "Using network=$network"
   print "Sidechain rpcip=$rpcip"
+  print "Sidechain network bindadress=$netbindaddress"
   print "websocketip for zend=$websocketip"
   print "zenpath=$zenpath"
   print "The folder containing your sdk=$sdkfolder"
-  print "sdkconfigfolder=$sdkconfigfolder"
-
+  print "The folder that will store your config=$sdkconfigfolder"
+  print "The name of the config you want to create=$configfile"
+  print "The folder that will store your sidechain data=$scdatadir"
+  print "The folder that will store your sidechain log=$sclogdir "
+  print "WARNING this will overwrite the any exisiting file named $configfile in $sdkconfigfolder"
   print " "
-  print "Warning inside sdkconfigfolder the file mysetting.conf will be deleted if it exists"
+  #less important variables
+  print "Name of your node is=$nodename"
+  print "The agent name is=$agentname"
+  print "Websocket connectionTimeout is=$connectiontimeout"
+  print "Websocket reconnectionDelay is=$reconnectiondelay"
+  print "Websocket reconnectionMaxAttempts is=$reconnectionmaxattempts"
 }
 
 #Let user specify config
@@ -624,10 +733,25 @@ function change_config()
       read -e -r -p "withdrawepochlength=" -i "$withdrawepochlength" withdrawepochlength
       read -e -r -p "network=" -i "$network" network
       read -e -r -p "rpcip=" -i "$rpcip" rpcip
+      read -e -r -p "netbindaddress=" -i "$netbindaddress" netbindaddress
       read -e -r -p "websocketip=" -i "$websocketip" websocketip
       read -e -r -p "zenpath=" -i "$zenpath" zenpath
       read -e -r -p "sdkfolder=" -i "$sdkfolder" sdkfolder
       read -e -r -p "sdkconfigfolder=" -i "$sdkconfigfolder" sdkconfigfolder
+      read -e -r -p "configfile=" -i "$configfile" configfile
+      read -e -r -p "scdatadir=" -i "$scdatadir" scdatadir
+      read -e -r -p "sclogdir=" -i "$sclogdir" sclogdir
+      read -e -r -p "bootstraptool=" -i "$bootstraptool" bootstraptool
+
+      read -e -r -p "zendatadir=" -i "$zendatadir" zendatadir
+      read -e -r -p "nodename=" -i "$nodename" nodename
+
+      read -e -r -p "submitterisenabled=" -i "$submitterisenabled" submitterisenabled
+      read -e -r -p "agentname=" -i "$agentname" agentname
+      read -e -r -p "connectiontimeout=" -i "$connectiontimeout" connectiontimeout
+      read -e -r -p "reconnectiondelay=" -i "$reconnectiondelay" reconnectiondelay
+      read -e -r -p "reconnectionmaxattempts=" -i "$reconnectionmaxattempts" reconnectionmaxattempts
+
       print "--------------------------------------------------------------"
 }
 
@@ -684,33 +808,51 @@ function exit_log()
 
 }
 
+#Updates the template with new values from user
 function sdkconfig()
 {
-  to_log "rm -f $sdkconfigfolder/mysetting.conf" "COMMAND"
-  rm -f "$sdkconfigfolder"/mysetting.conf
+  to_log "rm -f $sdkconfigfolder/$configfile" "COMMAND"
+  rm -f "$sdkconfigfolder"/"$configfile"
   
   template=$(curl -s "$jsontemplateurl")
   
-  template=$(jq '.scorex.dataDir = "'${scdatafolder}'/blockchain" ' <<< $template)
-  template=$(jq '.scorex.logDir = "'$scdatafolder'/log" ' <<< $template)
-  template=$(jq '.scorex.restApi.bindAddress = "'$rpcip'" ' <<< $template)
-  template=$(jq '.scorex.websocket.address = "ws://'$websocketip'" ' <<< $template)
-  template=$(jq '.scorex.websocket.zencliCommandLine = "'$zenpath'/zen-cli" ' <<< $template)
-  template=$(jq --argjson schpubkeys ${KEYS[SCHPUBKEYS]} '.scorex.withdrawalEpochCertificate.signersPublicKeys = $schpubkeys '<<< $template)
-  template=$(jq --argjson schsecrets ${KEYS[SCHSECRETS]} '.scorex.withdrawalEpochCertificate.signersSecrets = $schsecrets ' <<< $template)
-  template=$(jq '.scorex.withdrawalEpochCertificate.provingKeyFilePath = "'$sdkfolder'/sdk/src/test/resources/sample_proving_key_7_keys_with_threshold_5" '  <<< $template)
-  template=$(jq '.scorex.withdrawalEpochCertificate.verificationKeyFilePath = "'$sdkfolder'/sdk/src/test/resources/sample_vk_7_keys_with_threshold_5" ' <<< $template)
+  template=$(jq '.scorex.dataDir = "'$scdatadir'" ' <<< "$template")
+  template=$(jq '.scorex.logDir = "'$sclogdir'" ' <<< "$template")
+  template=$(jq '.scorex.restApi.bindAddress = "'$rpcip'" ' <<< "$template")
+  template=$(jq '.scorex.websocket.address = "ws://'$websocketip'" ' <<< "$template")
+  template=$(jq '.scorex.websocket.zencliCommandLine = "'$zenpath'/zen-cli" ' <<< "$template")
+  if [[ ! -z $zendatadir ]]; then
+        template=$(jq '.scorex.websocket.zencliCommandLineArguments = "'$zendatadir'" ' <<< "$template")
+  fi
+  template=$(jq --argjson schpubkeys ${KEYS[SCHPUBKEYS]} '.scorex.withdrawalEpochCertificate.signersPublicKeys = $schpubkeys '<<< "$template")
+  template=$(jq --argjson schsecrets ${KEYS[SCHSECRETS]} '.scorex.withdrawalEpochCertificate.signersSecrets = $schsecrets ' <<< "$template")
+  template=$(jq '.scorex.withdrawalEpochCertificate.provingKeyFilePath = "'$sdkfolder'/sdk/src/test/resources/sample_proving_key_7_keys_with_threshold_5" '  <<< "$template")
+  template=$(jq '.scorex.withdrawalEpochCertificate.verificationKeyFilePath = "'$sdkfolder'/sdk/src/test/resources/sample_vk_7_keys_with_threshold_5" ' <<< "$template")
   
-  template=$(jq '.scorex.wallet.seed = "'$seed'" ' <<< $template)
+  template=$(jq '.scorex.wallet.seed = "'$seed'" ' <<< "$template")
   template=$(jq '.scorex.wallet.genesisSecrets = [
 		     '${KEYS[VRFSECRET]}',
 		     '${KEYS[SECRET]}'
-		     ] ' <<< $template)
+		     ] ' <<< "$template")
 
-  template=$(jq --argjson genesisinfo ${KEYS[GENESISINFO]}  '.scorex.genesis = $genesisinfo ' <<< $template)
+  template=$(jq --argjson genesisinfo ${KEYS[GENESISINFO]}  '.scorex.genesis = $genesisinfo ' <<< "$template")
   
+  template=$(jq '.scorex.withdrawalEpochCertificate.submitterIsEnabled = '"$submitterisenabled"'  '  <<< "$template")
+  template=$(jq '.scorex.network.nodeName = "'$nodename'" ' <<< "$template")
+  template=$(jq '.scorex.network.agentName = "'$agentname'" ' <<< "$template")
+  template=$(jq '.scorex.network.bindAddress = "'$netbindaddress'" ' <<< "$template")
+  #NOT WORKING 
+  #template=$(jq '.scorex.websocket.connectionTimeout = "'$connectiontimeout'" ' <<< "$template")
+
+  #template=$(jq '.scorex.websocket.reconnectionDelay = "'$reconnectiondelay'" ' <<< "$template")
+  #template=$(jq '.scorex.websocket.reconnectionMaxAttempts = '$reconnectionmaxattempts' ' <<< "$template")
+
+
+  
+  #
+
   to_log "$template" "JQOUTPUT"
-  cat <<< "$template" > "$sdkconfigfolder"/mysetting.conf
+  cat <<< "$template" > "$sdkconfigfolder"/"$configfile"
 }
 
 #Starts main function
