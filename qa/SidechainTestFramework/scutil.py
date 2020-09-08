@@ -344,7 +344,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if binary is None:
         binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.2.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
-    bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    bashcmd = 'java -XX:NativeMemoryTracking=detail -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
@@ -395,6 +395,8 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
+def get_sc_node_pids() :
+    return [process.pid for process in sidechainclient_processes.values()]
 
 def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
