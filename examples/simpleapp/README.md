@@ -27,7 +27,7 @@ Otherwise, to run SimpleApp outside the IDE:
         java -cp ./target/sidechains-sdk-simpleapp-0.2.2.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
         On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
-        While our investigation is still ongoing, we found that setting the environment variable MALLOC_CHECK_=1 just before starting the node is a sufficiently good workaround.
+        While we keep monitoring the memory footprint of the proofs generation process, we have verified that setting the glibc per-thread cache with the following command 'export GLIBC_TUNABLES=glibc.malloc.tcache_count=0' just before starting the sidechain node in order keeps the memory consumption in check.
 
     
 **Running Simple App isolated from Mainchain**
