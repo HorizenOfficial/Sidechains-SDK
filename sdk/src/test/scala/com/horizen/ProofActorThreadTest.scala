@@ -24,9 +24,7 @@ import scala.util.{Random}
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 
-case object ProofMessage
-
-class ProofActorReceiver
+private class ProofThreadActorReceiver
   extends Actor {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
@@ -61,17 +59,29 @@ class ProofActorReceiver
     }
   }
 
+  class MyThread(val dataForProofGeneration:DataForProofGeneration) extends Thread
+  {
+    var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+
+    override def run()
+    {
+      proofWithQuality = generateProof(dataForProofGeneration)
+    }
+  }
+
   protected def tryGenerateProof = {
     val dataForProofGeneration:DataForProofGeneration = buildDataForProofGeneration()
-    val proofWithQuality = generateProof(dataForProofGeneration)
+    var th = new MyThread(dataForProofGeneration)
+    th.start()
+    th.join()
 
     val params = new RegTestParams
 
     val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
       dataForProofGeneration.processedEpochNumber,
       dataForProofGeneration.endWithdrawalEpochBlockHash,
-      proofWithQuality.getKey,
-      proofWithQuality.getValue,
+      th.proofWithQuality.getKey,
+      th.proofWithQuality.getValue,
       dataForProofGeneration.withdrawalRequests,
       params)
     true
@@ -116,7 +126,7 @@ class ProofActorReceiver
   }
 }
 
-class ProofActorTest {
+class ProofActorThreadTest {
   @Ignore
   @Test
   def simpleCheck(): Unit = {

@@ -4,11 +4,6 @@ import java.io.{BufferedReader, File, FileReader}
 import java.{lang, util}
 import java.util.Optional
 
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.pattern.ask
-import akka.util.Timeout
-
-import scala.concurrent.duration._
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo}
@@ -22,12 +17,8 @@ import org.junit.{Ignore, Test}
 
 import scala.util.{Random}
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
 
-case object ProofMessage
-
-class ProofActorReceiver
-  extends Actor {
+class ProofThreadTest {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
 
@@ -55,23 +46,31 @@ class ProofActorReceiver
                                     signatures:util.List[Optional[Array[Byte]]]
                                    )
 
-  override def receive = {
-    case ProofMessage => {
-      sender ! tryGenerateProof
+  class MyThread(val dataForProofGeneration:DataForProofGeneration) extends Thread
+  {
+    var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+
+    override def run()
+    {
+      proofWithQuality = generateProof(dataForProofGeneration)
+      generateProof(dataForProofGeneration)
     }
   }
 
-  protected def tryGenerateProof = {
+  def tryGenerateProof = {
     val dataForProofGeneration:DataForProofGeneration = buildDataForProofGeneration()
-    val proofWithQuality = generateProof(dataForProofGeneration)
+
+    var th = new MyThread(dataForProofGeneration)
+    th.start()
+    th.join()
 
     val params = new RegTestParams
 
     val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
       dataForProofGeneration.processedEpochNumber,
       dataForProofGeneration.endWithdrawalEpochBlockHash,
-      proofWithQuality.getKey,
-      proofWithQuality.getValue,
+      th.proofWithQuality.getKey,
+      th.proofWithQuality.getValue,
       dataForProofGeneration.withdrawalRequests,
       params)
     true
@@ -114,24 +113,14 @@ class ProofActorReceiver
       dataForProofGeneration.threshold,
       provingKeyPath)
   }
-}
 
-class ProofActorTest {
   @Ignore
   @Test
   def simpleCheck(): Unit = {
 
-    val system = ActorSystem("ProofGeneration")
-    val receiverInst = system.actorOf(Props(new ProofActorReceiver), name = "proof")
-
     for (i <- 1 to 15) {
-      println("Proof generation # " + i)
-
-      implicit val timeout = Timeout(600 seconds) // needed for `?` below
-
-      val result = Await.result(receiverInst ? ProofMessage, timeout.duration).asInstanceOf[Boolean]
-
-      assertTrue("Proof verification expected to be successfully", result)
+      println("Thread proof generation # " + i)
+      tryGenerateProof
     }
   }
 }
