@@ -189,7 +189,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
-  // The difference is that State is updated together with Wallet.
+  // The difference is that State is updated together with Wallet, also State receive list of blocks to be removed
   @tailrec
   private def updateStateAndWallet(history: HIS,
                           state: MS,
@@ -204,7 +204,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val branchingPoint = progressInfo.branchPoint.get //todo: .get
       if (state.version != branchingPoint) {
         (
-          state.rollbackTo(idToVersion(branchingPoint)),
+          state.rollbackTo(idToVersion(branchingPoint), progressInfo.toRemove),
           wallet.rollback(idToVersion(branchingPoint)),
           trimChainSuffix(suffixApplied, branchingPoint)
         )
@@ -273,7 +273,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           case Failure(e) =>
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
             context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
-            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Option(modToApply), Option(newProgressInfo), updateInfo.suffix)
         }
       } else updateInfo
     }
