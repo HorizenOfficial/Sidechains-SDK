@@ -23,12 +23,12 @@ import java.util.Set;
 @JsonIgnoreProperties({"signatures", "encoder"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
-    private HashSet<ByteArrayWrapper> _boxIdsToOpen;
+    private HashSet<ByteArrayWrapper> boxIdsToOpen;
 
     // TO DO: set real limits according to block size limits
-    public final static int MAX_TRANSACTION_SIZE = 500000; // size in bytes
-    public final static int MAX_TRANSACTION_UNLOCKERS = 1000;
-    public final static int MAX_TRANSACTION_NEW_BOXES = 1000;
+    public static final int MAX_TRANSACTION_SIZE = 500000; // size in bytes
+    public static final int MAX_TRANSACTION_UNLOCKERS = 1000;
+    public static final int MAX_TRANSACTION_NEW_BOXES = 1000;
 
     @JsonProperty("unlockers")
     public abstract List<BoxUnlocker<P>> unlockers();
@@ -64,13 +64,13 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
         )));
     }
 
-    public synchronized final Set<ByteArrayWrapper> boxIdsToOpen() {
-        if(_boxIdsToOpen == null) {
-            _boxIdsToOpen = new HashSet<>();
+    public final synchronized Set<ByteArrayWrapper> boxIdsToOpen() {
+        if(boxIdsToOpen == null) {
+            boxIdsToOpen = new HashSet<>();
             for (BoxUnlocker u : unlockers())
-                _boxIdsToOpen.add(new ByteArrayWrapper(u.closedBoxId()));
+                boxIdsToOpen.add(new ByteArrayWrapper(u.closedBoxId()));
         }
-        return Collections.unmodifiableSet(_boxIdsToOpen);
+        return Collections.unmodifiableSet(boxIdsToOpen);
     }
 
     public TransactionIncompatibilityChecker incompatibilityChecker() {

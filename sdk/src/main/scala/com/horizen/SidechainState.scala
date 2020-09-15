@@ -60,6 +60,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     }
   }
 
+  private val closedBoxesMerkleTree: ClosedBoxesMerkleTree = new ClosedBoxesMerkleTree() //@TODO add paths for restoring merkle tree from the disk
+
   // Note: emit tx.semanticValidity for each tx
   override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     if (!tx.semanticValidity())
@@ -97,30 +99,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   // Validate block itself: version and semanticValidity for block
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
-    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
-      s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
-
-
-    validateBlockTransactionsMutuality(mod)
+    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
+      s"${version} expected")
     mod.transactions.foreach(tx => validate(tx).get)
 
     validateWithdrawalEpochCertificate(mod)
+    validateAgainstClosedBoxMerkleTree(mod)
 
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
 
-  private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
-    val transactionsIds: Seq[String] = mod.transactions.map(_.id())
-    if (transactionsIds.toSet.size != transactionsIds.size) {
-      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated transactions")
-    }
-
-    val allInputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.boxIdsToOpen().asScala)
-    if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
-      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
-    }
-  }
 
   private def validateWithdrawalEpochCertificate(mod: SidechainBlock): Unit = {
     //Check content of the backward transfer certificate if it exists
@@ -137,7 +126,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
               util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
                 r.value().equals(o.amount)
             })) {
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
             }
           }
 
@@ -172,6 +161,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
     }
+  }
+
+  private def validateAgainstClosedBoxMerkleTree(block: SidechainBlock): Unit = {
+    closedBoxesMerkleTree.validateBlock(block)
+      .map(incompatibilityTx => throw new IllegalStateException(s"Transaction ${incompatibilityTx.id()} is incompatibility with current State"))
   }
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
@@ -222,6 +216,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
+        closedBoxesMerkleTree.applyBlock(mod)
         applyChanges(
           cs,
           idToVersion(mod.id),
@@ -275,7 +270,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     stateStorage.rollbackVersions.size
   }
 
-  override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
+  def rollbackTo(to: VersionTag, removedBlocks: Seq[SidechainBlock]): Unit = Try {
+    require(to != null, "Version to rollback to must be NOT NULL.")
+    val version = BytesUtils.fromHexString(to)
+    applicationState.onRollback(version) match {
+      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState)
+      case Failure(exception) => throw exception
+    }
+    closedBoxesMerkleTree.removeBlocks(removedBlocks)
+  }.recoverWith{case exception =>
+    log.error("Exception was thrown during rollback.", exception)
+    Failure(exception)
+  }
+
+  @Deprecated
+  override def rollbackTo(to: VersionTag): Try[SidechainState] = throw new UnsupportedOperationException() /*Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
@@ -285,7 +294,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
-  }
+  }*/
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
@@ -321,6 +330,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
         throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
     }
   }
+
+  def builtCachedClosedBoxTree(): CachedClosedBoxesMerkleTree = closedBoxesMerkleTree.builtNewCachedClosedBoxMerkleTree();
 }
 
 object SidechainState
