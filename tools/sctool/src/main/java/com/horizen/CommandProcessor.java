@@ -90,15 +90,14 @@ public class CommandProcessor {
             // Remove '-f', possible around whitespaces and/or quotes
             String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
             // Try to open and read data from file
-            BufferedReader reader = null;
-            try {
+            try(
                 FileReader file = new FileReader(filePath);
-                reader = new BufferedReader(file);
+                BufferedReader reader = new BufferedReader(file)
+            ) {
+                jsonData = reader.readLine();
             } catch (FileNotFoundException e) {
                 throw new IOException(String.format("Error: Input data file '%s' not found.%nSee 'help' for usage guideline.", filePath));
             }
-            jsonData = reader.readLine();
-            reader.close();
         }
         else {
             jsonData = commandArguments;
