@@ -2,7 +2,6 @@ package com.horizen.websocket
 
 import com.horizen.block.MainchainBlockReference
 import com.horizen.mainchain.api.{MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
-import com.horizen.sigproofnative.BackwardTransfer
 
 import scala.util.Try
 
