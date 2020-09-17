@@ -1,6 +1,9 @@
 package com.horizen.websocket
 
 import com.horizen.block.MainchainBlockReference
+import com.horizen.mainchain.api.{MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
+import com.horizen.sigproofnative.BackwardTransfer
+
 import scala.util.Try
 
 
@@ -8,7 +11,7 @@ case class OnUpdateTipEventPayload(height: Int, hash: String, block: String) ext
 trait OnUpdateTipEventHandler extends EventHandler[OnUpdateTipEventPayload]
 
 
-trait MainchainNodeChannel {
+trait MainchainNodeChannel extends MainchainNodeApi {
   // Get reference for given height in MC node active chain
   def getBlockByHeight(height: Int): Try[MainchainBlockReference]
 
@@ -34,4 +37,7 @@ trait MainchainNodeChannel {
 
   // Unsubscribe from new tip event.
   def unsubscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Unit
+
+  // Send certificate to MC
+  def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse
 }

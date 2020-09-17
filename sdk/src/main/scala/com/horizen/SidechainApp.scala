@@ -208,10 +208,6 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
-    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
-  }
-
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
@@ -248,6 +244,9 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
+  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  }
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()

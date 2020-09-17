@@ -58,7 +58,7 @@ class RpcMainchainNodeApi(val sidechainSettings: SidechainSettings)
   }
 
   // can be removed
-  override def getSidechainInfo: SidechainInfoResponse = {
+  def getSidechainInfo: SidechainInfoResponse = {
     val objectMapper = new ObjectMapper()
     val response = callRpc(new ProcessBuilder("getscinfo"))
 

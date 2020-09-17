@@ -11,7 +11,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
+import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeApi, RpcMainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
@@ -33,7 +33,8 @@ import scala.util.{Failure, Success, Try}
 class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
-   params: NetworkParams)
+   params: NetworkParams,
+   mainchainApi: MainchainNodeApi)
   (implicit ec: ExecutionContext)
   extends Actor
   with ScorexLogging
@@ -162,8 +163,6 @@ class CertificateSubmitter
     }
   }
 
-  lazy val mainchainApi = new RpcMainchainNodeApi(settings)
-
   case class DataForProofGeneration(processedEpochNumber: Int,
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endWithdrawalEpochBlockHash: Array[Byte],
@@ -239,15 +238,18 @@ class CertificateSubmitter
 
 object CertificateSubmitterRef {
 
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
 }
