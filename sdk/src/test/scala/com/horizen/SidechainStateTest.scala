@@ -52,7 +52,8 @@ class SidechainStateTest
   
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
-                            boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)]): RegularTransaction = {
+                            boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)],
+                            maxInputs: Int): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
@@ -61,7 +62,7 @@ class SidechainStateTest
     var totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
 
     for (b <- boxList) {
-      if(b.isInstanceOf[RegularBox]) {
+      if(b.isInstanceOf[RegularBox] && maxInputs > from.size()) {
         from.add(new JPair(b.asInstanceOf[RegularBox],
           secretList.find(_.publicImage().equals(b.proposition())).get))
         totalFrom += b.value()
@@ -100,7 +101,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, Seq())
+    transactionList += getRegularTransaction(1, 0, Seq(), 5)
 
     // Mock get and update methods of StateStorage
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -186,11 +187,11 @@ class SidechainStateTest
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
 
-    val secret = getPrivateKey25519List(1).get(0);
+    val secret = getPrivateKey25519List(1).get(0)
     val boxAndSecret = Seq((getRegularBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
     Mockito.when(mutualityMockedBlock.transactions)
       .thenReturn(transactionList.toList ++ transactionList)
-      .thenReturn(List(getRegularTransaction(1, 0, boxAndSecret), getRegularTransaction(1, 0, boxAndSecret)))
+      .thenReturn(List(getRegularTransaction(1, 0, boxAndSecret, 1), getRegularTransaction(1, 0, boxAndSecret, 1)))
 
     val sameTransactionsCheckTry = sidechainState.validate(mutualityMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $sameTransactionsCheckTry",
@@ -199,6 +200,22 @@ class SidechainStateTest
     val sameInputsInTransactions = sidechainState.validate(mutualityMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $sameInputsInTransactions",
       "Block testBlock contains duplicated input boxes to open" == sameInputsInTransactions.failed.get.getMessage)
+
+
+    val doubleSpendTransactionMockedBlock = mock[SidechainBlock]
+    Mockito.when(doubleSpendTransactionMockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(doubleSpendTransactionMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
+    Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
+    Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
+
+    val boxAndSecret2: Seq[(RegularBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[RegularBox], secretList.last))
+
+    Mockito.when(doubleSpendTransactionMockedBlock.transactions)
+      .thenReturn(List(getRegularTransaction(0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
+
+    val doubleSpendInTransaction = sidechainState.validate(doubleSpendTransactionMockedBlock)
+    assertTrue(s"Block validation must be failed with message. But result is - $doubleSpendInTransaction",
+      "Transaction is semantically invalid." == doubleSpendInTransaction.failed.get.getMessage)
 
     for(b <- changes.get.toRemove) {
       assertFalse("Box to remove is not found in storage.",
@@ -220,7 +237,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(2, 2, Seq())
+    transactionList += getRegularTransaction(2, 2, Seq(), 2)
     val forgingStakes = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).map(fb => ForgingStakeInfo(fb.id(), fb.value()))
 
     // Mock get and update methods of BoxStorage
