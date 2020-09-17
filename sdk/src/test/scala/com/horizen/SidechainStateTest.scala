@@ -40,7 +40,7 @@ class SidechainStateTest
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
 
-  val boxList = new ListBuffer[SidechainTypes#SCB]()
+  val boxList: ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
   val stateVersion = new ListBuffer[ByteArrayWrapper]()
   val transactionList = new ListBuffer[RegularTransaction]()
 
@@ -48,14 +48,17 @@ class SidechainStateTest
 
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
-
-  def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
+  
+  
+  def getRegularTransaction(regularOutputsCount: Int,
+                            forgerOutputsCount: Int,
+                            boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)]): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+    from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[RegularBox,PrivateKey25519](box, secret)}.asJava)
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
-    var totalFrom = 0L
-
+    var totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
 
     for (b <- boxList) {
       if(b.isInstanceOf[RegularBox]) {
@@ -97,7 +100,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0)
+    transactionList += getRegularTransaction(1, 0, Seq())
 
     // Mock get and update methods of StateStorage
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -175,6 +178,28 @@ class SidechainStateTest
     assertTrue("Extracting changes from block must be successful.",
       changes.isSuccess)
 
+
+    //test mutuality transaction check
+    val mutualityMockedBlock = mock[SidechainBlock]
+    Mockito.when(mutualityMockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
+    Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
+    Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
+
+    val secret = getPrivateKey25519List(1).get(0);
+    val boxAndSecret = Seq((getRegularBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
+    Mockito.when(mutualityMockedBlock.transactions)
+      .thenReturn(transactionList.toList ++ transactionList)
+      .thenReturn(List(getRegularTransaction(1, 0, boxAndSecret), getRegularTransaction(1, 0, boxAndSecret)))
+
+    val sameTransactionsCheckTry = sidechainState.validate(mutualityMockedBlock)
+    assertTrue(s"Block validation must be failed with message. But result is - $sameTransactionsCheckTry",
+      "Block testBlock contains duplicated transactions" == sameTransactionsCheckTry.failed.get.getMessage)
+
+    val sameInputsInTransactions = sidechainState.validate(mutualityMockedBlock)
+    assertTrue(s"Block validation must be failed with message. But result is - $sameInputsInTransactions",
+      "Block testBlock contains duplicated input boxes to open" == sameInputsInTransactions.failed.get.getMessage)
+
     for(b <- changes.get.toRemove) {
       assertFalse("Box to remove is not found in storage.",
         boxList.indexWhere(_.id().sameElements(b.boxId)) == -1)
@@ -195,7 +220,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(2, 2)
+    transactionList += getRegularTransaction(2, 2, Seq())
     val forgingStakes = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).map(fb => ForgingStakeInfo(fb.id(), fb.value()))
 
     // Mock get and update methods of BoxStorage
