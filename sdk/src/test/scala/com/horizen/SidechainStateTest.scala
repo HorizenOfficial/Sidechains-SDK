@@ -48,8 +48,8 @@ class SidechainStateTest
 
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
-  
-  
+
+
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)],

@@ -99,8 +99,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   // Validate block itself: version and semanticValidity for block
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
-    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
-      s"${version} expected")
+    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
+      s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
+
+
+    validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
     validateWithdrawalEpochCertificate(mod)
@@ -110,6 +113,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
 
+  private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
+    val transactionsIds: Seq[String] = mod.transactions.map(_.id())
+    if (transactionsIds.toSet.size != transactionsIds.size) {
+      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated transactions")
+    }
+
+    val allInputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.boxIdsToOpen().asScala)
+    if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
+      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
+    }
+  }
 
   private def validateWithdrawalEpochCertificate(mod: SidechainBlock): Unit = {
     //Check content of the backward transfer certificate if it exists
