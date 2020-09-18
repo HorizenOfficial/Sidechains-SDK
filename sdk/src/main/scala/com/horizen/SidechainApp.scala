@@ -234,6 +234,8 @@ class SidechainApp @Inject()
   // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
   if(connectorStarted.isSuccess)
     communicationClient.setWebSocketChannel(webSocketConnector)
+  else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+    throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
 
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
