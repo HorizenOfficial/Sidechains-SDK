@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class CertificateSubmitter
@@ -131,8 +131,14 @@ class CertificateSubmitter
       val checkGenerationData =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[DataForProofGeneration]](getDataForProofGeneration)
 
-      val certificateSubmittingResult = (sidechainNodeViewHolderRef ? checkGenerationData).asInstanceOf[Future[Option[DataForProofGeneration]]]
-      certificateSubmittingResult.onComplete{
+      // Wait in current thread for proof data
+      val checkDataResult: Try[Option[DataForProofGeneration]] = try {
+        Success(Await.result(sidechainNodeViewHolderRef ? checkGenerationData, settings.scorexSettings.restApi.timeout)
+          .asInstanceOf[Option[DataForProofGeneration]])
+      } catch {
+        case ex: Throwable => Failure(ex)
+      }
+      checkDataResult match {
         case Success(Some(dataForProofGeneration)) => {
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
