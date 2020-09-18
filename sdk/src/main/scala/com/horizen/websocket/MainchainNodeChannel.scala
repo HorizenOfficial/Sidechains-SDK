@@ -38,5 +38,5 @@ trait MainchainNodeChannel extends MainchainNodeApi {
   def unsubscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Unit
 
   // Send certificate to MC
-  def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse
+  def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse]
 }

@@ -86,7 +86,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     client.unregisterEventHandler(0, handler)
   }
 
-  override def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse = {
+  override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
     val backwardTransfer:Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt => BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
 
     val future: Future[CertificateResponsePayload] =

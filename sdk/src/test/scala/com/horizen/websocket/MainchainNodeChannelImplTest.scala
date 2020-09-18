@@ -8,8 +8,6 @@ import org.junit.Test
 import org.junit.Assert._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.mockito._
-import org.mockito._
 
 import scala.concurrent.duration._
 import scala.concurrent.duration.FiniteDuration
@@ -250,6 +248,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val mcRefTry = mcnode.sendCertificate(certificate)
 
-    assertEquals("Certificate hash is different.", certHash, BytesUtils.toHexString(mcRefTry.certificateId))
+    assertTrue("Certificate is expected to be sent.", mcRefTry.isSuccess)
+    assertEquals("Certificate hash is different.", certHash, BytesUtils.toHexString(mcRefTry.get.certificateId))
   }
 }

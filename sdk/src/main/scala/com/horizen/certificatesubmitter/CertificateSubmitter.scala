@@ -143,14 +143,14 @@ class CertificateSubmitter
             dataForProofGeneration.withdrawalRequests,
             params)
 
-          try {
-            log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+          log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-            val response: SendCertificateResponse = mainchainApi.sendCertificate(certificateRequest)
+          mainchainApi.sendCertificate(certificateRequest) match {
+            case Success(certificate) =>
+              log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
-            log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(response.certificateId))
-          } catch {
-            case ex: Throwable => log.error("Creation of backward transfer certificate had been failed. " + ex)
+            case Failure(ex) =>
+              log.error("Creation of backward transfer certificate had been failed. " + ex)
           }
         }
 
