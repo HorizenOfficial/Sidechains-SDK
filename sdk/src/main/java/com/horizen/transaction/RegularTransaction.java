@@ -257,8 +257,9 @@ public final class RegularTransaction
         }
 
         RegularTransaction transaction = new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
-        if(!transaction.semanticValidity())
-            throw new IllegalArgumentException("Created transaction is semantically invalid.");
+        // We don't need to check semantic validity here.
+        //if(!transaction.semanticValidity())
+        //    throw new IllegalArgumentException("Created transaction is semantically invalid.");
         return transaction;
     }
 
