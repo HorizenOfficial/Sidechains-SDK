@@ -65,7 +65,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     state <- SidechainState.restoreState(stateStorage, params, applicationState)
     wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes,
       walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
-    pool <- Some(SidechainMemoryPool.emptyPool)
+    pool <- Option(SidechainMemoryPool.emptyPool)
   } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {

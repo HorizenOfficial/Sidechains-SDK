@@ -21,7 +21,10 @@ case class MainNetParams(
                           override val signersThreshold: Int = 0,
                           override val provingKeyFilePath: String = "",
                           override val verificationKeyFilePath: String = "",
-                          override val calculatedSysDataConstant: Array[Byte] = Array()
+                          override val calculatedSysDataConstant: Array[Byte] = Array(),
+                          override val closedBoxesMerkleTreeStatePath: String = "",
+                          override val closedBoxesMerkleTreeDbPath: String = "",
+                          override val closedBoxesMerkleTreeCachePath: String = ""
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

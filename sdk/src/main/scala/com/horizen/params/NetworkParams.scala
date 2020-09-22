@@ -48,4 +48,10 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
+
+  // Closed boxes Merkle tree options
+  val closedBoxesMerkleTreeDepth: Int = 32
+  val closedBoxesMerkleTreeStatePath: String
+  val closedBoxesMerkleTreeDbPath: String
+  val closedBoxesMerkleTreeCachePath: String
 }
