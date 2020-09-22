@@ -14,7 +14,7 @@ case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) exte
 case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 case class BackwardTransfer(pubkeyhash: String, amount: String)
-case class SendCertificateRequestPayload(scid:String, epochNumber: Int, quality: Long, endEpochBlockHash: String,
+case class SendCertificateRequestPayload(scid: String, epochNumber: Int, quality: Long, endEpochBlockHash: String,
                                         scProof: String, backwardTransfers: Seq[BackwardTransfer]) extends RequestPayload
 
 
@@ -89,10 +89,11 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
     val backwardTransfer:Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt => BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
 
-    val future: Future[CertificateResponsePayload] =
-      client.sendRequest(3, SendCertificateRequestPayload(BytesUtils.toHexString(certificateRequest.sidechainId),
-        certificateRequest.epochNumber, certificateRequest.quality, BytesUtils.toHexString(certificateRequest.endEpochBlockHash),
-        BytesUtils.toHexString(certificateRequest.proofBytes), backwardTransfer), classOf[CertificateResponsePayload])
+    val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(BytesUtils.toHexString(certificateRequest.sidechainId),
+      certificateRequest.epochNumber, certificateRequest.quality, BytesUtils.toHexString(certificateRequest.endEpochBlockHash),
+      BytesUtils.toHexString(certificateRequest.proofBytes), backwardTransfer)
+
+    val future: Future[CertificateResponsePayload] = client.sendRequest(3, requestPayload, classOf[CertificateResponsePayload])
 
     processCertificateResponsePayload(future)
   }
