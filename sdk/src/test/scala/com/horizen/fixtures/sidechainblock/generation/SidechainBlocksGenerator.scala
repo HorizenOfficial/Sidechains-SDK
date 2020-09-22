@@ -11,6 +11,7 @@ import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -18,11 +19,9 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrP
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.cryptolibprovider.{VrfFunctions, CryptoLibProvider}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -532,6 +531,9 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val provingKeyFilePath: String = params.provingKeyFilePath
       override val verificationKeyFilePath: String = params.verificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = Array() //calculate if we need for some reason that data
+      override val closedBoxesMerkleTreeStatePath: String = ""
+      override val closedBoxesMerkleTreeDbPath: String = ""
+      override val closedBoxesMerkleTreeCachePath: String = ""
     }
   }
 

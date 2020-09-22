@@ -1,7 +1,7 @@
 package com.horizen.forge
 
 import com.horizen.block._
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{Box, ForgerBox, NoncedBox}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
@@ -16,6 +16,7 @@ import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 import com.horizen.chain._
 import com.horizen.vrf.VrfOutput
+import scorex.core.transaction.BoxTransaction
 
 import scala.util.{Failure, Success, Try}
 
@@ -220,6 +221,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .toSeq
       }
+
+    Try{nodeView.state.findIncompatibleTransaction(transactions.map(tx => tx.asInstanceOf))} match {
+      case Success(_) =>
+      case Failure(exception) => ForgeFailed(exception)
+    }
 
     // Get ommers in case if branch point is not current best block
     var ommers: Seq[Ommer] = Seq()

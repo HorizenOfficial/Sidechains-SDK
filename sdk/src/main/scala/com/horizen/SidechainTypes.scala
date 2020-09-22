@@ -1,6 +1,5 @@
 package com.horizen
 
-import language.implicitConversions
 import java.util.{List => JList}
 
 import com.horizen.box._
