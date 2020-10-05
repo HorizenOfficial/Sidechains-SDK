@@ -127,9 +127,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       .filter(forgerBox => pubKeys.contains(forgerBox.blockSignProposition()))
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
-      .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
+    val boxesInWalletToRemove = boxIdsToRemove.filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
 
-    val transactions = (for (boxId <- (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove))
+    val transactions = (for (boxId <- (newWalletBoxes.map(_.box.id()) ++ boxesInWalletToRemove))
       yield txBoxes(new ByteArrayWrapper(boxId))).distinct
 
     walletBoxStorage.update(new ByteArrayWrapper(version), newWalletBoxes.toList, boxIdsToRemove.toList).get
