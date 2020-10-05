@@ -490,16 +490,17 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
     return is_mac_block_included
 
 """
-Verify the wallet balance is equal to an expected balance.
+Verify the wallet coins balance is equal to an expected coins balance.
+Note: core coins boxes are: RegularBox and ForgerBox
 
 Parameters:
  - sc_node: a sidechain node
  - expected_wallet_balance
 """
-def check_wallet_balance(sc_node, expected_wallet_balance):
-    response = sc_node.wallet_balance()
+def check_wallet_coins_balance(sc_node, expected_wallet_balance):
+    response = sc_node.wallet_coinsBalance()
     balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected balance")
+    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
 
 
 """

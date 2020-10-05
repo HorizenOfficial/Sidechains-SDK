@@ -4,11 +4,11 @@ import java.lang
 import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
-import com.horizen.box.{Box, ForgerBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
@@ -199,8 +199,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
-  override def allBoxesBalance(): lang.Long = {
-    walletBoxStorage.getAll.map(_.box.value()).sum
+  override def allCoinsBoxesBalance(): lang.Long = {
+    walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }
 
   override def walletSeed(): Array[Byte] = seed
