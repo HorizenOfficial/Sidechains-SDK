@@ -1,11 +1,17 @@
+package com.horizen
+
 import java.io.File
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.Random
 
 trait TempDirectoriesCreator {
-  private val prefix = if (this.getClass.getCanonicalName != null) this.getClass.getCanonicalName else ""
+  private val prefix = if (this.getClass.getCanonicalName != null) {
+    this.getClass.getSimpleName
+  } else {
+    ""
+  }
+
   private val tempDirs: mutable.Set[File] = new mutable.HashSet[File]()
 
 
@@ -13,14 +19,16 @@ trait TempDirectoriesCreator {
     override def run(): Unit = {
       tempDirs.foreach(deleteRecur)
     }
-  }
-  )
+  })
 
   private def deleteRecur(dir: File): Unit = {
-    if (dir == null) return
+    if (dir == null) {
+      return
+    }
     val files: Array[File] = dir.listFiles()
-    if (files != null)
+    if (files != null) {
       files.foreach(deleteRecur)
+    }
     val deleteResult = dir.delete()
     //println(s"Delete result for delete: ${dir} is ${deleteResult}")
   }

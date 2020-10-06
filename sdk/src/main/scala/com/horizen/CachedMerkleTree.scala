@@ -2,19 +2,18 @@ package com.horizen
 
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.merkletreenative.BigLazyMerkleTree
+import scorex.util.ScorexLogging
 
 import scala.collection.mutable
 
 class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
                        val addCache: mutable.Map[Long, FieldElement] = new mutable.HashMap(),
-                       val removeCache: mutable.Map[Long, FieldElement] = new mutable.HashMap()) {
+                       val removeCache: mutable.Map[Long, FieldElement] = new mutable.HashMap()) extends ScorexLogging {
 
   def getUpdatedCachedMerkleTree(toRemove: Iterable[FieldElement], toAdd: Iterable[FieldElement]): Option[CachedMerkleTree] = {
     val newCachedTree = this.copy()
 
-    newCachedTree.removeElements(toRemove)
-    val addingIsSuccessfully = newCachedTree.addElements(toAdd)
-    if (addingIsSuccessfully) {
+    if (newCachedTree.removeElements(toRemove) && newCachedTree.addElements(toAdd)) {
       Option(newCachedTree)
     }
     else {
@@ -24,7 +23,7 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
 
 
   private def addElements(fieldElements: Iterable[FieldElement]): Boolean = {
-    fieldElements.view.forall(element => addElement(element))
+    fieldElements.forall(element => addElement(element))
   }
 
   private def addElement(fieldElement: FieldElement): Boolean = {
@@ -45,12 +44,12 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
         false
       case (false, true, false) =>
         false
-      case _ => throw new IllegalStateException()
+      case _ => false
     }
   }
 
-  private def removeElements(fieldElements: Iterable[FieldElement]): Unit = {
-    fieldElements.foreach(removeFieldElement)
+  private def removeElements(fieldElements: Iterable[FieldElement]): Boolean = {
+    fieldElements.forall(element => removeFieldElement(element))
   }
 
   private def removeFieldElement(fieldElement: FieldElement): Boolean = {
@@ -67,7 +66,7 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
       case (false, true, false) =>
         addCache.remove(position)
         true
-      case _ => throw new IllegalStateException()
+      case _ => false
     }
   }
 

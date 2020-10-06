@@ -5,18 +5,19 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.utils.ByteArrayWrapper;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.File;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DefaultTransactionIncompatibilityChecker
     implements TransactionIncompatibilityChecker
 {
-
-    //@TODO remove it
-    private static final ClosedBoxesZendooMerkleTree tree = new ClosedBoxesZendooMerkleTree("deleteMe1", "deleteMe2", "deleteMe3");
+    //@TODO remove it, static function shall be used
+    static Random rnd = new Random();
+    static String statePath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
+    static String dbPath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
+    static String cachePath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
+    private static final ClosedBoxesZendooMerkleTree tree = new ClosedBoxesZendooMerkleTree(statePath, dbPath, cachePath);
 
     @Override
     public <T extends BoxTransaction> boolean isTransactionCompatible(T newTx, List<T> currentTxs) {

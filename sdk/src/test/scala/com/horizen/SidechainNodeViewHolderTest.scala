@@ -193,7 +193,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock current version of the State
     Mockito.when(state.version).thenReturn(idToVersion(firstBlockInActiveChain.id))
     // State rollback check
-    Mockito.when(state.rollbackTo(ArgumentMatchers.any[VersionTag])).thenAnswer(answer => {
+    Mockito.when(state.rollbackTo(ArgumentMatchers.any[VersionTag], ArgumentMatchers.any())).thenAnswer(answer => {
       val rollbackPoint: VersionTag = answer.getArgument(0).asInstanceOf[VersionTag]
       assertEquals("State received different rollback point.", branchPointBlock.id, rollbackPoint)
       Success(state)
