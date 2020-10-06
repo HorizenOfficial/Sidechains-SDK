@@ -1,5 +1,5 @@
 package com.horizen.websocket
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 
@@ -12,11 +12,13 @@ case class GetBlockByHashRequestPayload(hash: String) extends RequestPayload
 case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) extends RequestPayload
 case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
+case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
 case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
+case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 
 
 class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
@@ -71,6 +73,22 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
       case Success((height, hashes)) => Success(height, hashes.head)
       case Failure(ex) => throw ex
     }
+  }
+
+  override def getBlockHeaders(hashes: Seq[String]): Try[Seq[MainchainHeader]] = Try {
+    val future: Future[BlockHeadersResponsePayload] =
+      client.sendRequest(2, GetBlockHeadersRequestPayload(hashes), classOf[BlockHeadersResponsePayload])
+
+    processBlockHeadersResponsePayload(future).get
+  }
+
+  private def processBlockHeadersResponsePayload(future: Future[BlockHeadersResponsePayload]): Try[Seq[MainchainHeader]] = Try {
+    val response: BlockHeadersResponsePayload = Await.result(future, client.requestTimeoutDuration())
+
+    val strHeaders: Seq[String] = response.headers
+    val headers: Seq[MainchainHeader] = strHeaders.map(str => MainchainHeader.create(BytesUtils.fromHexString(str), 0).get)
+
+    headers
   }
 
   override def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit] = {

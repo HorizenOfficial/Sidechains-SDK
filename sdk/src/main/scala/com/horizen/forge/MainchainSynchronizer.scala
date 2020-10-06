@@ -1,7 +1,7 @@
 package com.horizen.forge
 
 import com.horizen.SidechainHistory
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.utils.BytesUtils
 import com.horizen.websocket.MainchainNodeChannel
@@ -58,6 +58,18 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
       }
     }
     references
+  }
+
+  def getMainchainBlockHeadersReferences(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainHeader]] = Try {
+    val HEADERS_LIMIT = 100
+    val strHashes: Seq[String] = hashes.map(hash => BytesUtils.toHexString(hash.data))
+    var headers : Seq[MainchainHeader] = Seq()
+
+    for(group <- strHashes.grouped(HEADERS_LIMIT)) {
+      headers ++= mainchainNodeChannel.getBlockHeaders(group).get
+    }
+
+    headers
   }
 }
 
