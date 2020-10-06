@@ -1,3 +1,5 @@
+package com.horizen
+
 import java.io.File
 import java.util
 import java.util.Random
@@ -71,6 +73,18 @@ class ZendooScMerkleTreeTest extends TempDirectoriesCreator {
     println("tree had been created")
     checkTree(merkleTree, List())
 
+    //val merkleTree2 = BigLazyMerkleTree.init(merkleTreeHeight, merkleTreeStatePath, dbPath, cachePath)
+
+
+    println(merkleTreeStatePath)
+    println(new File(merkleTreeStatePath).exists())
+
+    println(dbPath)
+    println(new File(dbPath).exists())
+
+    println(cachePath)
+    println(new File(cachePath).exists())
+
     val fieldElements = createFiledElements(checkedElementsCount)
     merkleTree.addLeaves(fieldElements.asJava)
     checkTree(merkleTree, fieldElements)
@@ -91,7 +105,14 @@ class ZendooScMerkleTreeTest extends TempDirectoriesCreator {
     assert(util.Arrays.equals(merkleTree.root().serializeFieldElement(), firstRoot.serializeFieldElement()))
 
     println("Before free lazy tree")
+    println(merkleTreeStatePath)
+    println(new File(merkleTreeStatePath).exists())
 
+    println(dbPath)
+    println(new File(dbPath).exists())
+
+    println(cachePath)
+    println(new File(cachePath).exists())
     Thread.sleep(5000)
 
     merkleTree.freeLazyMerkleTree() //looks like doesn't free under layered db because LOCK file can't be deleted
@@ -104,6 +125,15 @@ class ZendooScMerkleTreeTest extends TempDirectoriesCreator {
       case e: Exception => assert(false, s"Got unexpected exception: ${e}")
     }
 
+    println("After free lazy tree")
+    println(merkleTreeStatePath)
+    println(new File(merkleTreeStatePath).exists())
+
+    println(dbPath)
+    println(new File(dbPath).exists())
+
+    println(cachePath)
+    println(new File(cachePath).exists())
 
     assert(new File(merkleTreeStatePath).exists())
     assert(new File(dbPath).exists())

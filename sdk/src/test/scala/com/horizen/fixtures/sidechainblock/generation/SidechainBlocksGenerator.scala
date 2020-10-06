@@ -365,10 +365,10 @@ object SidechainBlocksGenerator extends CompanionsFixture {
   val merkleTreeSize: Int = 128
   val txGen: TransactionFixture = new TransactionFixture {}
   val mcRefGen: MainchainBlockReferenceFixture = new MainchainBlockReferenceFixture {}
-  println("end SidechainBlocksGenerator object")
+  //println("end SidechainBlocksGenerator object")
 
   def startSidechain(initialValue: Long, seed: Long, params: NetworkParams): (NetworkParams, SidechainBlock, SidechainBlocksGenerator, SidechainForgingData, FinishedEpochInfo) = {
-    println("startSidechain")
+    //println("startSidechain")
 
     val random: Random = new Random(seed)
 

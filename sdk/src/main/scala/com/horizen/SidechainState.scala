@@ -64,34 +64,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-/*
-  verifyClosedBoxesTreeParams()
-  private val closedBoxesMerkleTree: ClosedBoxesMerkleTree =
-    new ClosedBoxesMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath )
-
-
-  private def verifyClosedBoxesTreeParams(): Unit = {
-    val statePath = params.closedBoxesMerkleTreeStatePath
-    val dbPath = params.closedBoxesMerkleTreeDbPath
-    val cachePath = params.closedBoxesMerkleTreeCachePath
-
-    require (!statePath.isEmpty, "closedBoxesMerkleTreeStatePath parameter shall be set")
-    require (!dbPath.isEmpty, "closedBoxesMerkleTreeDbPath parameter shall be set")
-    require (!cachePath.isEmpty, "closedBoxesMerkleTreeCachePath parameter shall be set")
-
-    val stateFile = new File(statePath).getAbsoluteFile
-    val dbFile = new File(dbPath).getAbsoluteFile
-    val cacheFile = new File(cachePath).getAbsoluteFile
-
-    (stateFile.isFile, dbFile.isDirectory, cacheFile.isDirectory) match {
-      case (true, true, true) => log.debug(s"Load closed box tree by paths: state file: ${stateFile}, db directory: ${dbFile}, cache directory: ${cacheFile}")
-      case (false, false, false) => log.debug(s"Create new closed box tree by paths: state file: ${stateFile}, db directory: ${dbFile}, cache directory: ${cacheFile}")
-      case (stateAsFile, dbAsDirectory, cacheAsDirectory) => {
-        throw new IllegalArgumentException(s"Incorrect closed box tree settings: ${stateAsFile}, ${dbAsDirectory}, ${cacheAsDirectory}") //@TODO more detailed error message
-      }
-    }
-  }*/
-
   // Note: emit tx.semanticValidity for each tx
   override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     if (!tx.semanticValidity())
@@ -341,14 +313,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.rollbackVersions.size
   }
 
-  def rollbackTo(to: VersionTag, removedBlocks: Seq[SidechainBlock]): Unit = Try {
+  def rollbackTo(to: VersionTag, removedBlocks: Seq[SidechainBlock]): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState, closedBoxesMerkleTree)
+      case Success(appState) => {
+        closedBoxesMerkleTree.removeBlocks(removedBlocks)
+        new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState, closedBoxesMerkleTree)
+      }
       case Failure(exception) => throw exception
     }
-    closedBoxesMerkleTree.removeBlocks(removedBlocks)
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
@@ -428,36 +402,24 @@ object SidechainState extends ScorexLogging
     // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
   }
 
-  private def verifyClosedBoxesTreeParams(treeShallBeCreated: Boolean, statePath: String, dbPath: String, cachePath: String): Unit = {
-    require (!statePath.isEmpty, "closedBoxesMerkleTreeStatePath parameter shall be set")
-    require (!dbPath.isEmpty, "closedBoxesMerkleTreeDbPath parameter shall be set")
-    require (!cachePath.isEmpty, "closedBoxesMerkleTreeCachePath parameter shall be set")
-
-    val stateFile = new File(statePath).getAbsoluteFile
-    val dbFile = new File(dbPath).getAbsoluteFile
-    val cacheFile = new File(cachePath).getAbsoluteFile
-
-    (treeShallBeCreated, stateFile.isFile, dbFile.isDirectory, cacheFile.isDirectory) match {
-      case (false, true, true, true) => log.debug(s"Load closed box tree by paths: state file: ${stateFile}, db directory: ${dbFile}, cache directory: ${cacheFile}")
-      case (true, false, false, false) => log.debug(s"Create new closed box tree by paths: state file: ${stateFile}, db directory: ${dbFile}, cache directory: ${cacheFile}")
-      case (shallBeCreated, stateAsFile, dbAsDirectory, cacheAsDirectory) => {
-        throw new IllegalArgumentException(s"Incorrect closed box tree creation state: ${shallBeCreated}, ${stateAsFile}, ${dbAsDirectory}, ${cacheAsDirectory}") //@TODO more detailed error message
-      }
-    }
-  }
-
   private[horizen] def restoreState(stateStorage: SidechainStateStorage, params: NetworkParams, applicationState: ApplicationState) : Option[SidechainState] = {
-
-    if (!stateStorage.isEmpty) {
-      verifyClosedBoxesTreeParams(treeShallBeCreated = false, params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
-
-      val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
-        new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
-
-      Option(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, closedBoxesMerkleTree))
-    } else {
-      None
+    if (stateStorage.isEmpty) {
+      log.error("Try to restore Sidechain state but state storage is empty")
+      return None
     }
+
+    val treeCouldBeLoad =
+      ClosedBoxesZendooMerkleTree.treeCouldBeLoadedForPaths(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    if (!treeCouldBeLoad) {
+      log.error("Try to restore Sidechain state but closed box tree can't be loaded")
+      return None
+    }
+
+    val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
+      new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    Option(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, closedBoxesMerkleTree))
   }
 
 
@@ -466,16 +428,24 @@ object SidechainState extends ScorexLogging
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty) {
-      verifyClosedBoxesTreeParams(treeShallBeCreated = true, params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+    if (!stateStorage.isEmpty) {
+      throw new IllegalArgumentException("State storage is not empty!")
+    }
 
-      val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
-        new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
-      new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState, closedBoxesMerkleTree)
-        .applyModifier(genesisBlock).get
+    val newTreeCouldBeCreated =
+      ClosedBoxesZendooMerkleTree.newTreeCouldBeCreatedForPaths(
+        params.closedBoxesMerkleTreeStatePath,
+        params.closedBoxesMerkleTreeDbPath,
+        params.closedBoxesMerkleTreeCachePath)
+
+    if (!newTreeCouldBeCreated) {
+      throw new IllegalArgumentException(s"ClosedBoxesZendooMerkleTree can't be created for paths: ${params.closedBoxesMerkleTreeStatePath}, ${params.closedBoxesMerkleTreeDbPath}, ${params.closedBoxesMerkleTreeCachePath}")
     }
-    else {
-      throw new RuntimeException("State storage is not empty!")
-    }
+
+    val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
+      new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState, closedBoxesMerkleTree)
+      .applyModifier(genesisBlock).get
   }
 }

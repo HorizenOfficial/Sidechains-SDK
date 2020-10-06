@@ -19,6 +19,8 @@ class ClosedBoxesDummyMerkleTree extends ClosedBoxesMerkleTree
 
   override def removeBlocks(blocks: Seq[SidechainBlock]): Unit = ()
 
+  override def closeTree(): Unit = ()
+
   override def getPositionForBoxId(id: ByteArrayWrapper): Long = {
     positionCounter += 1
     positionCounter

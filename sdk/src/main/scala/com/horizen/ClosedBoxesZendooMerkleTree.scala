@@ -1,11 +1,12 @@
 package com.horizen
 
-import java.math.BigInteger
+import java.io.File
 
 import com.horizen.block.SidechainBlock
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.merkletreenative.BigLazyMerkleTree
 import com.horizen.utils._
+import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
 
@@ -17,47 +18,61 @@ trait ClosedBoxesMerkleTree {
   def applyBlock(block: SidechainBlock): Unit
   def removeBlock(block: SidechainBlock)
   def removeBlocks(blocks: Seq[SidechainBlock]): Unit
+  def closeTree(): Unit
   def getPositionForBoxId(id: ByteArrayWrapper): Long //remove ASAP
 }
 
 
-class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val cachePath: String) extends ClosedBoxesMerkleTree {
+class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val cachePath: String)
+  extends ClosedBoxesMerkleTree
+  with ScorexLogging {
   private val merkleTreeHeight = 32
   private val merkleTree: BigLazyMerkleTree = BigLazyMerkleTree.init(merkleTreeHeight, statePath, dbPath, cachePath)
+  log.info(s"Create / Load closed box tree by paths: state file: ${statePath}, db directory: ${dbPath}, cache directory: ${cachePath}")
 
+  //current implementation of BigLazyMerkleTree require to use freeLazyMerkleTree() for saving current state at the end of the work
+  Runtime.getRuntime.addShutdownHook(new Thread() {
+    override def run(): Unit = {
+      merkleTree.freeLazyMerkleTree()
+    }
+  })
+
+  //workaround until box id is not Poseidon hash
   private def bytesToFieldElement(bytes: Array[Byte]): FieldElement = {
-    FieldElement.createFromLong(new BigInteger(bytes).longValue())
+    val fieldBytes = new Array[Byte](96)
+    Array.copy(bytes, 0, fieldBytes, 0, bytes.length)
+    Array.copy(bytes, 0, fieldBytes, 32, bytes.length)
+    Array.copy(bytes, 0, fieldBytes, 64, 30)
+    val fieldElement = FieldElement.deserialize(fieldBytes)
+
+    fieldElement
   }
 
-  private def getRemovedFieldElements(transaction: SidechainTypes#SCBT): Set[FieldElement] = transaction.boxIdsToOpen().asScala.map(bytesToFieldElement(_)).toSet
-  private def getAddedFieldElements(transaction: SidechainTypes#SCBT): Set[FieldElement] = transaction.newBoxes().asScala.view.map(_.id()).map(bytesToFieldElement).toSet
-  private def elementsCouldBeAdded(fieldElements: Set[FieldElement]): Boolean = fieldElements.map(element => merkleTree.getPosition(element)).forall(merkleTree.isPositionEmpty)
-  private def elementsCouldBeRemoved(fieldElements: Set[FieldElement]): Boolean = {
-    require(fieldElements.map(element => merkleTree.getPosition(element)).forall(element => !merkleTree.isPositionEmpty(element)))
-    true
-  }
+  private def getTransactionInputFieldElements(transaction: SidechainTypes#SCBT): Set[FieldElement] =
+    transaction.boxIdsToOpen().asScala.map(bytesToFieldElement(_)).toSet
+
+  private def getTransactionOutputFieldElements(transaction: SidechainTypes#SCBT): Set[FieldElement] =
+    transaction.newBoxes().asScala.view.map(_.id()).map(bytesToFieldElement).toSet
+
+  private def elementsCouldBeAdded(fieldElements: Set[FieldElement]): Boolean =
+    fieldElements.map(element => merkleTree.getPosition(element)).forall(merkleTree.isPositionEmpty)
+
+  private def elementsCouldBeRemoved(fieldElements: Set[FieldElement]): Boolean =
+    fieldElements.map(element => merkleTree.getPosition(element)).forall(element => !merkleTree.isPositionEmpty(element))
 
 
   def validateTransaction(transaction: SidechainTypes#SCBT): Boolean = {
-    val removedFieldElements = getRemovedFieldElements(transaction)
-    val addedFieldElements = getAddedFieldElements(transaction)
+    val removedFieldElements = getTransactionInputFieldElements(transaction)
+    val addedFieldElements = getTransactionOutputFieldElements(transaction)
 
     elementsCouldBeAdded(addedFieldElements) && elementsCouldBeRemoved(removedFieldElements)
   }
 
-  /*private def getUpdatedCachedMerkleTree(transaction: SidechainTypes#SCBT, cachedMerkleTree: CachedMerkleTree): Option[CachedMerkleTree] = {
-    val removedFieldElements = getRemovedFieldElements(transaction)
-    val addedFieldElements = getAddedFieldElements(transaction)
-
-    cachedMerkleTree.getUpdatedCachedMerkleTree(removedFieldElements, addedFieldElements)
-  }*/
-
-
   def validateTransactions(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = {
     transactions.foldLeft(new CachedMerkleTree(merkleTree)) {
       case (cachedMerkleTree: CachedMerkleTree, transaction: SidechainTypes#SCBT) =>
-        val removedFieldElements = getRemovedFieldElements(transaction)
-        val addedFieldElements = getAddedFieldElements(transaction)
+        val removedFieldElements = getTransactionInputFieldElements(transaction)
+        val addedFieldElements = getTransactionOutputFieldElements(transaction)
 
         //try to get new cached tree with applied field elements
         cachedMerkleTree.getUpdatedCachedMerkleTree(removedFieldElements, addedFieldElements) match {
@@ -75,17 +90,18 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
 
   def applyBlock(block: SidechainBlock): Unit = {
     block.transactions.foreach{ transaction =>
-      val toRemove = getRemovedFieldElements(transaction)
-      val toAdd =  getAddedFieldElements(transaction)
+      val toRemove = getTransactionInputFieldElements(transaction)
+      val toAdd =  getTransactionOutputFieldElements(transaction)
 
       updateMerkleTree(toRemove, toAdd)
     }
   }
 
   def removeBlock(block: SidechainBlock): Unit = {
-    block.transactions.foreach{ transaction =>
-      val toRemove = getRemovedFieldElements(transaction)
-      val toAdd = getAddedFieldElements(transaction)
+    //if remove block then transaction order shall be reversed as well as outputs became as remove elements and input as add elements
+    block.transactions.reverse.foreach{ transaction =>
+      val toAdd = getTransactionInputFieldElements(transaction)
+      val toRemove = getTransactionOutputFieldElements(transaction)
 
       updateMerkleTree(toRemove, toAdd)
     }
@@ -97,11 +113,18 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     val toAdd = toAddElements.toList.asJava
     val toAddPositions = toAddElements.map(element => merkleTree.getPosition(element))
 
-    //box to add could be placed at the same leaf which are deleted in the same transaction
-    merkleTree.removeLeaves(toRemovePositions)
+    log.info(s"update merkle tree positions: ${toRemovePositions.mkString("Remove(", ", ", ")")}, add ${toAddPositions.mkString("Add(", ", ", ")")}")
 
-    require(toAddPositions.forall(merkleTree.isPositionEmpty), "Position is not empty in UTXO merkle tree")
-    merkleTree.addLeaves(toAdd)
+    if (toRemovePositions.nonEmpty) {
+      require(toRemovePositions.forall(!merkleTree.isPositionEmpty(_)), "Position is empty in UTXO merkle tree")
+      //box to add could be placed at the same leaf which are deleted in the same transaction
+      merkleTree.removeLeaves(toRemovePositions)
+    }
+
+    if (toAddPositions.nonEmpty) {
+      require(toAddPositions.forall(merkleTree.isPositionEmpty), "Position is not empty in UTXO merkle tree")
+      merkleTree.addLeaves(toAdd)
+    }
   }
 
   //blocks starts from old to new
@@ -111,5 +134,42 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
 
   def getPositionForBoxId(id: ByteArrayWrapper): Long = {
     merkleTree.getPosition(bytesToFieldElement(id))
+  }
+
+  def closeTree(): Unit = {
+    merkleTree.freeLazyMerkleTree()
+  }
+}
+
+
+object ClosedBoxesZendooMerkleTree {
+  def newTreeCouldBeCreatedForPaths(statePath: String, dbPath: String, cachePath: String): Boolean = {
+    if (statePath.isEmpty || dbPath.isEmpty || cachePath.isEmpty) {
+      return false
+    }
+
+    val stateFile = new File(statePath).getAbsoluteFile
+    val dbFile = new File(dbPath).getAbsoluteFile
+    val cacheFile = new File(cachePath).getAbsoluteFile
+
+    (stateFile.exists(), dbFile.exists(), cacheFile.exists()) match {
+      case (false, false, false) => true //new tree could be created only if no directories / file is exist
+      case _ => false
+    }
+  }
+
+  def treeCouldBeLoadedForPaths(statePath: String, dbPath: String, cachePath: String): Boolean = {
+    if (statePath.isEmpty || dbPath.isEmpty || cachePath.isEmpty) {
+      return false
+    }
+
+    val stateFile = new File(statePath).getAbsoluteFile
+    val dbFile = new File(dbPath).getAbsoluteFile
+    val cacheFile = new File(cachePath).getAbsoluteFile
+
+    (stateFile.isFile, dbFile.isDirectory, cacheFile.isDirectory) match {
+      case (true, true, true) => true //tree could be loaded only if state file is exist and directories for db and cache is exist
+      case _ => false
+    }
   }
 }
