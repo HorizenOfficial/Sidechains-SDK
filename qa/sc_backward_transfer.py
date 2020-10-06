@@ -129,6 +129,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 1 Certificate.")
         assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
+        print("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node, "first node", 1)[0]
