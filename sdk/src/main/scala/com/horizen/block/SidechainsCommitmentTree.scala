@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.utils.{ByteArrayWrapper, MerklePath, MerkleTree}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerklePath, MerkleTree}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -38,9 +38,7 @@ class SidechainsCommitmentTree
   }
 
   private[block] def getMerkleTree: MerkleTree = {
-    val merkleTreeLeaves = sidechainsHashMap.toSeq.sortWith(_._1 < _._1)
-      .map(pair => getSidechainCommitmentEntryHash(pair._1))
-
+    val merkleTreeLeaves = getOrderedSidechainIds().map(id => getSidechainCommitmentEntryHash(id))
     MerkleTree.createMerkleTree(merkleTreeLeaves.asJava)
   }
 
@@ -61,9 +59,10 @@ class SidechainsCommitmentTree
 
   def getNeighbourSidechainCommitmentEntryProofs(sidechainId: ByteArrayWrapper): (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]) = {
     // Collect and sort sidechain Ids
-    val sidechainsIds: Seq[ByteArrayWrapper] = sidechainsHashMap.keys.toSeq.sortWith(_ < _)
+    val sidechainsIds: Seq[ByteArrayWrapper] = getOrderedSidechainIds()
+    val littleEndianSidechainId = new ByteArrayWrapper(BytesUtils.reverseBytes(sidechainId.data))
 
-    val leftNeighbourIndex: Int = sidechainsIds.lastIndexWhere(_ < sidechainId)
+    val leftNeighbourIndex: Int = sidechainsIds.lastIndexWhere(id => new ByteArrayWrapper(BytesUtils.reverseBytes(id.data)) < littleEndianSidechainId)
     val leftNeighbourProofOption = if(leftNeighbourIndex >= 0) {
       val leftNeighbourSidechainId: Array[Byte] = sidechainsIds(leftNeighbourIndex).data
       Some(getSidechainCommitmentEntryProof(leftNeighbourSidechainId, leftNeighbourIndex))
@@ -71,7 +70,7 @@ class SidechainsCommitmentTree
       None
     }
 
-    val rightNeighbourIndex: Int = sidechainsIds.indexWhere(_ > sidechainId, from = leftNeighbourIndex)
+    val rightNeighbourIndex: Int = sidechainsIds.indexWhere(id => new ByteArrayWrapper(BytesUtils.reverseBytes(id.data)) > littleEndianSidechainId, from = leftNeighbourIndex)
     val rightNeighbourProofOption = if(rightNeighbourIndex >= 0 ) {
       val rightNeighbourSidechainId: Array[Byte] = sidechainsIds(rightNeighbourIndex).data
       Some(getSidechainCommitmentEntryProof(rightNeighbourSidechainId, rightNeighbourIndex))
@@ -86,5 +85,12 @@ class SidechainsCommitmentTree
     val merkleTree = getMerkleTree
     val entry = sidechainsHashMap(new ByteArrayWrapper(sidechainId))
     SidechainCommitmentEntryProof(sidechainId, entry.getTxsHash, entry.getWCertHash, merkleTree.getMerklePathForLeaf(leafIndex))
+  }
+
+  // Sidechain ids are represented in a little-endian and ordered lexicographically same as in the MC.
+  // Note: MC data in the SC represented as a big-endian.
+  private def getOrderedSidechainIds(): Seq[ByteArrayWrapper] = {
+    val littleEndianOrderedIds = sidechainsHashMap.map(entry => new ByteArrayWrapper(BytesUtils.reverseBytes(entry._1.data))).toSeq.sortWith(_ < _)
+    littleEndianOrderedIds.map(id => new ByteArrayWrapper(BytesUtils.reverseBytes(id.data)))
   }
 }
