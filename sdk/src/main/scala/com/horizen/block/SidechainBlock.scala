@@ -209,7 +209,7 @@ object SidechainBlock extends ScorexEncoding {
              ownerPrivateKey: PrivateKey25519,
              forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
-             forgerBoxMerklePath: MerklePath,
+             forgingStakeInfoMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
@@ -221,8 +221,8 @@ object SidechainBlock extends ScorexEncoding {
     require(ownerPrivateKey != null)
     require(forgingStakeInfo != null)
     require(vrfProof != null)
-    require(forgerBoxMerklePath != null)
-    require(forgerBoxMerklePath.bytes().length > 0)
+    require(forgingStakeInfoMerklePath != null)
+    require(forgingStakeInfoMerklePath.bytes().length > 0)
     require(ownerPrivateKey.publicImage() == forgingStakeInfo.blockSignPublicKey)
 
     // Calculate merkle root hashes for SidechainBlockHeader
@@ -238,7 +238,7 @@ object SidechainBlock extends ScorexEncoding {
           parentId,
           timestamp,
           forgingStakeInfo,
-          forgerBoxMerklePath,
+          forgingStakeInfoMerklePath,
           vrfProof,
           sidechainTransactionsMerkleRootHash,
           mainchainMerkleRootHash,
@@ -256,7 +256,7 @@ object SidechainBlock extends ScorexEncoding {
       parentId,
       timestamp,
       forgingStakeInfo,
-      forgerBoxMerklePath,
+      forgingStakeInfoMerklePath,
       vrfProof,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,

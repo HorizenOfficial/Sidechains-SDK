@@ -165,7 +165,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
             print("Forget stake was spend: " + json.dumps(tx_hex))
 
         # Generate one more SC block on SC node 1 to include transaction
-        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+        generate_next_block(sc_node1, "first node")
 
         # Generate SC block on SC node 1 for the next consensus epoch - must be successful
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
