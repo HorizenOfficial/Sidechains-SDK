@@ -53,7 +53,7 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.horizen</groupId>
+      <groupId>com.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
       <version>0.2-SNAPSHOT</version>
       <scope>compile</scope>
