@@ -93,7 +93,8 @@ class SidechainAuthServiceProxy(object):
             # ConnectionResetError happens on FreeBSD with Python 3.4.
             # These classes don't exist in Python 2.x, so we can't refer to them directly.
             if ((isinstance(e, httplib.BadStatusLine) and e.line == "''")
-                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')):
+                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')
+                or (e.__class__.__name__ == "error" and (e.errno == 10053 or e.errno == 10054))):
                 self.__conn.close()
                 self.__conn.request(method, path, postdata, headers)
                 return self._get_response()
