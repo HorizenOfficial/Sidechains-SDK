@@ -140,6 +140,7 @@ class CertificateSubmitter
       }
       checkDataResult match {
         case Success(Some(dataForProofGeneration)) => {
+          log.debug(s"Get data for certificate proof calculation: ${dataForProofGeneration}")
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
             dataForProofGeneration.processedEpochNumber,
@@ -179,19 +180,20 @@ class CertificateSubmitter
     val state = sidechainNodeView.state
 
     val withdrawalEpochInfo: WithdrawalEpochInfo = state.getWithdrawalEpochInfo
-    if (WithdrawalEpochUtils.canSubmitCertificate(withdrawalEpochInfo, params)) {
-      log.info("Can submit certificate, withdrawal epoch info = " + withdrawalEpochInfo.toString)
+    if (WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params)) {
+      log.info("In submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       val processedWithdrawalEpochNumber = withdrawalEpochInfo.epoch - 1
       state.getUnprocessedWithdrawalRequests(processedWithdrawalEpochNumber)
         .map(unprocessedWithdrawalRequests => buildDataForProofGeneration(sidechainNodeView, processedWithdrawalEpochNumber, unprocessedWithdrawalRequests))
     }
     else {
-      log.info("Can't submit certificate, withdrawal epoch info = " + withdrawalEpochInfo.toString)
+      log.debug("Not in submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       None
     }
   }
 
   private def buildDataForProofGeneration(sidechainNodeView: View, processedWithdrawalEpochNumber: Int, unprocessedWithdrawalRequests: Seq[WithdrawalRequestBox]): DataForProofGeneration = {
+    log.debug(s"Start to build data for certificate proof generation, unprocessedWithdrawalRequests size is ${unprocessedWithdrawalRequests.size} ")
     val history = sidechainNodeView.history
 
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
@@ -220,7 +222,7 @@ class CertificateSubmitter
         history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
       }
     }
-    log.info(s"Request last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} which are ${BytesUtils.toHexString(mcBlockHash)}")
+    log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
 
     mcBlockHash
   }

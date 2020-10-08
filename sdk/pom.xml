@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.2.4</version>
+  <version>0.2.5</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -249,8 +249,6 @@
           <include>sidechainblock_hex</include>
           <include>sidechainblockheader_hex</include>
           <include>ommer_hex</include>
-          <!-- block generated in testnet3 (with sidechain support) -->
-          <include>mcblock530290_testnet3</include>
           <include>mcblock473173_mainnet</include>
           <include>mcblock473174_mainnet</include>
           <include>mcblock473175_mainnet</include>
@@ -288,18 +286,18 @@
           <include>mctx_v2</include>
           <!-- from https://explorer.horizen.global/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
           <include>mctx_v-3</include>
-          <!-- generated on regtest on 15.10.2019 -->
+          <!-- generated on regtest on 28.09.2020 -->
+          <include>mctx_v-4_without_sc_data</include>
+          <!-- generated on regtest on 28.09.2020 -->
           <include>mctx_v-4_single_ft</include>
-          <!-- generated on regtest on 15.10.2019 -->
+          <!-- generated on regtest on 28.09.2020 -->
           <include>mctx_v-4_multiple_ft</include>
-          <!-- generated on regtest on 15.10.2019 -->
+          <!-- generated on regtest on 28.09.2020 -->
           <include>mctx_v-4_sc_creation</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
-          <include>new_mc_blocks/mc_block_create_3_sidechains</include>
-          <include>new_mc_blocks/mc_block_forward_transfer_2_sidechains</include>
-          <include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer</include>
-          <include>new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2</include>
+          <include>new_mc_blocks/mc_block_with_3_sidechains</include>
+          <include>new_mc_blocks/mc_block_with_backward_transfer</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>
         </includes>

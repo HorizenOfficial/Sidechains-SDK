@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, WithdrawalCertificateData
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -98,7 +98,7 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               "../tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.4.jar",
+                               "../tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.5.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     jsone_node = json.loads(sc_bootstrap_output)
@@ -172,14 +172,14 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
-Generate withdrawal certificate data calling ScBootstrappingTools with command "generateProofInfo"
+Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
  - number_of_accounts: the number of schnorr keys to be generated
 
-Output: WithdrawalCertificateData (see sc_bootstrap_info.py).
+Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
-def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold):
+def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold):
     jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
     output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
 
@@ -196,8 +196,8 @@ def generate_withdrawal_certificate_data(seed, number_of_schnorr_keys, threshold
         schnorr_public_keys.append(keys["schnorrPublicKey"])
 
 
-    withdrawal_certificate_data = WithdrawalCertificateData(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
-    return withdrawal_certificate_data
+    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
+    return certificate_proof_info
 
 """
 Create directories for each node and configuration files inside them.
@@ -209,7 +209,7 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_config=MCConnectionInfo()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -217,6 +217,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     mc0datadir = os.path.join(dirname, "node0")
+    websocket_config = sc_node_config.mc_connection_info
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
@@ -249,9 +250,10 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
-        "THRESHOLD" : bootstrap_info.withdrawal_certificate_data.threshold,
-        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.withdrawal_certificate_data.schnorr_secrets)
+        "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
+        "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
+        "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
     }
 
     configsData.append({
@@ -292,6 +294,7 @@ def initialize_default_sc_datadir(dirname, n):
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
+        "SUBMITTER_CERTIFICATE": "false",
         'GENESIS_SECRETS': genesis_secrets[n]
     }
 
@@ -320,14 +323,15 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], get_websocket_configuration(i, array_of_MCConnectionInfo))
+        sc_node_config = SCNodeConfiguration(get_websocket_configuration(i, array_of_MCConnectionInfo))
+        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], sc_node_config)
 
 
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
-def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
     """
     Start a SC node and returns API connection to it
     """
@@ -338,23 +342,28 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.4.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.5.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
-    sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+    if print_output_to_file:
+        with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
+            sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
+    else:
+        sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
     return proxy
 
 
-def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
+def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False):
     """
     Start multiple SC clients, return connections to them
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
-    nodes = [start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes)]
+    nodes = [start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file) for i in range(num_nodes)]
     wait_for_sc_node_initialization(nodes)
     return nodes
 
@@ -590,7 +599,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
                                                             sc_nodes_bootstrap_info.network,
                                                             sc_nodes_bootstrap_info.withdrawal_epoch_length,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
-                                                            sc_nodes_bootstrap_info.withdrawal_certificate_data)
+                                                            sc_nodes_bootstrap_info.certificate_proof_info)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -614,22 +623,22 @@ def create_sidechain(sc_creation_info):
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    withdrawal_certificate_data = generate_withdrawal_certificate_data("seed", 7, 5)
+    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
                                     genesis_account.publicKey,
                                     sc_creation_info.forward_amount,
                                     vrf_key.publicKey,
-                                    withdrawal_certificate_data.genSysConstant,
-                                    withdrawal_certificate_data.verificationKey)
+                                    certificate_proof_info.genSysConstant,
+                                    certificate_proof_info.verificationKey)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                           sc_creation_info.withdrawal_epoch_length, vrf_key, withdrawal_certificate_data)
+                           sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
@@ -641,7 +650,7 @@ Parameters:
  
 """
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})
