@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val params: NetworkParams, override val version: VersionTag, val applicationState: ApplicationState)
   extends
     BoxMinimalState[SidechainTypes#SCP,
                     SidechainTypes#SCB,

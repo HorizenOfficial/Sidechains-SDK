@@ -47,7 +47,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                                         secretStorage: SidechainSecretStorage,
                                         walletTransactionStorage: SidechainWalletTransactionStorage,
                                         forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-                                        applicationWallet: ApplicationWallet)
+                                        val applicationWallet: ApplicationWallet)
   extends Wallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
                  SidechainTypes#SCBT,
