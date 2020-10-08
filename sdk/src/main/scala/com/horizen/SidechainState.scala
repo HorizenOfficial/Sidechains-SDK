@@ -110,22 +110,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     validateWithdrawalEpochCertificate(mod)
 
-    findIncompatibleTransaction(mod.transactions)
-      .map(incompatibilityTx => throw new IllegalStateException(s"Transaction ${incompatibilityTx.id()} is incompatibility with current State"))
+    validateTransactionsAgainstClosedBoxesMerkleTree(mod.transactions)
 
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
 
   private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
-    validateTransactionIdExclusivity(mod)
+    validateTransactionsIdsExclusivity(mod)
 
     validateSpentBoxesExclusivity(mod)
 
-    validateNewBoxPositionExclusivity(mod)
+    validateNewBoxesPositionsExclusivity(mod)
   }
 
-  private def validateTransactionIdExclusivity(mod: SidechainBlock): Unit = {
+  private def validateTransactionsIdsExclusivity(mod: SidechainBlock): Unit = {
     val transactionsIds: Seq[String] = mod.transactions.map(_.id())
     if (transactionsIds.toSet.size != transactionsIds.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated transactions")
@@ -139,7 +138,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def validateNewBoxPositionExclusivity(mod: SidechainBlock): Unit = {
+  private def validateNewBoxesPositionsExclusivity(mod: SidechainBlock): Unit = {
     val allOutputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.newBoxes().asScala.map(_.id()))
     val positionList = allOutputBoxesIds.map(closedBoxesMerkleTree.getPositionForBoxId)
 
@@ -200,9 +199,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def findIncompatibleTransaction(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = {
-    closedBoxesMerkleTree.validateTransactions(transactions)
-      //.map(incompatibilityTx => throw new IllegalStateException(s"Transaction ${incompatibilityTx.id()} is incompatibility with current State"))
+  def validateTransactionsAgainstClosedBoxesMerkleTree(transactions: Iterable[SidechainTypes#SCBT]): Unit = {
+    closedBoxesMerkleTree
+      .findFirstIncompatibleTransaction(transactions)
+      .map(incompatibilityTx => throw new IllegalStateException(s"Transaction ${incompatibilityTx.id()} is incompatibility with current State"))
   }
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
@@ -258,14 +258,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
-        closedBoxesMerkleTree.applyBlock(mod)
-        applyChanges(
-          cs,
-          idToVersion(mod.id),
-          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          timeStampToEpochNumber(mod.timestamp),
-          mod.withdrawalEpochCertificateOpt
-        )
+        val newState: Try[SidechainState] = applyChanges(
+                                              cs,
+                                              idToVersion(mod.id),
+                                              WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
+                                              timeStampToEpochNumber(mod.timestamp),
+                                              mod.withdrawalEpochCertificateOpt
+                                            )
+        newState.map(state => state.closedBoxesMerkleTree.applyBlock(mod))
+        newState
       })
     }
   }
@@ -318,8 +319,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
       case Success(appState) => {
-        closedBoxesMerkleTree.removeBlocks(removedBlocks)
-        new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState, closedBoxesMerkleTree)
+        stateStorage.rollback(new ByteArrayWrapper(version)).map{newStateStorage =>
+          closedBoxesMerkleTree.removeBlocks(removedBlocks)
+          new SidechainState(newStateStorage, params, to, appState, closedBoxesMerkleTree)
+        }
       }
       case Failure(exception) => throw exception
     }

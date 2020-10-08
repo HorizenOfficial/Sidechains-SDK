@@ -10,7 +10,7 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
                        val addCache: mutable.Map[Long, FieldElement] = new mutable.HashMap(),
                        val removeCache: mutable.Map[Long, FieldElement] = new mutable.HashMap()) extends ScorexLogging {
 
-  def getUpdatedCachedMerkleTree(toRemove: Iterable[FieldElement], toAdd: Iterable[FieldElement]): Option[CachedMerkleTree] = {
+  def tryToGetUpdatedCachedMerkleTree(toRemove: Iterable[FieldElement], toAdd: Iterable[FieldElement]): Option[CachedMerkleTree] = {
     val newCachedTree = this.copy()
 
     if (newCachedTree.removeElements(toRemove) && newCachedTree.addElements(toAdd)) {
@@ -44,7 +44,8 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
         false
       case (false, true, false) =>
         false
-      case _ => false
+      case _ =>
+        throw new IllegalStateException(s"Inconsistent state of Cached Merkle Tree for add operation: ${treeContains}, ${addCacheContains}, ${removeCacheContains}")
     }
   }
 
@@ -66,7 +67,12 @@ class CachedMerkleTree(merkleTree: BigLazyMerkleTree,
       case (false, true, false) =>
         addCache.remove(position)
         true
-      case _ => false
+      case (false, false, false) =>
+        false
+      case (true, false, true) =>
+        false
+      case _ =>
+        throw new IllegalStateException(s"Inconsistent state of Cached Merkle Tree for remove operation: ${treeContains}, ${addCacheContains}, ${removeCacheContains}")
     }
   }
 

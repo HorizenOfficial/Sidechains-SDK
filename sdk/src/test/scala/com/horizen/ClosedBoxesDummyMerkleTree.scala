@@ -9,7 +9,7 @@ class ClosedBoxesDummyMerkleTree extends ClosedBoxesMerkleTree
 
   override def validateTransaction(transaction: SidechainTypes#SCBT): Boolean = true
 
-  override def validateTransactions(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = None
+  override def findFirstIncompatibleTransaction(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = None
 
   override def validateBlock(block: SidechainBlock): Option[SidechainTypes#SCBT] = None
 

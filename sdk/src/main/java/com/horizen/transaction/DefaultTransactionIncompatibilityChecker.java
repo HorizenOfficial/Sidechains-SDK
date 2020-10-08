@@ -42,20 +42,23 @@ public class DefaultTransactionIncompatibilityChecker
     }
 
     private <T extends BoxTransaction> boolean checkOutputBoxesPositionExclusivity(T newTx, List<T> currentTxs) {
-        List<Long> currentTxsOutputBoxesPosition = currentTxs.stream().flatMap(tx -> {
+        List<Long> currentTxsOutputBoxesPositionList = currentTxs.stream().flatMap(tx -> {
             List<Box> boxes = tx.newBoxes();
             return boxes.stream().map(box -> tree.getPositionForBoxId(new ByteArrayWrapper(box.id())));
         }).collect(Collectors.toList());
 
+        Set<Long> currentTxsOutputBoxesPositionSet = new HashSet<>(currentTxsOutputBoxesPositionList);
+        if (currentTxsOutputBoxesPositionList.size() != currentTxsOutputBoxesPositionSet.size()) {
+            return false;
+        }
+
         List<Box> newTxsBoxes = newTx.newBoxes();
-        List<Long> newTxOutputBoxesPosition = newTxsBoxes.stream().map(box -> tree.getPositionForBoxId(new ByteArrayWrapper(box.id()))).collect(Collectors.toList());
+        boolean duplicateInPosition = newTxsBoxes
+            .stream()
+            .map(box -> tree.getPositionForBoxId(new ByteArrayWrapper(box.id())))
+            .allMatch(position -> (!currentTxsOutputBoxesPositionSet.contains(position)));
 
-        List<Long> totalOutputPositions = new ArrayList<>();
-        totalOutputPositions.addAll(currentTxsOutputBoxesPosition);
-        totalOutputPositions.addAll(newTxOutputBoxesPosition);
-
-        Set<Long> totalOutputPositionsAsSet = new HashSet<>(totalOutputPositions);
-        return (totalOutputPositions.size() == totalOutputPositionsAsSet.size());
+        return duplicateInPosition;
     }
 
     @Override

@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 
 trait ClosedBoxesMerkleTree {
   def validateTransaction(transaction: SidechainTypes#SCBT): Boolean
-  def validateTransactions(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT]
+  def findFirstIncompatibleTransaction(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT]
   def validateBlock(block: SidechainBlock): Option[SidechainTypes#SCBT]
   def applyBlock(block: SidechainBlock): Unit
   def removeBlock(block: SidechainBlock)
@@ -55,10 +55,10 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     transaction.newBoxes().asScala.view.map(_.id()).map(bytesToFieldElement).toSet
 
   private def elementsCouldBeAdded(fieldElements: Set[FieldElement]): Boolean =
-    fieldElements.map(element => merkleTree.getPosition(element)).forall(merkleTree.isPositionEmpty)
+    fieldElements.map(fieldElement => merkleTree.getPosition(fieldElement)).forall(merkleTree.isPositionEmpty)
 
   private def elementsCouldBeRemoved(fieldElements: Set[FieldElement]): Boolean =
-    fieldElements.map(element => merkleTree.getPosition(element)).forall(element => !merkleTree.isPositionEmpty(element))
+    fieldElements.map(fieldElement => merkleTree.getPosition(fieldElement)).forall(element => !merkleTree.isPositionEmpty(element))
 
 
   def validateTransaction(transaction: SidechainTypes#SCBT): Boolean = {
@@ -68,14 +68,14 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     elementsCouldBeAdded(addedFieldElements) && elementsCouldBeRemoved(removedFieldElements)
   }
 
-  def validateTransactions(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = {
+  def findFirstIncompatibleTransaction(transactions: Iterable[SidechainTypes#SCBT]): Option[SidechainTypes#SCBT] = {
     transactions.foldLeft(new CachedMerkleTree(merkleTree)) {
       case (cachedMerkleTree: CachedMerkleTree, transaction: SidechainTypes#SCBT) =>
         val removedFieldElements = getTransactionInputFieldElements(transaction)
         val addedFieldElements = getTransactionOutputFieldElements(transaction)
 
         //try to get new cached tree with applied field elements
-        cachedMerkleTree.getUpdatedCachedMerkleTree(removedFieldElements, addedFieldElements) match {
+        cachedMerkleTree.tryToGetUpdatedCachedMerkleTree(removedFieldElements, addedFieldElements) match {
           case Some(updatedCachedMerkleTree) => updatedCachedMerkleTree //if it is possible to get get new tree then transaction could be applied
           case None => return Option(transaction) //if it not possible to get new tree then transaction is not compatible, return that incompatible transaction
         }
@@ -85,7 +85,7 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
 
   //return incompatible transaction
   def validateBlock(block: SidechainBlock): Option[SidechainTypes#SCBT] = {
-    validateTransactions(block.transactions)
+    findFirstIncompatibleTransaction(block.transactions)
   }
 
   def applyBlock(block: SidechainBlock): Unit = {
@@ -115,9 +115,10 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
 
     log.info(s"update merkle tree positions: ${toRemovePositions.mkString("Remove(", ", ", ")")}, add ${toAddPositions.mkString("Add(", ", ", ")")}")
 
+    //box to add could be placed at the same leaf which are deleted in the same transaction, thus first remove and only then update
+
     if (toRemovePositions.nonEmpty) {
       require(toRemovePositions.forall(!merkleTree.isPositionEmpty(_)), "Position is empty in UTXO merkle tree")
-      //box to add could be placed at the same leaf which are deleted in the same transaction
       merkleTree.removeLeaves(toRemovePositions)
     }
 

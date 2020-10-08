@@ -189,7 +189,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
-  // The difference is that State is updated together with Wallet, also State receive list of blocks to be removed
+  // The difference is that State is updated together with Wallet,
+  // also State receive list of blocks to be removed to for correct performing rollback of closed boxes merkle tree
   @tailrec
   private def updateStateAndWallet(history: HIS,
                           state: MS,
