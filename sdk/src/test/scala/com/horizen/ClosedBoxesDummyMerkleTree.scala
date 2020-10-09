@@ -21,7 +21,7 @@ class ClosedBoxesDummyMerkleTree extends ClosedBoxesMerkleTree
 
   override def closeTree(): Unit = ()
 
-  override def getPositionForBoxId(id: ByteArrayWrapper): Long = {
+  override def getPositionForByteArrayWrapper(id: ByteArrayWrapper): Long = {
     positionCounter += 1
     positionCounter
   }

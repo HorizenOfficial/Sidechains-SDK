@@ -5,20 +5,12 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.utils.ByteArrayWrapper;
 
-import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class DefaultTransactionIncompatibilityChecker
     implements TransactionIncompatibilityChecker
 {
-    //@TODO remove it, static function shall be used
-    static Random rnd = new Random();
-    static String statePath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
-    static String dbPath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
-    static String cachePath = new File(System.getProperty("java.io.tmpdir") + File.separator + "-" + Math.abs(rnd.nextInt())).getAbsolutePath();
-    private static final ClosedBoxesZendooMerkleTree tree = new ClosedBoxesZendooMerkleTree(statePath, dbPath, cachePath);
-
     @Override
     public <T extends BoxTransaction> boolean isTransactionCompatible(T newTx, List<T> currentTxs) {
         if(newTx == null || currentTxs == null)
@@ -44,18 +36,18 @@ public class DefaultTransactionIncompatibilityChecker
     private <T extends BoxTransaction> boolean checkOutputBoxesPositionExclusivity(T newTx, List<T> currentTxs) {
         List<Long> currentTxsOutputBoxesPositionList = currentTxs.stream().flatMap(tx -> {
             List<Box> boxes = tx.newBoxes();
-            return boxes.stream().map(box -> tree.getPositionForBoxId(new ByteArrayWrapper(box.id())));
+            return boxes.stream().map(box -> ClosedBoxesZendooMerkleTree.getFieldElementPositionForBoxId(new ByteArrayWrapper(box.id())));
         }).collect(Collectors.toList());
 
         Set<Long> currentTxsOutputBoxesPositionSet = new HashSet<>(currentTxsOutputBoxesPositionList);
         if (currentTxsOutputBoxesPositionList.size() != currentTxsOutputBoxesPositionSet.size()) {
-            return false;
+            throw new IllegalStateException("Transaction had been found with the same output box position in closed boxes merkle tree in memory pool");
         }
 
         List<Box> newTxsBoxes = newTx.newBoxes();
         boolean duplicateInPosition = newTxsBoxes
             .stream()
-            .map(box -> tree.getPositionForBoxId(new ByteArrayWrapper(box.id())))
+            .map(box -> ClosedBoxesZendooMerkleTree.getFieldElementPositionForBoxId(new ByteArrayWrapper(box.id())))
             .allMatch(position -> (!currentTxsOutputBoxesPositionSet.contains(position)));
 
         return duplicateInPosition;

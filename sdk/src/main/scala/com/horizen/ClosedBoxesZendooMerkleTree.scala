@@ -2,6 +2,7 @@ package com.horizen
 
 import java.io.File
 
+import com.horizen.ClosedBoxesZendooMerkleTree.bytesToFieldElement
 import com.horizen.block.SidechainBlock
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.merkletreenative.BigLazyMerkleTree
@@ -19,15 +20,15 @@ trait ClosedBoxesMerkleTree {
   def removeBlock(block: SidechainBlock)
   def removeBlocks(blocks: Seq[SidechainBlock]): Unit
   def closeTree(): Unit
-  def getPositionForBoxId(id: ByteArrayWrapper): Long //remove ASAP
+  def getPositionForByteArrayWrapper(id: ByteArrayWrapper): Long //remove ASAP
 }
 
 
 class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val cachePath: String)
   extends ClosedBoxesMerkleTree
   with ScorexLogging {
-  private val merkleTreeHeight = 32
-  private val merkleTree: BigLazyMerkleTree = BigLazyMerkleTree.init(merkleTreeHeight, statePath, dbPath, cachePath)
+  private val merkleTree: BigLazyMerkleTree = BigLazyMerkleTree.init(ClosedBoxesZendooMerkleTree.merkleTreeDepth, statePath, dbPath, cachePath)
+  merkleTree.flush() //to be able to restore new Merkle tree for given paths, otherwise if something going wrong we do not be able to restore tree due no state file
   log.info(s"Create / Load closed box tree by paths: state file: ${statePath}, db directory: ${dbPath}, cache directory: ${cachePath}")
 
   //current implementation of BigLazyMerkleTree require to use freeLazyMerkleTree() for saving current state at the end of the work
@@ -36,17 +37,6 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
       merkleTree.freeLazyMerkleTree()
     }
   })
-
-  //workaround until box id is not Poseidon hash
-  private def bytesToFieldElement(bytes: Array[Byte]): FieldElement = {
-    val fieldBytes = new Array[Byte](96)
-    Array.copy(bytes, 0, fieldBytes, 0, bytes.length)
-    Array.copy(bytes, 0, fieldBytes, 32, bytes.length)
-    Array.copy(bytes, 0, fieldBytes, 64, 30)
-    val fieldElement = FieldElement.deserialize(fieldBytes)
-
-    fieldElement
-  }
 
   private def getTransactionInputFieldElements(transaction: SidechainTypes#SCBT): Set[FieldElement] =
     transaction.boxIdsToOpen().asScala.map(bytesToFieldElement(_)).toSet
@@ -58,7 +48,7 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     fieldElements.map(fieldElement => merkleTree.getPosition(fieldElement)).forall(merkleTree.isPositionEmpty)
 
   private def elementsCouldBeRemoved(fieldElements: Set[FieldElement]): Boolean =
-    fieldElements.map(fieldElement => merkleTree.getPosition(fieldElement)).forall(element => !merkleTree.isPositionEmpty(element))
+    fieldElements.map(fieldElement => merkleTree.getPosition(fieldElement)).forall(position => !merkleTree.isPositionEmpty(position))
 
 
   def validateTransaction(transaction: SidechainTypes#SCBT): Boolean = {
@@ -113,7 +103,7 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     val toAdd = toAddElements.toList.asJava
     val toAddPositions = toAddElements.map(element => merkleTree.getPosition(element))
 
-    log.info(s"update merkle tree positions: ${toRemovePositions.mkString("Remove(", ", ", ")")}, add ${toAddPositions.mkString("Add(", ", ", ")")}")
+    log.debug(s"update merkle tree positions: ${toRemovePositions.mkString("Remove(", ", ", ")")}, add ${toAddPositions.mkString("Add(", ", ", ")")}")
 
     //box to add could be placed at the same leaf which are deleted in the same transaction, thus first remove and only then update
 
@@ -133,9 +123,7 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
     blocks.reverse.foreach(removeBlock) //blocks started from the oldest one, removing blocks shall be in reversed order
   }
 
-  def getPositionForBoxId(id: ByteArrayWrapper): Long = {
-    merkleTree.getPosition(bytesToFieldElement(id))
-  }
+  def getPositionForByteArrayWrapper(id: ByteArrayWrapper): Long = ClosedBoxesZendooMerkleTree.getFieldElementPositionForBoxId(id)
 
   def closeTree(): Unit = {
     merkleTree.freeLazyMerkleTree()
@@ -144,6 +132,21 @@ class ClosedBoxesZendooMerkleTree(val statePath: String, val dbPath: String, val
 
 
 object ClosedBoxesZendooMerkleTree {
+  def merkleTreeDepth: Int = 32
+
+  //workaround until box id is not Poseidon hash
+  def bytesToFieldElement(bytes: Array[Byte]): FieldElement = {
+    val fieldBytes = new Array[Byte](96)
+    Array.copy(bytes, 0, fieldBytes, 0, bytes.length)
+    Array.copy(bytes, 0, fieldBytes, 32, bytes.length)
+    Array.copy(bytes, 0, fieldBytes, 64, 30)
+    val fieldElement = FieldElement.deserialize(fieldBytes)
+
+    fieldElement
+  }
+
+  def getFieldElementPositionForBoxId(boxId: ByteArrayWrapper): Long = BigLazyMerkleTree.getPosition(bytesToFieldElement(boxId), merkleTreeDepth)
+
   def newTreeCouldBeCreatedForPaths(statePath: String, dbPath: String, cachePath: String): Boolean = {
     if (statePath.isEmpty || dbPath.isEmpty || cachePath.isEmpty) {
       return false

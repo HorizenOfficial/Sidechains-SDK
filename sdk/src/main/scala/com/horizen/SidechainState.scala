@@ -140,7 +140,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   private def validateNewBoxesPositionsExclusivity(mod: SidechainBlock): Unit = {
     val allOutputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.newBoxes().asScala.map(_.id()))
-    val positionList = allOutputBoxesIds.map(closedBoxesMerkleTree.getPositionForBoxId)
+    val positionList = allOutputBoxesIds.map(closedBoxesMerkleTree.getPositionForByteArrayWrapper)
 
     if (positionList.size != positionList.toSet.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated positions in UTXO Merkle tree for new boxes ")
@@ -322,7 +322,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         stateStorage.rollback(new ByteArrayWrapper(version)).map{newStateStorage =>
           closedBoxesMerkleTree.removeBlocks(removedBlocks)
           new SidechainState(newStateStorage, params, to, appState, closedBoxesMerkleTree)
-        }
+        }.get
       }
       case Failure(exception) => throw exception
     }
@@ -332,17 +332,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   @Deprecated
-  override def rollbackTo(to: VersionTag): Try[SidechainState] = throw new UnsupportedOperationException() /*Try {
-    require(to != null, "Version to rollback to must be NOT NULL.")
-    val version = BytesUtils.fromHexString(to)
-    applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState)
-      case Failure(exception) => throw exception
-    }
-  }.recoverWith{case exception =>
-    log.error("Exception was thrown during rollback.", exception)
-    Failure(exception)
-  }*/
+  override def rollbackTo(to: VersionTag): Try[SidechainState] = throw new UnsupportedOperationException()
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
