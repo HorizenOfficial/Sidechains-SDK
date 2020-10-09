@@ -20,9 +20,12 @@ trait MockitoHelper extends MockitoSugar {
   }
 }
 
-class ClosedBoxesZendooMerkleTreeTest extends TempDirectoriesCreator with MockitoHelper
-{
-  def createMockedTransaction(toRemoveIds: Seq[Long], toAddIds: Seq[Long], id: String = ""): SidechainTypes#SCBT = {
+class ClosedBoxPositionMocker extends MockitoHelper {
+
+  def createMockedTransactionForIds(toRemoveIds: java.util.List[java.lang.Long], toAddIds: java.util.List[java.lang.Long], id: String = ""): SidechainTypes#SCBT =
+    createMockedTransaction(toRemoveIds.asScala, toAddIds.asScala, id)
+
+    def createMockedTransaction(toRemoveIds: Seq[java.lang.Long], toAddIds: Seq[java.lang.Long], id: String = ""): SidechainTypes#SCBT = {
     val mockedTransaction: SidechainTypes#SCBT = mock[SidechainTypes#SCBT]
 
     val unlockers = toRemoveIds
@@ -64,8 +67,10 @@ class ClosedBoxesZendooMerkleTreeTest extends TempDirectoriesCreator with Mockit
 
     mockedBlock
   }
+}
 
-
+class ClosedBoxesZendooMerkleTreeTest extends ClosedBoxPositionMocker with TempDirectoriesCreator
+{
   private def checkEmptyTree(closedBoxesZendooMerkleTree: ClosedBoxesZendooMerkleTree): Unit = {
     //check empty transaction on empty tree
     val emptyTransaction = createMockedTransaction(Seq(), Seq(1))
