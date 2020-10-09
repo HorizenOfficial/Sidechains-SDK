@@ -21,18 +21,25 @@ case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends Re
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 
 
+case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
+case object GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE extends RequestType(1)
+case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
+case object SEND_CERTIFICATE_REQUEST_TYPE extends RequestType(3)
+case object GET_MULTIPLE_HEADERS_REQUEST_TYPE extends RequestType(4)
+
+
 class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
 
   override def getBlockByHeight(height: Int): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
-      client.sendRequest(0, GetBlockByHeightRequestPayload(height), classOf[BlockResponsePayload])
+      client.sendRequest(GET_SINGLE_BLOCK_REQUEST_TYPE, GetBlockByHeightRequestPayload(height), classOf[BlockResponsePayload])
 
     processBlockResponsePayload(future).get
   }
 
   override def getBlockByHash(hash: String): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
-      client.sendRequest(0, GetBlockByHashRequestPayload(hash), classOf[BlockResponsePayload])
+      client.sendRequest(GET_SINGLE_BLOCK_REQUEST_TYPE, GetBlockByHashRequestPayload(hash), classOf[BlockResponsePayload])
 
     processBlockResponsePayload(future).get
   }
@@ -45,7 +52,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   def getBlockHashesAfterHeight(height: Int, limit: Int): Try[Seq[String]] = Try {
     val future: Future[BlocksResponsePayload] =
-      client.sendRequest(1, GetBlocksAfterHeightRequestPayload(height, limit), classOf[BlocksResponsePayload])
+      client.sendRequest(GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE, GetBlocksAfterHeightRequestPayload(height, limit), classOf[BlocksResponsePayload])
 
     val response: BlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
     response.hashes
@@ -53,7 +60,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   def getBlockHashesAfterHash(hash: String, limit: Int): Try[Seq[String]] = Try {
     val future: Future[BlocksResponsePayload] =
-      client.sendRequest(1, GetBlocksAfterHashRequestPayload(hash, limit), classOf[BlocksResponsePayload])
+      client.sendRequest(GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE, GetBlocksAfterHashRequestPayload(hash, limit), classOf[BlocksResponsePayload])
 
     val response: BlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
     response.hashes
@@ -62,7 +69,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[(Int, Seq[String])] = Try {
     val future: Future[NewBlocksResponsePayload] =
-      client.sendRequest(2, GetNewBlocksRequestPayload(locatorHashes, limit), classOf[NewBlocksResponsePayload])
+      client.sendRequest(GET_NEW_BLOCK_HASHES_REQUEST_TYPE, GetNewBlocksRequestPayload(locatorHashes, limit), classOf[NewBlocksResponsePayload])
 
     val response: NewBlocksResponsePayload = Await.result(future, client.requestTimeoutDuration())
     (response.height, response.hashes)
@@ -77,7 +84,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def getBlockHeaders(hashes: Seq[String]): Try[Seq[MainchainHeader]] = Try {
     val future: Future[BlockHeadersResponsePayload] =
-      client.sendRequest(2, GetBlockHeadersRequestPayload(hashes), classOf[BlockHeadersResponsePayload])
+      client.sendRequest(GET_MULTIPLE_HEADERS_REQUEST_TYPE, GetBlockHeadersRequestPayload(hashes), classOf[BlockHeadersResponsePayload])
 
     processBlockHeadersResponsePayload(future).get
   }

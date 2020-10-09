@@ -25,13 +25,13 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val height = 473173
     val hash = "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660"
     val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
-    val expectedReqType = 0
+    val expectedReqType = GET_SINGLE_BLOCK_REQUEST_TYPE
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
     Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
-      ArgumentMatchers.any[Int], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
     )).thenAnswer( answer => {
-        val reqType = answer.getArgument(0).asInstanceOf[Int]
+        val reqType = answer.getArgument(0).asInstanceOf[RequestType]
         assertEquals("Get block by height request type is wrong.", expectedReqType, reqType)
         val req = answer.getArgument(1).asInstanceOf[GetBlockByHeightRequestPayload]
         assertEquals("Get block by height request data (height) is wrong.", height, req.height)
@@ -66,13 +66,13 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val height = 473173
     val hash = "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660"
     val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
-    val expectedReqType = 0
+    val expectedReqType = GET_SINGLE_BLOCK_REQUEST_TYPE
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
     Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
-      ArgumentMatchers.any[Int], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
     )).thenAnswer( answer => {
-        val reqType = answer.getArgument(0).asInstanceOf[Int]
+        val reqType = answer.getArgument(0).asInstanceOf[RequestType]
         assertEquals("Get block by hash request type is wrong.", expectedReqType, reqType)
         val req = answer.getArgument(1).asInstanceOf[GetBlockByHashRequestPayload]
         assertEquals("Get block by hash request data (hash) is wrong.", hash, req.hash)
@@ -111,7 +111,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb662"
     )
     val limit = 10
-    val expectedReqType = 2
+    val expectedReqType = GET_NEW_BLOCK_HASHES_REQUEST_TYPE
 
     val respHeight = 1000
     val respHashes = Seq(
@@ -122,9 +122,9 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
     Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
-      ArgumentMatchers.any[Int], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
     )).thenAnswer( answer => {
-      val reqType = answer.getArgument(0).asInstanceOf[Int]
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
       assertEquals("Get new block hashes request type is wrong.", expectedReqType, reqType)
       val req = answer.getArgument(1).asInstanceOf[GetNewBlocksRequestPayload]
       assertEquals("Get new block hashes request data (locatorHashes) is wrong.", reqHashes, req.locatorHashes)
