@@ -48,8 +48,8 @@ class SidechainStateTest
 
   val params = MainNetParams()
   val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
-  
-  
+
+
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)],
@@ -112,7 +112,7 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState, new ClosedBoxesDummyMerkleTree())
 
     //Test get
     assertEquals("State must return existing box.",
@@ -326,7 +326,7 @@ class SidechainStateTest
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState, new ClosedBoxesDummyMerkleTree())
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 

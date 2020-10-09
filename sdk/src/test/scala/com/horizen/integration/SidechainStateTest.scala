@@ -9,6 +9,7 @@ import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
+import com.horizen.fixtures.sidechainblock.generation.SidechainBlocksGenerator
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
@@ -16,7 +17,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.{SidechainState, SidechainTypes}
+import com.horizen.{ClosedBoxesDummyMerkleTree, ClosedBoxesZendooMerkleTree, SidechainState, SidechainTypes, TempDirectoriesCreator}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -35,8 +36,9 @@ class SidechainStateTest
     with IODBStoreFixture
     with MockitoSugar
     with SidechainTypes
+    with TempDirectoriesCreator
 {
-  val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
+  val sidechainBoxesCompanion: SidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
 
   var stateStorage: SidechainStateStorage = _
@@ -45,10 +47,18 @@ class SidechainStateTest
   var initialForgerBox: ForgerBox = _
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val secretList = new ListBuffer[PrivateKey25519]()
-  val params = MainNetParams()
 
-  val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, 1)
+  val statePath: String = createNewTempDirPath().getAbsolutePath
+  val dbPath: String = createNewTempDirPath().getAbsolutePath
+  val cachePath: String = createNewTempDirPath().getAbsolutePath
+  val closedBoxesTree = new ClosedBoxesZendooMerkleTree(statePath, dbPath, cachePath)
+  val params: MainNetParams = MainNetParams(closedBoxesMerkleTreeStatePath = statePath, closedBoxesMerkleTreeDbPath = dbPath, closedBoxesMerkleTreeCachePath = cachePath)
+
+  val initialWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(1, 1)
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+
+  val (_, genesisBlock, blockGenerator, forgingData, _) = SidechainBlocksGenerator.startSidechain(1000L, 89L, params)
+
 
   def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
@@ -120,10 +130,71 @@ class SidechainStateTest
     )
   }
 
+  @Test
+  def genesisStateLoadNonEmptyStorage(): Unit = {
+
+    val statePath: String = createNewTempDirPath().getAbsolutePath
+    val dbPath: String = createNewTempDirPath().getAbsolutePath
+    val cachePath: String = createNewTempDirPath().getAbsolutePath
+    val params: MainNetParams = MainNetParams(closedBoxesMerkleTreeStatePath = statePath, closedBoxesMerkleTreeDbPath = dbPath, closedBoxesMerkleTreeCachePath = cachePath)
+
+    val sidechainState = SidechainState.createGenesisState(stateStorage, params, applicationState, genesisBlock)
+
+    val expectedMessage = s"State storage is not empty!"
+    assertEquals(sidechainState.failed.get.getMessage, expectedMessage)
+  }
+
+  @Test
+  def genesisStateLoadNonEmptyClosedBoxTree(): Unit = {
+
+    val statePath: String = createNewTempDirPath().getAbsolutePath
+    val dbPath: String = createNewTempDirPath().getAbsolutePath
+    val cachePath: String = createNewTempDirPath().getAbsolutePath
+    val closedBoxesTree: ClosedBoxesZendooMerkleTree = new ClosedBoxesZendooMerkleTree(statePath, dbPath, cachePath)
+    val localParams: MainNetParams = MainNetParams(closedBoxesMerkleTreeStatePath = statePath, closedBoxesMerkleTreeDbPath = dbPath, closedBoxesMerkleTreeCachePath = cachePath)
+
+
+    // Init SidechainStateStorage with boxList
+    val tmpDir = tempDir()
+    val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
+    stateDir.mkdirs()
+    val store = getStore(stateDir)
+    val emptyStateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+
+    val sidechainState = SidechainState.createGenesisState(emptyStateStorage, localParams, applicationState, genesisBlock)
+
+    val expectedMessage = s"ClosedBoxesZendooMerkleTree can't be created for paths: ${localParams.closedBoxesMerkleTreeStatePath}, ${localParams.closedBoxesMerkleTreeDbPath}, ${localParams.closedBoxesMerkleTreeCachePath}"
+    assertEquals(sidechainState.failed.get.getMessage, expectedMessage)
+  }
+
+
+  @Test
+  def createGenesisState(): Unit = {
+    val statePath: String = createNewTempDirPath().getAbsolutePath
+    val dbPath: String = createNewTempDirPath().getAbsolutePath
+    val cachePath: String = createNewTempDirPath().getAbsolutePath
+    val localParams: MainNetParams = MainNetParams(closedBoxesMerkleTreeStatePath = statePath, closedBoxesMerkleTreeDbPath = dbPath, closedBoxesMerkleTreeCachePath = cachePath)
+
+    // Init SidechainStateStorage with boxList
+    val tmpDir = tempDir()
+    val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
+    stateDir.mkdirs()
+    val store = getStore(stateDir)
+    val emptyStateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+
+    val sidechainState = SidechainState.createGenesisState(emptyStateStorage, localParams, applicationState, genesisBlock)
+
+    assertTrue(sidechainState.isSuccess)
+  }
+
 
   @Test
   def closedBoxes(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
+    val sidechainState: SidechainState =
+      new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, new ClosedBoxesDummyMerkleTree())//SidechainState.restoreState(stateStorage, params, applicationState).get
+
+    /*closedBoxesTree.closeTree()
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get*/
 
     // Test that initial boxes list present in the State
     for (box <- boxList) {
@@ -133,12 +204,17 @@ class SidechainStateTest
       assertEquals("State contains different box for given key.",
         box, sidechainState.getClosedBox(box.id()).get)
     }
-
   }
+
+
+
 
   @Test
   def currentConsensusEpochInfo(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
+    /*closedBoxesTree.closeTree()
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get*/
+    val sidechainState: SidechainState =
+      new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, new ClosedBoxesDummyMerkleTree())//SidechainState.restoreState(stateStorage, params, applicationState).get
 
     // Test that initial currentConsensusEpochInfo is valid
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
@@ -150,7 +226,7 @@ class SidechainStateTest
 
   @Test
   def applyModifier(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, params, applicationState).get
+    val sidechainState: SidechainState = new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, new ClosedBoxesDummyMerkleTree())//SidechainState.restoreState(stateStorage, params, applicationState).get
 
     // Test applyModifier with a single RegularTransaction with regular and forger outputs
     val mockedBlock = mock[SidechainBlock]
@@ -209,7 +285,7 @@ class SidechainStateTest
 
 
     // Test rollback
-    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(initialVersion.data))
+    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(initialVersion.data), Seq(mockedBlock))
 
     assertTrue("Rollback must be successful.",
       rollbackTry.isSuccess)
@@ -229,5 +305,10 @@ class SidechainStateTest
       assertTrue("Box in state after applyModifier must contain unlocked boxes from transaction.",
         sidechainState.closedBox(b).isDefined)
     }
+  }
+
+  @Test
+  def checkClosedTree(): Unit = {
+
   }
 }

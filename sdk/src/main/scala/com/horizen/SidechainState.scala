@@ -14,7 +14,7 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils, _}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -23,7 +23,11 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val params: NetworkParams, override val version: VersionTag, applicationState: ApplicationState)
+class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
+                                       val params: NetworkParams,
+                                       override val version: VersionTag,
+                                       applicationState: ApplicationState,
+                                       val closedBoxesMerkleTree: ClosedBoxesMerkleTree)
   extends
     BoxMinimalState[SidechainTypes#SCP,
                     SidechainTypes#SCB,
@@ -106,19 +110,40 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
     validateWithdrawalEpochCertificate(mod)
 
+    validateTransactionsAgainstClosedBoxesMerkleTree(mod.transactions)
+
     if (!applicationState.validate(this, mod))
       throw new Exception("Exception was thrown by ApplicationState validation.")
   }
 
   private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
+    validateTransactionsIdsExclusivity(mod)
+
+    validateSpentBoxesExclusivity(mod)
+
+    validateNewBoxesPositionsExclusivity(mod)
+  }
+
+  private def validateTransactionsIdsExclusivity(mod: SidechainBlock): Unit = {
     val transactionsIds: Seq[String] = mod.transactions.map(_.id())
     if (transactionsIds.toSet.size != transactionsIds.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated transactions")
     }
+  }
 
+  private def validateSpentBoxesExclusivity(mod: SidechainBlock): Unit = {
     val allInputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.boxIdsToOpen().asScala)
     if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
+    }
+  }
+
+  private def validateNewBoxesPositionsExclusivity(mod: SidechainBlock): Unit = {
+    val allOutputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.newBoxes().asScala.map(_.id()))
+    val positionList = allOutputBoxesIds.map(closedBoxesMerkleTree.getPositionForByteArrayWrapper)
+
+    if (positionList.size != positionList.toSet.size) {
+      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated positions in UTXO Merkle tree for new boxes ")
     }
   }
 
@@ -137,7 +162,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
               util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
                 r.value().equals(o.amount)
             })) {
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+              throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
             }
           }
 
@@ -174,6 +199,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     }
   }
 
+  def validateTransactionsAgainstClosedBoxesMerkleTree(transactions: Iterable[SidechainTypes#SCBT]): Unit = {
+    closedBoxesMerkleTree
+      .findFirstIncompatibleTransaction(transactions)
+      .map(incompatibilityTx => throw new IllegalStateException(s"Transaction ${incompatibilityTx.id()} is incompatibility with current State"))
+  }
+
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
   // TO DO: (almost the same as in NodeViewHolder)
@@ -186,49 +217,56 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   // TO DO check logic in Hybrid.BoxMinimalState.validate
   // TO DO TBD
   override def validate(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+    if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
+      validateProofsAndBoxValueAmount(tx)
+    }
+
+    closedBoxesMerkleTree.validateTransaction(tx)
+
+    semanticValidity(tx).get
+
+    if(!applicationState.validate(this, tx))
+      throw new Exception(s"ApplicationState transaction ${tx.id} validation failed.")
+  }
+
+  def validateProofsAndBoxValueAmount(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     var closedCoinsBoxesAmount : Long = 0L
     var newCoinsBoxesAmount : Long = 0L
 
-    if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
-
-      for (u <- tx.unlockers().asScala) {
-        closedBox(u.closedBoxId()) match {
-          case Some(box) => {
-            val boxKey = u.boxKey()
-            if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
-              throw new Exception("Box unlocking proof is invalid.")
-            if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
-              closedCoinsBoxesAmount += box.value()
-          }
-          case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
+    for (u <- tx.unlockers().asScala) {
+      closedBox(u.closedBoxId()) match {
+        case Some(box) => {
+          val boxKey = u.boxKey()
+          if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
+            throw new Exception("Box unlocking proof is invalid.")
+          if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+            closedCoinsBoxesAmount += box.value()
         }
+        case None => throw new Exception(s"Box ${BytesUtils.toHexString(u.closedBoxId())} is not found in state")
       }
-
-      newCoinsBoxesAmount = tx.newBoxes().asScala
-        .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
-        .map(_.value()).sum
-
-      if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
-        throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
-          s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
-
     }
 
-    semanticValidity(tx).get
-    if(!applicationState.validate(this, tx))
-      throw new Exception(s"ApplicationState transaction ${tx.id} validation failed.")
+    newCoinsBoxesAmount = tx.newBoxes().asScala
+      .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+      .map(_.value()).sum
+
+    if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
+      throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
+        s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
     validate(mod).flatMap { _ =>
       changes(mod).flatMap(cs => {
-        applyChanges(
-          cs,
-          idToVersion(mod.id),
-          WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          timeStampToEpochNumber(mod.timestamp),
-          mod.withdrawalEpochCertificateOpt
-        )
+        val newState: Try[SidechainState] = applyChanges(
+                                              cs,
+                                              idToVersion(mod.id),
+                                              WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
+                                              timeStampToEpochNumber(mod.timestamp),
+                                              mod.withdrawalEpochCertificateOpt
+                                            )
+        newState.map(state => state.closedBoxesMerkleTree.applyBlock(mod))
+        newState
       })
     }
   }
@@ -261,7 +299,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
             withdrawalRequestsToAppend, forgingStakesToAppend, consensusEpoch, withdrawalEpochCertificateOpt).get,
           params,
           newVersion,
-          appState
+          appState,
+          closedBoxesMerkleTree
         )
       case Failure(exception) => throw exception
     }
@@ -275,17 +314,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     stateStorage.rollbackVersions.size
   }
 
-  override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
+  def rollbackTo(to: VersionTag, removedBlocks: Seq[SidechainBlock]): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(stateStorage.rollback(new ByteArrayWrapper(version)).get, params, to, appState)
+      case Success(appState) => {
+        stateStorage.rollback(new ByteArrayWrapper(version)).map{newStateStorage =>
+          closedBoxesMerkleTree.removeBlocks(removedBlocks)
+          new SidechainState(newStateStorage, params, to, appState, closedBoxesMerkleTree)
+        }.get
+      }
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
     Failure(exception)
   }
+
+  @Deprecated
+  override def rollbackTo(to: VersionTag): Try[SidechainState] = throw new UnsupportedOperationException()
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
     val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
@@ -323,7 +370,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
   }
 }
 
-object SidechainState
+object SidechainState extends ScorexLogging
 {
   def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = Try {
     val initial = (Seq(): Seq[Array[Byte]], Seq(): Seq[SidechainTypes#SCB], 0L)
@@ -349,21 +396,49 @@ object SidechainState
   }
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage, params: NetworkParams, applicationState: ApplicationState) : Option[SidechainState] = {
+    if (stateStorage.isEmpty) {
+      log.error("Try to restore Sidechain state but state storage is empty")
+      return None
+    }
 
-    if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
-    else
-      None
+    val treeCouldBeLoad =
+      ClosedBoxesZendooMerkleTree.treeCouldBeLoadedForPaths(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    if (!treeCouldBeLoad) {
+      log.error("Try to restore Sidechain state but closed box tree can't be loaded")
+      return None
+    }
+
+    val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
+      new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    Option(new SidechainState(stateStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, closedBoxesMerkleTree))
   }
+
+
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage, params: NetworkParams,
                                           applicationState: ApplicationState,
-                                          genesisBlock: SidechainBlock) : Try[SidechainState] = Try {
+                                          genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-        .applyModifier(genesisBlock).get
-    else
-      throw new RuntimeException("State storage is not empty!")
+    if (!stateStorage.isEmpty) {
+      throw new IllegalArgumentException("State storage is not empty!")
+    }
+
+    val newTreeCouldBeCreated =
+      ClosedBoxesZendooMerkleTree.newTreeCouldBeCreatedForPaths(
+        params.closedBoxesMerkleTreeStatePath,
+        params.closedBoxesMerkleTreeDbPath,
+        params.closedBoxesMerkleTreeCachePath)
+
+    if (!newTreeCouldBeCreated) {
+      throw new IllegalArgumentException(s"ClosedBoxesZendooMerkleTree can't be created for paths: ${params.closedBoxesMerkleTreeStatePath}, ${params.closedBoxesMerkleTreeDbPath}, ${params.closedBoxesMerkleTreeCachePath}")
+    }
+
+    val closedBoxesMerkleTree: ClosedBoxesZendooMerkleTree =
+      new ClosedBoxesZendooMerkleTree(params.closedBoxesMerkleTreeStatePath, params.closedBoxesMerkleTreeDbPath, params.closedBoxesMerkleTreeCachePath)
+
+    new SidechainState(stateStorage, params, idToVersion(genesisBlock.parentId), applicationState, closedBoxesMerkleTree)
+      .applyModifier(genesisBlock).get
   }
 }

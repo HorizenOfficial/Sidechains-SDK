@@ -1,5 +1,9 @@
 package com.horizen.transaction;
 
+import com.horizen.ClosedBoxPositionMocker;
+import com.horizen.SidechainTypes;
+import com.horizen.block.SidechainBlock;
+import com.horizen.box.Box;
 import com.horizen.box.NoncedBox;
 import com.horizen.box.RegularBox;
 import com.horizen.box.data.NoncedBoxData;
@@ -10,8 +14,14 @@ import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
 import com.horizen.utils.Pair;
 import org.junit.Test;
+import org.mockito.MockSettings;
+import org.mockito.stubbing.Answer;
+import org.mockito.stubbing.Stubber;
+import scala.collection.Seq;
+import scala.reflect.ClassTag;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -81,5 +91,27 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
         incompatibleList.add(currentTx1);
         incompatibleList.add(currentTx3);
         assertFalse("Transaction expected to be incompatible to list", checker.isTransactionCompatible(newTx, incompatibleList));
+    }
+
+    @Test
+    public void ClosedBoxPositionTest() {
+        ClosedBoxPositionMocker mockerCreator = new ClosedBoxPositionMocker();
+
+        BoxTransaction firstTransaction = mockerCreator.createMockedTransactionForIds(Arrays.asList(0L), Arrays.asList(1L, 2L), "1");
+        BoxTransaction secondTransaction = mockerCreator.createMockedTransactionForIds(Arrays.asList(10L), Arrays.asList(3L, 4L), "2");
+        BoxTransaction thirdTransaction = mockerCreator.createMockedTransactionForIds(Arrays.asList(20L), Arrays.asList(5L, 6L), "3");
+        BoxTransaction fourthTransaction = mockerCreator.createMockedTransactionForIds(Arrays.asList(30L), Arrays.asList(7L, 8L), "4");
+        BoxTransaction incompatibleWithFirstAndSecondTransaction = mockerCreator.createMockedTransactionForIds(Arrays.asList(0L), Arrays.asList(3L, 2L), "5");
+
+        DefaultTransactionIncompatibilityChecker checker = new DefaultTransactionIncompatibilityChecker();
+
+        assertTrue("Transaction expected to be compatible to empty list", checker.isTransactionCompatible(firstTransaction, new ArrayList<>()));
+        assertFalse("Transaction expected to not be compatible", checker.isTransactionCompatible(firstTransaction, Arrays.asList(incompatibleWithFirstAndSecondTransaction)));
+        assertFalse("Transaction expected to not be compatible", checker.isTransactionCompatible(incompatibleWithFirstAndSecondTransaction, Arrays.asList(firstTransaction, thirdTransaction)));
+
+        assertTrue("Transaction expected to be compatible", checker.isTransactionCompatible(firstTransaction, Arrays.asList(secondTransaction, thirdTransaction, fourthTransaction)));
+        assertTrue("Transaction expected to be compatible", checker.isTransactionCompatible(fourthTransaction, Arrays.asList(firstTransaction, secondTransaction, thirdTransaction)));
+
+        assertFalse("Transaction expected to not be compatible", checker.isTransactionCompatible(thirdTransaction, Arrays.asList(thirdTransaction)));
     }
 }

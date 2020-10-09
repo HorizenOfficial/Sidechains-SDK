@@ -53,9 +53,9 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.horizen</groupId>
+      <groupId>com.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <version>0.3.0</version>
+      <version>0.2-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->

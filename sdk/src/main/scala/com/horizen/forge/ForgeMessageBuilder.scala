@@ -2,7 +2,7 @@ package com.horizen.forge
 
 import com.horizen.block._
 import com.horizen.box.{ForgerBox, NoncedBox}
-import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
+import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -11,11 +11,10 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.MerklePath
+import com.horizen.vrf.VrfOutput
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
-import com.horizen.chain._
-import com.horizen.vrf.VrfOutput
 
 import scala.util.{Failure, Success, Try}
 
@@ -220,6 +219,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
           .toSeq
       }
+
+    //additional check of compatible to closed boxes merkle tree in memory pool, we expected that all transactions are compatible. Could be removed later
+    nodeView.state.validateTransactionsAgainstClosedBoxesMerkleTree(transactions.map(tx => tx.asInstanceOf))
 
     // Get ommers in case if branch point is not current best block
     var ommers: Seq[Ommer] = Seq()

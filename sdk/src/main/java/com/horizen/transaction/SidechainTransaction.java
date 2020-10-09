@@ -12,13 +12,13 @@ import scorex.crypto.hash.Blake2b256;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
-abstract public class SidechainTransaction<P extends Proposition, B extends NoncedBox<P>> extends BoxTransaction<P, B>
+public abstract class SidechainTransaction<P extends Proposition, B extends NoncedBox<P>> extends BoxTransaction<P, B>
 {
     // We don't need to calculate the hashWithoutNonce value each time, because transaction is immutable.
-    private byte[] _hashWithoutNonce;
+    private byte[] hashWithoutNonce;
 
     private synchronized byte[] hashWithoutNonce() {
-        if(_hashWithoutNonce == null) {
+        if(hashWithoutNonce == null) {
             ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
             for (BoxUnlocker<P> u : unlockers())
                 unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
@@ -28,13 +28,13 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
                 newBoxesStream.write(box.proposition().bytes(), 0, box.proposition().bytes().length);
 
 
-            _hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
+            hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
                     newBoxesStream.toByteArray(),
                     Longs.toByteArray(timestamp()),
                     Longs.toByteArray(fee()));
 
         }
-        return _hashWithoutNonce;
+        return hashWithoutNonce;
     }
 
     // Declaring the same rule for nonce calculation for all SidechainTransaction inheritors
