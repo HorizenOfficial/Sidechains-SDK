@@ -135,6 +135,9 @@ class SidechainStateTest
       sidechainState.semanticValidity(mockedTransaction).isFailure)
 
     // Mock ApplicationState always successfully validate
+    Mockito.when(mockedApplicationState.pre_validate(ArgumentMatchers.any[SidechainStateReader],
+     ArgumentMatchers.any[SidechainBlock]())).thenReturn(true);
+
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())).thenReturn(true)
 
@@ -313,6 +316,9 @@ class SidechainStateTest
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
     Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+
+    Mockito.when(mockedApplicationState.pre_validate(ArgumentMatchers.any[SidechainStateReader],
+     ArgumentMatchers.any[SidechainBlock]())).thenReturn(true);
 
     Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())).thenReturn(true)

@@ -13,6 +13,11 @@ import java.util.List;
 
 public class DefaultApplicationState implements ApplicationState {
     @Override
+    public boolean pre_validate(SidechainStateReader stateReader, SidechainBlock block) {
+        return true;
+    }
+
+    @Override
     public boolean validate(SidechainStateReader stateReader, SidechainBlock block) {
         return true;
     }

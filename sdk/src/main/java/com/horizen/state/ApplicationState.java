@@ -14,6 +14,8 @@ import scala.util.Try;
 // TO DO: provide access to HistoryReader
 public interface ApplicationState {
 
+    boolean pre_validate(SidechainStateReader stateReader, SidechainBlock block);
+
     boolean validate(SidechainStateReader stateReader, SidechainBlock block);
 
     boolean validate(SidechainStateReader stateReader, BoxTransaction<Proposition, Box<Proposition>> transaction);

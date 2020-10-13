@@ -100,6 +100,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
 
+    if(!applicationState.pre_validate(this, mod)) {
+      throw new Exception("Exception was thrown by ApplicationState pre_validation");
+    }
 
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
