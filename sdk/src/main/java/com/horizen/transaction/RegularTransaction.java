@@ -16,6 +16,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
@@ -32,6 +33,7 @@ public final class RegularTransaction
     private long fee;
     private long timestamp;
 
+    private List<Proposition> newBoxesPropositions;
     private List<NoncedBox<Proposition>> newBoxes;
     private List<BoxUnlocker<Proposition>> unlockers;
 
@@ -90,6 +92,14 @@ public final class RegularTransaction
         }
 
         return Collections.unmodifiableList(unlockers);
+    }
+
+    @Override
+    public List<Proposition> newBoxesPropositions() {
+        if(newBoxesPropositions == null){
+            newBoxesPropositions = outputs.stream().map(NoncedBoxData::proposition).collect(Collectors.toList());
+        }
+        return Collections.unmodifiableList(newBoxesPropositions);
     }
 
     @Override

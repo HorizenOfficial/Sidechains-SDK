@@ -20,28 +20,40 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
     private synchronized byte[] hashWithoutNonce() {
         if(_hashWithoutNonce == null) {
             ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
-            for (BoxUnlocker<P> u : unlockers())
+            for (BoxUnlocker<P> u : unlockers()){
                 unlockersStream.write(u.closedBoxId(), 0, u.closedBoxId().length);
+            }
 
-            ByteArrayOutputStream newBoxesStream = new ByteArrayOutputStream();
-            for (B box : newBoxes())
-                newBoxesStream.write(box.proposition().bytes(), 0, box.proposition().bytes().length);
+            ByteArrayOutputStream newBoxesPropositionsStream = new ByteArrayOutputStream();
+            for (P proposition : newBoxesPropositions()){
+                newBoxesPropositionsStream.write(proposition.bytes(), 0, proposition.bytes().length);
+            }
 
-
-            _hashWithoutNonce = Bytes.concat(unlockersStream.toByteArray(),
-                    newBoxesStream.toByteArray(),
-                    Longs.toByteArray(timestamp()),
-                    Longs.toByteArray(fee()));
-
+            _hashWithoutNonce = Blake2b256.hash(
+                    Bytes.concat(
+                            unlockersStream.toByteArray(),
+                            newBoxesPropositionsStream.toByteArray(),
+                            Longs.toByteArray(timestamp()),
+                            Longs.toByteArray(fee())
+                    )
+            );
         }
         return _hashWithoutNonce;
     }
 
     // Declaring the same rule for nonce calculation for all SidechainTransaction inheritors
     protected final long getNewBoxNonce(P newBoxProposition, int newBoxIndex) {
-        byte[] hash = Blake2b256.hash(Bytes.concat(newBoxProposition.bytes(), hashWithoutNonce(), Ints.toByteArray(newBoxIndex)));
+        byte[] hash = Blake2b256.hash(
+                Bytes.concat(
+                        newBoxProposition.bytes(),
+                        hashWithoutNonce(),
+                        Ints.toByteArray(newBoxIndex)
+                )
+        );
         return BytesUtils.getLong(hash, 0);
     }
+
+    public abstract List<P> newBoxesPropositions();
 
     public abstract boolean transactionSemanticValidity();
 
