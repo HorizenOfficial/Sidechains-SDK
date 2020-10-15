@@ -3,6 +3,7 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -32,7 +33,7 @@ class SidechainBlock(override val header: SidechainBlockHeader,
                       companion: SidechainTransactionsCompanion)
   extends OmmersContainer with Block[SidechainTypes#SCBT]
 {
-  def forgerPublicKey: PublicKey25519Proposition = header.forgerBox.blockSignProposition()
+  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
   // Currently sidechain block can contain 0 or 1 certificate (this is checked in WithdrawalEpochValidator)
   lazy val withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.withdrawalEpochCertificate).headOption
@@ -206,9 +207,9 @@ object SidechainBlock extends ScorexEncoding {
              mainchainHeaders: Seq[MainchainHeader],
              ommers: Seq[Ommer],
              ownerPrivateKey: PrivateKey25519,
-             forgerBox: ForgerBox,
+             forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
-             forgerBoxMerklePath: MerklePath,
+             forgingStakeInfoMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
              params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
@@ -218,11 +219,11 @@ object SidechainBlock extends ScorexEncoding {
     require(mainchainHeaders != null)
     require(ommers != null)
     require(ownerPrivateKey != null)
-    require(forgerBox != null)
+    require(forgingStakeInfo != null)
     require(vrfProof != null)
-    require(forgerBoxMerklePath != null)
-    require(forgerBoxMerklePath.bytes().length > 0)
-    require(ownerPrivateKey.publicImage() == forgerBox.blockSignProposition())
+    require(forgingStakeInfoMerklePath != null)
+    require(forgingStakeInfoMerklePath.bytes().length > 0)
+    require(ownerPrivateKey.publicImage() == forgingStakeInfo.blockSignPublicKey)
 
     // Calculate merkle root hashes for SidechainBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = calculateTransactionsMerkleRootHash(sidechainTransactions)
@@ -236,8 +237,8 @@ object SidechainBlock extends ScorexEncoding {
           SidechainBlock.BLOCK_VERSION,
           parentId,
           timestamp,
-          forgerBox,
-          forgerBoxMerklePath,
+          forgingStakeInfo,
+          forgingStakeInfoMerklePath,
           vrfProof,
           sidechainTransactionsMerkleRootHash,
           mainchainMerkleRootHash,
@@ -254,8 +255,8 @@ object SidechainBlock extends ScorexEncoding {
       SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      forgerBox,
-      forgerBoxMerklePath,
+      forgingStakeInfo,
+      forgingStakeInfoMerklePath,
       vrfProof,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,

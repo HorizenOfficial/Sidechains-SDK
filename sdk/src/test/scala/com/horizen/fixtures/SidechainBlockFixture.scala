@@ -63,9 +63,9 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       firstOrSecond(mainchainHeaders, initialBlock.mainchainHeaders),
       Seq(), // TODO: ommers support
       forgerMetadata.blockSignSecret,
-      forgingBox,
+      forgerMetadata.forgingStakeInfo,
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
-      firstOrSecond(merklePath, initialBlock.header.forgerBoxMerklePath),
+      firstOrSecond(merklePath, initialBlock.header.forgingStakeMerklePath),
       firstOrSecond(companion, sidechainTransactionsCompanion),
       params,
       signatureOption
@@ -104,7 +104,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       references.map(_.header),
       Seq(), // TODO: ommers suport
       forgerMetadata.blockSignSecret,
-      forgerBox,
+      forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
       companion,

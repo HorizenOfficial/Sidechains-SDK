@@ -37,7 +37,7 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
       SidechainBlock.BLOCK_VERSION,
       bytesToId(parentId),
       random.nextInt(100) + 10000,
-      forgerBox,
+      forgerMetadata.forgingStakeInfo,
       merklePath,
       vrfProof,
       transactionsRootHash,
