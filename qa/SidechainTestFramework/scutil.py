@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -209,7 +209,7 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_config=MCConnectionInfo()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -217,6 +217,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     mc0datadir = os.path.join(dirname, "node0")
+    websocket_config = sc_node_config.mc_connection_info
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
@@ -230,8 +231,6 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
-    zencliArgs = []
-    zencliArgs.append("-datadir=" + mc0datadir.replace("\\", "/"))
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -251,9 +250,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
-        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
-        "ZEN_CLI_ARGS": json.dumps(zencliArgs),
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
+        "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
     }
@@ -296,6 +294,7 @@ def initialize_default_sc_datadir(dirname, n):
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
+        "SUBMITTER_CERTIFICATE": "false",
         'GENESIS_SECRETS': genesis_secrets[n]
     }
 
@@ -324,7 +323,8 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], get_websocket_configuration(i, array_of_MCConnectionInfo))
+        sc_node_config = SCNodeConfiguration(get_websocket_configuration(i, array_of_MCConnectionInfo))
+        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], sc_node_config)
 
 
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
@@ -650,7 +650,7 @@ Parameters:
  
 """
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})

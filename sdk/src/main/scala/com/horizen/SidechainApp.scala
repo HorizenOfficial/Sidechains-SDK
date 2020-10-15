@@ -208,10 +208,6 @@ class SidechainApp @Inject()
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
-    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params)
-  }
-
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
@@ -238,6 +234,8 @@ class SidechainApp @Inject()
   // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
   if(connectorStarted.isSuccess)
     communicationClient.setWebSocketChannel(webSocketConnector)
+  else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+    throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
 
   // Init Forger with a proper web socket client
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
@@ -248,6 +246,9 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
+  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  }
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
