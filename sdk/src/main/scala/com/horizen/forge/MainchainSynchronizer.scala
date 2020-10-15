@@ -61,11 +61,15 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
   }
 
   def getMainchainBlockHeadersReferences(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainHeader]] = Try {
-    val HEADERS_LIMIT = 100
+    val HEADERS_LIMIT = 100 // TODO Analyse amount of headers that can be added to one block.
+    val HEADERS_REQUEST_LIMIT = 25 // TODO Change this value to 50 after changing HEADERS_LIMIT. It has to be 50(as described in doc and implemented in MC)
+
+    if (hashes.size > HEADERS_LIMIT) throw new IllegalArgumentException("Headers request amount is over the limit(" + HEADERS_LIMIT + ")")
+
     val strHashes: Seq[String] = hashes.map(hash => BytesUtils.toHexString(hash.data))
     var headers : Seq[MainchainHeader] = Seq()
 
-    for(group <- strHashes.grouped(HEADERS_LIMIT)) {
+    for(group <- strHashes.grouped(HEADERS_REQUEST_LIMIT)) {
       headers ++= mainchainNodeChannel.getBlockHeaders(group).get
     }
 
