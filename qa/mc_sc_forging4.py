@@ -11,7 +11,7 @@ from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Latus forger behavior for:
-1. Sidechain forging fails due to time out(SC create too many requests to MC for block generation).
+1. Sidechain forging not fails due to time out(SC create too many requests to MC for block generation).
 
 Configuration:
     Start 1 MC nodes and 1 SC node.
