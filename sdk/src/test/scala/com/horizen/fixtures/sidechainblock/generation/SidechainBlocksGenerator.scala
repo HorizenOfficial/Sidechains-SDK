@@ -179,9 +179,9 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val owner: PrivateKey25519 = forgingData.key
 
-    val forgerBox: ForgerBox = generationRules.corruption.forgerBoxCorruptionRules.map(getIncorrectForgerBox(forgingData.forgerBox, _)).getOrElse(forgingData.forgerBox)
+    val forgingStake: ForgingStakeInfo = generationRules.corruption.forgingStakeCorruptionRules.map(getIncorrectForgingStake(forgingData.forgingStakeInfo, _)).getOrElse(forgingData.forgingStakeInfo)
 
-    val forgerBoxMerklePath: MerklePath =
+    val forgingStakeMerklePath: MerklePath =
       if (generationRules.corruption.merklePathFromPreviousEpoch) {
         getCorruptedMerklePath(possibleForger)
       }
@@ -205,8 +205,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      forgerBox,
-      forgerBoxMerklePath,
+      forgingStake,
+      forgingStakeMerklePath,
       vrfProofInBlock,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
@@ -221,8 +221,8 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      forgerBox,
-      forgerBoxMerklePath,
+      forgingStake,
+      forgingStakeMerklePath,
       vrfProofInBlock,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
@@ -244,44 +244,34 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     generatedBlock
   }
 
-  private def getIncorrectForgerBox(initialForgerBox: ForgerBox, forgerBoxCorruptionRules: ForgerBoxCorruptionRules): ForgerBox = {
-    val proposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.propositionChanged) {
-      val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
-      val newProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
-      newProposition
-    }
-    else {
-      initialForgerBox.proposition()
-    }
+  private def getIncorrectForgingStake(initialForgingStake: ForgingStakeInfo, forgingStakeCorruptionRules: ForgingStakeCorruptionRules): ForgingStakeInfo = {
+    val stakeAmount: Long = initialForgingStake.stakeAmount + forgingStakeCorruptionRules.stakeAmountShift
 
-    val nonce: Long = initialForgerBox.nonce() + forgerBoxCorruptionRules.nonceShift
-    val value: Long = initialForgerBox.value() + forgerBoxCorruptionRules.valueShift
-
-    val blockSignProposition: PublicKey25519Proposition = if (forgerBoxCorruptionRules.blockSignPropositionChanged) {
+    val blockSignProposition: PublicKey25519Proposition = if (forgingStakeCorruptionRules.blockSignPropositionChanged) {
       val propositionKeyPair: utils.Pair[Array[Byte], Array[Byte]] = Ed25519.createKeyPair(rnd.nextLong().toString.getBytes)
       val newBlockSignProposition: PublicKey25519Proposition = new PublicKey25519Proposition(propositionKeyPair.getValue)
       newBlockSignProposition
     }
     else {
-      initialForgerBox.blockSignProposition()
+      initialForgingStake.blockSignPublicKey
     }
 
-    val vrfPubKey: VrfPublicKey = if (forgerBoxCorruptionRules.vrfPubKeyChanged) {
+    val vrfPubKey: VrfPublicKey = if (forgingStakeCorruptionRules.vrfPubKeyChanged) {
       var corrupted: VrfPublicKey = null
 
       do {
         val corruptedVrfPublicKeyBytes =
           CryptoLibProvider.vrfFunctions.generatePublicAndSecretKeys(rnd.nextLong().toString.getBytes).get(VrfFunctions.KeyType.PUBLIC)
         corrupted = new VrfPublicKey(corruptedVrfPublicKeyBytes)
-        println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgerBox.vrfPubKey().bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
-      } while (corrupted.bytes.deep == initialForgerBox.vrfPubKey().bytes.deep)
+        println(s"corrupt VRF public key ${BytesUtils.toHexString(initialForgingStake.vrfPublicKey.bytes)} by ${BytesUtils.toHexString(corrupted.bytes)}")
+      } while (corrupted.bytes.deep == initialForgingStake.vrfPublicKey.bytes.deep)
       corrupted
     }
     else {
-      initialForgerBox.vrfPubKey()
+      initialForgingStake.vrfPublicKey
     }
 
-    new ForgerBoxData(proposition, value, blockSignProposition, vrfPubKey).getBox(nonce)
+    ForgingStakeInfo(blockSignProposition, vrfPubKey, stakeAmount)
   }
 
   private def getIncorrectPossibleForger(initialPossibleForger: PossibleForger): PossibleForger = {
@@ -378,7 +368,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val vrfProof = VrfGenerator.generateProof(seed) //no VRF proof checking for genesis block!
 
-    val genesisMerkleTree: MerkleTree = buildGenesisMerkleTree(genesisSidechainForgingData.forgerBox)
+    val genesisMerkleTree: MerkleTree = buildGenesisMerkleTree(genesisSidechainForgingData.forgingStakeInfo)
     val merklePathForGenesisSidechainForgingData: MerklePath = genesisMerkleTree.getMerklePathForLeaf(0)
     val possibleForger: PossibleForger = PossibleForger(
       forgingData = genesisSidechainForgingData,
@@ -391,7 +381,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val nonceInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(networkParams)
     val stakeInfo =
-      StakeConsensusEpochInfo(genesisMerkleTree.rootHash(), possibleForger.forgingData.forgerBox.value())
+      StakeConsensusEpochInfo(genesisMerkleTree.rootHash(), possibleForger.forgingData.forgingStakeInfo.stakeAmount)
     val consensusDataStorage = createConsensusDataStorage(genesisSidechainBlock.id, nonceInfo, stakeInfo)
 
 
@@ -423,11 +413,13 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     val nonce = 42L
 
     val forgerBox = forgerBoxData.getBox(nonce)
-    SidechainForgingData(key, forgerBox, vrfSecretKey)
+    val forgingStake = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
+
+    SidechainForgingData(key, forgingStake, vrfSecretKey)
   }
 
-  private def buildGenesisMerkleTree(genesisForgerBox: ForgerBox): MerkleTree = {
-    val leave: Array[Byte] = genesisForgerBox.id()
+  private def buildGenesisMerkleTree(genesisForgingStakeInfo: ForgingStakeInfo): MerkleTree = {
+    val leave: Array[Byte] = genesisForgingStakeInfo.hash
 
     val initialLeaves = Seq.fill(merkleTreeSize)(leave)
     MerkleTree.createMerkleTree(initialLeaves.asJava)
@@ -451,14 +443,14 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     val ommersMerkleRootHash: Array[Byte] = SidechainBlock.calculateOmmersMerkleRootHash(Seq())
 
     val owner: PrivateKey25519 = forgingData.key
-    val forgerBox = forgingData.forgerBox
+    val forgingStake = forgingData.forgingStakeInfo
 
 
     val unsignedBlockHeader = SidechainBlockHeader(
       SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      forgerBox,
+      forgingStake,
       merklePath,
       vrfProof,
       sidechainTransactionsMerkleRootHash,
@@ -474,7 +466,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       SidechainBlock.BLOCK_VERSION,
       parentId,
       timestamp,
-      forgerBox,
+      forgingStake,
       merklePath,
       vrfProof,
       sidechainTransactionsMerkleRootHash,

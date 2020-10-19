@@ -4,14 +4,14 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
-import com.horizen.box.{RegularBox, WithdrawalRequestBox, _}
+import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
-import com.horizen.storage.SidechainStateStorage
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
@@ -38,6 +38,7 @@ class SidechainStateTest
 {
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+  val mockedStateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
 
   val boxList: ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
@@ -112,7 +113,12 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    // Mock get and update methods of StateForgerBoxStorage
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateForgerBoxStorage.getForgerBox(ArgumentMatchers.any[Array[Byte]]())).thenReturn(None)
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -238,7 +244,10 @@ class SidechainStateTest
     stateVersion += getVersion
     transactionList.clear()
     transactionList += getRegularTransaction(2, 2, Seq(), 2)
-    val forgingStakes = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).map(fb => ForgingStakeInfo(fb.id(), fb.value()))
+    val forgerBoxes = transactionList.head.newBoxes().asScala
+      .view
+      .filter(_.isInstanceOf[ForgerBox])
+      .map(_.asInstanceOf[ForgerBox])
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedStateStorage.lastVersionId)
@@ -255,7 +264,6 @@ class SidechainStateTest
       ArgumentMatchers.any[Set[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]](),
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
-      ArgumentMatchers.any[Seq[ForgingStakeInfo]](),
       ArgumentMatchers.any[ConsensusEpochNumber](),
       ArgumentMatchers.any[Option[WithdrawalEpochCertificate]]()))
       .thenAnswer( answer => {
@@ -263,16 +271,14 @@ class SidechainStateTest
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
         val boxToUpdate = answer.getArgument[Set[SidechainTypes#SCB]](2)
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
-        val withdrawalRequestAppendSeq = answer.getArgument[Seq[WithdrawalRequestBox]](4)
-        val forgingStakesToAppendSeq = answer.getArgument[Seq[ForgingStakeInfo]](5)
-        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](6)
-        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](7)
+        val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
+        val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
+        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
-        // Verify Forging stakes data
+        // Verify consensus epoch number
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
-        assertEquals("Forging stake seq should be different.", forgingStakes, forgingStakesToAppendSeq)
         // Verify certificate presence
         assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
 
@@ -292,6 +298,23 @@ class SidechainStateTest
 
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo)
       .thenAnswer(answer => None)
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId)
+      .thenAnswer(answer => {Some(stateVersion.last)})
+
+    Mockito.when(mockedStateForgerBoxStorage.update(
+      ArgumentMatchers.any[ByteArrayWrapper](),
+      ArgumentMatchers.any[Seq[ForgerBox]](),
+      ArgumentMatchers.any[Set[ByteArrayWrapper]]()
+    )).thenAnswer( answer => {
+      val version = answer.getArgument[ByteArrayWrapper](0)
+      val forgerBoxToUpdate = answer.getArgument[ListBuffer[ForgerBox]](1)
+      val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](2)
+
+      assertEquals("ForgerBox seq should be different.", forgerBoxes, forgerBoxToUpdate)
+
+      Success(mockedStateForgerBoxStorage)
+    })
 
     val mockedBlock = mock[SidechainBlock]
 
@@ -326,7 +349,7 @@ class SidechainStateTest
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
