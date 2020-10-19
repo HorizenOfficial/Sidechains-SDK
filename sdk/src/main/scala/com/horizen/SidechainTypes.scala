@@ -49,4 +49,7 @@ trait SidechainTypes {
 
   implicit def certifierRightBoxSetToScbSet(bs: Set[CertifierRightBox]): Set[SCB] = bs.asInstanceOf[Set[SCB]]
 
+  implicit def scbToForgerBox(b: SCB): ForgerBox = b.asInstanceOf[ForgerBox]
+
+  implicit def scbToWithdrawalRequestBox(b: SCB): WithdrawalRequestBox = b.asInstanceOf[WithdrawalRequestBox]
 }

@@ -58,7 +58,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     Seq(),
     Seq(),
     forgerBoxMetadata.blockSignSecret,
-    forgingBox,
+    forgerBoxMetadata.forgingStakeInfo,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
     sidechainTransactionsCompanion,

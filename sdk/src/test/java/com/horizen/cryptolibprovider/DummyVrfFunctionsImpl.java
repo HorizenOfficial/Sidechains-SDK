@@ -6,7 +6,7 @@ import com.horizen.utils.Utils;
 import java.math.BigInteger;
 import java.util.*;
 
-public class VrfFunctionsImpl implements VrfFunctions {
+public class DummyVrfFunctionsImpl implements VrfFunctions {
     private static int vrfLength = 32; //sha256HashLen
 
     @Override

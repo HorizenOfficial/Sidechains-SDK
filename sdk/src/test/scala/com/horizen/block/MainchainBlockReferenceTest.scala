@@ -105,46 +105,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   @Test
-  @Ignore //Will be fixed and enabled again in future
-  def blockWithSCSupportParsingOnTestnet3(): Unit = {
-    val scIdHex = "1111111111111111111111111111111111111111111111111111111111111111"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
-    val params = TestNetParams(scId.data)
-
-    // Test 1: Block #530292 on testnet3 (with sc support)
-    val mcBlockHex = Source.fromResource("mcblock530290_testnet3").getLines().next()
-    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params)
-
-    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
-    val mcblock = mcblockTry.get
-
-    assertEquals("Block Hash is different.", "002061121ddac5438c6de656d046e80d3a044d06bac87c2501afc69eaff6fafa", mcblock.header.hashHex)
-    assertEquals("Block version = 536870912 expected.", 536870912, mcblock.header.version)
-    assertEquals("Hash of previous block is different.", "006d20987ff5322196a1e5f530d52ed5c0b44750f4d1997daeda6a6c128ee14f", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "68bc6ede2f15ebb01dd6c9ff2c6dfcbe9ad824f4ec82264e4d38a8860af1d065", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
-    assertEquals("ScTxCommitment hash is different.", "0000000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(mcblock.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1572469894, mcblock.header.time)
-    assertEquals("Block PoW bits is different.", "1f6c7b5d", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
-    assertEquals("Block nonce is different.", "0000cefd46238a6721302931021ee4b444e54c55adad68229872877b49c10012", BytesUtils.toHexString(mcblock.header.nonce))
-    assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
-    mcblock.semanticValidity(params) match {
-      case Success(_) =>
-      case Failure(e) => jFail(s"Block expected to be semantically valid, instead: ${e.getMessage}")
-    }
-
-
-    assertFalse("New Block occurred without SC mentioned inside, MProof expected to be undefined.",
-      mcblock.data.mProof.isDefined)
-    assertFalse("New Block occurred without SC mentioned inside, MC2SCAggTx expected to be undefined.",
-      mcblock.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertFalse("New Block occurred without SC mentioned inside, Certificate expected to be undefined.",
-      mcblock.data.withdrawalEpochCertificate.isDefined)
-  }
-
-  @Test
   def blockWithoutSidechains(): Unit = {
-    val scIdHex = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000"
     val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
 
     val params = RegTestParams(scId.data)
@@ -163,28 +125,28 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof for left neighbour.", mcblock.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock.data.proofOfNoData._2.isEmpty)
 
-    assertEquals("Block Hash is different.", "08c776943ee8b41e9b27bdcfcdfb508b36cd6bc04338e07e45310814c4cb7013", mcblock.header.hashHex)
-    assertEquals("Block version = 3 expected.", 3, mcblock.header.version)
-    assertEquals("Hash of previous block is different.", "02d7cd7df9aabfe60fa334c4a5cec864c1e62661bdac6c67d06fe3b4bf07826e", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "77dabfb11d94e29833477ccd3d6b09b582e4d0020c59c3de2b09d54bd6839120", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
+    assertEquals("Block Hash is different.", "036af1a575b50d4c4fa97e23bc9be952846dbf1e10379c3a825624a5448904c6", mcblock.header.hashHex)
+    assertEquals("Block version = 3 expected.", 536870912, mcblock.header.version)
+    assertEquals("Hash of previous block is different.", "013d0296d6bff748f2e45a8a63fcbf5796d458d4c35ecb933e27567121acb9b8", BytesUtils.toHexString(mcblock.header.hashPrevBlock))
+    assertEquals("Merkle root hash is different.", "490ed0b1b4ccc9f92a49744173fbf9e0a85805f804d6c2171eb09e61b15db3cb", BytesUtils.toHexString(mcblock.header.hashMerkleRoot))
     assertEquals("SCMap Merkle root hash is different.", "0000000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(mcblock.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1584793090, mcblock.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
-    assertEquals("Block nonce is different.", "0000a2c6b51d11ca740936a888c9ade2539df60ce1593506711ebb5a8ef10007", BytesUtils.toHexString(mcblock.header.nonce))
+    assertEquals("Block creation time is different", 1601294955, mcblock.header.time)
+    assertEquals("Block PoW bits is different.", "200f0f04", BytesUtils.toHexString(Ints.toByteArray(mcblock.header.bits)))
+    assertEquals("Block nonce is different.", "0000470ba808e69f91bf2d8431209928ece5d98f56f0caa0ed49fcb5e74e0019", BytesUtils.toHexString(mcblock.header.nonce))
     assertEquals("Block equihash solution length is wrong.", params.EquihashSolutionLength, mcblock.header.solution.length)
     assertTrue("Block expected to be semantically valid", mcblock.semanticValidity(params).isSuccess)
   }
 
-  // fix test and uncomment
   @Test
-  @Ignore
-  def blockCreate3Sidechains(): Unit = {
-    // Test: parse MC block with tx version -4 with creation of 3 sidechains.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_create_3_sidechains").getLines().next()
+  def blockWith3Sidechains(): Unit = {
+    // Test: parse MC block with tx version -4 with 3 sidechains.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_3_sidechains").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
-    //Check for sidechain 1
-    val scIdHex1 = "00000000000000000000000000000000000000000000000000000000deadbeeb"
+
+    // Test 1: Check for the leftmost sidechain mentioned in the block.
+    // We expect to get a MainchainBlockReference with AggTx and proof of presence.
+    val scIdHex1 = "7f056e570ede40aee29236ada94740f01bcbba90fd4c889f6ddea8f1223a4105"
     val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
 
     val params1 = RegTestParams(scId1.data)
@@ -202,26 +164,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
 
-    //Check sidechain creation transaction.
-    val aggTx1 = mcblock1.data.sidechainRelatedAggregatedTransaction.get
-    val outputs1 = aggTx1.mc2scTransactionsOutputs()
-    assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx1.unlockers().size())
-    assertEquals("MC2SCAggTx outputs size is different", 1,outputs1.size())
 
-    assertTrue("Output type must be SidechainCreation.", outputs1.get(0).isInstanceOf[SidechainCreation])
-
-    assertEquals("Block Hash is different.", "0ce5fd05abc00bf27466efca4a4fb8ac475bff2c7463dd6d0655e2754c282aa2", mcblock1.header.hashHex)
-    assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "09534fc8c782a1bbe1acea143bb8a3438849ea2a4a8e2405e08b7ffa6bd7ccd3", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "fceec4f34d30346f40f3f47591d0ae38a4a05b4226b93afea47b5b4f3b7030c9", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "93ae3630ae1ebb8ce132a9ce47e15185f37ef081c8c8ff2c75c6868129e5d651", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1590737352, mcblock1.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f03", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "00003b5733c7aebe785177b66660c70390c756c849c2d08dea4a0fa277230021", BytesUtils.toHexString(mcblock1.header.nonce))
-    assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
-
-    //Check for sidechain 2
-    val scIdHex2 = "00000000000000000000000000000000000000000000000000000000deadbeed"
+    // Test 2: Check for the sidechain in the middle, that is mentioned in the block.
+    // We expect to get a MainchainBlockReference with AggTx and proof of presence.
+    val scIdHex2 = "9b82a324500a432279f52083bcf1065b2af17b4c91c7f6887fa7b3606e2780bb"
     val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
 
     val params2 = RegTestParams(scId2.data)
@@ -239,14 +185,10 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
 
-    //Check sidechain creation transaction.
-    val aggTx2 = mcblock2.data.sidechainRelatedAggregatedTransaction.get
-    val outputs2 = aggTx2.mc2scTransactionsOutputs()
-    assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx2.unlockers().size())
-    assertEquals("MC2SCAggTx outputs size is different", 1,outputs2.size())
 
-    //Check for sidechain 3
-    val scIdHex3 = "00000000000000000000000000000000000000000000000000000000deadbeef"
+    // Test 3:  Check for the rightmost sidechain mentioned in the block.
+    // We expect to get a MainchainBlockReference with AggTx and proof of presence.
+    val scIdHex3 = "0539ad367573d166fc70ffb0e961552bb3923ee97c6fc0cda9eb77cfff338ef9"
     val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
 
     val params3 = RegTestParams(scId3.data)
@@ -264,177 +206,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
 
-    //Check sidechain creation transaction.
-    val aggTx3 = mcblock3.data.sidechainRelatedAggregatedTransaction.get
-    val outputs3 = aggTx3.mc2scTransactionsOutputs()
-    assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx3.unlockers().size())
-    assertEquals("MC2SCAggTx outputs size is different", 1,outputs3.size())
-  }
 
-  // to do: fix test and uncomment
-  @Ignore
-  @Test
-  def blockForwardTransfer2Sidechains(): Unit = {
-
-    // Test: parse MC block with tx version -4 with forward transfers to two sidechains and no operation for one sidechain.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_forward_transfer_2_sidechains").getLines().next()
-    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-
-    //Check for sidechain 1
-    val scIdHex1 = "00000000000000000000000000000000000000000000000000000000deadbeeb"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
-
-    val params1 = RegTestParams(scId1.data)
-
-    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
-
-    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
-    val mcblock1 = mcblockTry1.get
-
-    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
-
-    assertEquals("Block Hash is different.", "015ad63f2d374defa22ad4c485504b303f051ec44f48f10bc7574bbe2874e9b4", mcblock1.header.hashHex)
-    assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "0ce5fd05abc00bf27466efca4a4fb8ac475bff2c7463dd6d0655e2754c282aa2", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "feab56386d33ea0a0f7b2fa84b0a860e4041d7b9bb9807e3f31d19abf85ef24a", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "1caf818bd855dfc7937fe438f607bea0f59a49ce6703dcf22a1045134d3ff2f1", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1590737709, mcblock1.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "00006d2a761bcec1123b6cfea7d9425182c18c494f03f1c695a4295185e7000e", BytesUtils.toHexString(mcblock1.header.nonce))
-    assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
-
-    assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock1.data.withdrawalEpochCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
-
-    //Check forward transfer transaction.
-    val aggTx1 = mcblock1.data.sidechainRelatedAggregatedTransaction.get
-    val outputs1 = aggTx1.mc2scTransactionsOutputs()
-    assertEquals("MC2SCAggTx unlockers size is different", 0, aggTx1.unlockers().size())
-    assertEquals("MC2SCAggTx outputs size is different", 1,outputs1.size())
-
-    assertTrue("Output type must be SidechainCreation.", outputs1.get(0).isInstanceOf[ForwardTransfer])
-
-    //Check for sidechain 2
-    val scIdHex2 = "00000000000000000000000000000000000000000000000000000000deadbeed"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
-
-    val params2 = RegTestParams(scId2.data)
-
-    val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2)
-
-    assertTrue("Block expected to be parsed", mcblockTry2.isSuccess)
-    val mcblock2 = mcblockTry2.get
-
-    assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
-
-    assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must not contain certificate.", mcblock2.data.withdrawalEpochCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock2.data.mProof.isEmpty)
-    assertTrue("Block must contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isDefined)
-    assertTrue("Block must contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isDefined)
-
-    //Check for sidechain 3
-    val scIdHex3 = "00000000000000000000000000000000000000000000000000000000deadbeef"
-    val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
-
-    val params3 = RegTestParams(scId3.data)
-
-    val mcblockTry3 = MainchainBlockReference.create(mcBlockBytes, params3)
-
-    assertTrue("Block expected to be parsed", mcblockTry3.isSuccess)
-    val mcblock3 = mcblockTry3.get
-
-    assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
-
-    assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must not contain certificate.", mcblock3.data.withdrawalEpochCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
-
-  }
-
-  @Ignore
-  @Test
-  def blockBackwardTransfer3Sidechains(): Unit = {
-    // Test: parse MC block with tx version -4 with backward transfers to from 3 sidechains and forward transfer to 1 sidechain.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_forward_transfer_3_backward_transfer_2").getLines().next()
-    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-
-    //Check for sidechain 1
-    val scIdHex1 = "00000000000000000000000000000000000000000000000000000000deadbeeb"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
-
-    val params1 = RegTestParams(scId1.data)
-
-    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
-
-    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
-    val mcblock1 = mcblockTry1.get
-
-    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
-
-    assertEquals("Block Hash is different.", "052245ab070530d3fe1d8a0a2d046a44e6832aa8e18b27abe06ba050b86e15f5", mcblock1.header.hashHex)
-    assertEquals("Block version = 3 expected.", 3, mcblock1.header.version)
-    assertEquals("Hash of previous block is different.", "0d1137bc2a9091f467c4bf6aba338e9d6e33063f2c4747ac5a9410b89bddbb9e", BytesUtils.toHexString(mcblock1.header.hashPrevBlock))
-    assertEquals("Merkle root hash is different.", "020b25b78bce05dd1db07a0cfdcf5004060f87df6b70460ad4ed2da0641e7faa", BytesUtils.toHexString(mcblock1.header.hashMerkleRoot))
-    assertEquals("SCMap Merkle root hash is different.", "322c0573aef56746b906bb2465447c4ac99a6893b941fdf617a250427980694b", BytesUtils.toHexString(mcblock1.header.hashScTxsCommitment))
-    assertEquals("Block creation time is different", 1585805421, mcblock1.header.time)
-    assertEquals("Block PoW bits is different.", "200f0f02", BytesUtils.toHexString(Ints.toByteArray(mcblock1.header.bits)))
-    assertEquals("Block nonce is different.", "0000031e3c4a69efb24131bc539edec01d1d478034161273b74808be3bc7003b", BytesUtils.toHexString(mcblock1.header.nonce))
-    assertEquals("Block equihash solution length is wrong.", params1.EquihashSolutionLength, mcblock1.header.solution.length)
-
-    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.withdrawalEpochCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
-
-    //Check for sidechain 2
-    val scIdHex2 = "00000000000000000000000000000000000000000000000000000000deadbeed"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
-
-    val params2 = RegTestParams(scId2.data)
-
-    val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2)
-
-    assertTrue("Block expected to be parsed", mcblockTry2.isSuccess)
-    val mcblock2 = mcblockTry2.get
-
-    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
-
-    assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock2.data.withdrawalEpochCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
-
-    //Check for sidechain 3
-    val scIdHex3 = "00000000000000000000000000000000000000000000000000000000deadbeef"
-    val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
-
-    val params3 = RegTestParams(scId3.data)
-
-    val mcblockTry3 = MainchainBlockReference.create(mcBlockBytes, params3)
-
-    assertTrue("Block expected to be parsed", mcblockTry3.isSuccess)
-    val mcblock3 = mcblockTry3.get
-
-    assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
-
-    assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
-    assertTrue("Block must contain certificate.", mcblock3.data.withdrawalEpochCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
-
-    //Check for non-existing sidechain, leftmost
-    val scIdHex4 = "00000000000000000000000000000000000000000000000000000000deadbeea"
+    // Test 4: Check for the sidechain that is not mentioned in the block and has a leftmost neighbour.
+    // We expect to get a MainchainBlockReference with only right neighbour proof of no data.
+    val scIdHex4 = "0000000000000000000000000000000000000000000000000000000000000000"
     val scId4 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex4))
-
     val params4 = RegTestParams(scId4.data)
 
     val mcblockTry4 = MainchainBlockReference.create(mcBlockBytes, params4)
@@ -450,10 +226,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof for left neighbour.", mcblock4.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must contain proof for right neighbour.", mcblock4.data.proofOfNoData._2.isDefined)
 
-    //Check for non-existing sidechain, rightmost
-    val scIdHex5 = "00000000000000000000000000000000000000000000000000000000deadbeff"
-    val scId5 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex5))
 
+    // Test 5: Check for the sidechain that is not mentioned in the block and has a rightmost neighbour.
+    // We expect to get a MainchainBlockReference with only left neighbour proof of no data.
+    val scIdHex5 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    val scId5 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex5))
     val params5 = RegTestParams(scId5.data)
 
     val mcblockTry5 = MainchainBlockReference.create(mcBlockBytes, params5)
@@ -468,5 +245,73 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain proof.", mcblock5.data.mProof.isEmpty)
     assertTrue("Block must contain proof for left neighbour.", mcblock5.data.proofOfNoData._1.isDefined)
     assertTrue("Block must not contain proof for right neighbour.", mcblock5.data.proofOfNoData._2.isEmpty)
+
+
+    // Test 6: Check for the sidechain that is not mentioned in the block and has a both left and right neighbours.
+    // We expect to get a MainchainBlockReference with left and right neighbour proofs of no data.
+    // Take the value near to scIdHex2. Quite enough condition to have id, where, scIdHex1 < id < scIdHex2
+    val scIdHex6 = "0000" + scIdHex2.substring(4)
+    val scId6 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex6))
+    val params6 = RegTestParams(scId6.data)
+
+    val mcblockTry6 = MainchainBlockReference.create(mcBlockBytes, params6)
+
+    assertTrue("Block expected to be parsed", mcblockTry6.isSuccess)
+    val mcblock6 = mcblockTry6.get
+
+    assertTrue("Block expected to be semantically valid", mcblock6.semanticValidity(params6).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock6.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock6.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock6.data.mProof.isEmpty)
+    assertTrue("Block must contain proof for left neighbour.", mcblock6.data.proofOfNoData._1.isDefined)
+    assertTrue("Block must contain proof for right neighbour.", mcblock6.data.proofOfNoData._2.isDefined)
+
+
+    // Test 7: Check for the sidechain that is not mentioned in the block and has a both left and right neighbours.
+    // We expect to get a MainchainBlockReference with left and right neighbour proofs of no data.
+    // Take the value near to scIdHex1. Quite enough condition to have id, where, scIdHex1 < id < scIdHex2
+    val scIdHex7 = "ffff" + scIdHex1.substring(4)
+    val scId7 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex7))
+    val params7 = RegTestParams(scId7.data)
+
+    val mcblockTry7 = MainchainBlockReference.create(mcBlockBytes, params7)
+
+    assertTrue("Block expected to be parsed", mcblockTry7.isSuccess)
+    val mcblock7 = mcblockTry7.get
+
+    assertTrue("Block expected to be semantically valid", mcblock7.semanticValidity(params6).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock7.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock7.data.withdrawalEpochCertificate.isEmpty)
+    assertTrue("Block must not contain proof.", mcblock7.data.mProof.isEmpty)
+    assertTrue("Block must contain proof for left neighbour.", mcblock7.data.proofOfNoData._1.isDefined)
+    assertTrue("Block must contain proof for right neighbour.", mcblock7.data.proofOfNoData._2.isDefined)
+  }
+
+  @Test
+  def blockWithBackwardTransfer(): Unit = {
+    // Test: parse MC block with tx version -4 with backward transfer.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_backward_transfer").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+
+    //Check for sidechain 1
+    val scIdHex1 = "526787a277076420ee74acdbb0d90a0d8f7ab4a04559bd9698b1007927c97a8f"
+    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+
+    val params1 = RegTestParams(scId1.data)
+
+    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
+
+    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
+    val mcblock1 = mcblockTry1.get
+
+    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.withdrawalEpochCertificate.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
+    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
+    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
   }
 }

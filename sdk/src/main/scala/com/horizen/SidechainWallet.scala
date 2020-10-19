@@ -5,7 +5,7 @@ import java.util.{List => JList, Optional => JOptional}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, ForgerBox}
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.proposition.Proposition
@@ -13,15 +13,13 @@ import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
 import scorex.core.VersionTag
 import com.horizen.utils._
 import scorex.util.ModifierId
 
 import scala.util.Try
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.compat.java8.OptionConverters._
 
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -206,21 +204,25 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   override def walletSeed(): Array[Byte] = seed
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
-    val merkleTreeLeaves = epochInfo.forgersBoxIds.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
+    val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes
-    val forgerBoxMerklePathInfoSeq = forgingBoxesInfoStorage.getForgerBoxes.getOrElse(Seq()).map(forgerBox => {
-      ForgerBoxMerklePathInfo(
-        forgerBox,
-        epochInfo.forgersBoxIds.getMerklePathForLeaf(merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgerBox.id())))
-      )
-    })
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
+      ForgingStakeInfo.fromForgerBoxes(forgingBoxesInfoStorage.getForgerBoxes.getOrElse(Seq())).flatMap(forgingStakeInfo => {
+        merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
+          case -1 => None // May occur in case if Wallet doesn't contain information about all boxes for given blockSignKey and vrfKey
+          case index => Some(ForgingStakeMerklePathInfo(
+            forgingStakeInfo,
+            epochInfo.forgingStakeInfoTree.getMerklePathForLeaf(index)
+          ))
+        }
+      })
 
-    forgingBoxesInfoStorage.updateForgerBoxMerklePathInfo(epochInfo.epoch, forgerBoxMerklePathInfoSeq).get
+    forgingBoxesInfoStorage.updateForgingStakeMerklePathInfo(epochInfo.epoch, forgingStakeMerklePathInfoSeq).get
     this
   }
 
-  def getForgerBoxMerklePathInfoOpt(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
+  def getForgingStakeMerklePathInfoOpt(requestedEpoch: ConsensusEpochNumber): Option[Seq[ForgingStakeMerklePathInfo]] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
@@ -229,7 +231,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       case epoch => ConsensusEpochNumber @@ (epoch - 2)
     }
 
-    forgingBoxesInfoStorage.getForgerBoxMerklePathInfoForEpoch(storedConsensusEpochNumber)
+    forgingBoxesInfoStorage.getForgingStakeMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
 
 }
