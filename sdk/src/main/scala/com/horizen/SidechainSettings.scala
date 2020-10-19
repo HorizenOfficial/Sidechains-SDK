@@ -9,8 +9,6 @@ case class WebSocketSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
                              reconnectionMaxAttempts: Int,
-                             zencliCommandLine: String,
-                             zencliCommandLineArguments: Option[Seq[String]] = None,
                              allowNoConnectionInRegtest: Boolean = true // In Regtest allow to forge new blocks without connection to MC node, for example.
                             )
 

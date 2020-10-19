@@ -121,7 +121,8 @@ case class MainchainBlockReference(
 
         data.proofOfNoData._1 match {
           case Some(leftNeighbourProof) =>
-            if (new ByteArrayWrapper(leftNeighbourProof.sidechainId) >= sidechainId)
+            // Compare in little-endian like in MC
+            if (new ByteArrayWrapper(BytesUtils.reverseBytes(leftNeighbourProof.sidechainId)) >= new ByteArrayWrapper(BytesUtils.reverseBytes(sidechainId.data)))
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} left neighbour sidechain id is after current sidechain id")
             val merkleRoot = leftNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(leftNeighbourProof))
             if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))
@@ -131,7 +132,8 @@ case class MainchainBlockReference(
 
         data.proofOfNoData._2 match {
           case Some(rightNeighbourProof) =>
-            if (new ByteArrayWrapper(rightNeighbourProof.sidechainId) <= sidechainId)
+            // Compare in little-endian like in MC
+            if (new ByteArrayWrapper(BytesUtils.reverseBytes(rightNeighbourProof.sidechainId)) <= new ByteArrayWrapper(BytesUtils.reverseBytes(sidechainId.data)))
               throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} right neighbour sidechain id is before current sidechain id")
             val merkleRoot = rightNeighbourProof.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rightNeighbourProof))
             if (!util.Arrays.equals(header.hashScTxsCommitment, merkleRoot))

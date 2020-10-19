@@ -7,7 +7,7 @@ import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
-import com.horizen.fixtures.sidechainblock.generation.{ForgerBoxCorruptionRules, GenerationRules, SidechainBlocksGenerator}
+import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.TestNetParams
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -150,32 +150,18 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
-    /////////// Forger box verification /////////////////
-    println("Test blockGeneratedWithIncorrectForgerBoxBlockSignProposition")
-    val blockGeneratedWithIncorrectForgerBoxBlockSignProposition = generateBlockWithIncorrectForgerBoxBlockSignProposition(lastGenerator)
-    history.append(blockGeneratedWithIncorrectForgerBoxBlockSignProposition).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectForgerBoxBlockSignProposition.id} is inconsistent to stakes merkle root hash"))
+    /////////// Forging stake verification /////////////////
+    println("Test generateBlockWithIncorrectForgingStakeBlockSignProposition")
+    val blockGeneratedWithIncorrectForgingStakeBlockSignProposition = generateBlockWithIncorrectForgingStakeBlockSignProposition(lastGenerator)
+    history.append(blockGeneratedWithIncorrectForgingStakeBlockSignProposition).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectForgingStakeBlockSignProposition.id} is inconsistent to stakes merkle root hash"))
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
-    println("Test blockGeneratedWithIncorrectForgerBoxProposition")
-    val blockGeneratedWithIncorrectForgerBoxProposition = generateBlockWithIncorrectForgerBoxProposition(lastGenerator)
-    history.append(blockGeneratedWithIncorrectForgerBoxProposition).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectForgerBoxProposition.id} is inconsistent to stakes merkle root hash"))
-      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }
-
-    println("Test blockGeneratedWithIncorrectForgerNonce")
-    val blockGeneratedWithIncorrectForgerNonce = generateBlockWithIncorrectForgerBoxNonce(lastGenerator)
-    history.append(blockGeneratedWithIncorrectForgerNonce).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectForgerNonce.id} is inconsistent to stakes merkle root hash"))
-      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }
-
-    println("Test blockGeneratedWithIncorrectValue")
-    val blockGeneratedWithIncorrectValue = generateBlockWithIncorrectForgerBoxValue(lastGenerator)
-    history.append(blockGeneratedWithIncorrectValue).failed.get match {
-      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forger box merkle path in block ${blockGeneratedWithIncorrectValue.id} is inconsistent to stakes merkle root hash"))
+    println("Test blockGeneratedWithIncorrectStakeAmount")
+    val blockGeneratedWithIncorrectStakeAmount = generateBlockWithIncorrectForgingStakeAmount(lastGenerator)
+    history.append(blockGeneratedWithIncorrectStakeAmount).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectStakeAmount.id} is inconsistent to stakes merkle root hash"))
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
 
@@ -234,9 +220,9 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   def generateBlockWithIncorrectVrfPublicKey(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(vrfPubKeyChanged = true)
+    val forgingStakeCorruption = ForgingStakeCorruptionRules(vrfPubKeyChanged = true)
     val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
+      generationRules.copy(corruption = generationRules.corruption.copy(forgingStakeCorruptionRules = Some(forgingStakeCorruption)))
     generateBlock(corruptedRules, generator)._2
   }
 
@@ -247,35 +233,19 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     generateBlock(corruptedRules, generator)._2
   }
 
-  def generateBlockWithIncorrectForgerBoxBlockSignProposition(generator: SidechainBlocksGenerator): SidechainBlock = {
+  def generateBlockWithIncorrectForgingStakeBlockSignProposition(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(blockSignPropositionChanged = true)
+    val forgingStakeCorruption = ForgingStakeCorruptionRules(blockSignPropositionChanged = true)
     val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
+      generationRules.copy(corruption = generationRules.corruption.copy(forgingStakeCorruptionRules = Some(forgingStakeCorruption)))
     generateBlock(corruptedRules, generator)._2
   }
 
-  def generateBlockWithIncorrectForgerBoxProposition(generator: SidechainBlocksGenerator): SidechainBlock = {
+  def generateBlockWithIncorrectForgingStakeAmount(generator: SidechainBlocksGenerator): SidechainBlock = {
     val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(propositionChanged = true)
+    val forgingStakeCorruption = ForgingStakeCorruptionRules(stakeAmountShift = 1)
     val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
-    generateBlock(corruptedRules, generator)._2
-  }
-
-  def generateBlockWithIncorrectForgerBoxNonce(generator: SidechainBlocksGenerator): SidechainBlock = {
-    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(nonceShift = 1)
-    val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
-    generateBlock(corruptedRules, generator)._2
-  }
-
-  def generateBlockWithIncorrectForgerBoxValue(generator: SidechainBlocksGenerator): SidechainBlock = {
-    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes)
-    val forgerBoxCorruption = ForgerBoxCorruptionRules(valueShift = 1)
-    val corruptedRules =
-      generationRules.copy(corruption = generationRules.corruption.copy(forgerBoxCorruptionRules = Some(forgerBoxCorruption)))
+      generationRules.copy(corruption = generationRules.corruption.copy(forgingStakeCorruptionRules = Some(forgingStakeCorruption)))
     generateBlock(corruptedRules, generator)._2
   }
 

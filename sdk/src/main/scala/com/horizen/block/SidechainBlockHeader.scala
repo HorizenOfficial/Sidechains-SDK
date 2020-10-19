@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
+import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof}
@@ -26,8 +27,8 @@ case class SidechainBlockHeader(
                                  version: Block.Version,
                                  @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) parentId: ModifierId,
                                  timestamp: Block.Timestamp,
-                                 forgerBox: ForgerBox,
-                                 @JsonSerialize(using = classOf[MerklePathSerializer]) forgerBoxMerklePath: MerklePath,
+                                 forgingStakeInfo: ForgingStakeInfo,
+                                 @JsonSerialize(using = classOf[MerklePathSerializer]) forgingStakeMerklePath: MerklePath,
                                  vrfProof: VrfProof,
                                  sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                  mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
@@ -47,9 +48,9 @@ case class SidechainBlockHeader(
     Bytes.concat(
       idToBytes(parentId),
       Longs.toByteArray(timestamp),
-      forgerBox.id(),
+      forgingStakeInfo.hash,
       vrfProof.bytes, // TO DO: is it ok or define vrfProof.id() ?
-      forgerBoxMerklePath.bytes(), // TO DO: is it ok?
+      forgingStakeMerklePath.bytes(),
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
@@ -69,13 +70,13 @@ case class SidechainBlockHeader(
     if(version != SidechainBlock.BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
     // check, that signature is valid
-    if(!signature.isValid(forgerBox.blockSignProposition(), messageToSign))
+    if(!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
   }
 
 
   override def toString =
-    s"SidechainBlockHeader($id, $version, $timestamp, $forgerBox, $vrfProof, ${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, ${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
+    s"SidechainBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, ${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, ${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
 
@@ -87,13 +88,13 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     w.putLong(obj.timestamp)
 
-    val forgerBoxBytes = ForgerBoxSerializer.getSerializer.toBytes(obj.forgerBox)
-    w.putInt(forgerBoxBytes.length)
-    w.putBytes(forgerBoxBytes)
+    val forgingStakeInfoBytes = ForgingStakeInfoSerializer.toBytes(obj.forgingStakeInfo)
+    w.putInt(forgingStakeInfoBytes.length)
+    w.putBytes(forgingStakeInfoBytes)
 
-    val forgerBoxMerklePathBytes = obj.forgerBoxMerklePath.bytes()
-    w.putInt(forgerBoxMerklePathBytes.length)
-    w.putBytes(forgerBoxMerklePathBytes)
+    val forgingStakeMerklePathBytes = obj.forgingStakeMerklePath.bytes()
+    w.putInt(forgingStakeMerklePathBytes.length)
+    w.putBytes(forgingStakeMerklePathBytes)
 
     val vrfProofBytes = obj.vrfProof.bytes // TODO: replace with VRFProofSerializer... later
     w.putBytes(vrfProofBytes)
@@ -118,11 +119,11 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     val timestamp: Block.Timestamp = r.getLong()
 
-    val forgerBoxBytesLength: Int = r.getInt()
-    val forgerBox: ForgerBox = ForgerBoxSerializer.getSerializer.parseBytes(r.getBytes(forgerBoxBytesLength))
+    val forgingStakeInfoBytesLength: Int = r.getInt()
+    val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfoSerializer.parseBytes(r.getBytes(forgingStakeInfoBytesLength))
 
-    val forgerBoxMerklePathBytesLength: Int = r.getInt()
-    val forgerBoxMerklePath: MerklePath = MerklePath.parseBytes(r.getBytes(forgerBoxMerklePathBytesLength))
+    val forgingStakeMerklePathBytesLength: Int = r.getInt()
+    val forgingStakeMerkle: MerklePath = MerklePath.parseBytes(r.getBytes(forgingStakeMerklePathBytesLength))
 
     val vrfProofBytesLength: Int = CryptoLibProvider.vrfFunctions.vrfProofLen()
     val vrfProof: VrfProof = VrfProof.parse(r.getBytes(vrfProofBytesLength))
@@ -142,8 +143,8 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
       version,
       parentId,
       timestamp,
-      forgerBox,
-      forgerBoxMerklePath,
+      forgingStakeInfo,
+      forgingStakeMerkle,
       vrfProof,
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
