@@ -20,7 +20,7 @@ abstract public class SidechainNoncedTransaction<P extends Proposition, B extend
 
     // Returns a list of propositions for all output boxes which should be created from output data in a current transaction
     @Override
-    final public List<P> newBoxesPropositions(){
+    final protected List<P> newBoxesPropositions(){
         if(newBoxesPropositions == null){
             newBoxesPropositions = getOutputData().stream().map(NoncedBoxData::proposition).collect(Collectors.toList());
         }

@@ -53,7 +53,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
         return BytesUtils.getLong(hash, 0);
     }
 
-    public abstract List<P> newBoxesPropositions();
+    protected abstract List<P> newBoxesPropositions();
 
     public abstract boolean transactionSemanticValidity();
 

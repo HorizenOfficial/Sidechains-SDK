@@ -9,6 +9,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 // AbstractRegularTransaction is an abstract class that was designed to work with RegularBoxes only.
@@ -23,6 +24,8 @@ public abstract class AbstractRegularTransaction
 
     protected final long fee;
     protected final long timestamp;
+
+    List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> allBoxesData;
 
     protected static ListSerializer<Signature25519> regularBoxProofsSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
@@ -54,6 +57,21 @@ public abstract class AbstractRegularTransaction
         this.timestamp = timestamp;
     }
 
+    abstract protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getCustomOutputData();
+
+    @Override
+    final public List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
+        if(allBoxesData == null){
+            allBoxesData = new ArrayList<>();
+            // Add own regular boxes data
+            for(RegularBoxData regularBoxData: outputRegularBoxesData){
+                allBoxesData.add((NoncedBoxData) regularBoxData);
+            }
+            // Add custom boxes data from inheritors
+            allBoxesData.addAll(getCustomOutputData());
+        }
+        return Collections.unmodifiableList(allBoxesData);
+    }
 
     // Box ids to open and proofs is expected to be aggregated together and represented as Unlockers.
     // Important: all boxes which must be opened as a part of the Transaction MUST be represented as Unlocker.
