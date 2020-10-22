@@ -8,6 +8,7 @@ updates:
     target-branch: "dev"
     reviewers:
       - "i-Alex"
+      - "abi87"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
     open-pull-requests-limit: 5
