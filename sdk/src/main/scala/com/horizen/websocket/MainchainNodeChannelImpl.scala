@@ -1,5 +1,6 @@
 package com.horizen.websocket
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
+import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 
@@ -13,12 +14,16 @@ case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) exte
 case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
+case class BackwardTransfer(pubkeyhash: String, amount: String)
+case class SendCertificateRequestPayload(scid: String, epochNumber: Int, quality: Long, endEpochBlockHash: String,
+                                        scProof: String, backwardTransfers: Seq[BackwardTransfer]) extends RequestPayload
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
 case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
+case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
 
 
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
@@ -26,7 +31,6 @@ case object GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE extends RequestType(1)
 case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
 case object SEND_CERTIFICATE_REQUEST_TYPE extends RequestType(3)
 case object GET_MULTIPLE_HEADERS_REQUEST_TYPE extends RequestType(4)
-
 
 class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
 
@@ -104,5 +108,22 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def unsubscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Unit = {
     client.unregisterEventHandler(0, handler)
+  }
+
+  override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
+    val backwardTransfer:Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt => BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
+
+    val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(BytesUtils.toHexString(certificateRequest.sidechainId),
+      certificateRequest.epochNumber, certificateRequest.quality, BytesUtils.toHexString(certificateRequest.endEpochBlockHash),
+      BytesUtils.toHexString(certificateRequest.proofBytes), backwardTransfer)
+
+    val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
+
+    processCertificateResponsePayload(future)
+  }
+
+  private def processCertificateResponsePayload(future: Future[CertificateResponsePayload]): SendCertificateResponse = {
+    val response: CertificateResponsePayload = Await.result(future, client.requestTimeoutDuration())
+    SendCertificateResponse(BytesUtils.fromHexString(response.certificateHash))
   }
 }

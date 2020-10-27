@@ -1,9 +1,7 @@
 package com.horizen.mainchain.api
 
+import scala.util.Try
+
 trait MainchainNodeApi {
-
-  def getSidechainInfo: SidechainInfoResponse
-
-  def sendCertificate(certificateRequest: SendCertificateRequest): SendCertificateResponse
-
+  def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse]
 }

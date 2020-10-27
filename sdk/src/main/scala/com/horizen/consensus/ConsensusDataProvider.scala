@@ -162,7 +162,7 @@ trait ConsensusDataProvider {
     val slotNumber: ConsensusSlotNumber = timeStampToSlotNumber(blockHeader.timestamp)
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 
-    blockHeader.vrfProof.proofToVrfOutput(blockHeader.forgerBox.vrfPubKey(), vrfMessage).asScala
+    blockHeader.vrfProof.proofToVrfOutput(blockHeader.forgingStakeInfo.vrfPublicKey, vrfMessage).asScala
   }
 }
 
