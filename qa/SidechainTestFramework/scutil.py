@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -107,9 +107,10 @@ def launch_bootstrap_tool(command_name, json_parameters):
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
 Parameters:
- - n: sidechain node nth
  - genesis_info: genesis info provided by a mainchain node
- - genesis_secret:
+ - genesis_secret: private key 25519 secret to sign SC block
+ - vrf_secret: vrk secret key to check consensus rules SC block
+ - block_timestamp_rewind: rewind genesis block timestamp by some value
  
 Output: a JSON object to be included in the settings file of the sidechain node nth.
 {
@@ -121,8 +122,8 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "withdrawalEpochLength": xxx
 }
 """
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret):
-    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info}
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
+    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info, "regtestBlockTimestampRewind": block_timestamp_rewind}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -209,7 +210,7 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_config=MCConnectionInfo()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -217,6 +218,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
     mc0datadir = os.path.join(dirname, "node0")
+    websocket_config = sc_node_config.mc_connection_info
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
@@ -230,8 +232,6 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
-    zencliArgs = []
-    zencliArgs.append("-datadir=" + mc0datadir.replace("\\", "/"))
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -251,9 +251,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
-        "ZEN_CLI": str(os.getenv("BITCOINCLI", "bitcoin-cli")).replace("\\","/"), # NOTE: it always will call first MC node RPC. TODO: make it configurable.
-        "ZEN_CLI_ARGS": json.dumps(zencliArgs),
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
+        "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
     }
@@ -296,6 +295,7 @@ def initialize_default_sc_datadir(dirname, n):
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
+        "SUBMITTER_CERTIFICATE": "false",
         'GENESIS_SECRETS': genesis_secrets[n]
     }
 
@@ -324,7 +324,8 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], get_websocket_configuration(i, array_of_MCConnectionInfo))
+        sc_node_config = SCNodeConfiguration(get_websocket_configuration(i, array_of_MCConnectionInfo))
+        initialize_sc_datadir(test_dir, i, genesis_secrets[i], genesis_info[i], sc_node_config)
 
 
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
@@ -537,6 +538,10 @@ def check_box_balance(sc_node, account, box_type, expected_boxes_count, expected
                 "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
                 .format(pub_key, expected_balance * 100000000, boxes_balance))
 
+# In STF we need to create SC genesis block with a timestamp in the past to be able to forge next block
+# without receiving "block in future" error. By default we rewind half of the consensus epoch.
+DefaultBlockTimestampRewind = 720 * 120 / 2
+
 """
 Bootstrap a network of sidechain nodes.
 
@@ -586,10 +591,10 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration):
+def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
-    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info)
+    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info, block_timestamp_rewind)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -618,7 +623,7 @@ Parameters:
  Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
-def create_sidechain(sc_creation_info):
+def create_sidechain(sc_creation_info, block_timestamp_rewind):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
@@ -633,7 +638,7 @@ def create_sidechain(sc_creation_info):
                                     certificate_proof_info.genSysConstant,
                                     certificate_proof_info.verificationKey)
 
-    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret)
+    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret, block_timestamp_rewind)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
@@ -650,34 +655,36 @@ Parameters:
  
 """
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration.mc_connection_info)
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})
 
 
-def get_next_epoch_slot(epoch, slot, slots_in_epoch):
+def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=False):
     next_slot = slot + 1
     next_epoch = epoch
 
-    if next_slot > slots_in_epoch:
+    if next_slot > slots_in_epoch or force_switch_to_next_epoch:
         next_slot = 1
         next_epoch += 1
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
     best_epoch = forging_info["bestEpochNumber"]
 
-    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch)
+    next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
     #"while" will break if whole epoch no generated block, due changed error code
     while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
+        if("no forging stake" in forge_result["error"]["description"]):
+            raise AssertionError("No forging stake for the epoch")
         print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))

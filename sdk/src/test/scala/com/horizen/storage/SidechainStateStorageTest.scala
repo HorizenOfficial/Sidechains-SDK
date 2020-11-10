@@ -42,9 +42,6 @@ class SidechainStateStorageTest
   val withdrawalEpochInfo = WithdrawalEpochInfo(1, 2)
 
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
-  val forgingStakeInfoSerializer = new ListSerializer[ForgingStakeInfo](ForgingStakeInfoSerializer)
-  val forgingStakesToAppendSeq: Seq[ForgingStakeInfo] = getForgerBoxList(2).asScala.map(box => ForgingStakeInfo(box.id(), box.value()))
-  val forgingStakesAmount: Long = forgingStakesToAppendSeq.foldLeft(0L)(_ + _.value)
 
   @Before
   def setUp(): Unit = {
@@ -92,10 +89,6 @@ class SidechainStateStorageTest
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
     // consensus epoch
     toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
-    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.forgingStakesInfoKey),
-      new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesToAppendSeq.asJava))))
-    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.forgingStakesAmountKey),
-      new ByteArrayWrapper(Longs.toByteArray(forgingStakesAmount))))
     val toRemove = java.util.Arrays.asList(storedBoxList(2).getKey)
 
     Mockito.when(mockedPhysicalStorage.update(
@@ -116,14 +109,14 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), forgingStakesToAppendSeq, consensusEpoch, None)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getRegularBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), Seq(), consensusEpoch, None)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)

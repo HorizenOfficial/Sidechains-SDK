@@ -11,7 +11,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.mainchain.api.{CertificateRequestCreator, RpcMainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
+import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
@@ -33,7 +33,8 @@ import scala.util.{Failure, Success, Try}
 class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
-   params: NetworkParams)
+   params: NetworkParams,
+   mainchainApi: MainchainNodeApi)
   (implicit ec: ExecutionContext)
   extends Actor
   with ScorexLogging
@@ -149,14 +150,14 @@ class CertificateSubmitter
             dataForProofGeneration.withdrawalRequests,
             params)
 
-          try {
-            log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+          log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-            val response: SendCertificateResponse = mainchainApi.sendCertificate(certificateRequest)
+          mainchainApi.sendCertificate(certificateRequest) match {
+            case Success(certificate) =>
+              log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
-            log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(response.certificateId))
-          } catch {
-            case ex: Throwable => log.error("Creation of backward transfer certificate had been failed. " + ex)
+            case Failure(ex) =>
+              log.error("Creation of backward transfer certificate had been failed. " + ex)
           }
         }
 
@@ -168,8 +169,6 @@ class CertificateSubmitter
       }
     }
   }
-
-  lazy val mainchainApi = new RpcMainchainNodeApi(settings)
 
   case class DataForProofGeneration(processedEpochNumber: Int,
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
@@ -247,15 +246,18 @@ class CertificateSubmitter
 
 object CertificateSubmitterRef {
 
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams)
+  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
+            mainchainApi: MainchainNodeApi)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
 }

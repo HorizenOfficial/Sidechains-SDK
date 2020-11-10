@@ -58,6 +58,7 @@ public class SimpleAppModule
         File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
         File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
         File stateStore = new File(dataDirAbsolutePath + "/state");
+        File stateForgerBoxStore = new File(dataDirAbsolutePath + "/stateForgerBox");
         File historyStore = new File(dataDirAbsolutePath + "/history");
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
 
@@ -117,6 +118,9 @@ public class SimpleAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("StateForgerBoxStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(historyStore));

@@ -16,6 +16,7 @@ import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
+import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -337,6 +338,11 @@ public class CommandProcessor {
             return;
         }
 
+        // Undocumented optional argument, that is used in STF to decrease genesis block timestamps
+        // to be able to generate next sc blocks without delays.
+        // can be used only in Regtest network
+        int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
+
         // Parsing the info: scid, powdata vector, mc block height, mc block hex
         int offset = 0;
         try {
@@ -381,12 +387,13 @@ public class CommandProcessor {
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo.");
 
             ForgerBox forgerBox = sidechainCreation.getBox();
+            ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
             VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
-            // Set genesis block timestamp to not to have block in future exception during STF tests.
-            // TODO: timestamp should be a hidden optional parameter during SC bootstrapping and must be used by STF
-            long timestamp = System.currentTimeMillis() / 1000 - (params.consensusSlotsInEpoch() / 2 * params.consensusSecondsInSlot());
+            // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
+            long currentTimeSeconds = System.currentTimeMillis() / 1000;
+            long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
@@ -396,7 +403,7 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
-                    forgerBox,
+                    forgingStakeInfo,
                     vrfProof,
                     mp,
                     sidechainTransactionsCompanion,

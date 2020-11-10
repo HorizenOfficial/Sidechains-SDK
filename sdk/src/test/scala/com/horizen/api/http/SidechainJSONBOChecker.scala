@@ -126,9 +126,9 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("mainchainMerkleRootHash").isTextual)
     assertTrue(headerJson.get("ommersMerkleRootHash").isTextual)
     assertTrue(headerJson.get("ommersCumulativeScore").isNumber)
-    assertTrue(headerJson.get("forgerBox").isObject)
+    assertTrue(headerJson.get("forgingStakeInfo").isObject)
     assertTrue(headerJson.get("vrfProof").isObject)
-    assertTrue(headerJson.get("forgerBoxMerklePath").isTextual)
+    assertTrue(headerJson.get("forgingStakeMerklePath").isTextual)
     assertTrue(headerJson.get("id").isTextual)
     assertTrue(headerJson.get("signature").isObject)
 
@@ -136,12 +136,12 @@ class SidechainJSONBOChecker {
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.id)), json.get("id").asText())
     assertEquals(block.timestamp.toLong, json.get("timestamp").asLong())
 
-    val forgerBox = headerJson.get("forgerBox")
-    val forgerBoxElementNames = forgerBox.fieldNames().asScala.toSet
-    assertEquals(7, forgerBoxElementNames.size)
+    val forgingStakeInfo = headerJson.get("forgingStakeInfo")
+    val forgingStakeInfoElementNames = forgingStakeInfo.fieldNames().asScala.toSet
+    assertEquals(3, forgingStakeInfoElementNames.size)
 
-    val forgerBoxExpectedElements = Set("nonce", "id", "blockSignProposition", "typeId", "vrfPubKey", "value", "proposition")
-    assertEquals(forgerBoxExpectedElements, forgerBoxElementNames)
+    val forgingStakeInfoExpectedElements = Set("blockSignPublicKey", "vrfPublicKey", "stakeAmount")
+    assertEquals(forgingStakeInfoExpectedElements, forgingStakeInfoElementNames)
 
 
 

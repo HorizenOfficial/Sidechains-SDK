@@ -53,8 +53,9 @@ SCNodeConfiguration: {
 """
 class SCNodeConfiguration(object):
 
-    def __init__(self, mc_connection_info=MCConnectionInfo()):
+    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True):
         self.mc_connection_info = mc_connection_info
+        self.cert_submitter_enabled = cert_submitter_enabled
 
 
 """

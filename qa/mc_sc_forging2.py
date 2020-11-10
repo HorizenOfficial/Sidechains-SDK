@@ -66,7 +66,7 @@ class MCSCForging2(SidechainTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
-        sc_node_2_configuration = SCNodeConfiguration()
+        sc_node_2_configuration = SCNodeConfiguration(MCConnectionInfo(), False)
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
                                          sc_node_1_configuration, sc_node_2_configuration)
