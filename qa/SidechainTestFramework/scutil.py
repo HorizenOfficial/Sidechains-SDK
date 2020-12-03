@@ -98,7 +98,7 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               "../tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
+                               os.getenv("SIDECHAIN_SDK", "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     jsone_node = json.loads(sc_bootstrap_output)
