@@ -394,6 +394,14 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
   }
 
+  override def getBlockHeightById(id: String): JOptional[Integer] = {
+    storage.heightOf(ModifierId(id)) match {
+      case Some(height) => JOptional.of[Integer](height)
+      case None => JOptional.empty()
+    }
+  }
+
+
   override def getCurrentHeight: Int = {
     height
   }
