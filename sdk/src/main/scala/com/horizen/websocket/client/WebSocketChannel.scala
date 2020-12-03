@@ -1,4 +1,4 @@
-package com.horizen.websocket
+package com.horizen.websocket.client
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration

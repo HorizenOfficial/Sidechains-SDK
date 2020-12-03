@@ -21,6 +21,8 @@ public interface NodeHistory {
 
     Optional<String> getBlockIdByHeight(int height);
 
+    Optional<Integer> getBlockHeightById(String id);
+
     int getCurrentHeight();
 
     Optional<Integer> getBlockHeight(String blockId);
