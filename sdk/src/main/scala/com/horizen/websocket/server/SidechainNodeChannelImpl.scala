@@ -178,8 +178,10 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
       mempoolTxes.forEach(txs => txids.add(txs.id()))
 
       val responsePayload = mapper.createObjectNode()
-      responsePayload.put("transactions",SerializationUtil.serializeWithResult(txids.toArray()))
-      responsePayload.put("size", view.get.getNodeMemoryPool.getSize)
+      val json = mapper.readTree(SerializationUtil.serializeWithResult(txids.toArray()))
+
+      responsePayload.put("transactions",json.get("result"))
+      responsePayload.put("size", mempoolTxes.size())
 
       if(requestId == -1) {
         sendMessage(EVENT_MESSAGE.code, requestId, answerType,responsePayload)

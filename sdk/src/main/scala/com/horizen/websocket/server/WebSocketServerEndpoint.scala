@@ -26,7 +26,6 @@ class WebSocketServerEndpoint() {
       WebSocketServerEndpoint.addSession(session);
     }
     try {
-      System.out.println("MESSAGE RECEIVED "+message)
       val json = mapper.readTree(message)
       if (json.has("msgType")) {
         json.get("msgType").asInt() match {
@@ -86,7 +85,6 @@ class WebSocketServerEndpoint() {
   }
 
   def processError(json: JsonNode, session: Session): Unit = {
-    System.out.println("PROCESS ERROR")
     val sidechainNodeChannelImpl: SidechainNodeChannelImpl = new SidechainNodeChannelImpl(session)
 
     var requestId = -1
