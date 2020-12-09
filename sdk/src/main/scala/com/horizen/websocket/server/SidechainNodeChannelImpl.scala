@@ -163,9 +163,9 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
           txs.add(tx.get())
         }
       })
-      val txsJson = SerializationUtil.serializeWithResult(txs.toArray())
+      val txsJson = mapper.readTree(SerializationUtil.serializeWithResult(txs.toArray()))
       val responsePayload = mapper.createObjectNode()
-      responsePayload.put("transactions",txsJson)
+      responsePayload.put("transactions",txsJson.get("result"))
       sendMessage(RESPONSE_MESSAGE.code, requestId, answerType,responsePayload)
     })
   }
