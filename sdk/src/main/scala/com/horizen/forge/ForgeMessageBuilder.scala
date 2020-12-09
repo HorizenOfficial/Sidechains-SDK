@@ -218,7 +218,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     // Extract proper MainchainHeaders
     val mainchainHeaders: Seq[MainchainHeader] =
-      mainchainSynchronizer.getMainchainBlockHeadersReferences(mainchainHeaderHashesToRetrieve) match {
+      mainchainSynchronizer.getMainchainBlockHeaders(mainchainHeaderHashesToRetrieve) match {
         case Success(references) => references
         case Failure(ex) => return ForgeFailed(ex)
       }

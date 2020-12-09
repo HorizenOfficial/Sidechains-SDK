@@ -11,7 +11,8 @@ from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Latus forger behavior for:
-1. Sidechain forging not fails due to time out(SC create too many requests to MC for block generation).
+1. Sidechain has multiple MC blocks to be synchronized (>50). Check that sidechains forging not fails due to 
+   time out(SC create too many requests to MC for block generation).
 
 Configuration:
     Start 1 MC nodes and 1 SC node.
@@ -68,30 +69,41 @@ class MCSCForging4(SidechainTestFramework):
 
         # Generate 50 MC blocks
         # Generate 1 SC block
-        mcblock_hash1 = mc_node.generate(50)[0]
+        mcblock_hashes_1 = mc_node.generate(49)
         scblock_id0 = generate_next_blocks(sc_node, "first node", 1)[0]
         # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
         check_mcheaders_amount(49, scblock_id0, sc_node)
-        check_mcreference_presence(mcblock_hash1, scblock_id0, sc_node)
+        check_mcreference_presence(mcblock_hashes_1[0], scblock_id0, sc_node)
+
+        for mchash in mcblock_hashes_1:
+            check_mcheader_presence(mchash, scblock_id0, sc_node)
 
         # Generate 150 MC blocks
         # Generate 2 SC blocks
-        mc_node.generate(150)[0]
+        mcblock_hashes_2 = mc_node.generate(150)
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
         # TODO Change amount of MC headers. At current implementation SC forger cannot retrieve more than 49 headers.
-        # TODO Add MC reference presence
+        # TODO Add MC reference presence when forger will be able to retrieve more than 49 headers
         check_mcheaders_amount(49, scblock_id1, sc_node)
+        for mchash in mcblock_hashes_2[0:49]:
+            check_mcheader_presence(mchash, scblock_id1, sc_node)
 
         scblock_id2 = generate_next_blocks(sc_node, "first node", 2)[0]
         check_mcheaders_amount(49, scblock_id2, sc_node)
+        # TODO Add checking presence of the rest headers when forger will be able to retrieve more than 49 headers
 
         # Generate 200 MC blocks
         # Generate 1 SC blocks
-        mc_node.generate(200)[0]
+        mcblock_hashes_3 = mc_node.generate(200)[0]
         scblock_id3 = generate_next_blocks(sc_node, "first node", 4)[0]
         # TODO Change amount of MC headers. At current implementation SC forger cannot retrieve more than 49 headers.
-        # TODO Add MC reference presence
+        # TODO Add MC reference presence when forger will be able to retrieve more than 49 headers
         check_mcheaders_amount(49, scblock_id3, sc_node)
+
+        # TODO Uncomment when forger will be able to retrieve more than 49 headers
+        #for mchash in mcblock_hashes_3:
+        #    check_mcheader_presence(mchash, scblock_id3, sc_node)
+
 
 if __name__ == "__main__":
     MCSCForging4().main()

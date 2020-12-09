@@ -11,6 +11,8 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
+  private val HEADERS_LIMIT = 100 // TODO Analyse amount of headers that can be added to one block.
+
   // Get divergent mainchain suffix between SC Node and MC Node
   // Return last common header with height + divergent suffix
   def getMainchainDivergentSuffix(history: SidechainHistory, limit: Int): Try[(Int, Seq[MainchainHeaderHash])] = Try {
@@ -60,14 +62,15 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
     references
   }
 
-  def getMainchainBlockHeadersReferences(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainHeader]] = Try {
-    val HEADERS_LIMIT = 100 // TODO Analyse amount of headers that can be added to one block.
+  def getMainchainBlockHeaders(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainHeader]] = Try {
     val HEADERS_REQUEST_LIMIT = 25 // TODO Change this value to 50 after changing HEADERS_LIMIT. It has to be 50(as described in doc and implemented in MC)
+                                   // HEADERS_REQUEST_LIMIT reduced to 25 in order to keep track of correctness of multiple header requests.
+                                   // At this moment forger doesn't request more than 50 headers.
 
     if (hashes.size > HEADERS_LIMIT) throw new IllegalArgumentException("Headers request amount is over the limit(" + HEADERS_LIMIT + ")")
 
     val strHashes: Seq[String] = hashes.map(hash => BytesUtils.toHexString(hash.data))
-    var headers : Seq[MainchainHeader] = Seq()
+    var headers : Seq[MainchainHeader] = ListBuffer()
 
     for(group <- strHashes.grouped(HEADERS_REQUEST_LIMIT)) {
       headers ++= mainchainNodeChannel.getBlockHeaders(group).get
