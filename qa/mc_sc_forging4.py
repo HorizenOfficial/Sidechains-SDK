@@ -20,9 +20,7 @@ Configuration:
 
 Test:
     - Synchronize MC nodes to the point of SC Creation Block.
-    - Mine 50 MC blocks, then forge SC block, verify MC data inclusion
-    - Mine 150 MC blocks, then forge 2 SC blocks, verify MC data inclusion
-    - Mine 200 MC blocks, then forge SC block, verify MC data inclusion  
+    - Mine 200 MC blocks, then forge 5 SC blocks, verify MC data inclusion
      
      TODO In tests when SC is more than 50 blocks beyond MC Forger cannot retrieve more than 49 block headers
      for forging one block. Update this test after modifying Forger with bigger headers amount. 
@@ -66,43 +64,28 @@ class MCSCForging4(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
 
-
-        # Generate 50 MC blocks
-        # Generate 1 SC block
-        mcblock_hashes_1 = mc_node.generate(49)
-        scblock_id0 = generate_next_blocks(sc_node, "first node", 1)[0]
-        # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
-        check_mcheaders_amount(49, scblock_id0, sc_node)
-        check_mcreference_presence(mcblock_hashes_1[0], scblock_id0, sc_node)
-
-        for mchash in mcblock_hashes_1:
-            check_mcheader_presence(mchash, scblock_id0, sc_node)
-
-        # Generate 150 MC blocks
-        # Generate 2 SC blocks
-        mcblock_hashes_2 = mc_node.generate(150)
-        scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
-        # TODO Change amount of MC headers. At current implementation SC forger cannot retrieve more than 49 headers.
-        # TODO Add MC reference presence when forger will be able to retrieve more than 49 headers
-        check_mcheaders_amount(49, scblock_id1, sc_node)
-        for mchash in mcblock_hashes_2[0:49]:
-            check_mcheader_presence(mchash, scblock_id1, sc_node)
-
-        scblock_id2 = generate_next_blocks(sc_node, "first node", 2)[0]
-        check_mcheaders_amount(49, scblock_id2, sc_node)
-        # TODO Add checking presence of the rest headers when forger will be able to retrieve more than 49 headers
-
         # Generate 200 MC blocks
-        # Generate 1 SC blocks
-        mcblock_hashes_3 = mc_node.generate(200)[0]
-        scblock_id3 = generate_next_blocks(sc_node, "first node", 4)[0]
-        # TODO Change amount of MC headers. At current implementation SC forger cannot retrieve more than 49 headers.
-        # TODO Add MC reference presence when forger will be able to retrieve more than 49 headers
-        check_mcheaders_amount(49, scblock_id3, sc_node)
+        mcblock_hashes = mc_node.generate(200)
+        # Generate 5 SC blocks
+        scblock_ids = generate_next_blocks(sc_node, "first node", 5)
 
-        # TODO Uncomment when forger will be able to retrieve more than 49 headers
-        #for mchash in mcblock_hashes_3:
-        #    check_mcheader_presence(mchash, scblock_id3, sc_node)
+        # Verify that SC block contains newly created MC blocks as MainchainHeaders and MainchainReferences
+        # First 4 SC blocks. Every block contain 3 MainchainReferences and 49 MainchainHeaders
+        for i in range(4):
+            check_mcheaders_amount(49, scblock_ids[i], sc_node)
+            for mchash in mcblock_hashes[i * 49 : (i + 1) * 49]:
+                check_mcheader_presence(mchash, scblock_ids[i], sc_node)
+            check_mcreferencedata_amount(3, scblock_ids[i], sc_node)
+            for mchash in mcblock_hashes[i * 3 : (i + 1) * 3]:
+                check_mcreferencedata_presence(mchash, scblock_ids[i], sc_node)
+
+        # Fifth block. contain 3 MainchainReferences and 4 MainchainHeaders.
+        check_mcheaders_amount(4, scblock_ids[4], sc_node)
+        for mchash in mcblock_hashes[196:200]:
+            check_mcheader_presence(mchash, scblock_ids[4], sc_node)
+        check_mcreferencedata_amount(3, scblock_ids[4], sc_node)
+        for mchash in mcblock_hashes[12:15]:
+            check_mcreferencedata_presence(mchash, scblock_ids[4], sc_node)
 
 
 if __name__ == "__main__":
