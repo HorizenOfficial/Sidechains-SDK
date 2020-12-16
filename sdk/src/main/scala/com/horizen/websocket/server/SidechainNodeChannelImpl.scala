@@ -52,10 +52,11 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
         if (optionalSidechainBlock.isPresent) {
           val sblock = optionalSidechainBlock.get()
           //serialize JSON
-          val blockJson = SerializationUtil.serializeWithResult(sblock)
+          val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(sblock))
           val responsePayload = mapper.createObjectNode()
-          responsePayload.put("block", blockJson)
+          responsePayload.put("block", blockJson.get("result"))
           responsePayload.put("hash",sblockHash)
+          responsePayload.put("height",height)
 
           sendMessage(RESPONSE_MESSAGE.code, requestId, answerType, responsePayload)
         }else {
@@ -74,12 +75,14 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
         val optionalSidechainBlock = view.get.getNodeHistory.getBlockById(hash)
         if (optionalSidechainBlock.isPresent) {
           val sblock = optionalSidechainBlock.get()
-          //serialize JSON
-          val blockJson = SerializationUtil.serializeWithResult(sblock)
-          val responsePayload = mapper.createObjectNode()
-          responsePayload.put("block", blockJson)
-          responsePayload.put("hash",hash)
+          val height = view.get.getNodeHistory.getBlockHeightById(sblock.id).get()
 
+          //serialize JSON
+          val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(sblock))
+          val responsePayload = mapper.createObjectNode()
+          responsePayload.put("block", blockJson.get("result"))
+          responsePayload.put("hash",hash)
+          responsePayload.put("height",height)
           sendMessage(RESPONSE_MESSAGE.code, requestId, answerType, responsePayload)
       } else {
         sendError(requestId, answerType, 5, "Invalid parameter")
@@ -137,11 +140,11 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
         }
       } while (c < limit && found)
 
-      val hashes = SerializationUtil.serializeWithResult(headerList.toArray())
+      val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.toArray()))
 
       val responsePayload = mapper.createObjectNode()
       responsePayload.put("height",lastHeight)
-      responsePayload.put("hashes", hashes)
+      responsePayload.put("hashes", hashes.get("result"))
 
       sendMessage(RESPONSE_MESSAGE.code,requestId, answerType, responsePayload)
 

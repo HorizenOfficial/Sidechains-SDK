@@ -3,12 +3,12 @@ package com.horizen.websocket.server
 import java.util
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.{SidechainAppEvents}
+import com.horizen.SidechainAppEvents
 import javax.websocket.Session
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
-import scala.concurrent.{ExecutionContext}
+import scala.concurrent.ExecutionContext
 
 class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   extends Actor
@@ -16,9 +16,8 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   var websocket: WebSocketServerImpl = null;
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
     context.system.eventStream.subscribe(self, classOf[ChangedMempool[_]])
-    context.system.eventStream.subscribe(self, classOf[ChangedHistory[_]])
+    context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
     wsPort match {
       case 0 =>     this.websocket = new WebSocketServerImpl(8025, classOf[WebSocketServerEndpoint])
       case _ =>     this.websocket = new WebSocketServerImpl(wsPort, classOf[WebSocketServerEndpoint])
@@ -28,13 +27,11 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
 
   override def receive: Receive = {
     checkMessage orElse {
-      case message: Any => log.error("CertificateSubmitter received strange message: " + message)
+      case message: Any => log.error("WebsocketServer received strange message: " + message)
     }
   }
 
   protected def checkMessage: Receive = {
-    case SidechainAppEvents.SidechainApplicationStart => {
-    }
     case ChangedMempool(_)  => {
       val sessionToRemove: util.ArrayList[Session] = new util.ArrayList[Session]()
       WebSocketServerEndpoint.sessions.forEach(session =>{
@@ -47,7 +44,7 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
       })
       removeOutdatedSession(sessionToRemove)
     }
-    case ChangedHistory(_) => {
+    case SemanticallySuccessfulModifier(_) => {
       val sessionToRemove: util.ArrayList[Session] = new util.ArrayList[Session]()
       WebSocketServerEndpoint.sessions.forEach(session =>{
         if (session.isOpen) {
