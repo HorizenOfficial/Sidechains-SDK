@@ -92,64 +92,64 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
 
   override def sendNewBlockHashes(locatorHashes: JsonNode, limit: Int, requestId: Int, answerType: Int): Try[Unit] = Try {
     if (limit > 50) {
-      sendError(requestId, 2, 4,  "Invalid limit size! Max limit is 50")
-    }
-    var lastHeight = 1
-    var startBlock: SidechainBlock = null
+      sendError(requestId, answerType, 4,  "Invalid limit size! Max limit is 50")
+    } else {
+      var lastHeight = 1
+      var startBlock: SidechainBlock = null
 
-    val sidechainNodeView: Future[SidechainNodeView] = viewAsync()
-    sidechainNodeView.onComplete(view => {
-      //Find the best block in common
-      locatorHashes.forEach(hash => {
-        val optionalSidechainBlock = view.get.getNodeHistory.getBlockById(hash.asText())
+      val sidechainNodeView: Future[SidechainNodeView] = viewAsync()
+      sidechainNodeView.onComplete(view => {
+        //Find the best block in common
+        locatorHashes.forEach(hash => {
+          val optionalSidechainBlock = view.get.getNodeHistory.getBlockById(hash.asText())
 
-        if (optionalSidechainBlock.isPresent) {
-          val sblock = optionalSidechainBlock.get()
-          val height = view.get.getNodeHistory.getBlockHeightById(sblock.id).get()
-          if(height > lastHeight) {
-            lastHeight = height
-            startBlock = sblock
+          if (optionalSidechainBlock.isPresent) {
+            val sblock = optionalSidechainBlock.get()
+            val height = view.get.getNodeHistory.getBlockHeightById(sblock.id).get()
+            if(height > lastHeight) {
+              lastHeight = height
+              startBlock = sblock
+            }
           }
+        })
+        var startHash:String = ""
+        if (startBlock == null) {
+          val optionalGenesisBlockHash = view.get.getNodeHistory.getBlockIdByHeight(1)
+          if (optionalGenesisBlockHash.isPresent) {
+            startHash = optionalGenesisBlockHash.get()
+          }
+        }else {
+          startHash = startBlock.id
         }
+
+        // Retrieve the best block + limit block hashes
+        val headerList: util.ArrayList[String] = new util.ArrayList[String]()
+        var c = 0
+        var height = lastHeight
+        headerList.add(startHash)
+        var found = true
+        do {
+          height = height + 1
+          val optionalSidechainBlock = view.get.getNodeHistory.getBlockIdByHeight(height)
+          if (optionalSidechainBlock.isPresent) {
+            val hash = optionalSidechainBlock.get()
+            headerList.add(hash)
+            c = c+1
+          } else {
+            found = false
+          }
+        } while (c < limit && found)
+
+        val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.toArray()))
+
+        val responsePayload = mapper.createObjectNode()
+        responsePayload.put("height",lastHeight)
+        responsePayload.put("hashes", hashes.get("result"))
+
+        sendMessage(RESPONSE_MESSAGE.code,requestId, answerType, responsePayload)
+
       })
-      var startHash:String = ""
-      if (startBlock == null) {
-        val optionalGenesisBlockHash = view.get.getNodeHistory.getBlockIdByHeight(1)
-        if (optionalGenesisBlockHash.isPresent) {
-          startHash = optionalGenesisBlockHash.get()
-        }
-      }else {
-        startHash = startBlock.id
-      }
-
-      // Retrieve the best block + limit block hashes
-      val headerList: util.ArrayList[String] = new util.ArrayList[String]()
-      var c = 0
-      var height = lastHeight
-      headerList.add(startHash)
-      var found = true
-      do {
-        height = height + 1
-        val optionalSidechainBlock = view.get.getNodeHistory.getBlockIdByHeight(height)
-        if (optionalSidechainBlock.isPresent) {
-          val hash = optionalSidechainBlock.get()
-          headerList.add(hash)
-          c = c+1
-        } else {
-          found = false
-        }
-      } while (c < limit && found)
-
-      val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.toArray()))
-
-      val responsePayload = mapper.createObjectNode()
-      responsePayload.put("height",lastHeight)
-      responsePayload.put("hashes", hashes.get("result"))
-
-      sendMessage(RESPONSE_MESSAGE.code,requestId, answerType, responsePayload)
-
-    })
-
+    }
   }
 
   override def sendMempoolTxs(txids: JsonNode, requestId: Int, answerType: Int): Try[Unit] = Try {
@@ -158,18 +158,20 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
 
       val txs: util.ArrayList[BoxTransaction[Proposition, Box[Proposition]]] = new util.ArrayList[BoxTransaction[Proposition, Box[Proposition]]]()
       if (txids.size() > 10) {
-        sendError(requestId, 2, 4,  "Exceed max number of transactions (10)!")
+        sendError(requestId, answerType, 4,  "Exceed max number of transactions (10)!")
       }
-      txids.forEach(txid => {
-        val tx = view.get.getNodeMemoryPool.getTransactionById(txid.asText())
-        if (tx.isPresent) {
-          txs.add(tx.get())
-        }
-      })
-      val txsJson = mapper.readTree(SerializationUtil.serializeWithResult(txs.toArray()))
-      val responsePayload = mapper.createObjectNode()
-      responsePayload.put("transactions",txsJson.get("result"))
-      sendMessage(RESPONSE_MESSAGE.code, requestId, answerType,responsePayload)
+      else {
+        txids.forEach(txid => {
+          val tx = view.get.getNodeMemoryPool.getTransactionById(txid.asText())
+          if (tx.isPresent) {
+            txs.add(tx.get())
+          }
+        })
+        val txsJson = mapper.readTree(SerializationUtil.serializeWithResult(txs.toArray()))
+        val responsePayload = mapper.createObjectNode()
+        responsePayload.put("transactions",txsJson.get("result"))
+        sendMessage(RESPONSE_MESSAGE.code, requestId, answerType,responsePayload)
+      }
     })
   }
 
