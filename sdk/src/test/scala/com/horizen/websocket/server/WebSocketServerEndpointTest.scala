@@ -235,9 +235,6 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     val endpoint = new WsEndpoint
     val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
 
-    val requestPayload = mapper.createObjectNode()
-      .put("limit",5)
-      .putArray("locatorHashes").add("some_block_hash")
     // Get block by hash
     val newBlockHashesRequest = mapper.createObjectNode()
       .put("msgType", 1)
@@ -249,7 +246,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
     Thread.sleep(3000)
 
-    val json = mapper.readTree(endpoint.receivedMessage.get(0))
+    var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
     assertTrue(checkStaticResponseFields(json,2,0,2))
 
@@ -258,6 +255,18 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     assertTrue(responsePayload.has("height"))
     assertTrue(responsePayload.has("hashes"))
     assertTrue(responsePayload.get("hashes").isArray)
+
+    // Test with limit greater than max
+    newBlockHashesRequest.findParent("locatorHashes").put("limit",100)
+    session.getBasicRemote.sendText(newBlockHashesRequest.toString)
+    Thread.sleep(3000)
+    json = mapper.readTree(endpoint.receivedMessage.get(1))
+
+    assertTrue(checkStaticResponseFields(json,3,0,2))
+    assertTrue(json.has("errorCode"))
+    assertEquals(4,json.get("errorCode").asInt())
+    assertTrue(json.has("responsePayload"))
+    assertEquals(json.get("responsePayload").asText(), "Invalid limit size! Max limit is 50")
 
     session.close()
 
