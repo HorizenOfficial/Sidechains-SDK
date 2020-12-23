@@ -47,6 +47,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
   def setUp(): Unit = {
     // start server on default port
     server = WebSocketServerRef(mockedSidechainNodeViewHolderRef, 9025)
+    Thread.sleep(3000)
   }
 
 

@@ -113,16 +113,18 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
           }
         })
         var startHash:String = ""
+        var hashLimit = limit
         if (startBlock == null) {
           val optionalGenesisBlockHash = view.get.getNodeHistory.getBlockIdByHeight(1)
           if (optionalGenesisBlockHash.isPresent) {
             startHash = optionalGenesisBlockHash.get()
+            hashLimit = hashLimit - 1
           }
         }else {
           startHash = startBlock.id
         }
 
-        // Retrieve the best block + limit block hashes
+        // Retrieve the best block + hashLimit block hashes
         val headerList: util.ArrayList[String] = new util.ArrayList[String]()
         var c = 0
         var height = lastHeight
@@ -138,7 +140,7 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
           } else {
             found = false
           }
-        } while (c < limit && found)
+        } while (c < hashLimit && found)
 
         val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.toArray()))
 
@@ -202,10 +204,11 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
     sidechainNodeView.onComplete(view => {
       val bestBlock = view.get.getNodeHistory.getBestBlock
       val height = view.get.getNodeHistory.getBlockHeightById(bestBlock.id).get()
+      val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(bestBlock))
       val responsePayload = mapper.createObjectNode()
       responsePayload.put("height",height)
       responsePayload.put("hash",bestBlock.id)
-      responsePayload.put("block",SerializationUtil.serializeWithResult(bestBlock))
+      responsePayload.put("block",blockJson.get("result"))
 
       sendMessage(EVENT_MESSAGE.code, -1, 0,responsePayload)
     })
