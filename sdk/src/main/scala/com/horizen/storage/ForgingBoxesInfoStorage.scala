@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ListSerializer, Pair}
+import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ListSerializer, Pair}
 import scorex.util.ScorexLogging
 import scorex.crypto.hash.Blake2b256
 
@@ -22,7 +22,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
   private[horizen] val forgerBoxesKey: ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash("forgerBoxesKey".getBytes()))
   private[horizen] val maxNumberOfStoredEpochs: Int = 3
 
-  private[horizen] val forgerBoxMerklePathInfoListSerializer = new ListSerializer[ForgerBoxMerklePathInfo](ForgerBoxMerklePathInfoSerializer)
+  private[horizen] val forgingStakeMerklePathInfoListSerializer = new ListSerializer[ForgingStakeMerklePathInfo](ForgerBoxMerklePathInfoSerializer)
   private[horizen] val forgerBoxListSerializer = new ListSerializer[ForgerBox](ForgerBoxSerializer.getSerializer)
 
   private def nextVersion: ByteArrayWrapper = {
@@ -37,7 +37,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
 
   // Current storage is updated with consensus epoch info between block modifiers application.
   // The random version here is not used as a point to rollback.
-  def updateForgerBoxMerklePathInfo(epoch: ConsensusEpochNumber, boxMerklePathInfoSeq: Seq[ForgerBoxMerklePathInfo]): Try[ForgingBoxesInfoStorage] = Try {
+  def updateForgingStakeMerklePathInfo(epoch: ConsensusEpochNumber, boxMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo]): Try[ForgingBoxesInfoStorage] = Try {
     require(boxMerklePathInfoSeq != null, "Seq of boxMerklePathInfoSeq to append must be NOT NULL. Use empty Seq instead.")
 
     // remove data of the epoch with number (epoch - maxNumberOfStoredEpochs) if exists.
@@ -45,7 +45,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     removeList.add(epochKey(ConsensusEpochNumber @@ (epoch - maxNumberOfStoredEpochs)))
 
     val updateList = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
-    updateList.add(new Pair(epochKey(epoch), new ByteArrayWrapper(forgerBoxMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava))))
+    updateList.add(new Pair(epochKey(epoch), new ByteArrayWrapper(forgingStakeMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava))))
 
     storage.update(nextVersion, updateList, removeList)
 
@@ -84,10 +84,10 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     }
   }
 
-  def getForgerBoxMerklePathInfoForEpoch(epoch: ConsensusEpochNumber): Option[Seq[ForgerBoxMerklePathInfo]] = {
+  def getForgingStakeMerklePathInfoForEpoch(epoch: ConsensusEpochNumber): Option[Seq[ForgingStakeMerklePathInfo]] = {
     storage.get(epochKey(epoch)).asScala match {
       case Some(baw) =>
-        forgerBoxMerklePathInfoListSerializer.parseBytesTry(baw.data) match {
+        forgingStakeMerklePathInfoListSerializer.parseBytesTry(baw.data) match {
           case Success(boxMerklePathsInfo) => Some(boxMerklePathsInfo.asScala)
           case Failure(exception) =>
             log.error("Error while box merkle paths info parsing.", exception)

@@ -53,8 +53,9 @@ SCNodeConfiguration: {
 """
 class SCNodeConfiguration(object):
 
-    def __init__(self, mc_connection_info=MCConnectionInfo()):
+    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True):
         self.mc_connection_info = mc_connection_info
+        self.cert_submitter_enabled = cert_submitter_enabled
 
 
 """
@@ -108,10 +109,10 @@ class VrfAccount(object):
         self.publicKey = publicKey
 
 """
-Withdrawal certificate related data .
+Withdrawal certificate proof info  data .
 The JSON representation is only for documentation.
 
-WithdrawalCertificateData : {
+CertificateProofInfo : {
     "threshold":
     "genSysConstant":"5e7b..0000"
     "verificationKey":"caa..000"
@@ -119,7 +120,7 @@ WithdrawalCertificateData : {
     "schnorr_public_keys": public key in byte hex representation
 }
 """
-class WithdrawalCertificateData(object):
+class CertificateProofInfo(object):
 
     def __init__(self, threshold, genSysConstant, verificationKey, schnorr_secrets = [], schnorr_public_keys = []):
         self.threshold = threshold
@@ -141,13 +142,13 @@ SCBootstrapInfo: {
     "network":
     "withdrawal_epoch_length":
     "genesis_vrf_account": an instance of VrfAccount
-    "withdrawal_certificate_data": an instance of WithdrawalCertificateData
+    "certificate_proof_info": an instance of CertificateProofInfo
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, withdrawal_certificate_data):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, certificate_proof_info):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -157,4 +158,4 @@ class SCBootstrapInfo(object):
         self.network = network
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.genesis_vrf_account = genesis_vrf_account
-        self.withdrawal_certificate_data = withdrawal_certificate_data
+        self.certificate_proof_info = certificate_proof_info
