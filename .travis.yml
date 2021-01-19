@@ -10,7 +10,7 @@ services:
 
 env:
   global:
-    - CONTAINER_JAVA_VER="openjdk-11-jdk-headless=11.0.8+10-0ubuntu1~18.04.1"
+    - CONTAINER_JAVA_VER="openjdk-11-jdk-headless"
     - CONTAINER_SCALA_VER="2.12.12"
     - CONTAINER_SCALA_DEB_SHA256SUM="7ecbc3850d8186c0084be37c01cdd987e97328fdd74eb781bf6dc050dba95276"
 
