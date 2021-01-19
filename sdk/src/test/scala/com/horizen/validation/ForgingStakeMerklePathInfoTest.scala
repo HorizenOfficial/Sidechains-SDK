@@ -6,14 +6,15 @@ import java.util
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.box.ForgerBox
+import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.fixtures.BoxFixture
-import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfo, ForgerBoxMerklePathInfoSerializer, MerklePath, Pair}
+import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 
-class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
+class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907
   val vrfGenerationPrefix = "ForgerBoxMerklePathInfoTest"
 
@@ -29,6 +30,8 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     getPrivateKey25519("456".getBytes()).publicImage(),
     VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed)
   )
+  val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
+
   val emptyMerklePath: MerklePath = new MerklePath(new JArrayList())
 
   val nonEmptyMerklePath: MerklePath = new MerklePath(util.Arrays.asList(
@@ -44,7 +47,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
   @Test
   def serialization(): Unit = {
     // Test 1: empty merkle path (single element in merkle tree)
-    val boxWithEmptyPath = ForgerBoxMerklePathInfo(forgerBox, emptyMerklePath)
+    val boxWithEmptyPath = ForgingStakeMerklePathInfo(forgingStakeInfo, emptyMerklePath)
     var boxBytes = boxWithEmptyPath.bytes
     var deserializedBox = ForgerBoxMerklePathInfoSerializer.parseBytes(boxBytes)
     assertEquals("Deserialized box merkle path info hashCode expected to be equal to the original one.", boxWithEmptyPath.hashCode(), deserializedBox.hashCode())
@@ -52,7 +55,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
 
 
     // Test 2: non empty merkle path
-    val boxWithNonEmptyPath = ForgerBoxMerklePathInfo(forgerBox, nonEmptyMerklePath)
+    val boxWithNonEmptyPath = ForgingStakeMerklePathInfo(forgingStakeInfo, nonEmptyMerklePath)
     boxBytes = boxWithNonEmptyPath.bytes
     deserializedBox = ForgerBoxMerklePathInfoSerializer.parseBytes(boxBytes)
     assertEquals("Deserialized box merkle path info hashCode expected to be equal to the original one.", boxWithNonEmptyPath.hashCode(), deserializedBox.hashCode())
@@ -66,7 +69,7 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     }
 
     // Test 3: try to deserialize broken bytes.
-    assertTrue("ForgerBoxMerklePathInfo expected to be not parsed due to broken data.", ForgerBoxMerklePathInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
+    assertTrue("ForgingStakeMerklePathInfo expected to be not parsed due to broken data.", ForgerBoxMerklePathInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
   }
 
   @Test
@@ -83,9 +86,9 @@ class ForgerBoxMerklePathInfoTest extends JUnitSuite with BoxFixture {
     }
 
     val boxMerklePathInfoTry = ForgerBoxMerklePathInfoSerializer.parseBytesTry(bytes)
-    assertTrue("ForgerBoxMerklePathInfo expected to by parsed.", boxMerklePathInfoTry.isSuccess)
+    assertTrue("ForgingStakeMerklePathInfo expected to by parsed.", boxMerklePathInfoTry.isSuccess)
 
-    val boxWithNonEmptyPath = ForgerBoxMerklePathInfo(forgerBox, nonEmptyMerklePath)
+    val boxWithNonEmptyPath = ForgingStakeMerklePathInfo(forgingStakeInfo, nonEmptyMerklePath)
     assertEquals("Parsed info is different to original.", boxWithNonEmptyPath, boxMerklePathInfoTry.get)
   }
 }

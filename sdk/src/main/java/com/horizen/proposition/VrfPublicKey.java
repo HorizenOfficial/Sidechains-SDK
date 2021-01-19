@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proof.VrfProof;
@@ -12,6 +13,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 @JsonView(Views.Default.class)
+@JsonIgnoreProperties("valid")
 public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     private final byte[] publicBytes;
 

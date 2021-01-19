@@ -12,7 +12,7 @@ case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
                                     consensusNonceShift: Long = 0,
                                     consensusSlotShift: Int = 0,
                                     stakeCheckCorruption: Boolean = false,
-                                    forgerBoxCorruptionRules: Option[ForgerBoxCorruptionRules] = None,
+                                    forgingStakeCorruptionRules: Option[ForgingStakeCorruptionRules] = None,
                                     forcedVrfProof: Option[VrfProof] = None,
                                    ) {
   override def toString: String = {
@@ -23,7 +23,7 @@ case class CorruptedGenerationRules(timestampShiftInSlots: Int = 0,
     s"consensusNonceShift = ${consensusNonceShift}, " +
     s"consensusSlotShift = ${consensusSlotShift}, " +
     s"stakeCheckCorruptionCheck = ${stakeCheckCorruption} " +
-    s"forgerBoxCorruptionRules = ${forgerBoxCorruptionRules})"
+    s"forgingStakeCorruptionRules = ${forgingStakeCorruptionRules})"
   }
 
   def getStakeCheckCorruptionFunction: Boolean => Boolean =
@@ -80,7 +80,7 @@ object CorruptedGenerationRules {
     }
 
     if (rnd.nextInt(100) < 5) {
-      rule = rule.copy(forgerBoxCorruptionRules = Some(ForgerBoxCorruptionRules.generate(rnd, params)))
+      rule = rule.copy(forgingStakeCorruptionRules = Some(ForgingStakeCorruptionRules.generate(rnd, params)))
     }
 
     if (rnd.nextInt(100) < 3) {
@@ -91,43 +91,31 @@ object CorruptedGenerationRules {
   }
 }
 
-case class ForgerBoxCorruptionRules(propositionChanged: Boolean = false,
-                                    nonceShift: Long = 0,
-                                    valueShift: Long = 0,
-                                    blockSignPropositionChanged: Boolean = false,
-                                    vrfPubKeyChanged: Boolean = false) {
+case class ForgingStakeCorruptionRules(blockSignPropositionChanged: Boolean = false,
+                                       vrfPubKeyChanged: Boolean = false,
+                                       stakeAmountShift: Long = 0) {
   override def toString: String = {
-    "ForgerBoxCorruptionRules(" +
-    s"propositionChanged = ${propositionChanged}, " +
-    s"nonceShift = ${nonceShift}, " +
-    s"valueShift = ${valueShift}, " +
+    "ForgingStakeCorruptionRules(" +
     s"blockSignPropositionChanged = ${blockSignPropositionChanged}, " +
-    s"vrfPubKeyChanged = ${vrfPubKeyChanged}"
+    s"vrfPubKeyChanged = ${vrfPubKeyChanged}, " +
+    s"stakeAmountShift = ${stakeAmountShift}"
   }
 }
 
-object ForgerBoxCorruptionRules {
-  val emptyCorruptedForgerBoxGenerationRules: ForgerBoxCorruptionRules = ForgerBoxCorruptionRules()
+object ForgingStakeCorruptionRules {
+  val emptyCorruptedForgingStakeGenerationRules: ForgingStakeCorruptionRules = ForgingStakeCorruptionRules()
 
-  def generate(rnd: Random, params: NetworkParams): ForgerBoxCorruptionRules = {
-    var generated: ForgerBoxCorruptionRules = emptyCorruptedForgerBoxGenerationRules
-    while (generated == emptyCorruptedForgerBoxGenerationRules) generated = generateIteration(rnd, params)
+  def generate(rnd: Random, params: NetworkParams): ForgingStakeCorruptionRules = {
+    var generated: ForgingStakeCorruptionRules = emptyCorruptedForgingStakeGenerationRules
+    while (generated == emptyCorruptedForgingStakeGenerationRules) generated = generateIteration(rnd, params)
 
     generated
   }
 
-  private def generateIteration(rnd: Random, params: NetworkParams): ForgerBoxCorruptionRules = {
-    var rule = ForgerBoxCorruptionRules()
-    if (rnd.nextInt(100) < 1) {
-      rule = rule.copy(propositionChanged = true)
-    }
-
+  private def generateIteration(rnd: Random, params: NetworkParams): ForgingStakeCorruptionRules = {
+    var rule = ForgingStakeCorruptionRules()
     if (rnd.nextInt(100) < 2) {
-      rule = rule.copy(nonceShift = rnd.nextInt())
-    }
-
-    if (rnd.nextInt(100) < 2) {
-      rule = rule.copy(valueShift = rnd.nextInt())
+      rule = rule.copy(stakeAmountShift = rnd.nextInt())
     }
 
     if (rnd.nextInt(100) < 1) {

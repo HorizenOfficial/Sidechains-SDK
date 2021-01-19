@@ -11,7 +11,7 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenera
 import com.horizen.vrf.VrfOutput
 
 
-case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfSecret: VrfSecretKey) {
+case class SidechainForgingData(key: PrivateKey25519, forgingStakeInfo: ForgingStakeInfo, vrfSecret: VrfSecretKey) {
   /**
    * @return VrfProof in case if can be forger
    */
@@ -25,20 +25,20 @@ case class SidechainForgingData(key: PrivateKey25519, forgerBox: ForgerBox, vrfS
   }
 
   private def stakeCheck(vrfOutput: VrfOutput, totalStake: Long): Boolean = {
-    vrfProofCheckAgainstStake(vrfOutput, forgerBox.value(), totalStake)
+    vrfProofCheckAgainstStake(vrfOutput, forgingStakeInfo.stakeAmount, totalStake)
   }
 
-  val forgerId: Array[Byte] = forgerBox.id()
+  val forgerId: Array[Byte] = forgingStakeInfo.hash
 
   override def toString: String = {
-    s"id - ${key.hashCode()}, value - ${forgerBox.value()}"
+    s"id - ${key.hashCode()}, value - ${forgingStakeInfo.stakeAmount}"
   }
 
   override def equals(obj: Any): Boolean = {
     obj match {
       case that: SidechainForgingData => {
         val keyEquals = this.key.equals(that.key)
-        val forgerBoxEquals = this.forgerBox.equals(that.forgerBox)
+        val forgerBoxEquals = this.forgingStakeInfo.equals(that.forgingStakeInfo)
         val vrfSecretEquals = this.vrfSecret.equals(that.vrfSecret)
 
         keyEquals && forgerBoxEquals && vrfSecretEquals
@@ -53,10 +53,10 @@ object SidechainForgingData {
   def generate(rnd: Random, value: Long): SidechainForgingData = {
     val key: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret(rnd.nextLong().toString.getBytes)
     val vrfSecretKey = VrfKeyGenerator.getInstance().generateSecret(rnd.nextLong().toString.getBytes())
-    val vrfPublicKey: VrfPublicKey = vrfSecretKey.publicImage();
+    val vrfPublicKey: VrfPublicKey = vrfSecretKey.publicImage()
     val forgerBox = new ForgerBoxData(key.publicImage(), value, key.publicImage(), vrfPublicKey).getBox(rnd.nextLong())
-
-    SidechainForgingData(key, forgerBox, vrfSecretKey)
+    val forgingStakeInfo = ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value())
+    SidechainForgingData(key, forgingStakeInfo, vrfSecretKey)
   }
 }
 

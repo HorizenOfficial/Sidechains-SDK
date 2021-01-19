@@ -1,6 +1,8 @@
 package com.horizen.websocket
 
 import com.horizen.block.MainchainBlockReference
+import com.horizen.mainchain.api.{MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
+
 import scala.util.Try
 
 
@@ -8,7 +10,7 @@ case class OnUpdateTipEventPayload(height: Int, hash: String, block: String) ext
 trait OnUpdateTipEventHandler extends EventHandler[OnUpdateTipEventPayload]
 
 
-trait MainchainNodeChannel {
+trait MainchainNodeChannel extends MainchainNodeApi {
   // Get reference for given height in MC node active chain
   def getBlockByHeight(height: Int): Try[MainchainBlockReference]
 

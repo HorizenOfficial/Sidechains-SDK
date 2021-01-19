@@ -99,6 +99,8 @@ trait SidechainNodeViewHolderFixture
   val sidechainStateStorage = new SidechainStateStorage(
     getStorage(),
     sidechainBoxesCompanion)
+  val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(
+    getStorage())
   val sidechainHistoryStorage = new SidechainHistoryStorage(
     getStorage(),
     sidechainTransactionsCompanion, params)
@@ -121,6 +123,7 @@ trait SidechainNodeViewHolderFixture
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
+    sidechainStateForgerBoxStorage,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
