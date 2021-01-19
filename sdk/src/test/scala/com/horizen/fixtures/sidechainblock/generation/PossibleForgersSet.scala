@@ -11,7 +11,7 @@ import scala.collection.immutable.TreeMap
 
 
 class PossibleForgersSet(forgers: Set[PossibleForger]) {
-  private val ordering: Ordering[SidechainForgingData] = Ordering[(Long, BigInteger)].on(x => (x.forgerBox.value(), new BigInteger(x.forgerId)))
+  private val ordering: Ordering[SidechainForgingData] = Ordering[(Long, BigInteger)].on(x => (x.forgingStakeInfo.stakeAmount, new BigInteger(x.forgerId)))
 
   val forgingDataToPossibleForger: TreeMap[SidechainForgingData, PossibleForger] = TreeMap(forgers.map(pf => (pf.forgingData.copy(), pf.copy())).toArray:_*)(ordering.reverse)
   require(forgingDataToPossibleForger.size == forgers.size)
@@ -34,8 +34,8 @@ class PossibleForgersSet(forgers: Set[PossibleForger]) {
   def finishCurrentEpoch(): (PossibleForgersSet, StakeConsensusEpochInfo) = {
     val possibleForgersForNextEpoch: Seq[PossibleForger] = getPossibleForgersForNextEpoch
 
-    val totalStake = possibleForgersForNextEpoch.withFilter(_.isNotSpent).map(_.forgingData.forgerBox.value()).sum
-    val merkleTreeForEndOfEpoch: MerkleTree = buildMerkleTree(possibleForgersForNextEpoch.map(_.forgingData.forgerBox.id()))
+    val totalStake = possibleForgersForNextEpoch.withFilter(_.isNotSpent).map(_.forgingData.forgingStakeInfo.stakeAmount).sum
+    val merkleTreeForEndOfEpoch: MerkleTree = buildMerkleTree(possibleForgersForNextEpoch.map(_.forgingData.forgingStakeInfo.hash))
     val merkleTreeForEndOfEpochRootHash = merkleTreeForEndOfEpoch.rootHash()
 
     val forgingDataWithUpdatedMerkleTreePathAndMaturity: Seq[PossibleForger] =

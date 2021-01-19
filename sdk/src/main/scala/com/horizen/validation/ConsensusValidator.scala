@@ -26,7 +26,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
       throw new IllegalArgumentException(s"Genesis block timestamp ${block.timestamp} is differ than expected timestamp from configuration ${history.params.sidechainGenesisBlockTimestamp}")
     }
 
-    val vrfSignIsNotCorrect = false //@TODO we should call verifyVfr and verifyForgerBox with consensusEpochInfo calculated from SC creation TX and a constant for nonce
+    val vrfSignIsNotCorrect = false //@TODO we should call verifyVfr and verifyForgingStakeInfo with consensusEpochInfo calculated from SC creation TX and a constant for nonce
     if (vrfSignIsNotCorrect) {
       throw new IllegalArgumentException(s"Genesis block timestamp is not signed his own forger box")
     }
@@ -42,7 +42,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
       .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
-    verifyForgerBox(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
+    verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
     val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
@@ -129,7 +129,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
       val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
         .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
-      verifyForgerBox(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
+      verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
 
       verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
         bestKnownParentId, bestKnownParentInfo, history, accumulator)
@@ -143,17 +143,17 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     }
   }
 
-  //Verify that forger box in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgerBox(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
-    log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgerBoxMerklePath.bytes().deep.mkString}")
+  //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
+  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
 
-    val forgerBoxIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgerBoxMerklePath.apply(header.forgerBox.id()))
-    if (!forgerBoxIsCorrect) {
+    val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
+    if (!forgingStakeIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forger box merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
+      throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
     }
 
-    val value = header.forgerBox.value()
+    val value = header.forgingStakeInfo.stakeAmount
 
     val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake)
     if (!stakeIsEnough) {

@@ -16,6 +16,7 @@ import com.horizen.companion.SidechainBoxesDataCompanion;
 import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
+import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -31,9 +32,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.MerklePath;
 import com.horizen.utils.VarInt;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -71,21 +70,45 @@ public class CommandProcessor {
         }
     }
 
-    // Command structure is: command_name [json_argument]
+    // Command structure is:
+    // 1) <command name>
+    // 1) <command name> <json argument>
+    // 2) <command name> -f <path to file with json argument>
     private Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
         if(inputData.length == 0)
             throw new IOException(String.format("Error: unrecognized input structure '%s'.%nSee 'help' for usage guideline.", input));
 
         ObjectMapper objectMapper = new ObjectMapper();
-        if(inputData.length != 2)
+        // Check for command without arguments
+        if(inputData.length == 1)
             return new Command(inputData[0], objectMapper.createObjectNode());
+
+        String jsonData;
+        String commandArguments = inputData[1].trim();
+        // Check for file flag
+        if(commandArguments.startsWith("-f ")) {
+            // Remove '-f', possible around whitespaces and/or quotes
+            String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
+            // Try to open and read data from file
+            try(
+                FileReader file = new FileReader(filePath);
+                BufferedReader reader = new BufferedReader(file)
+            ) {
+                jsonData = reader.readLine();
+            } catch (FileNotFoundException e) {
+                throw new IOException(String.format("Error: Input data file '%s' not found.%nSee 'help' for usage guideline.", filePath));
+            }
+        }
+        else {
+            jsonData = commandArguments;
+        }
 
         JsonNode jsonNode;
         try {
-            jsonNode = objectMapper.readTree(inputData[1]);
+            jsonNode = objectMapper.readTree(jsonData);
         } catch (Exception e) {
-            throw new IOException(String.format("Error: Invalid input data format '%s'. Json expected.%nSee 'help' for usage guideline.", inputData[1]));
+            throw new IOException(String.format("Error: Invalid input data format '%s'. Json expected.%nSee 'help' for usage guideline.", jsonData));
         }
 
         return new Command(inputData[0], jsonNode);
@@ -95,6 +118,7 @@ public class CommandProcessor {
         printer.print("Usage:\n" +
                       "\tFrom command line: <program name> <command name> [<json data>]\n" +
                       "\tFor interactive mode: <command name> [<json data>]\n" +
+                      "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
                       "Supported commands:\n" +
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
@@ -314,6 +338,11 @@ public class CommandProcessor {
             return;
         }
 
+        // Undocumented optional argument, that is used in STF to decrease genesis block timestamps
+        // to be able to generate next sc blocks without delays.
+        // can be used only in Regtest network
+        int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
+
         // Parsing the info: scid, powdata vector, mc block height, mc block hex
         int offset = 0;
         try {
@@ -358,12 +387,13 @@ public class CommandProcessor {
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo.");
 
             ForgerBox forgerBox = sidechainCreation.getBox();
+            ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
             VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
-            // Set genesis block timestamp to not to have block in future exception during STF tests.
-            // TODO: timestamp should be a hidden optional parameter during SC bootstrapping and must be used by STF
-            long timestamp = System.currentTimeMillis() / 1000 - (params.consensusSlotsInEpoch() / 2 * params.consensusSecondsInSlot());
+            // In Regtest it possible to set genesis block timestamp to not to have block in future exception during STF tests.
+            long currentTimeSeconds = System.currentTimeMillis() / 1000;
+            long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
@@ -373,7 +403,7 @@ public class CommandProcessor {
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
-                    forgerBox,
+                    forgingStakeInfo,
                     vrfProof,
                     mp,
                     sidechainTransactionsCompanion,

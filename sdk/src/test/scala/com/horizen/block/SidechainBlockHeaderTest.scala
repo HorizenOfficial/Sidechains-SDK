@@ -48,8 +48,8 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     assertEquals("SidechainBlockHeader version is different", header.version, serializedHeader.version)
     assertEquals("SidechainBlockHeader parentId is different", header.parentId, serializedHeader.parentId)
     assertEquals("SidechainBlockHeader timestamp is different", header.timestamp, serializedHeader.timestamp)
-    assertEquals("SidechainBlockHeader forgerBox is different", header.forgerBox, serializedHeader.forgerBox)
-    assertEquals("SidechainBlockHeader forgerBoxMerklePath is different", header.forgerBoxMerklePath, serializedHeader.forgerBoxMerklePath)
+    assertEquals("SidechainBlockHeader forgerBox is different", header.forgingStakeInfo, serializedHeader.forgingStakeInfo)
+    assertEquals("SidechainBlockHeader forgingStakeMerklePath is different", header.forgingStakeMerklePath, serializedHeader.forgingStakeMerklePath)
     assertArrayEquals("SidechainBlockHeader vrfProof is different", header.vrfProof.bytes, serializedHeader.vrfProof.bytes) // TODO: replace with vrfProof inself later
     assertArrayEquals("SidechainBlockHeader sidechainTransactionsMerkleRootHash is different", header.sidechainTransactionsMerkleRootHash, serializedHeader.sidechainTransactionsMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader mainchainMerkleRootHash is different", header.mainchainMerkleRootHash, serializedHeader.mainchainMerkleRootHash)
@@ -89,8 +89,8 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
     assertEquals("SidechainBlockHeader version is different", header.version, deserializedHeader.version)
     assertEquals("SidechainBlockHeader parentId is different", header.parentId, deserializedHeader.parentId)
     assertEquals("SidechainBlockHeader timestamp is different", header.timestamp, deserializedHeader.timestamp)
-    assertEquals("SidechainBlockHeader forgerBox is different", header.forgerBox, deserializedHeader.forgerBox)
-    assertEquals("SidechainBlockHeader forgerBoxMerklePath is different", header.forgerBoxMerklePath, deserializedHeader.forgerBoxMerklePath)
+    assertEquals("SidechainBlockHeader forgerBox is different", header.forgingStakeInfo, deserializedHeader.forgingStakeInfo)
+    assertEquals("SidechainBlockHeader forgingStakeMerklePath is different", header.forgingStakeMerklePath, deserializedHeader.forgingStakeMerklePath)
     assertArrayEquals("SidechainBlockHeader vrfProof is different", header.vrfProof.bytes, deserializedHeader.vrfProof.bytes) // TODO: replace with vrfProof inself later
     assertArrayEquals("SidechainBlockHeader sidechainTransactionsMerkleRootHash is different", header.sidechainTransactionsMerkleRootHash, deserializedHeader.sidechainTransactionsMerkleRootHash)
     assertArrayEquals("SidechainBlockHeader mainchainMerkleRootHash is different", header.mainchainMerkleRootHash, deserializedHeader.mainchainMerkleRootHash)

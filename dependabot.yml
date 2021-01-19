@@ -1,0 +1,14 @@
+# Basic dependabot.yml configuration file
+
+version: 2
+updates:
+  # Enable version updates for maven
+  - package-ecosystem: "maven"
+    directory: "/"
+    target-branch: "dev"
+    reviewers:
+      - "i-Alex"
+      - "abi87"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
