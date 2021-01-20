@@ -90,7 +90,7 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
     })
   }
 
-  override def sendNewBlockHashes(locatorHashes: JsonNode, limit: Int, requestId: Int, answerType: Int): Try[Unit] = Try {
+  override def sendNewBlockHashes(locatorHashes: Seq[String], limit: Int, requestId: Int, answerType: Int): Try[Unit] = Try {
     if (limit > 50) {
       sendError(requestId, answerType, 4,  "Invalid limit size! Max limit is 50")
     } else {
@@ -100,8 +100,8 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
       val sidechainNodeView: Future[SidechainNodeView] = viewAsync()
       sidechainNodeView.onComplete(view => {
         //Find the best block in common
-        locatorHashes.forEach(hash => {
-          val optionalSidechainBlock = view.get.getNodeHistory.getBlockById(hash.asText())
+        locatorHashes.foreach(hash => {
+          val optionalSidechainBlock = view.get.getNodeHistory.getBlockById(hash)
 
           if (optionalSidechainBlock.isPresent) {
             val sblock = optionalSidechainBlock.get()
@@ -154,17 +154,17 @@ class SidechainNodeChannelImpl(client: Session) extends SidechainNodeChannel wit
     }
   }
 
-  override def sendMempoolTxs(txids: JsonNode, requestId: Int, answerType: Int): Try[Unit] = Try {
+  override def sendMempoolTxs(txids: Seq[String], requestId: Int, answerType: Int): Try[Unit] = Try {
     val sidechainNodeView: Future[SidechainNodeView] = viewAsync()
     sidechainNodeView.onComplete(view => {
 
       val txs: util.ArrayList[BoxTransaction[Proposition, Box[Proposition]]] = new util.ArrayList[BoxTransaction[Proposition, Box[Proposition]]]()
-      if (txids.size() > 10) {
+      if (txids.length > 10) {
         sendError(requestId, answerType, 4,  "Exceed max number of transactions (10)!")
       }
       else {
-        txids.forEach(txid => {
-          val tx = view.get.getNodeMemoryPool.getTransactionById(txid.asText())
+        txids.foreach(txid => {
+          val tx = view.get.getNodeMemoryPool.getTransactionById(txid)
           if (tx.isPresent) {
             txs.add(tx.get())
           }

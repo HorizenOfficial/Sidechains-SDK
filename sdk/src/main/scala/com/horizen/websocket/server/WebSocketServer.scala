@@ -3,9 +3,8 @@ package com.horizen.websocket.server
 import java.util
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.SidechainAppEvents
 import javax.websocket.Session
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool, SemanticallySuccessfulModifier}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -13,16 +12,19 @@ import scala.concurrent.ExecutionContext
 class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   extends Actor
   with ScorexLogging {
-  var websocket: WebSocketServerImpl = null;
+
+  var Port = if(wsPort == 0) 8025 else wsPort
+  try {
+    val websocket: WebSocketServerImpl = new WebSocketServerImpl(Port, classOf[WebSocketServerEndpoint]);
+    websocket.start()
+  }catch {
+    case _: Throwable => println("Couldn't start websocket server!")
+  }
+
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[ChangedMempool[_]])
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
-    wsPort match {
-      case 0 =>     this.websocket = new WebSocketServerImpl(8025, classOf[WebSocketServerEndpoint])
-      case _ =>     this.websocket = new WebSocketServerImpl(wsPort, classOf[WebSocketServerEndpoint])
-    }
-    this.websocket.start()
   }
 
   override def receive: Receive = {

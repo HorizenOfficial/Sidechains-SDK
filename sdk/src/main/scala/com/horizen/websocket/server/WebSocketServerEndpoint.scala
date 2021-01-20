@@ -2,10 +2,8 @@ package com.horizen.websocket.server
 
 import java.util
 
-import akka.actor.ActorRef
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.inject.Inject
 import javax.websocket.{OnMessage, Session}
 import javax.websocket.server.ServerEndpoint
 
@@ -17,8 +15,6 @@ case object GET_RAW_MEMPOOL extends RequestType(5)
 @ServerEndpoint("/")
 class WebSocketServerEndpoint() {
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
-
-  @Inject val bean: ActorRef = null;
 
   @OnMessage
   def onMessageReceived(session: Session, message: String): Unit = {
@@ -67,13 +63,29 @@ class WebSocketServerEndpoint() {
         else processError(json, session)
 
       case GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code => // Get new block hashes
-        val afterHash = requestPayload.get("locatorHashes")
+        val afterHash = requestPayload.get("locatorHashes").elements()
+
+        var hashes: Seq[String] = Seq()
+        while ( {
+          afterHash.hasNext
+        }) {
+          hashes = hashes :+ afterHash.next().asText()
+        }
+
         val limit = requestPayload.get("limit").asInt()
-        sidechainNodeChannelImpl.sendNewBlockHashes(afterHash, limit, requestId, requestType)
+        sidechainNodeChannelImpl.sendNewBlockHashes(hashes, limit, requestId, requestType)
 
       case GET_MEMPOOL_TXS.code => // Get mempool txes
-        val txids = requestPayload.get("hash")
-        sidechainNodeChannelImpl.sendMempoolTxs(txids, requestId, requestType)
+        val txids = requestPayload.get("hash").elements()
+
+        var hashes: Seq[String] = Seq()
+        while ( {
+          txids.hasNext
+        }) {
+          hashes = hashes :+ txids.next().asText()
+        }
+
+        sidechainNodeChannelImpl.sendMempoolTxs(hashes, requestId, requestType)
 
       case GET_RAW_MEMPOOL.code => // Get raw mempool
         sidechainNodeChannelImpl.sendRawMempool(requestId, requestType)

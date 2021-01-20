@@ -1,7 +1,5 @@
 package com.horizen.websocket.server
 
-import com.fasterxml.jackson.databind.JsonNode
-
 import scala.util.Try
 
 abstract class RequestType(val code:Int)
@@ -15,10 +13,10 @@ trait SidechainNodeChannel {
 
   // For given locator find the best known block in SC active chain - common point.
   // Then return common point height and seq of block hashes up to `limit` elements starting from common point.
-  def sendNewBlockHashes(locatorHashes: JsonNode, limit: Int, requestId: Int, answerType: Int): Try[Unit]
+  def sendNewBlockHashes(locatorHashes: Seq[String], limit: Int, requestId: Int, answerType: Int): Try[Unit]
 
   // Send mempool transaction based and the hashes provided
-  def sendMempoolTxs(txids: JsonNode, requestId: Int, answerType: Int): Try[Unit]
+  def sendMempoolTxs(txids: Seq[String], requestId: Int, answerType: Int): Try[Unit]
 
   // Send the current hashes of transactions in mempool
   def sendRawMempool(requestId: Int, answerType:Int): Try[Unit]
