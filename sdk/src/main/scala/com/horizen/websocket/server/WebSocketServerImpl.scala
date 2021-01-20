@@ -13,7 +13,7 @@ class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSoc
   var server: Server = null
 
   override def isStarted: Boolean =
-    server != null
+    server != null && !WebSocketServerEndpoint.sessions.isEmpty
 
   override def start(): Try[Unit] = Try {
 
