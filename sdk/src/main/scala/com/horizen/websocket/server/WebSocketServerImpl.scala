@@ -6,14 +6,15 @@ import scorex.util.ScorexLogging
 
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
+import com.horizen.websocket.client.WebSocketConnector
 
 @ClientEndpoint
-class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketServerConnector with ScorexLogging {
+class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketConnector with ScorexLogging {
 
   var server: Server = null
 
   override def isStarted: Boolean =
-    server != null && !WebSocketServerEndpoint.sessions.isEmpty
+    server != null
 
   override def start(): Try[Unit] = Try {
 
@@ -34,10 +35,21 @@ class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSoc
     promise.future
   }
 
+  def onMempoolChanged(): Unit = {
+    WebSocketServerEndpoint.notifyMempoolChanged()
+  }
+
+  def onSemanticallySuccessfulModifier(): Unit = {
+    WebSocketServerEndpoint.notifySemanticallySuccessfulModifier()
+  }
+
   override def stop(): Try[Unit] = Try {
     log.info("Stopping web socket server...")
-    server.stop()
-    log.info("Web socket server stopped.")
+    if (this.server != null) {
+      this.server.stop()
+      this.server = null
+      log.info("Web socket server stopped.")
+    }
   }
 
 }

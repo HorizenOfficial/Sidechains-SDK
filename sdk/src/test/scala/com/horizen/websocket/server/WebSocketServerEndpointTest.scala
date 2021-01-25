@@ -8,15 +8,15 @@ import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.SidechainMemoryPool
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainNodeViewUtilMocks}
+import com.horizen.{SidechainMemoryPool}
+import com.horizen.api.http.{NodeViewHolderUtilMocks, SidechainApiMockConfiguration}
 import javax.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
 import scala.concurrent.{ExecutionContext, Promise}
@@ -29,14 +29,13 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-wwebsocket-server")
   val mockedSidechainNodeViewHolder = TestProbe()
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
-  val utilMocks = new SidechainNodeViewUtilMocks()
+  val utilMocks = new NodeViewHolderUtilMocks()
 
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case GetDataFromCurrentSidechainNodeView(f) =>
-          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
-            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+        case GetDataFromCurrentView(f) =>
+            sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
       }
       TestActor.KeepRunning
     }

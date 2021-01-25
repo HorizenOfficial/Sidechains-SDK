@@ -1,27 +1,27 @@
 package com.horizen.websocket.server
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+
 import scala.util.Try
 
-abstract class RequestType(val code:Int)
-
 trait SidechainNodeChannel {
-  // Send Sidechain block by height
-  def sendBlockByHeight(height: Int, requestId: Int, answerType: Int): Try[Unit]
+  // Get Sidechain block by height
+  def getBlockByHeight(height: Int): Try[ObjectNode]
 
-  // Send Sidechain block by hash
-  def sendBlockByHash(hash: String, requestId: Int, answerType: Int): Try[Unit]
+  // Get Sidechain block by hash
+  def getBlockByHash(hash: String): Try[ObjectNode]
 
   // For given locator find the best known block in SC active chain - common point.
   // Then return common point height and seq of block hashes up to `limit` elements starting from common point.
-  def sendNewBlockHashes(locatorHashes: Seq[String], limit: Int, requestId: Int, answerType: Int): Try[Unit]
+  def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[ObjectNode]
 
-  // Send mempool transaction based and the hashes provided
-  def sendMempoolTxs(txids: Seq[String], requestId: Int, answerType: Int): Try[Unit]
+  // Get mempool transaction based and the hashes provided
+  def getMempoolTxs(txids: Seq[String]): Try[ObjectNode]
 
-  // Send the current hashes of transactions in mempool
-  def sendRawMempool(requestId: Int, answerType:Int): Try[Unit]
+  // Get the current hashes of transactions in mempool
+  def getRawMempool(): Try[ObjectNode]
 
-  // Send current best block
-  def sendBestBlock(): Try[Unit]
+  // Get current best block
+  def getBestBlock(): Try[ObjectNode]
 
 }

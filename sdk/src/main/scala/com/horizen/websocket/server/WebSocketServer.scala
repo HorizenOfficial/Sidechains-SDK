@@ -12,10 +12,10 @@ import scala.concurrent.ExecutionContext
 class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   extends Actor
   with ScorexLogging {
-
-  var Port = if(wsPort == 0) 8025 else wsPort
+  var websocket : WebSocketServerImpl = null
+  val Port = if(wsPort == 0) 8025 else wsPort
   try {
-    val websocket: WebSocketServerImpl = new WebSocketServerImpl(Port, classOf[WebSocketServerEndpoint]);
+    websocket = new WebSocketServerImpl(Port, classOf[WebSocketServerEndpoint]);
     websocket.start()
   }catch {
     case _: Throwable => println("Couldn't start websocket server!")
@@ -35,36 +35,11 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
 
   protected def checkMessage: Receive = {
     case ChangedMempool(_)  => {
-      val sessionToRemove: util.ArrayList[Session] = new util.ArrayList[Session]()
-      WebSocketServerEndpoint.sessions.forEach(session =>{
-        if (session.isOpen) {
-          new SidechainNodeChannelImpl(session).sendRawMempool(-1,2)
-        }
-        else {
-          sessionToRemove.add(session)
-        }
-      })
-      removeOutdatedSession(sessionToRemove)
+      websocket.onMempoolChanged()
     }
     case SemanticallySuccessfulModifier(_) => {
-      val sessionToRemove: util.ArrayList[Session] = new util.ArrayList[Session]()
-      WebSocketServerEndpoint.sessions.forEach(session =>{
-        if (session.isOpen) {
-          new SidechainNodeChannelImpl(session).sendBestBlock()
-        }
-        else {
-          sessionToRemove.add(session)
-        }
-      })
-      removeOutdatedSession(sessionToRemove)
+      websocket.onSemanticallySuccessfulModifier()
     }
-  }
-
-
-  private def removeOutdatedSession(toRemove: util.ArrayList[Session]): Unit = {
-    toRemove.forEach(s => {
-      WebSocketServerEndpoint.sessions.remove(s)
-    })
   }
 }
 

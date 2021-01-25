@@ -40,8 +40,8 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
-import com.horizen.websocket.server.{WebSocketServerRef}
+import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
+import com.horizen.websocket.server.WebSocketServerRef
 
 import scala.util.Try
 
@@ -242,7 +242,7 @@ class SidechainApp @Inject()
   val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
 
   // Create the web socket connector and configure it
-  val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
+  val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
     sidechainSettings.websocket.address,
     sidechainSettings.websocket.connectionTimeout,
     communicationClient,

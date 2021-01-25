@@ -28,7 +28,7 @@ trait WebSocketReconnectionHandler {
   def onConnectionSuccess(): Unit
 }
 
-trait WebSocketConnector extends WebSocketChannel {
+trait  WebSocketConnector{
   def isStarted(): Boolean
 
   def start(): Try[Unit]
