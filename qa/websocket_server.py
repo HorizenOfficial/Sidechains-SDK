@@ -15,9 +15,7 @@ from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey
 from httpCalls.transaction.findTransactionByID import http_transaction_findById
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.best import http_block_best
-
-import websocket
-from websocket import create_connection
+from SidechainTestFramework.websocket_client import WebsocketClient
 try:
     import thread
 except ImportError:
@@ -59,42 +57,6 @@ Workflow modelled in this test:
         -Verify that mempool changed event is triggered
 """
 
-
-# Websocket message types codes
-EVENT_MSG_TYPE = 0
-REQUEST_MSG_TYPE = 1
-RESPONSE_MSG_TYPE = 2
-ERROR_MSG_TYPE = 3
-
-# Websocket request codes
-SEND_RAW_MEMPOOL_REQUEST = 5
-GET_MEMPOOL_TXS_REQUEST = 4
-GET_NEW_BLOCK_HASHES_REQUEST = 2
-GET_SINGLE_BLOCK_REQUEST = 0
-
-# Websocket events codes
-MEMPOOL_CHANGED_EVENT = 2
-UPDATE_TIP_EVENT = 0
-
-def sendMessage(ws, msgType, requestId, requestType, requestPayload):
-    ws.send('{"msgType":'+str(msgType)+', "requestId":'+str(requestId)+', "requestType":'+str(requestType)+', "requestPayload":'+requestPayload+' }')
-    timeout = 500
-    for x in xrange(1, timeout):
-        results = ws.recv()
-        if len(results)==0:
-            time.sleep(1)
-        else:
-            break
-    return results
-
-def checkMessageStaticFields(response, msgType, requestId, answerType):
-    assert_equal(response['msgType'], msgType)
-    assert_equal(response['answerType'], answerType)
-    if (msgType == 0):
-        assert_true('requestId' not in response)
-    else:
-        assert_equal(response['requestId'], requestId)
-
 class SCWsServer(SidechainTestFramework):
     blocks = []
 
@@ -120,7 +82,8 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(http_wallet_balance(sc_node1),  (self.sc_nodes_bootstrap_info.genesis_account_balance * 2) * 100000000)
 
         #Start websocket client
-        ws_client = create_connection("ws://localhost:8025/")
+        ws = WebsocketClient()
+        ws_connection = ws.create_connection("ws://localhost:8025/")
 
         ######## Mempool requests test ########
         print("######## Mempool requests test ########")
@@ -128,32 +91,32 @@ class SCWsServer(SidechainTestFramework):
         # Test with empty mempool
 
         #Send raw mempool request to ws
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST,
+                                ws.SEND_RAW_MEMPOOL_REQUEST,
                                 "{}"))
         #Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST)
+                                ws.SEND_RAW_MEMPOOL_REQUEST)
         #Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(int(responsePayload['size']),0)
         assert_equal(len(responsePayload['transactions']),0)
 
         #Send get mempool txs request to ws with non-existing txid
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST,
+                                ws.GET_MEMPOOL_TXS_REQUEST,
                                 json.dumps({"hash": ["non_existing_txid"]})))
         #Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST)
+                                ws.GET_MEMPOOL_TXS_REQUEST)
         #Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(len(responsePayload['transactions']),0)
@@ -168,17 +131,17 @@ class SCWsServer(SidechainTestFramework):
         self.sc_sync_all()
 
         #Send raw mempool request to ws
-        sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST,
+                                ws.SEND_RAW_MEMPOOL_REQUEST,
                                 "{}")
-        response = json.loads(ws_client.recv()) # Skip the event message of changed mempool
+        response = json.loads(ws_connection.recv()) # Skip the event message of changed mempool
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST)
+                                ws.SEND_RAW_MEMPOOL_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(int(responsePayload['size']),1)
@@ -186,16 +149,16 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['transactions'][0],txid)
 
         #Send get mempool txs request to ws with both existing and non-existing txid
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST,
+                                ws.GET_MEMPOOL_TXS_REQUEST,
                                 json.dumps({"hash": [txid,"non_existing_txid"]})))
         #Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST)
+                                ws.GET_MEMPOOL_TXS_REQUEST)
         #Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(len(responsePayload['transactions']),1)
@@ -204,16 +167,16 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['transactions'][0],txJson['transaction'])
 
         #Send get mempool txs request with > 10 txids, it should answer with error
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST,
+                                ws.GET_MEMPOOL_TXS_REQUEST,
                                 json.dumps({"hash": [txid,"2","3","4","5","6","7","8","9","10","11"]})))
         #Verify static response field
-        checkMessageStaticFields(response,
-                                ERROR_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.ERROR_MSG_TYPE,
                                 0,
-                                GET_MEMPOOL_TXS_REQUEST)
+                                ws.GET_MEMPOOL_TXS_REQUEST)
         assert_equal(response['errorCode'], 4)
         assert_equal(response['responsePayload'],"Exceed max number of transactions (10)!")
 
@@ -223,19 +186,19 @@ class SCWsServer(SidechainTestFramework):
         block = generate_next_blocks(sc_node1, "", 1)[0]
         self.blocks.append(block)
         self.sc_sync_all()
-        ws_client.recv()
-        ws_client.recv()
+        ws_connection.recv()
+        ws_connection.recv()
         #Send raw mempool request to ws
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST,
+                                ws.SEND_RAW_MEMPOOL_REQUEST,
                                 "{}"))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                SEND_RAW_MEMPOOL_REQUEST)
+                                ws.SEND_RAW_MEMPOOL_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(int(responsePayload['size']),0)
@@ -248,16 +211,16 @@ class SCWsServer(SidechainTestFramework):
         # Test get single block request
 
         # Send get single block request with block hash
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST,
+                                ws.GET_SINGLE_BLOCK_REQUEST,
                                 json.dumps({"hash": block})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST)
+                                ws.GET_SINGLE_BLOCK_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(responsePayload['hash'],block)
@@ -268,16 +231,16 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['block'],blockJson['block'])
 
         # Send get single block request with block height
-        response = json.loads(sendMessage(ws_client,
-                               REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                               ws.REQUEST_MSG_TYPE,
                                0,
-                               GET_SINGLE_BLOCK_REQUEST,
+                               ws.GET_SINGLE_BLOCK_REQUEST,
                                json.dumps({"height": 3})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                               RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                               ws.RESPONSE_MSG_TYPE,
                                0,
-                               GET_SINGLE_BLOCK_REQUEST)
+                               ws.GET_SINGLE_BLOCK_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(responsePayload['hash'],block)
@@ -289,31 +252,31 @@ class SCWsServer(SidechainTestFramework):
         # Test get single block request with non existing block
 
         # Send get single block request with block hash
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST,
+                                ws.GET_SINGLE_BLOCK_REQUEST,
                                 json.dumps({"hash": "d1d0af586e3e01abb7c9f493cb9bbfc2ff863e87cb035325d9e22df37fb1660e"})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                ERROR_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.ERROR_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST)
+                                ws.GET_SINGLE_BLOCK_REQUEST)
         assert_equal(response['errorCode'],5)
         # Verify responsePayload
         assert_equal(response['responsePayload'], "Invalid parameter")
 
         # Send get single block request with block height
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST,
+                                ws.GET_SINGLE_BLOCK_REQUEST,
                                 json.dumps({"height": 5})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                ERROR_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.ERROR_MSG_TYPE,
                                 0,
-                                GET_SINGLE_BLOCK_REQUEST)
+                                ws.GET_SINGLE_BLOCK_REQUEST)
         assert_equal(response['errorCode'],5)
         # Verify responsePayload
         assert_equal(response['responsePayload'], "Invalid parameter")
@@ -323,16 +286,16 @@ class SCWsServer(SidechainTestFramework):
         # Test with no hashes in common
 
         # Send get new block hashes request with non existing block hash
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST,
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST,
                                 json.dumps({"locatorHashes": ["d1d0af586e3e01abb7c9f493cb9bbfc2ff863e87cb035325d9e22df37fb1660e"], "limit":2})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST)
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(responsePayload['height'],1)
@@ -340,16 +303,16 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hashes'][1],self.blocks[0]) #the first hash is the block height 1 (we start save at height 2)
 
         # Send get new block hashes request with block hash # 1
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST,
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST,
                                 json.dumps({"locatorHashes": [self.blocks[0]], "limit":2})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST)
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(responsePayload['height'],2)
@@ -358,16 +321,16 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hashes'][1],self.blocks[1])
 
         # Send get new block hashes request with the last block hash
-        response = json.loads(sendMessage(ws_client,
-                                REQUEST_MSG_TYPE,
+        response = json.loads(ws.sendMessage(ws_connection,
+                                ws.REQUEST_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST,
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST,
                                 json.dumps({"locatorHashes": [self.blocks[0],self.blocks[1]], "limit":2})))
         # Verify static response field
-        checkMessageStaticFields(response,
-                                RESPONSE_MSG_TYPE,
+        ws.checkMessageStaticFields(response,
+                                ws.RESPONSE_MSG_TYPE,
                                 0,
-                                GET_NEW_BLOCK_HASHES_REQUEST)
+                                ws.GET_NEW_BLOCK_HASHES_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
         assert_equal(responsePayload['height'],3)
@@ -383,7 +346,7 @@ class SCWsServer(SidechainTestFramework):
         newTipEvent = ""
         changedMempoolEvent = ""
         for i in range (0,2):
-            response = json.loads(ws_client.recv())
+            response = json.loads(ws_connection.recv())
             if response['msgType'] == 0 and response['answerType'] == 0: # new Tip event
                 newTipEvent = response
             elif response['msgType'] == 0 and response['answerType'] == 2: # changed mempool event
@@ -393,10 +356,10 @@ class SCWsServer(SidechainTestFramework):
 
         # After generating a block we expect to receive new tip event
         # Verify static response field
-        checkMessageStaticFields(newTipEvent,
-                               EVENT_MSG_TYPE,
+        ws.checkMessageStaticFields(newTipEvent,
+                               ws.EVENT_MSG_TYPE,
                                -1,
-                               UPDATE_TIP_EVENT)
+                               ws.UPDATE_TIP_EVENT)
         eventPayload = newTipEvent['eventPayload']
         bestBlockJson = http_block_best(sc_node1)
 
@@ -406,10 +369,10 @@ class SCWsServer(SidechainTestFramework):
 
         #After generating a block the mempool changes and we expect to receive changedMempool event that send the actual state of the mempool
         # Verify static response field
-        checkMessageStaticFields(changedMempoolEvent,
-                               EVENT_MSG_TYPE,
+        ws.checkMessageStaticFields(changedMempoolEvent,
+                               ws.EVENT_MSG_TYPE,
                                -1,
-                               MEMPOOL_CHANGED_EVENT)
+                               ws.MEMPOOL_CHANGED_EVENT)
         # We expect to have no txes in mempool
         eventPayload = changedMempoolEvent['eventPayload']
         assert_equal(eventPayload['size'],0)
@@ -420,12 +383,12 @@ class SCWsServer(SidechainTestFramework):
         txid = sendCoinsToAddress(sc_node1, publicKey1, 40000000, 1000)
         self.sc_sync_all()
 
-        changedMempoolEvent = json.loads(ws_client.recv())
+        changedMempoolEvent = json.loads(ws_connection.recv())
         # Verify static response field
-        checkMessageStaticFields(changedMempoolEvent,
-                               EVENT_MSG_TYPE,
+        ws.checkMessageStaticFields(changedMempoolEvent,
+                               ws.EVENT_MSG_TYPE,
                                -1,
-                               MEMPOOL_CHANGED_EVENT)
+                               ws.MEMPOOL_CHANGED_EVENT)
         # We expect to have new tx in mempool
         eventPayload = changedMempoolEvent['eventPayload']
         assert_equal(eventPayload['size'],1)
