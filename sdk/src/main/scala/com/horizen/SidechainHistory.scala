@@ -254,6 +254,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
 
+  def blockIdByHeight(height: Int): Option[String] = {
+    storage.activeChainBlockId(height)
+  }
+
   override def isSemanticallyValid(blockId: ModifierId): ModifierSemanticValidity = {
     storage.semanticValidity(blockId)
   }

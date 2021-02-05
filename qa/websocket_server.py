@@ -298,9 +298,10 @@ class SCWsServer(SidechainTestFramework):
                                 ws.GET_NEW_BLOCK_HASHES_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
-        assert_equal(responsePayload['height'],1)
+        assert_equal(responsePayload['height'],3)
         assert_equal(len(responsePayload['hashes']),2)
-        assert_equal(responsePayload['hashes'][1],self.blocks[0]) #the first hash is the block height 1 (we start save at height 2)
+        assert_equal(responsePayload['hashes'][0],self.blocks[0])
+        assert_equal(responsePayload['hashes'][1],self.blocks[1])
 
         # Send get new block hashes request with block hash # 1
         response = json.loads(ws.sendMessage(ws_connection,
@@ -315,10 +316,9 @@ class SCWsServer(SidechainTestFramework):
                                 ws.GET_NEW_BLOCK_HASHES_REQUEST)
         # Verify responsePayload
         responsePayload = response['responsePayload']
-        assert_equal(responsePayload['height'],2)
-        assert_equal(len(responsePayload['hashes']),2)
-        assert_equal(responsePayload['hashes'][0],self.blocks[0])
-        assert_equal(responsePayload['hashes'][1],self.blocks[1])
+        assert_equal(responsePayload['height'],3)
+        assert_equal(len(responsePayload['hashes']),1)
+        assert_equal(responsePayload['hashes'][0],self.blocks[1])
 
         # Send get new block hashes request with the last block hash
         response = json.loads(ws.sendMessage(ws_connection,

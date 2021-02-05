@@ -12,10 +12,9 @@ import scala.concurrent.ExecutionContext
 class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   extends Actor
   with ScorexLogging {
-  var websocket : WebSocketServerImpl = null
-  val Port = if(wsPort == 0) 8025 else wsPort
+  val websocket = new WebSocketServerImpl(wsPort, classOf[WebSocketServerEndpoint]);
+
   try {
-    websocket = new WebSocketServerImpl(Port, classOf[WebSocketServerEndpoint]);
     websocket.start()
   }catch {
     case _: Throwable => println("Couldn't start websocket server!")

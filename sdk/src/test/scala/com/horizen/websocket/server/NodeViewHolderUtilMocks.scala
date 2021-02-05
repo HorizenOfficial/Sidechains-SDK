@@ -4,10 +4,11 @@ import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainTypes, SidechainWallet}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
-import com.horizen.box.{Box,NoncedBox, RegularBox}
+import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -18,10 +19,13 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
+import scorex.core.ModifierTypeId
 import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.consensus.History.ModifierIds
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
@@ -63,6 +67,19 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     sidechainTransactionsCompanion,
     null).get
 
+  val genesisBlockInfo: SidechainBlockInfo = new SidechainBlockInfo(
+    100,
+    100,
+     bytesToId(new Array[Byte](32)),
+    Instant.now.getEpochSecond - 10000,
+    null,
+    Seq(),
+    Seq(),
+    null,
+    null,
+    bytesToId(new Array[Byte](32)),
+  )
+
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
     val history: SidechainHistory = mock[SidechainHistory]
 
@@ -80,11 +97,30 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
     Mockito.when(history.getBestBlock).thenAnswer(_ => genesisBlock)
 
+    Mockito.when(history.bestBlock).thenAnswer(_ => genesisBlock)
+
+    Mockito.when(history.height).thenAnswer(_ =>Optional.of(100))
+
+    Mockito.when(history.modifierById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
+      Option(genesisBlock)
+   )
+    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
+      genesisBlockInfo
+    )
+
     Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ =>Optional.of(100))
 
     Mockito.when(history.getBlockIdByHeight(ArgumentMatchers.any())).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockIdByHeight_return_value()) Optional.of("the_block_id")
       else Optional.empty())
+
+    Mockito.when(history.blockIdByHeight(ArgumentMatchers.any[Int])).thenAnswer(_ =>
+      Option("the_block_id")
+    )
+
+    Mockito.when(history.continuationIds(ArgumentMatchers.any[SidechainSyncInfo],ArgumentMatchers.any[Int])).thenAnswer(_ =>{
+      Seq(Tuple2(null,null))
+    })
 
     Mockito.when(history.getCurrentHeight).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getCurrentHeight_return_value()) 230
@@ -227,6 +263,12 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
       } else
         Optional.empty()
     })
+
+    Mockito.when(memoryPool.getAll(ArgumentMatchers.any[Seq[ModifierId]])).thenAnswer(_ => {
+      Seq[RegularTransaction]() :+ transactionList.get(0)
+    })
+
+    Mockito.when(memoryPool.take(ArgumentMatchers.any[Int])).thenAnswer(_ => JavaConversions.iterableAsScalaIterable(transactionList))
 
     memoryPool
   }
