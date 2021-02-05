@@ -11,7 +11,7 @@ case class WebSocketSettings(address: String,
                              reconnectionMaxAttempts: Int,
                              allowNoConnectionInRegtest: Boolean = true, // In Regtest allow to forge new blocks without connection to MC node, for example.
                              wsServer: Boolean = false,
-                             wsServerPort: Int
+                             wsServerPort: Int = 8025
                             )
 
 case class GenesisDataSettings(scGenesisBlockHex: String,

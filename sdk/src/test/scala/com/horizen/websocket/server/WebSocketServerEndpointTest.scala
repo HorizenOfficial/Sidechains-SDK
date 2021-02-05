@@ -186,7 +186,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
       .put("msgType", 1)
       .put("requestId",0)
       .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash","some_block_hash")
+    blockByHashtRequest.putObject("requestPayload").put("hash","21438dfafec6d70317574cc3307bedf801e3f9137835ae8b36d12653c4d26e95")
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
     Thread.sleep(3000)
@@ -201,7 +201,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     assertTrue(responsePayload.has("hash"))
     assertTrue(responsePayload.has("height"))
 
-    assertEquals("some_block_hash", responsePayload.get("hash").asText())
+    assertEquals("21438dfafec6d70317574cc3307bedf801e3f9137835ae8b36d12653c4d26e95", responsePayload.get("hash").asText())
 
     // Get block by height
     val blockByHeightRequest = mapper.createObjectNode()

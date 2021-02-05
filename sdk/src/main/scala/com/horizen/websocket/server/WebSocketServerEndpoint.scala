@@ -9,6 +9,8 @@ import javax.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendRe
 import javax.websocket.server.ServerEndpoint
 import scorex.util.ScorexLogging
 
+import scala.util.{Failure, Success}
+
 abstract class RequestType(val code:Int)
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
 case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
@@ -21,7 +23,7 @@ case object EVENT_MESSAGE extends MsgType(0)
 case object ERROR_MESSAGE extends MsgType(3)
 
 @ServerEndpoint("/")
-class WebSocketServerEndpoint(){
+class WebSocketServerEndpoint() extends ScorexLogging {
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
   val sidechainNodeChannel: SidechainNodeChannelImpl = new SidechainNodeChannelImpl()
 
@@ -41,7 +43,7 @@ class WebSocketServerEndpoint(){
 
   @OnError
   def onError(session: Session, t:Throwable): Unit = {
-    System.out.println("Error on session "+session.getId+": "+t.toString)
+    log.error("Error on session "+session.getId+": "+t.toString)
     synchronized{
       WebSocketServerEndpoint.removeSession(session);
     }
@@ -81,22 +83,28 @@ class WebSocketServerEndpoint(){
       case GET_SINGLE_BLOCK_REQUEST_TYPE.code => // Get single block
         if (requestPayload.has("hash")) {
           val hash = requestPayload.get("hash").asText()
-          val responsePayload = sidechainNodeChannel.getBlockByHash(hash).get
-          responsePayload.size match {
-            case 0 =>
-              WebSocketServerEndpoint.sendError(requestId, requestType, 5, "Invalid parameter", session)
-            case _ =>
+          sidechainNodeChannel.getBlockByHash(hash) match {
+            case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
+
+            }
+            case Failure(ex) => {
+              log.debug("Error inside GET_SINGLE_BLOCK websocket request: "+ex.toString)
+              WebSocketServerEndpoint.sendError(requestId, requestType, 5, "Invalid parameter", session)
+            }
           }
         }
         else if (requestPayload.has("height")) {
           val height = requestPayload.get("height").asInt()
-          val responsePayload = sidechainNodeChannel.getBlockByHeight(height).get
-          responsePayload.size match {
-            case 0 =>
-              WebSocketServerEndpoint.sendError(requestId, requestType, 5, "Invalid parameter", session)
-            case _ =>
+          sidechainNodeChannel.getBlockByHeight(height) match{
+            case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
+
+            }
+            case Failure(ex) => {
+              log.debug("Error inside GET_SINGLE_BLOCK websocket request: "+ex.toString)
+              WebSocketServerEndpoint.sendError(requestId, requestType, 5, "Invalid parameter", session)
+            }
           }
 
         }
@@ -116,12 +124,15 @@ class WebSocketServerEndpoint(){
         if (limit > 50)
           WebSocketServerEndpoint.sendError(requestId,requestType,4,"Invalid limit size! Max limit is 50", session)
         else {
-          val responsePayload = sidechainNodeChannel.getNewBlockHashes(hashes, limit).get
-          responsePayload match {
-            case null =>
-              WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't find new block hashes", session)
-            case _ =>
+          sidechainNodeChannel.getNewBlockHashes(hashes, limit) match {
+            case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
+
+            }
+            case Failure(ex) => {
+              log.debug("Error inside GET_NEW_BLOCK_HASHES websocket request: "+ex.toString)
+              WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't find new block hashes", session)
+            }
           }
         }
 
@@ -138,25 +149,30 @@ class WebSocketServerEndpoint(){
           WebSocketServerEndpoint.sendError(requestId, requestType, 4,  "Exceed max number of transactions (10)!", session)
         }
         else {
-          val responsePayload = sidechainNodeChannel.getMempoolTxs(hashes).get
-          responsePayload.size match {
-            case 0 =>
-              WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't find mempool txs", session)
-            case _ =>
+          sidechainNodeChannel.getMempoolTxs(hashes) match {
+            case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
+
+            }
+            case Failure(ex) => {
+              log.debug("Error inside GET_MEMPOOL_TXS websocket request: "+ex.toString)
+              WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't find mempool txs", session)
+            }
           }
         }
 
       case GET_RAW_MEMPOOL.code => // Get raw mempool
-        val responsePayload = sidechainNodeChannel.getRawMempool().get
-        responsePayload.size match {
-          case 0 =>
-            WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't query mempool", session)
-          case _ =>
+        sidechainNodeChannel.getRawMempool() match {
+          case Success(responsePayload) => {
             if (requestId == -1)
               WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, requestId, requestType, responsePayload, session)
             else
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
+          }
+          case Failure(ex) => {
+            log.debug("Error inside GET_RAW_MEMPOOL websocket request: "+ex.toString)
+            WebSocketServerEndpoint.sendError(requestId, requestType, 4, "Couldn't query mempool", session)
+          }
         }
 
       case msgType =>
@@ -181,7 +197,7 @@ class WebSocketServerEndpoint(){
 
 private object WebSocketServerEndpoint extends ScorexLogging {
   var sessions: util.ArrayList[Session] = new util.ArrayList[Session]()
-  var sidechainNodeChannelImpl = new SidechainNodeChannelImpl();
+  val sidechainNodeChannelImpl = new SidechainNodeChannelImpl();
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   def addSession (session: Session): Unit = {
@@ -192,10 +208,14 @@ private object WebSocketServerEndpoint extends ScorexLogging {
   }
 
   def notifyMempoolChanged(): Unit = {
-    val eventPayload = sidechainNodeChannelImpl.getRawMempool().get
-    this.sessions.forEach(session =>{
-        WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, -1, 2, eventPayload, session)
-    })
+    val eventPayload = sidechainNodeChannelImpl.getRawMempool() match {
+      case Success(eventPayload) =>
+        this.sessions.forEach(session =>{
+          WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, -1, 2, eventPayload, session)
+        })
+      case Failure(ex)  => log.error("Error on notifyMempoolChanged!: "+ex.toString)
+    }
+
   }
 
   def notifySemanticallySuccessfulModifier(): Unit = {
