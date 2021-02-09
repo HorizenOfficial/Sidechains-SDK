@@ -269,7 +269,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           case Success(stateAfterApply) =>
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-            val walletAfterApply = newWallet.scanPersistent(modToApply)
+            val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
+              newWallet.scanPersistent(modToApply, stateAfterApply.getFeePayments(stateAfterApply.getWithdrawalEpochInfo.epoch))
+            } else
+              newWallet.scanPersistent(modToApply)
+
             SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)

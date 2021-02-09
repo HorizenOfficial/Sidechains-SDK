@@ -208,6 +208,8 @@ class SidechainWalletTest
     // Prepare mockedSecretStorage1 Secrets
     Mockito.when(mockedSecretStorage.getAll).thenReturn(secretList.toList)
 
+    // Define fee payment boxes to be added during scan persistent
+    val feePaymentBoxes: Seq[SidechainTypes#SCB] = getRegularBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
 
     // Test:
     // Prepare what we expect to receive for WalletBoxStorage.update
@@ -262,7 +264,10 @@ class SidechainWalletTest
         assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxesToUpdate list is wrong.", util.Arrays.asList(
           transaction1.newBoxes().get(0),
           transaction2.newBoxes().get(0),
-          transaction2.newBoxes().get(1)
+          transaction2.newBoxes().get(1),
+          feePaymentBoxes.head,
+          feePaymentBoxes(1),
+          feePaymentBoxes(2)
         ), boxesToUpdate)
 
         assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxIdsToRemove list is wrong.", util.Arrays.asList(
@@ -306,7 +311,7 @@ class SidechainWalletTest
           Success(mockedForgingBoxesInfoStorage)
         })
 
-    sidechainWallet.scanPersistent(mockedBlock)
+    sidechainWallet.scanPersistent(mockedBlock, feePaymentBoxes)
   }
 
   @Test

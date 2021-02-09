@@ -2,7 +2,6 @@ package com.horizen
 
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
-
 import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, ForgerBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
@@ -20,6 +19,7 @@ import scorex.util.ModifierId
 
 import scala.util.Try
 import scala.collection.JavaConverters._
+import scala.language.postfixOps
 
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -99,9 +99,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // just do nothing, we don't need to care about offchain objects inside the wallet
   override def scanOffchain(txs: Seq[SidechainTypes#SCBT]): SidechainWallet = this
 
-  // scan like in HybridApp, but in more general way.
-  // update boxes in BoxStore
+  // Scan the modifier and store wallet related data from it.
   override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
+    scanPersistent(modifier, Seq())
+  }
+
+  // Scan the modifier and store wallet related data from it + some fee payments according to consensus rules.
+  def scanPersistent(modifier: SidechainBlock, feePaymentBoxes: Seq[SidechainTypes#SCB]): SidechainWallet = {
     //require(modifier != null, "SidechainBlock must be NOT NULL.")
     val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
@@ -114,12 +118,18 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
           tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
       }
 
-    val newBoxes = changes.toAppend.map(_.box)
+    val newBoxes: Seq[SidechainTypes#SCB] = changes.toAppend.map(_.box) ++ feePaymentBoxes
 
-    val newWalletBoxes = newBoxes.withFilter(box => pubKeys.contains(box.proposition())).map( box => {
-      val boxTransaction = txBoxes(box.id())
-      new WalletBox(box, ModifierId @@ boxTransaction.id, boxTransaction.timestamp())
-    })
+    val newWalletBoxes = newBoxes
+      .withFilter(box => pubKeys.contains(box.proposition()))
+      .map(box => {
+        if (txBoxes.contains(box.id())) {
+          val boxTransaction = txBoxes(box.id())
+          new WalletBox(box, ModifierId @@ boxTransaction.id, boxTransaction.timestamp())
+        } else { // For fee payment boxes which have no containing transaction.
+          new WalletBox(box)
+        }
+      })
 
     val newDelegatedForgerBoxes: Seq[ForgerBox] = newBoxes.withFilter(_.isInstanceOf[ForgerBox]).map(_.asInstanceOf[ForgerBox])
       .filter(forgerBox => pubKeys.contains(forgerBox.blockSignProposition()))
@@ -127,8 +137,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
       .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
 
-    val transactions = (for (boxId <- (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove))
-      yield txBoxes(new ByteArrayWrapper(boxId))).distinct
+    // Note: the fee payment boxes have no related transactions
+    val transactions: Seq[SidechainTypes#SCBT] = (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove).flatMap(id => txBoxes.get(id)).distinct
 
     walletBoxStorage.update(new ByteArrayWrapper(version), newWalletBoxes.toList, boxIdsToRemove.toList).get
 

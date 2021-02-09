@@ -10,7 +10,7 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ListSerializer, MerklePath, MerkleTree, Utils}
+import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
 import com.horizen.{ScorexEncoding, SidechainTypes}
 import scorex.core.block.Block
@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
 class SidechainBlock(override val header: SidechainBlockHeader,
                       val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
@@ -65,6 +65,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
       txs = txs :+ tx.asInstanceOf[SidechainTypes#SCBT]
     txs
   }
+
+  lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
 
   // Check that Sidechain Block data is consistent to SidechainBlockHeader
   protected def verifyDataConsistency(params: NetworkParams): Try[Unit] = Try {

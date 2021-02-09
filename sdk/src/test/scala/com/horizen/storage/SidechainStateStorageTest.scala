@@ -2,7 +2,6 @@ package com.horizen.storage
 
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
-
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.SidechainTypes
 import com.horizen.box.BoxSerializer
@@ -10,7 +9,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.utils.{ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -84,9 +83,19 @@ class SidechainStateStorageTest
     val version = getVersion
     val toUpdate = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     toUpdate.add(storedBoxList.head)
-    // wothdrawals info
+
+    // withdrawals info
     toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.withdrawalEpochInformationKey),
       new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfo))))
+
+    // block fee info
+    val nextBlockFeeInfoCounter: Int = 0
+    val blockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch)),
+      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+    toUpdate.add(new Pair(new ByteArrayWrapper(stateStorage.getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter)),
+      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
+
     // consensus epoch
     toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
     val toRemove = java.util.Arrays.asList(storedBoxList(2).getKey)
@@ -109,14 +118,14 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None, blockFeeInfo)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getRegularBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
