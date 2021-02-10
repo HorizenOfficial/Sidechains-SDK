@@ -36,13 +36,11 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
-
 import scala.util.Try
 
 
@@ -65,8 +63,10 @@ class SidechainApp @Inject()
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
   )
-  extends Application with ScorexLogging with Module
+  extends Application  with ScorexLogging with Module
 {
+
+
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
@@ -87,6 +87,7 @@ class SidechainApp @Inject()
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+
   protected val sidechainBoxesDataCompanion: SidechainBoxesDataCompanion = SidechainBoxesDataCompanion(customBoxDataSerializers)
   protected val sidechainProofsCompanion: SidechainProofsCompanion = SidechainProofsCompanion(customProofSerializers)
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion =
@@ -296,9 +297,15 @@ class SidechainApp @Inject()
     binder.bind(classOf[SidechainProofsCompanion])
       .toInstance(sidechainProofsCompanion)
 
-    binder.install(new FactoryModuleBuilder()
-      .build(classOf[SidechainCoreTransactionFactory]))
   }
+
+  def getTransactionActorRef(): ActorRef = {
+    return sidechainTransactionActorRef
+  }
+  def getNodeViewActorRef(): ActorRef = {
+    return nodeViewHolderRef
+  }
+
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
