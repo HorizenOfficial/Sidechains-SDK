@@ -105,7 +105,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
     val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
     val txids: util.ArrayList[String] = new util.ArrayList[String]()
-    sidechainNodeView.pool.take(200).foreach(txs => txids.add(txs.id()))
+    sidechainNodeView.pool.take(sidechainNodeView.pool.size).foreach(txs => txids.add(txs.id()))
 
     val json = mapper.readTree(SerializationUtil.serializeWithResult(txids.toArray()))
 

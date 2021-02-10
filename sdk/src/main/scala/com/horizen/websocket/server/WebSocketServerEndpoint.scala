@@ -219,10 +219,14 @@ private object WebSocketServerEndpoint extends ScorexLogging {
   }
 
   def notifySemanticallySuccessfulModifier(): Unit = {
-    val eventPayload = sidechainNodeChannelImpl.getBestBlock().get
-    this.sessions.forEach(session =>{
-        WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, -1, 0, eventPayload, session)
-    })
+    val eventPayload = sidechainNodeChannelImpl.getBestBlock() match {
+      case Success(eventPayload) =>
+        this.sessions.forEach(session =>{
+          WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, -1, 0, eventPayload, session)
+        })
+      case Failure(ex)  => log.error("Error on notifySemanticallySuccessfulModifier!: "+ex.toString)
+
+    }
   }
 
   // answerType is new field added to the default mainchain websocket events because to help the Explorer to understand
