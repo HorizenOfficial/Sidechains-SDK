@@ -53,3 +53,5 @@ The project has a Maven module structure and consists of 4 modules:
 
 You can find an example of a sidechain implementation without any custom business logic here: [Simple App](examples/simpleapp/README.md). A detailed description of how to set up and run a sidechain node with a connection to the mainchain [can be found here](examples/simpleapp/mc_sc_workflow_example.md).
 
+
+# issue 151
