@@ -9,6 +9,7 @@ import com.google.inject.{Binder, Provides}
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.box.BoxSerializer
 import com.horizen.box.data.NoncedBoxDataSerializer
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
 import com.horizen.proof.ProofSerializer
 import com.horizen.secret.SecretSerializer
@@ -18,7 +19,7 @@ import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSeri
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
 
-class SidechainAppModule extends com.google.inject.Module {
+abstract class SidechainAppModule extends com.google.inject.Module {
 
   var app : SidechainApp = null
 
@@ -32,7 +33,12 @@ class SidechainAppModule extends com.google.inject.Module {
 
     binder.install(new FactoryModuleBuilder()
       .build(classOf[SidechainCoreTransactionFactory]))
+
+    configureApp(binder)
+
   }
+
+  def configureApp(binder: Binder): Unit
 
   @Provides
   def get(
@@ -52,7 +58,9 @@ class SidechainAppModule extends com.google.inject.Module {
                     @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
                     @Named("ConsensusStorage")  consensusStorage: Storage,
                     @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-                    @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
+                    @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+                    sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
+                    sidechainTransactionsCompanion : SidechainTransactionsCompanion
                   ): SidechainApp = {
     if (app == null) {
       app = new SidechainApp(
@@ -72,7 +80,9 @@ class SidechainAppModule extends com.google.inject.Module {
         walletForgingBoxesInfoStorage,
         consensusStorage,
         customApiGroups,
-        rejectedApiPaths
+        rejectedApiPaths,
+        sidechainCoreTransactionFactory,
+        sidechainTransactionsCompanion
       )
 
     }

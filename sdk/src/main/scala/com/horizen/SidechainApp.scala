@@ -5,7 +5,6 @@ import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http._
@@ -20,7 +19,7 @@ import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer}
+import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -61,9 +60,11 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   val sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
+   val sidechainTransactionsCompanion : SidechainTransactionsCompanion
   )
-  extends Application  with ScorexLogging with Module
+  extends Application  with ScorexLogging
 {
 
 
@@ -87,11 +88,6 @@ class SidechainApp @Inject()
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
-
-  protected val sidechainBoxesDataCompanion: SidechainBoxesDataCompanion = SidechainBoxesDataCompanion(customBoxDataSerializers)
-  protected val sidechainProofsCompanion: SidechainProofsCompanion = SidechainProofsCompanion(customProofSerializers)
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion =
-    SidechainTransactionsCompanion(customTransactionSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
 
   // Deserialize genesis block bytes
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -193,8 +189,6 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
-
-
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -249,13 +243,9 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
-
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
-
-  val injector: Injector = Guice.createInjector(this)
-  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
@@ -279,7 +269,6 @@ class SidechainApp @Inject()
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
 
-
   override def stopAll(): Unit = {
     super.stopAll()
     storageList.foreach(_.close())
@@ -290,22 +279,12 @@ class SidechainApp @Inject()
     storage
   }
 
-  override def configure(binder: Binder): Unit = {
-    binder.bind(classOf[SidechainBoxesDataCompanion])
-      .toInstance(sidechainBoxesDataCompanion)
-
-    binder.bind(classOf[SidechainProofsCompanion])
-      .toInstance(sidechainProofsCompanion)
-
-  }
-
   def getTransactionActorRef(): ActorRef = {
     return sidechainTransactionActorRef
   }
   def getNodeViewActorRef(): ActorRef = {
     return nodeViewHolderRef
   }
-
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
