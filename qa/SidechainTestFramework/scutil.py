@@ -220,7 +220,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, websocket_
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
-    with open('./resources/template.conf', 'r') as templateFile:
+    customFileName = './resources/template_' + str(n+1) + '.conf'
+    fileToOpen = './resources/template.conf'
+    if os.path.isfile(customFileName):
+        fileToOpen = customFileName
+
+    with open(fileToOpen, 'r') as templateFile:
         tmpConfig = templateFile.read()
 
     genesis_secrets = []
