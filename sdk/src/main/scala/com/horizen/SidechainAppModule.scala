@@ -19,26 +19,26 @@ import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSeri
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
 
-abstract class SidechainAppModule extends com.google.inject.Module {
+abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
   var app : SidechainApp = null
 
-  override def configure(binder: Binder): Unit = {
+  override def configure(): Unit = {
 
-    binder.bind(classOf[NodeViewHelper])
+    bind(classOf[NodeViewHelper])
       .to(classOf[NodeViewHelperImpl]);
 
-    binder.bind(classOf[TransactionSubmitHelper])
+    bind(classOf[TransactionSubmitHelper])
       .to(classOf[TransactionSubmitHelperImpl]);
 
-    binder.install(new FactoryModuleBuilder()
+    install(new FactoryModuleBuilder()
       .build(classOf[SidechainCoreTransactionFactory]))
 
-    configureApp(binder)
+    configureApp()
 
   }
 
-  def configureApp(binder: Binder): Unit
+  def configureApp(): Unit
 
   @Provides
   def get(

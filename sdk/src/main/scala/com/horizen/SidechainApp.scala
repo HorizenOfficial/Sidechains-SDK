@@ -16,6 +16,7 @@ import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
+import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
@@ -40,6 +41,8 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
+
+
 import scala.util.Try
 
 
@@ -260,6 +263,9 @@ class SidechainApp @Inject()
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
+  var transactionSubmitProvider : TransactionSubmitProvider =  new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+  var nodeViewProvider : NodeViewProvider =  new NodeViewProviderImpl(nodeViewHolderRef)
+
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
   override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
@@ -279,11 +285,12 @@ class SidechainApp @Inject()
     storage
   }
 
-  def getTransactionActorRef(): ActorRef = {
-    return sidechainTransactionActorRef
+  def getTransactionSubmitProvider(): TransactionSubmitProvider = {
+    transactionSubmitProvider
   }
-  def getNodeViewActorRef(): ActorRef = {
-    return nodeViewHolderRef
+
+  def getNodeViewProvider(): NodeViewProvider = {
+    nodeViewProvider
   }
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)

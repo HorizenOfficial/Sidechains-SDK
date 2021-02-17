@@ -10,6 +10,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
+import com.horizen.SidechainAppModule;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
@@ -29,8 +30,7 @@ import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
 import com.horizen.utils.Pair;
 
-public class SimpleAppModule
-    extends AbstractModule
+public class SimpleAppModule extends SidechainAppModule
 {
     private SettingsReader settingsReader;
 
@@ -39,7 +39,7 @@ public class SimpleAppModule
     }
 
     @Override
-    protected void configure() {
+    public void configureApp() {
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
