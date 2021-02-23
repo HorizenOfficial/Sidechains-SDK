@@ -62,29 +62,30 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
                     sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
                     sidechainTransactionsCompanion : SidechainTransactionsCompanion
                   ): SidechainApp = {
-    if (app == null) {
-      app = new SidechainApp(
-        sidechainSettings,
-        customBoxSerializers,
-        customBoxDataSerializers,
-        customSecretSerializers,
-        customProofSerializers,
-        customTransactionSerializers,
-        applicationWallet,
-        applicationState,
-        secretStorage,
-        walletBoxStorage,
-        walletTransactionStorage,
-        stateStorage,
-        historyStorage,
-        walletForgingBoxesInfoStorage,
-        consensusStorage,
-        customApiGroups,
-        rejectedApiPaths,
-        sidechainCoreTransactionFactory,
-        sidechainTransactionsCompanion
-      )
-
+    synchronized {
+      if (app == null) {
+        app = new SidechainApp(
+          sidechainSettings,
+          customBoxSerializers,
+          customBoxDataSerializers,
+          customSecretSerializers,
+          customProofSerializers,
+          customTransactionSerializers,
+          applicationWallet,
+          applicationState,
+          secretStorage,
+          walletBoxStorage,
+          walletTransactionStorage,
+          stateStorage,
+          historyStorage,
+          walletForgingBoxesInfoStorage,
+          consensusStorage,
+          customApiGroups,
+          rejectedApiPaths,
+          sidechainCoreTransactionFactory,
+          sidechainTransactionsCompanion
+        )
+      }
     }
     return app;
   }
