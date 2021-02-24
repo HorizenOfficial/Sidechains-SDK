@@ -66,7 +66,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   }
 
   override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[ObjectNode] = Try {
-    var lastHeight = 1
+    var lastHeight = -1
     val responsePayload = mapper.createObjectNode()
 
     val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
@@ -74,14 +74,8 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
     var headerList = sidechainNodeView.history.continuationIds(scInfo ,limit)
     if (headerList.size > 0) {
       lastHeight = sidechainNodeView.history.blockInfoById(headerList.last._2.asInstanceOf[ModifierId]).height
-    } else {
-      scInfo = new SidechainSyncInfo(
-        Seq(sidechainNodeView.history.blockIdByHeight(1).get)
-          .asInstanceOf[Seq[ModifierId]]
-      )
-      headerList = sidechainNodeView.history.continuationIds(scInfo ,limit)
-      lastHeight = sidechainNodeView.history.blockInfoById(headerList.last._2.asInstanceOf[ModifierId]).height
     }
+
     val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.map(el =>el._2)))
     responsePayload.put("height",lastHeight)
     responsePayload.put("hashes", hashes.get("result"))
