@@ -16,7 +16,8 @@ case class MainchainBlockReferenceData(
                                         @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
                                         mProof: Option[MerklePath],
                                         proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
-                                        withdrawalEpochCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
+                                        lowerCertificateLeaves: Seq[Array[Byte]],
+                                        topQualityCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -72,9 +73,12 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         w.putInt(0)
     }
 
-    obj.withdrawalEpochCertificate match {
+    w.putInt(obj.lowerCertificateLeaves.size)
+    obj.lowerCertificateLeaves.foreach(leaf => w.putBytes(leaf))
+
+    obj.topQualityCertificate match {
       case Some(certificate) =>
-        val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
+        val cb = WithdrawalEpochCertificateSerializer.toBytes(certificate)
         w.putInt(cb.length)
         w.putBytes(cb)
       case _ => w.putInt(0)
@@ -121,16 +125,18 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         None
     }
 
-    val certificateSize: Int = r.getInt()
+    val lowerCertificateLeavesSize: Int = r.getInt()
+    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(SidechainCommitmentEntry.CERT_LEAF_LENGTH))
 
-    val certificate: Option[WithdrawalEpochCertificate] = {
-      if (certificateSize > 0)
-        Some(MainchainBackwardTransferCertificateSerializer.parseBytes(r.getBytes(certificateSize)))
+    val topQualityCertificateSize: Int = r.getInt()
+    val topQualityCertificate: Option[WithdrawalEpochCertificate] = {
+      if (topQualityCertificateSize > 0)
+        Some(WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(topQualityCertificateSize)))
       else
         None
     }
 
 
-    MainchainBlockReferenceData(headerHash, mc2scTx, mproof, (leftNeighbour, rightNeighbour), certificate)
+    MainchainBlockReferenceData(headerHash, mc2scTx, mproof, (leftNeighbour, rightNeighbour), lowerCertificateLeaves, topQualityCertificate)
   }
 }

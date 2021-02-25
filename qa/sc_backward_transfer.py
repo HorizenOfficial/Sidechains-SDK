@@ -136,7 +136,9 @@ class SCBackwardTransfer(SidechainTestFramework):
         check_mcreference_presence(we1_2_mcblock_hash, scblock_id4, sc_node)
 
         # Verify Certificate for epoch 0 on SC side
-        we0_sc_cert = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]["withdrawalEpochCertificate"]
+        mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
+        we0_sc_cert = mbrefdata["topQualityCertificate"]
+        assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
@@ -260,7 +262,9 @@ class SCBackwardTransfer(SidechainTestFramework):
         check_mcreference_presence(we2_2_mcblock_hash, scblock_id5, sc_node)
 
         # Verify Certificate for epoch 1 on SC side
-        we1_sc_cert = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]["withdrawalEpochCertificate"]
+        mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
+        we1_sc_cert = mbrefdata["topQualityCertificate"]
+        assert_equal(len(mbrefdata["lowerCertificateLeaves"]), 0)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(1, we1_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")

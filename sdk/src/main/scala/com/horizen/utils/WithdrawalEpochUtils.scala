@@ -23,8 +23,32 @@ object WithdrawalEpochUtils {
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
 
-  //Certificate could be sent only then block in specific position in Withdrawal epoch
+  def inReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    val mcBlocksLeft = mcBlocksLeftTillCertificateSubmissionWindowEnd(parentEpochInfo, params)
+    if(mcBlocksLeft == 0) {
+      // SC block is not inside the window at all
+      false
+    } else {
+      // SC block may have multiple MCBlockRefData entries that reach or even exceed the CertificateSubmissionWindowEnd
+      block.mainchainBlockReferencesData.size >= mcBlocksLeft
+    }
+  }
+
+  def mcBlocksLeftTillCertificateSubmissionWindowEnd(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Int = {
+    if (inSubmitCertificateWindow(epochInfo, params)) {
+      certificateSubmissionWindowLength(params) - epochInfo.lastEpochIndex
+    } else {
+      0
+    }
+  }
+
+  // Certificate can be sent only when mc block is in specific position in the Withdrawal epoch
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= params.withdrawalEpochLength / 5)
+    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
+  }
+
+  def certificateSubmissionWindowLength(params: NetworkParams): Int = {
+    // MC consensus cert submission window length is 1/5 of the withdrawal epoch length, but at least 2 mc blocks
+    Math.max(2, params.withdrawalEpochLength / 5)
   }
 }

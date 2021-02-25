@@ -35,6 +35,11 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     @Override
+    public byte[] sidechainId() {
+        return output.sidechainId();
+    }
+
+    @Override
     public RegularBox getBox() {
         byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
         long nonce = BytesUtils.getLong(hash, 0);

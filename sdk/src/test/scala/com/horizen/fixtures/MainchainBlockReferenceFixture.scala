@@ -90,7 +90,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     }
 
 
-    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, (None,None), None)) {
+    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, (None,None), Seq(), None)) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
     }
 

@@ -5,7 +5,7 @@ import java.util.{ArrayList => JArrayList}
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
@@ -42,12 +42,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getWithdrawalBlockKey(epoch: Int): ByteArrayWrapper = {
-    calculateKey(("Withdrawal block - " + epoch).getBytes)
-  }
-
-  private val lastWithdrawalCertificatePreviousMcBlockHashKey: ByteArrayWrapper = {
-    calculateKey("Previous MC block hash Key".getBytes)
+  private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -110,10 +106,16 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
-  def getUnprocessedWithdrawalRequests(epoch: Int) : Option[Seq[WithdrawalRequestBox]] = {
-    storage.get(getWithdrawalBlockKey(epoch)) match {
-      case v if v.isPresent => None
-      case _ => Some(getWithdrawalRequests(epoch))
+  def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
+      case Some(baw) =>
+        WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
+          case Success(certificate) => Option(certificate)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch certificate information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
     }
   }
 
@@ -132,15 +134,13 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getLastCertificateEndEpochMcBlockHashOpt: Option[Array[Byte]] = storage.get(lastWithdrawalCertificatePreviousMcBlockHashKey).asScala.map(_.data)
-
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              consensusEpoch: ConsensusEpochNumber,
-             withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainStateStorage] = Try {
+             topQualityCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -175,7 +175,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
     }
 
-    // If withdrawal epoch switched to the next one, then remove outdated withdrawal related records and counters (2 epochs before).
+    // If withdrawal epoch switched to the next one, then:
+    // 1) remove outdated withdrawal related records and counters (2 epochs before);
+    // 2) remove outdated topQualityCertificates retrieved in the previous epoch and referenced to the 2 epochs before.
     val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfo.epoch
       case _ => false
@@ -186,13 +188,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         removeList.add(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch - 2, counter))
       }
       removeList.add(getWithdrawalEpochCounterKey(withdrawalEpochNumberToRemove))
+      removeList.add(getTopQualityCertificateKey(withdrawalEpochNumberToRemove))
     }
 
-    // Update Certificate related data
-    withdrawalEpochCertificateOpt.map { withdrawalEpochCertificate =>
-      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1), version))
-      updateList.add(new JPair(lastWithdrawalCertificatePreviousMcBlockHashKey, withdrawalEpochCertificate.endEpochBlockHash))
-    }
+    // Store the top quality cert for epoch if present
+    topQualityCertificateOpt.foreach(certificate =>
+      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    )
 
     // Update Consensus related data
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {

@@ -213,7 +213,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
-    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     assertTrue("ApplyChanges for block must be successful.",
