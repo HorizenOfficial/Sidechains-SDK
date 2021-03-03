@@ -254,7 +254,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
+                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number])
     }
 
     configsData.append({
@@ -422,6 +423,23 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
             break
         time.sleep(WAIT_CONST)
 
+
+def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
+    """
+    Disconnect a SC node, from_connection, to another one, specifying its node_num.
+    Method will attempt to disconnect for maximum wait_for seconds.
+    """
+    j = {"host": "127.0.0.1", \
+         "port": str(sc_p2p_port(node_num))}
+    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
+    print("Disconnecting from " + ip_port)
+    from_connection.node_disconnect(json.dumps(j))
+    time.sleep(WAIT_CONST)
+
+
+def disconnect_sc_nodes_bi(nodes, a, b):
+    disconnect_sc_nodes(nodes[a], b)
+    disconnect_sc_nodes(nodes[b], a)
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)

@@ -2,6 +2,7 @@
 import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
+from sc_multiple_certs import SCMultipleCerts
 from test_framework.util import assert_equal
 from mc_node_alive import MCNodeAlive
 from mc_sc_connected_nodes import MCSCConnectedNodes
@@ -52,6 +53,9 @@ def run_tests(log_file):
 
     result = run_test(MCSCForgingDelegation())
     assert_equal(0, result, "mc_sc_forging_delegation test failed!")
+
+    result = run_test(SCMultipleCerts())
+    assert_equal(0, result, "sc_multiple_certs test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")

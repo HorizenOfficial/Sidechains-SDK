@@ -186,7 +186,7 @@ class CertificateSubmitter
       buildDataForProofGeneration(sidechainNodeView, referencedWithdrawalEpochNumber)
     }
     else {
-      log.debug("Not in submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
+      log.info("Not in submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       None
     }
   }

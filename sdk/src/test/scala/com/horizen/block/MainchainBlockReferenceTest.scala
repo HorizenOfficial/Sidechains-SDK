@@ -292,7 +292,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   @Test
   def blockWithBackwardTransfer(): Unit = {
     // Test: parse MC block with tx version -4 with backward transfer.
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_backward_transfer").getLines().next()
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
     //Check for sidechain 1
@@ -310,6 +310,32 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
+    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
+    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
+  }
+
+  @Test
+  def blockWithMultipleCertificates(): Unit = {
+    // Test: parse MC block with tx version -4 with backward transfer.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_2_certificates").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+
+    val scIdHex = "bce79abe3b617ab20ce3517314681bdeed4c16b741ec5d469c006d3230fe42a3"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+
+    val params1 = RegTestParams(scId.data)
+
+    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
+
+    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
+    val mcblock1 = mcblockTry1.get
+
+    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain top quality certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertEquals("Block must contain 1 low quality certificate.", 1, mcblock1.data.lowerCertificateLeaves.size)
     assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
     assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
     assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
