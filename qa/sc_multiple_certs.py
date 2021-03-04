@@ -31,10 +31,11 @@ Test:
     - generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
     - generate SC blocks to sync with MC node.
     - disconnect SC nodes.
+    - SC node 2 generates 1 SC block with one BackwardTransfer request.
     - generate 2 MC blocks to switch WE.
-    - SC node 2 generates SC block with MC block ref included and with one BackwardTransfer.
+    - SC node 2 generates 2 SC blocks with one MC block ref included in each.
     - SC node 2 automatically starts generating Certificate -> than do submit.
-    - SC node 1 generates SC block with MC block ref included.
+    - SC node 1 generates 2 SC blocks with one MC block ref included in each.
     - SC node 1 automatically starts generating Certificate with better quality -> than do submit.
     - MC node generate 1 block and checks certificates inclusion.
     - Both SC nodes generate 1 SC block each and checks certificates inclusion.
@@ -42,6 +43,7 @@ Test:
     - SC nodes generates blocks to sync with MC:
         * SC node 1 can sync with MC, because follows the top quality cert data.
         * SC node 2 can't grow SC chain, because it follows wrong cert data.
+    - Connect SC nodes again and check that SC node 2 synced to the state of SC Node 1
 """
 class SCMultipleCerts(SidechainTestFramework):
 
@@ -170,7 +172,7 @@ class SCMultipleCerts(SidechainTestFramework):
         try:
             generate_next_block(sc_node2, "second node")
         except SCAPIException as e:
-            print("Expected SCAPIException: " + e.message)
+            print("Expected SCAPIException: " + e.error)
             error_occur = True
 
         assert_true(error_occur, "Node 2 wrongly verified top quality cert as a valid one.")
