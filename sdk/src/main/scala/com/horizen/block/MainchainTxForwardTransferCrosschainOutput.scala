@@ -8,16 +8,14 @@ class MainchainTxForwardTransferCrosschainOutput(
                                         val forwardTransferOutputBytes: Array[Byte],
                                         override val sidechainId: Array[Byte],
                                         val amount: Long,
-                                        val propositionBytes: Array[Byte],
+                                        val propositionBytes: Array[Byte]
                                       ) extends MainchainTxCrosschainOutput {
-  override val outputType: Byte = MainchainTxForwardTransferCrosschainOutput.OUTPUT_TYPE
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(forwardTransferOutputBytes))
 }
 
 
 object MainchainTxForwardTransferCrosschainOutput {
-  val OUTPUT_TYPE: Byte = 1.toByte
   val FORWARD_TRANSFER_OUTPUT_SIZE = 72 // 8 + 32 + 32
 
   def create(forwardTransferOutputBytes: Array[Byte], offset: Int): Try[MainchainTxForwardTransferCrosschainOutput] = Try {

@@ -8,8 +8,10 @@ import scala.util.Try
 class MainchainTransaction(
                             transactionsBytes: Array[Byte],
                             version: Int,
+                            val cswInputs: Seq[MainchainTxCswCrosschainInput],
                             sidechainCreationOutputsData: Seq[MainchainTxSidechainCreationCrosschainOutputData],
-                            forwardTransferOutputs: Seq[MainchainTxForwardTransferCrosschainOutput]
+                            forwardTransferOutputs: Seq[MainchainTxForwardTransferCrosschainOutput],
+                            bwtRequestOutputs: Seq[MainchainTxBwtRequestCrosschainOutput]
                           ) {
   val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
 
@@ -25,7 +27,9 @@ class MainchainTransaction(
 
   def size: Int = transactionsBytes.length
 
-  def getCrosschainOutputs: Seq[MainchainTxCrosschainOutput] = sidechainCreationOutputs ++ forwardTransferOutputs
+  def getCrosschainOutputs: Seq[MainchainTxCrosschainOutput] = {
+    sidechainCreationOutputs ++ forwardTransferOutputs ++ bwtRequestOutputs
+  }
 }
 
 
@@ -56,10 +60,21 @@ object MainchainTransaction {
       currentOffset += MainchainTransactionOutput.parse(transactionBytes, currentOffset).size
     }
 
+    val cswInputsData = ListBuffer[MainchainTxCswCrosschainInput]()
     val sidechainCreationOutputsData = ListBuffer[MainchainTxSidechainCreationCrosschainOutputData]()
     val forwardTransferOutputs  = ListBuffer[MainchainTxForwardTransferCrosschainOutput]()
+    val bwtRequestOutputs  = ListBuffer[MainchainTxBwtRequestCrosschainOutput]()
 
     if(version == SC_TX_VERSION) {
+      // parse Ceased Sidechain Withdrawal inputs
+      val cswInputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      currentOffset += cswInputsNumber.size()
+      for (_ <- 1 to cswInputsNumber.value().intValue()) {
+        val input = MainchainTxCswCrosschainInput.create(transactionBytes, currentOffset).get
+        currentOffset += input.size
+        cswInputsData += input
+      }
+
       // parse SidechainCreation outputs
       val creationOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += creationOutputsNumber.size()
@@ -76,6 +91,15 @@ object MainchainTransaction {
         val output = MainchainTxForwardTransferCrosschainOutput.create(transactionBytes, currentOffset).get
         currentOffset += MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE
         forwardTransferOutputs += output
+      }
+
+      // parse Backward Transfer Request outputs
+      val bwtRequestOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      currentOffset += bwtRequestOutputsNumber.size()
+      for (_ <- 1 to bwtRequestOutputsNumber.value().intValue()) {
+        val output = MainchainTxBwtRequestCrosschainOutput.create(transactionBytes, currentOffset).get
+        currentOffset += MainchainTxBwtRequestCrosschainOutput.BWT_REQUEST_OUTPUT_SIZE
+        bwtRequestOutputs += output
       }
     }
 
@@ -116,6 +140,7 @@ object MainchainTransaction {
     }
 
     val thisMainchainTransactionBytes = transactionBytes.slice(offset, currentOffset)
-    new MainchainTransaction(thisMainchainTransactionBytes, version, sidechainCreationOutputsData, forwardTransferOutputs)
+    new MainchainTransaction(thisMainchainTransactionBytes, version, cswInputsData,
+      sidechainCreationOutputsData, forwardTransferOutputs, bwtRequestOutputs)
   }
 }

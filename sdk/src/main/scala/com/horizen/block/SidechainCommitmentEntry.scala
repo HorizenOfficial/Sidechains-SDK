@@ -1,7 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.Bytes
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, MerkleTree, Utils}
 
 import scala.collection.mutable.ListBuffer
@@ -12,6 +12,10 @@ class SidechainCommitmentEntry
   private val ftLeaves: ListBuffer[Array[Byte]] = ListBuffer()
   private val certLeaves: ListBuffer[Array[Byte]] = ListBuffer()
 
+  def addCswInput(csw: MainchainTxCswCrosschainInput): Unit = {
+    // Note: not used during Commitment calculation at the current moment
+  }
+
   def addSidechainCreation(sc: SidechainCreation): Unit = {
     // In current MC implementation SC and FWT are stored and processed together
     ftLeaves.append(sc.hash)
@@ -19,6 +23,11 @@ class SidechainCommitmentEntry
 
   def addForwardTransfer(ft: ForwardTransfer): Unit = {
     ftLeaves.append(ft.hash)
+  }
+
+  def addBwtRequest(btr: BwtRequest): Unit = {
+    // Note: not used during Commitment calculation at the current moment
+    // btrLeaves.append(btr.hash)
   }
 
   def addCertificate(cert: WithdrawalEpochCertificate): Unit = {

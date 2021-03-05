@@ -12,7 +12,9 @@ class MainchainTxSidechainCreationCrosschainOutputData(val sidechainCreationOutp
                                                        val address: Array[Byte],
                                                        val customData: Array[Byte],
                                                        val constant: Array[Byte],
-                                                       val certVk: Array[Byte]) {
+                                                       val certVk: Array[Byte],
+                                                       val mbtrVk: Option[Array[Byte]],
+                                                       val ceasedVk: Option[Array[Byte]]) {
   def size: Int = sidechainCreationOutputBytes.length
 }
 
@@ -44,12 +46,31 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val constant: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue())
     currentOffset += constantLength.value().intValue()
 
-    val certVkSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.certVkSize()
-    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize)
-    currentOffset += certVkSize
+    val vkSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.certVkSize()
+    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize)
+    currentOffset += vkSize
+
+    val mbtrVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
+    currentOffset += 1
+    val mbtrVk: Option[Array[Byte]] = if(mbtrVkPresence) {
+      Some(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize))
+    } else {
+      None
+    }
+    if(mbtrVkPresence) currentOffset += vkSize
+
+    val ceasedVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
+    currentOffset += 1
+    val ceasedVk: Option[Array[Byte]] = if(ceasedVkPresence) {
+      Some(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize))
+    } else {
+      None
+    }
+    if(ceasedVkPresence) currentOffset += vkSize
+
 
     new MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes.slice(offset, currentOffset),
-      withdrawalEpochLength, amount, address, customData, constant, certVk)
+      withdrawalEpochLength, amount, address, customData, constant, certVk, mbtrVk, ceasedVk)
   }
 }
 
@@ -61,17 +82,16 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
                                                       data.address,
                                                       data.customData,
                                                       data.constant,
-                                                      data.certVk
+                                                      data.certVk,
+                                                      data.mbtrVk,
+                                                      data.ceasedVk
                                                     ) with MainchainTxCrosschainOutput {
-  override val outputType: Byte = MainchainTxSidechainCreationCrosschainOutput.OUTPUT_TYPE
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(sidechainCreationOutputBytes))
 }
 
 
 object MainchainTxSidechainCreationCrosschainOutput {
-  val OUTPUT_TYPE: Byte = 3.toByte
-
   def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
     BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(transactionHash), BytesUtils.reverseBytes(Ints.toByteArray(index))))
   }

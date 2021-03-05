@@ -2,11 +2,12 @@ package com.horizen.block
 
 import java.util
 import java.util.Arrays
+
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
+import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -169,6 +170,21 @@ object MainchainBlockReference extends ScorexLogging {
 
         val sidechainsCommitmentTree = new SidechainsCommitmentTree()
 
+        // Collect all CSW inputs
+        val cswInputs: ListBuffer[MainchainTxCswCrosschainInput] = ListBuffer()
+        for(tx <- mainchainTxs)
+          cswInputs.appendAll(tx.cswInputs)
+
+        val sidechainRelatedCswInputs: Map[ByteArrayWrapper, Seq[MainchainTxCswCrosschainInput]] =
+          cswInputs.groupBy(input => new ByteArrayWrapper(input.sidechainId))
+
+        scIds = scIds ++ sidechainRelatedCswInputs.keys
+        sidechainRelatedCswInputs.foreach {
+          case (scId, cswInputs) =>
+            // Update commitment tree
+            cswInputs.foreach(input => sidechainsCommitmentTree.addCswInput(scId, input))
+        }
+
         // Collect all sidechain related outputs
         val crosschainOutputs: ListBuffer[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = ListBuffer()
         for(tx <- mainchainTxs)
@@ -184,12 +200,12 @@ object MainchainBlockReference extends ScorexLogging {
             outputs.foreach {
               case sc: SidechainCreation => sidechainsCommitmentTree.addSidechainCreation(scId, sc)
               case ft: ForwardTransfer => sidechainsCommitmentTree.addForwardTransfer(scId, ft)
+              case btr: BwtRequest => sidechainsCommitmentTree.addBwtRequest(scId, btr)
             }
         }
 
         scIds = scIds ++ certificates.map(c => new ByteArrayWrapper(c.sidechainId))
         certificates.foreach(cert => sidechainsCommitmentTree.addCertificate(cert))
-
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, header.time))
@@ -242,6 +258,8 @@ object MainchainBlockReference extends ScorexLogging {
           new SidechainCreation(creationOutput, tx.hash, indexInTx)
         case forwardTransferOutput: MainchainTxForwardTransferCrosschainOutput =>
           new ForwardTransfer(forwardTransferOutput, tx.hash, indexInTx)
+        case bwtRequestOutput: MainchainTxBwtRequestCrosschainOutput =>
+          new BwtRequest(bwtRequestOutput, tx.hash, indexInTx)
       }
     })
   }

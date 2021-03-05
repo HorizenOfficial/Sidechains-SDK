@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerklePath, MerkleTree}
 
 import scala.collection.JavaConverters._
@@ -9,6 +9,16 @@ import scala.collection.mutable
 class SidechainsCommitmentTree
 {
   val sidechainsHashMap: mutable.Map[ByteArrayWrapper, SidechainCommitmentEntry] = new mutable.HashMap[ByteArrayWrapper, SidechainCommitmentEntry]()
+
+  def addCswInput(sidechainId: ByteArrayWrapper, csw: MainchainTxCswCrosschainInput): Unit = {
+    sidechainsHashMap.get(sidechainId) match {
+      case Some(entry) => entry.addCswInput(csw)
+      case None =>
+        val entry = new SidechainCommitmentEntry()
+        entry.addCswInput(csw)
+        sidechainsHashMap.put(sidechainId, entry)
+    }
+  }
 
   def addSidechainCreation(sidechainId: ByteArrayWrapper, sc: SidechainCreation): Unit = {
     sidechainsHashMap.get(sidechainId) match {
@@ -26,6 +36,16 @@ class SidechainsCommitmentTree
       case None =>
         val entry = new SidechainCommitmentEntry()
         entry.addForwardTransfer(ft)
+        sidechainsHashMap.put(sidechainId, entry)
+    }
+  }
+
+  def addBwtRequest(sidechainId: ByteArrayWrapper, btr: BwtRequest): Unit = {
+    sidechainsHashMap.get(sidechainId) match {
+      case Some(entry) => entry.addBwtRequest(btr)
+      case None =>
+        val entry = new SidechainCommitmentEntry()
+        entry.addBwtRequest(btr)
         sidechainsHashMap.put(sidechainId, entry)
     }
   }
