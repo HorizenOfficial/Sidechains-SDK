@@ -4,9 +4,11 @@ import java.util.{Optional => JOptional}
 
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import com.horizen.fixtures.{MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, fail => jFail}
 import org.junit.Test
@@ -106,6 +108,7 @@ class MainchainBlockReferenceValidatorTest
     val ref9: MainchainBlockReference = generateMainchainBlockReference()
     val ref10: MainchainBlockReference = generateMainchainBlockReference()
 
+    val initialCumulativeHash: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
     val genesisBlock: SidechainBlock = mockBlock(genesisBlockId, genesisParentBlockId, Seq(ref1.header), Seq(ref1.data))
     val block1: SidechainBlock = mockBlock(getRandomModifier(), genesisBlock.id, Seq(ref2.header, ref3.header), Seq())
     val block2: SidechainBlock = mockBlock(getRandomModifier(), block1.id, Seq(ref4.header, ref5.header, ref6.header), Seq(ref2.data))
@@ -114,7 +117,7 @@ class MainchainBlockReferenceValidatorTest
     val block5: SidechainBlock = mockBlock(getRandomModifier(), block4.id, Seq(ref8.header), Seq(ref6.data, ref7.data, ref8.data))
 
     val blocks: Seq[SidechainBlock] = Seq(genesisBlock, block1, block2, block3, block4, block5)
-    val blocksInfo: Seq[(ModifierId, SidechainBlockInfo)] = blocks.map(b => (b.id, getBlockInfo(b)))
+    val blocksInfo: Seq[(ModifierId, SidechainBlockInfo)] = blocks.map(b => (b.id, getBlockInfo(b, initialCumulativeHash)))
 
     val history: SidechainHistory = mock[SidechainHistory]
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
@@ -243,7 +246,7 @@ class MainchainBlockReferenceValidatorTest
     block
   }
 
-  private def getBlockInfo(block: SidechainBlock): SidechainBlockInfo = {
+  private def getBlockInfo(block: SidechainBlock, initialCumulativeHash: FieldElement): SidechainBlockInfo = {
     // Specify only the parts used in Validator
     SidechainBlockInfo(
       0,
@@ -251,7 +254,7 @@ class MainchainBlockReferenceValidatorTest
       block.parentId,
       0L,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, initialCumulativeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(0, 0),
       Option(VrfGenerator.generateVrfOutput(0)),

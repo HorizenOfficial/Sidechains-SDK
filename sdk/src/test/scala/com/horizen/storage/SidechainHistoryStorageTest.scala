@@ -5,21 +5,21 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, O
 
 import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.utils.Pair
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue, assertArrayEquals}
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito._
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, idToBytes, bytesToId}
+import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -398,7 +398,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           activeChainBlockList.last.parentId,
           activeChainBlockInfoList.last.timestamp,
           tipNewValidity,
-          activeChainBlockInfoList.last.mainchainHeaderHashes,
+          activeChainBlockInfoList.last.mainchainHeaderBaseInfo,
           activeChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           activeChainBlockInfoList.last.withdrawalEpochInfo,
           activeChainBlockInfoList.last.vrfOutputOpt,
@@ -417,7 +417,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
           forkChainBlockList.last.parentId,
           forkChainBlockList.last.timestamp,
           forkTipNewValidity,
-          forkChainBlockInfoList.last.mainchainHeaderHashes,
+          forkChainBlockInfoList.last.mainchainHeaderBaseInfo,
           forkChainBlockInfoList.last.mainchainReferenceDataHeaderHashes,
           forkChainBlockInfoList.last.withdrawalEpochInfo,
           forkChainBlockInfoList.last.vrfOutputOpt,
@@ -478,7 +478,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       newBestBlock.parentId,
       20,
       ModifierSemanticValidity.Valid,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(newBestBlock),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(newBestBlock, activeChainBlockInfoList.last.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
       WithdrawalEpochInfo(1, 2),
       Option(VrfGenerator.generateVrfOutput(12)),

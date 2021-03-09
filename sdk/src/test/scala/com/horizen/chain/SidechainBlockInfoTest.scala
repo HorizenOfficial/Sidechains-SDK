@@ -3,6 +3,7 @@ package com.horizen.chain
 import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -25,6 +26,14 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
   val mainchainHeaderHashes: Seq[MainchainHeaderHash] = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
     "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
+  val mainchainHeadersBaseInfo: Seq[MainchainHeaderBaseInfo] = Seq(
+    MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")),
+     FieldElement.deserialize(BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457"))),
+    MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70")),
+      FieldElement.deserialize(BytesUtils.fromHexString("04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd"))),
+    MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508")),
+      FieldElement.deserialize(BytesUtils.fromHexString("8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca")))
+  )
   val mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = Seq("CEE50DFEC92130269861FB647BA5730425C79AC164F8A0E4003CF30990628D52", "0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")
     .map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(10, 100)
@@ -38,7 +47,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   @Test
   def creation(): Unit = {
     val clonedParentId: ModifierId = bytesToId(idToBytes(parentId))
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeadersBaseInfo, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
 
     assertEquals("SidechainBlockInfo height is different", height, info.height)
     assertEquals("SidechainBlockInfo score is different", score, info.score)
@@ -57,7 +66,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
   @Test
   def serialization(): Unit = {
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mainchainHeadersBaseInfo, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, Option(vrfOutput), lastBlockIdInPreviousConsensusEpoch)
     val bytes = info.bytes
 
 
@@ -112,10 +121,11 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo score is different", score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo parentId is different", parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, serializedInfoTry.get.semanticValidity)
-    val mcHeaderHashes = serializedInfoTry.get.mainchainHeaderHashes
-    assertEquals("Size of mainchain headers must be the same", mainchainHeaderHashes.size, mcHeaderHashes.size)
-    for(index <- mcHeaderHashes.indices)
-      assertEquals("SidechainBlockInfo mainchain headers is different", mainchainHeaderHashes(index), mcHeaderHashes(index))
+    //val mcHeaderHashes = serializedInfoTry.get.mainchainHeaderHashes
+    val mcHeaderBaseInfo = serializedInfoTry.get.mainchainHeaderBaseInfo
+    assertEquals("Size of mainchain headers must be the same", mainchainHeadersBaseInfo.size, mcHeaderBaseInfo.size)
+    for(index <- mcHeaderBaseInfo.indices)
+      assertEquals("SidechainBlockInfo mainchain headers is different", mainchainHeadersBaseInfo(index), mcHeaderBaseInfo(index))
     val mcRefDataHeaderHashes = serializedInfoTry.get.mainchainReferenceDataHeaderHashes
     assertEquals("Size of mainchain reference data header hashes must be the same", mainchainReferenceDataHeaderHashes.size, mcRefDataHeaderHashes.size)
     for(index <- mcRefDataHeaderHashes.indices)
@@ -123,7 +133,7 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo withdrawalEpochInfo is different", withdrawalEpochInfo, serializedInfoTry.get.withdrawalEpochInfo)
 
     //check equals and hash code
-    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mcHeaderHashes, mcRefDataHeaderHashes, withdrawalEpochInfo, Option((vrfOutput)), lastBlockIdInPreviousConsensusEpoch)
+    val info: SidechainBlockInfo = SidechainBlockInfo(height, score, parentId, timestamp, semanticValidity, mcHeaderBaseInfo, mcRefDataHeaderHashes, withdrawalEpochInfo, Option((vrfOutput)), lastBlockIdInPreviousConsensusEpoch)
 
     assert(serializedInfoTry.get == info)
     assert(serializedInfoTry.get.hashCode() == info.hashCode())

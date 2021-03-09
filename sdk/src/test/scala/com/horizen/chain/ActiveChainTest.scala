@@ -2,6 +2,7 @@ package com.horizen.chain
 
 import java.io.{PrintWriter, StringWriter}
 
+import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
@@ -9,6 +10,8 @@ import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.ModifierId
+import com.horizen.librustsidechains.FieldElement
+import com.horizen.poseidonnative.PoseidonHash
 
 import scala.collection.breakOut
 import scala.util.Try
@@ -472,8 +475,11 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     val blockId0: ModifierId = getRandomModifier()
     val blockId1: ModifierId = getRandomModifier()
     val mcHash0: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcCumulativeHash0: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
     val mcHash1: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
-    val blockInfo1 = getBlockInfo(blockId0, Seq(mcHash1), Seq(mcHash1), 1)
+    //val BloclCommTreeHash1: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val mcCumulativeHash1: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val blockInfo1 = getBlockInfo(blockId0, Seq(MainchainHeaderBaseInfo(mcHash1, mcCumulativeHash1)), Seq(mcHash1), 1)
 
     addNewBestBlockIsSuccessful(chain, blockId1, blockInfo1, Some(mcHash0))
     assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight, chain.heightOfMcHeaders)
@@ -484,8 +490,10 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     // Add block info with MainchainHeaders only
     val blockId2: ModifierId = getRandomModifier()
     val mcHash2: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcCumulativeHash2: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
     val mcHash3: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
-    val blockInfo2 = getBlockInfo(blockId1, Seq(mcHash2, mcHash3), Seq(), 2)
+    val mcCumulativeHash3: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val blockInfo2 = getBlockInfo(blockId1, Seq(MainchainHeaderBaseInfo(mcHash2, mcCumulativeHash2), MainchainHeaderBaseInfo(mcHash3, mcCumulativeHash3)), Seq(), 2)
 
     addNewBestBlockIsSuccessful(chain, blockId2, blockInfo2, Some(mcHash1))
     assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 2, chain.heightOfMcHeaders)
@@ -516,9 +524,12 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     // Add block with 3 MainchainHeader and 2 corresponding MainchainRefData
     val blockId4: ModifierId = getRandomModifier()
     val mcHash4: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcCumulativeHash4: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
     val mcHash5: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
+    val mcCumulativeHash5: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
     val mcHash6: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
-    val blockInfo4 = getBlockInfo(blockId3, Seq(mcHash4, mcHash5, mcHash6), Seq(mcHash4, mcHash5), 4)
+    val mcCumulativeHash6: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val blockInfo4 = getBlockInfo(blockId3, Seq(MainchainHeaderBaseInfo(mcHash4, mcCumulativeHash4), MainchainHeaderBaseInfo(mcHash5, mcCumulativeHash5), MainchainHeaderBaseInfo(mcHash6, mcCumulativeHash6)), Seq(mcHash4, mcHash5), 4)
 
     addNewBestBlockIsSuccessful(chain, blockId4, blockInfo4, Some(mcHash3))
     assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 5, chain.heightOfMcHeaders)
@@ -530,7 +541,8 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     // Add block with 1 MainchainHeader and 2 MainchainRefData (1 for previous headers and 1 for current one)
     val blockId5: ModifierId = getRandomModifier()
     val mcHash7: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
-    val blockInfo5 = getBlockInfo(blockId4, Seq(mcHash7), Seq(mcHash6, mcHash7), 5)
+    val mcCumulativeHash7: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val blockInfo5 = getBlockInfo(blockId4, Seq(MainchainHeaderBaseInfo(mcHash7, mcCumulativeHash7)), Seq(mcHash6, mcHash7), 5)
 
     addNewBestBlockIsSuccessful(chain, blockId5, blockInfo5, Some(mcHash6))
     assertEquals("Different height of MainchainHeaders expected.", genesisBlockMainchainHeight + 6, chain.heightOfMcHeaders)
@@ -543,18 +555,19 @@ class ActiveChainTest extends JUnitSuite with SidechainBlockInfoFixture {
     // MainchainRefData headers hashes must be equal to the MainchainHeader hashes on the same height
     val inconsistentBlockId2: ModifierId = getRandomModifier()
     val mcHash8: MainchainHeaderHash = byteArrayToMainchainHeaderHash(generateBytes())
-    val inconsistentBlockInfo2 = getBlockInfo(blockId5, Seq(mcHash8), Seq(inconsistentMcHash), 6)
+    val mcCumulativeHash8: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+    val inconsistentBlockInfo2 = getBlockInfo(blockId5, Seq(MainchainHeaderBaseInfo(mcHash8, mcCumulativeHash8)), Seq(inconsistentMcHash), 6)
     addNewBestBlockShallBeFailed(chain, inconsistentBlockId2, inconsistentBlockInfo2, Some(mcHash7))
   }
 
-  private def getBlockInfo(parentId: ModifierId, headers: Seq[MainchainHeaderHash], refData: Seq[MainchainHeaderHash], height: Int): SidechainBlockInfo = {
+  private def getBlockInfo(parentId: ModifierId, headersBaseInfo: Seq[MainchainHeaderBaseInfo], refData: Seq[MainchainHeaderHash], height: Int): SidechainBlockInfo = {
     SidechainBlockInfo(
       height,
       height,
       parentId,
       1000,
       ModifierSemanticValidity.Unknown,
-      headers,
+      headersBaseInfo,
       refData,
       WithdrawalEpochInfo(0, height),
       Option(VrfGenerator.generateVrfOutput(height)),

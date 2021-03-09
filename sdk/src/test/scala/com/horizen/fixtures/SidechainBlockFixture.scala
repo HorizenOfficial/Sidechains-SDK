@@ -7,10 +7,12 @@ import java.util.{HashMap => JHashMap}
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{ForgerBox, NoncedBox}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
+import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
@@ -118,17 +120,20 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
-                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34)
+                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
+                               initialCumulativeHash: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
+    val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
+
     SidechainBlockInfo(
       1,
       1,
       bytesToId(new Array[Byte](32)),
       timestamp.getOrElse(Random.nextLong()),
       validity,
-      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))),
-      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainReferenceDataHeaderHash.getOrElse(new Array[Byte](32)))),
+      Seq(MainchainHeaderBaseInfo(mainchainHeaderHash, initialCumulativeHash)),
+      Seq(mainchainHeaderHash),
       WithdrawalEpochInfo(1, 1),
       Option(vrfOutput),
       blockId
@@ -151,7 +156,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       block.parentId,
       block.timestamp,
       validity,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, parentBlockInfo.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),
