@@ -18,6 +18,7 @@ import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.FieldElementUtils;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -343,7 +344,7 @@ public class CommandProcessor {
         // can be used only in Regtest network
         int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
 
-        // Parsing the info: scid, powdata vector, mc block height, mc block hex
+        // Parsing the info: scid, powdata vector, mc block height, mc block hex, mc initial BlockSCTxCommTreeCumulativeHash
         int offset = 0;
         try {
             byte network = infoBytes[offset];
@@ -360,6 +361,9 @@ public class CommandProcessor {
 
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
+
+            byte[] initialMcCumulativeCommTreeHash = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + FieldElementUtils.maximumFieldElementLength()));
+            offset += FieldElementUtils.maximumFieldElementLength();
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -431,6 +435,7 @@ public class CommandProcessor {
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
             resJson.put("withdrawalEpochLength", withdrawalEpochLength);
+            resJson.put("initialMcCumulativeCommTreeHash", BytesUtils.toHexString(initialMcCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
 
