@@ -15,7 +15,7 @@ import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
@@ -42,6 +42,7 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
+
 
 import scala.util.Try
 
@@ -121,7 +122,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
   )
 
     case "testnet" => TestNetParams(
@@ -137,7 +139,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
 
     case "mainnet" => MainNetParams(
@@ -153,7 +156,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

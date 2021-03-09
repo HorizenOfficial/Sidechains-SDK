@@ -1,10 +1,12 @@
 package com.horizen.params
 import java.math.BigInteger
 
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
+import com.horizen.librustsidechains.FieldElement
 
 case class RegTestParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
@@ -21,7 +23,8 @@ case class RegTestParams(
                           override val signersThreshold: Int = 0,
                           override val provingKeyFilePath: String = "",
                           override val verificationKeyFilePath: String = "",
-                          override val calculatedSysDataConstant: Array[Byte] = Array()
+                          override val calculatedSysDataConstant: Array[Byte] = Array(),
+                          override val initialCumulativeCommTreeHash: FieldElement = FieldElementUtils.hashToFieldElement("Test")
 ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

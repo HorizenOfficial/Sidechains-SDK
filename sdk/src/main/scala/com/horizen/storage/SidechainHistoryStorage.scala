@@ -17,6 +17,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 
+import com.horizen.librustsidechains.FieldElement
+
 
 trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
@@ -189,7 +191,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       mcHeight <- activeChain.mcHeadersHeightByMcHash(mcHash)
       sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
-    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId)
+      blockInfo <- activeChain.blockInfoById(sidechainBlockId)
+      cumulativeHash = blockInfo.getBlockCumulativeHashByHeaderHash(mcHash)
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, cumulativeHash)
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {

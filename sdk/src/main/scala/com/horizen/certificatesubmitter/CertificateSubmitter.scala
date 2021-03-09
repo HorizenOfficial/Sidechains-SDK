@@ -30,6 +30,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+import com.horizen.librustsidechains.FieldElement
+
 class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
@@ -174,6 +176,8 @@ class CertificateSubmitter
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endWithdrawalEpochBlockHash: Array[Byte],
                                     prevEndWithdrawalEpochBlockHash: Array[Byte],
+                                    endWithdrawalEpochBlockCumulativeCommTreeHash: FieldElement,
+                                    prevEndWithdrawalEpochBlockCumulativeCommTreeHash: FieldElement,
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   protected def getDataForProofGeneration(sidechainNodeView: View): Option[DataForProofGeneration] = {
@@ -199,6 +203,9 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
 
+    val endEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
+    val previousEndEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
+
     // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
     val endEpochBlockHashLE = BytesUtils.reverseBytes(endEpochBlockHash)
     val previousEndEpochBlockHashLE = BytesUtils.reverseBytes(previousEndEpochBlockHash)
@@ -211,7 +218,8 @@ class CertificateSubmitter
         (signerPublicKey, signature)
       }
 
-    DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, signersPublicKeyWithSignatures)
+    // TODO After switching for SNARK proof generation remove endEpochBlockHash and previousEndEpochBlockHash from DataForProofGeneration
+    DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, endEpochBlockCumulativeCommTreeHash, previousEndEpochBlockCumulativeCommTreeHash, signersPublicKeyWithSignatures)
   }
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
@@ -225,6 +233,21 @@ class CertificateSubmitter
     log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
 
     mcBlockHash
+  }
+
+  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): FieldElement = {
+    val mcBlockHash = withdrawalEpochNumber match {
+      case -1 => params.parentHashOfGenesisMainchainBlock
+      case _  => {
+        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
+        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+      }
+    }
+    log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
+
+    val headerInfo = history.getMainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+
+    headerInfo.cumulativeHash
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
