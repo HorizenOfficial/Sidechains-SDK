@@ -134,7 +134,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
-    val prevBaseInfo:MainchainHeaderBaseInfo = storage.getPreviousMainchainHeaderBaseInfo(block.parentId)
+    val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
