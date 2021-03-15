@@ -30,7 +30,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-import com.horizen.librustsidechains.FieldElement
 
 class CertificateSubmitter
   (settings: SidechainSettings,
@@ -176,8 +175,8 @@ class CertificateSubmitter
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endWithdrawalEpochBlockHash: Array[Byte],
                                     prevEndWithdrawalEpochBlockHash: Array[Byte],
-                                    endWithdrawalEpochBlockCumulativeCommTreeHash: FieldElement,
-                                    prevEndWithdrawalEpochBlockCumulativeCommTreeHash: FieldElement,
+                                    endWithdrawalEpochBlockCumulativeCommTreeHash: Array[Byte],
+                                    prevEndWithdrawalEpochBlockCumulativeCommTreeHash: Array[Byte],
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   protected def getDataForProofGeneration(sidechainNodeView: View): Option[DataForProofGeneration] = {
@@ -235,7 +234,7 @@ class CertificateSubmitter
     mcBlockHash
   }
 
-  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): FieldElement = {
+  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _  => {

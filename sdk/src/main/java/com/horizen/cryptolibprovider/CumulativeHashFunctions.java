@@ -7,7 +7,16 @@ public class CumulativeHashFunctions {
         return PoseidonHash.HASH_LENGTH;
     }
 
-    public static FieldElement computeCumulativeHash(FieldElement a, FieldElement b) {
-        return PoseidonHash.computeHash(new FieldElement[] {a, b});
+    public static byte[] computeCumulativeHash(byte[] a, byte[] b) {
+        FieldElement fieldElementA = FieldElement.deserialize(a);
+        FieldElement fieldElementB = FieldElement.deserialize(a);
+        FieldElement fieldElementHash = PoseidonHash.computeHash(new FieldElement[] {fieldElementA, fieldElementB});
+        byte[] hash = fieldElementHash.serializeFieldElement();
+
+        fieldElementA.freeFieldElement();
+        fieldElementB.freeFieldElement();
+        fieldElementHash.freeFieldElement();
+
+        return hash;
     }
 }

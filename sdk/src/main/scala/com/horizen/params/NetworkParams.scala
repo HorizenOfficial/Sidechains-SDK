@@ -5,7 +5,6 @@ import java.math.BigInteger
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
-import com.horizen.librustsidechains.FieldElement
 
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
@@ -49,5 +48,5 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
-  val initialCumulativeCommTreeHash: FieldElement
+  val initialCumulativeCommTreeHash: Array[Byte]
 }

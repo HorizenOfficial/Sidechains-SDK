@@ -17,8 +17,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 
-import com.horizen.librustsidechains.FieldElement
-
 
 trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
@@ -110,6 +108,15 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId ${blockId}"))
   }
 
+  def getPreviousMainchainHeaderBaseInfo(parentId: ModifierId): MainchainHeaderBaseInfo = {
+    var parentBlockInfo: SidechainBlockInfo = this.blockInfoById(parentId)
+    while(parentBlockInfo.mainchainHeaderBaseInfo.isEmpty) {
+      parentBlockInfo = this.blockInfoById(parentBlockInfo.parentId)
+    }
+
+    parentBlockInfo.mainchainHeaderBaseInfo.last
+  }
+
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)
 
   def chainScoreFor(blockId: ModifierId): Option[Long] = blockInfoOptionById(blockId).map(_.score)
@@ -192,8 +199,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
       blockInfo <- activeChain.blockInfoById(sidechainBlockId)
-      cumulativeHash = blockInfo.getBlockCumulativeHashByHeaderHash(mcHash)
-    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, cumulativeHash)
+      mainchainBaseInfo = getPreviousMainchainHeaderBaseInfo(blockInfo.parentId)
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, mainchainBaseInfo.cumulativeCommTreeHash)
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {

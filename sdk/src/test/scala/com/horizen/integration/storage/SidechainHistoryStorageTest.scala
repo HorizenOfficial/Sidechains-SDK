@@ -65,7 +65,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     // Add one more block
     val secondBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
     expectedHeight += 1
-    expectedInfo = generateBlockInfo(secondBlock, expectedInfo, params, validity = ModifierSemanticValidity.Unknown)
+    var lastMainchainBaseInfo = historyStorage.getPreviousMainchainHeaderBaseInfo(secondBlock.parentId)
+    expectedInfo = generateBlockInfo(secondBlock, expectedInfo, params, lastMainchainBaseInfo.cumulativeCommTreeHash, validity = ModifierSemanticValidity.Unknown)
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(secondBlock, expectedInfo).isSuccess)
 
     // Before we update best block, active chain related data should not change
@@ -96,7 +97,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     // Add one more block
     val thirdBlock: SidechainBlock = generateNextSidechainBlock(secondBlock, sidechainTransactionsCompanion, params)
     expectedHeight += 1
-    expectedInfo = generateBlockInfo(thirdBlock, expectedInfo, params, validity = ModifierSemanticValidity.Unknown)
+    lastMainchainBaseInfo = historyStorage.getPreviousMainchainHeaderBaseInfo(thirdBlock.parentId)
+    expectedInfo = generateBlockInfo(thirdBlock, expectedInfo, params, lastMainchainBaseInfo.cumulativeCommTreeHash, validity = ModifierSemanticValidity.Unknown)
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(thirdBlock, expectedInfo).isSuccess)
     assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Unknown, historyStorage.blockInfoOptionById(thirdBlock.id).get.semanticValidity)
     // Update best block and validity -> active chain related data should change
@@ -119,7 +121,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
     // Add block from another chain after genesis one, which lead to Fork
     val forkBlock: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params, basicSeed = 991919L)
     expectedHeight = 2
-    expectedInfo = generateBlockInfo(forkBlock, genesisBlockInfo, params, Some(100L << 32), validity = ModifierSemanticValidity.Unknown)
+    lastMainchainBaseInfo = historyStorage.getPreviousMainchainHeaderBaseInfo(forkBlock.parentId)
+    expectedInfo = generateBlockInfo(forkBlock, genesisBlockInfo, params, lastMainchainBaseInfo.cumulativeCommTreeHash,Some(100L << 32), validity = ModifierSemanticValidity.Unknown)
     assertTrue("HistoryStorage expected to be updated", historyStorage.update(forkBlock, expectedInfo).isSuccess)
     assertEquals("HistoryStorage different semantic validity expected", ModifierSemanticValidity.Unknown, historyStorage.blockInfoOptionById(forkBlock.id).get.semanticValidity)
 

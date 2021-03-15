@@ -10,9 +10,8 @@ import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.NetworkParams
-import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
@@ -116,12 +115,13 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 }
 
 trait SidechainBlockFixture extends MainchainBlockReferenceFixture with SidechainBlockHeaderFixture {
+
   def generateGenesisBlockInfo(genesisMainchainHeaderHash: Option[Array[Byte]] = None,
                                genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
                                vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
-                               initialCumulativeHash: FieldElement = FieldElement.deserialize(generateBytes(PoseidonHash.HASH_LENGTH))
+                               initialCumulativeHash:Array[Byte] = FieldElementFixture.generateFiledElement()
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
     val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
@@ -147,16 +147,18 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
   def generateBlockInfo(block: SidechainBlock,
                         parentBlockInfo: SidechainBlockInfo,
                         params: NetworkParams,
+                        previousCumulativeHash:Array[Byte],
                         customScore: Option[Long] = None,
                         validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                         timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
+
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
       customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainHeaderHashes.size.toLong << 32) + 1),
       block.parentId,
       block.timestamp,
       validity,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, parentBlockInfo.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, previousCumulativeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),

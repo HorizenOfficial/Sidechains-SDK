@@ -37,7 +37,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val provingKeyFilePath: String = ""
     override val verificationKeyFilePath: String = ""
     override val calculatedSysDataConstant: Array[Byte] = Array()
-    override val initialCumulativeCommTreeHash: FieldElement = FieldElement.deserialize(Array())
+    override val initialCumulativeCommTreeHash: Array[Byte] = Array()
   }
 
   class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,

@@ -28,11 +28,11 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
   val mainchainHeadersBaseInfo: Seq[MainchainHeaderBaseInfo] = Seq(
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")),
-     FieldElement.deserialize(BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457"))),
+      BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f32110000")),
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70")),
-      FieldElement.deserialize(BytesUtils.fromHexString("04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd"))),
+      BytesUtils.fromHexString("04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff10000")),
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508")),
-      FieldElement.deserialize(BytesUtils.fromHexString("8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca")))
+      BytesUtils.fromHexString("8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c65530000"))
   )
   val mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = Seq("CEE50DFEC92130269861FB647BA5730425C79AC164F8A0E4003CF30990628D52", "0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")
     .map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
@@ -79,10 +79,11 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo timestamp is different", info.timestamp, serializedInfoTry.get.timestamp)
     assertEquals("SidechainBlockInfo parentId is different", info.parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", info.semanticValidity, serializedInfoTry.get.semanticValidity)
-    val mcHeaderHashes = serializedInfoTry.get.mainchainHeaderHashes
-    assertEquals("Size of mainchain headers must be the same", info.mainchainHeaderHashes.size, mcHeaderHashes.size)
-    for(index <- mcHeaderHashes.indices)
-      assertEquals("SidechainBlockInfo mainchain headers is different", info.mainchainHeaderHashes(index), mcHeaderHashes(index))
+    val mcHeaderBaseInfos = serializedInfoTry.get.mainchainHeaderBaseInfo
+    assertEquals("Size of MainchainHeaderBaseInfo must be the same", info.mainchainHeaderBaseInfo.size, mcHeaderBaseInfos.size)
+    for(index <- mcHeaderBaseInfos.indices) {
+      assertEquals("SidechainBlockInfo MainchainHeaderBaseInfo is different", info.mainchainHeaderBaseInfo(index), mcHeaderBaseInfos(index))
+    }
     val mcRefDataHeaderHashes = serializedInfoTry.get.mainchainReferenceDataHeaderHashes
     assertEquals("Size of mainchain reference data header hashes must be the same", info.mainchainReferenceDataHeaderHashes.size, mcRefDataHeaderHashes.size)
     for(index <- mcRefDataHeaderHashes.indices)
@@ -121,11 +122,11 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo score is different", score, serializedInfoTry.get.score)
     assertEquals("SidechainBlockInfo parentId is different", parentId, serializedInfoTry.get.parentId)
     assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, serializedInfoTry.get.semanticValidity)
-    //val mcHeaderHashes = serializedInfoTry.get.mainchainHeaderHashes
     val mcHeaderBaseInfo = serializedInfoTry.get.mainchainHeaderBaseInfo
-    assertEquals("Size of mainchain headers must be the same", mainchainHeadersBaseInfo.size, mcHeaderBaseInfo.size)
-    for(index <- mcHeaderBaseInfo.indices)
-      assertEquals("SidechainBlockInfo mainchain headers is different", mainchainHeadersBaseInfo(index), mcHeaderBaseInfo(index))
+    assertEquals("Size of MainchainHeaderBaseInfos must be the same", mainchainHeadersBaseInfo.size, mcHeaderBaseInfo.size)
+    for(index <- mcHeaderBaseInfo.indices) {
+      assertEquals("SidechainBlockInfo MainchainHeaderBaseInfo is different", mainchainHeadersBaseInfo(index), mcHeaderBaseInfo(index))
+    }
     val mcRefDataHeaderHashes = serializedInfoTry.get.mainchainReferenceDataHeaderHashes
     assertEquals("Size of mainchain reference data header hashes must be the same", mainchainReferenceDataHeaderHashes.size, mcRefDataHeaderHashes.size)
     for(index <- mcRefDataHeaderHashes.indices)

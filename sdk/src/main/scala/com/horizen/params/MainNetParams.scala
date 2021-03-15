@@ -1,12 +1,11 @@
 package com.horizen.params
 import java.math.BigInteger
 
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
-import com.horizen.librustsidechains.FieldElement
 
 case class MainNetParams(
                           override val sidechainId: Array[Byte] = new Array[Byte](32),
@@ -24,7 +23,7 @@ case class MainNetParams(
                           override val provingKeyFilePath: String = "",
                           override val verificationKeyFilePath: String = "",
                           override val calculatedSysDataConstant: Array[Byte] = Array(),
-                          override val initialCumulativeCommTreeHash: FieldElement = FieldElementUtils.hashToFieldElement("Test")
+                          override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength())
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

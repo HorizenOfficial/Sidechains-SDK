@@ -20,7 +20,6 @@ import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
-import com.horizen.librustsidechains.FieldElement
 
 
 class SidechainHistory private (val storage: SidechainHistoryStorage,
@@ -130,13 +129,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
-
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
-    val prevCumulativeCommTreeHash:FieldElement = parentBlockInfo.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash
+    val prevBaseInfo:MainchainHeaderBaseInfo = storage.getPreviousMainchainHeaderBaseInfo(block.parentId)
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -144,7 +142,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, prevCumulativeCommTreeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, prevBaseInfo.cumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None

@@ -35,7 +35,7 @@ case class SidechainBlockInfo(height: Int,
 
   lazy val mainchainHeaderHashes: Seq[MainchainHeaderHash] = {mainchainHeaderBaseInfo.map(info => info.hash)}
 
-  def getBlockCumulativeHashByHeaderHash(headerHash: MainchainHeaderHash) : FieldElement = {
+  def getBlockCumulativeHashByHeaderHash(headerHash: MainchainHeaderHash) : Array[Byte] = {
     mainchainHeaderBaseInfo.find(info => info.hash == headerHash).get.cumulativeCommTreeHash
   }
 }
@@ -87,19 +87,7 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     val length = r.getInt()
 
     (0 until length).foreach(_ => {
-      references.append(MainchainHeaderBaseInfo.getSerializer().parse(r))
-    })
-
-    references
-  }
-
-  private def readCumulativeHashes(r: Reader): IndexedSeq[FieldElement] = {
-    val references: ArrayBuffer[FieldElement] = ArrayBuffer()
-    val length = r.getInt()
-
-    (0 until length).foreach(_ => {
-      val bytes = r.getBytes(CumulativeHashFunctions.hashLength())
-      references.append(FieldElement.deserialize(bytes))
+      references.append(MainchainHeaderBaseInfoSerializer.parse(r))
     })
 
     references

@@ -40,7 +40,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
-  val params: NetworkParams = RegTestParams()
+  val params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFiledElement())
 
   @Before
   def setUp(): Unit = {

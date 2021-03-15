@@ -15,7 +15,7 @@ import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
@@ -123,7 +123,7 @@ class SidechainApp @Inject()
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
   )
 
     case "testnet" => TestNetParams(
@@ -140,7 +140,7 @@ class SidechainApp @Inject()
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
 
     case "mainnet" => MainNetParams(
@@ -157,7 +157,7 @@ class SidechainApp @Inject()
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = FieldElementUtils.hashToFieldElement(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

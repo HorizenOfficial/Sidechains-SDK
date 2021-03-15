@@ -525,7 +525,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val provingKeyFilePath: String = params.provingKeyFilePath
       override val verificationKeyFilePath: String = params.verificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = Array() //calculate if we need for some reason that data
-      override val initialCumulativeCommTreeHash: FieldElement = params.initialCumulativeCommTreeHash
+      override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
     }
   }
 

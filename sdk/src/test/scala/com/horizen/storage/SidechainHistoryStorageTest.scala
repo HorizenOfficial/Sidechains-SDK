@@ -117,6 +117,19 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     }
   }
 
+  private def getLastMainchainBaseInfoInclusion(blockInfoSequence: Seq[SidechainBlockInfo]) = {
+    var i: Int = blockInfoSequence.length - 1
+    var blockInfo:SidechainBlockInfo = blockInfoSequence.last
+
+    while((blockInfo.mainchainHeaderBaseInfo.isEmpty)
+      && (i > 0)) {
+      i -= 1
+      blockInfo = blockInfoSequence(-1)
+    }
+
+    blockInfo
+  }
+
   @Before
   def setUp() : Unit = {
     // add genesis block
@@ -145,7 +158,9 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       activeChainBlockInfoList += generateBlockInfo(
         block = block,
         parentBlockInfo = activeChainBlockInfoList.last,
-        params = params)
+        params = params,
+        getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash
+      )
     })
     // generate (height/2) fork blocks
     generateSidechainBlockSeq(
@@ -159,7 +174,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       forkChainBlockInfoList += generateBlockInfo(
         block = block,
         parentBlockInfo = forkChainBlockInfoList.lastOption.getOrElse(activeChainBlockInfoList.head),
-        params = params) // First Fork block parent is genesis block
+        params = params,
+        getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash) // First Fork block parent is genesis block
     })
 
 
@@ -330,12 +346,12 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     val expectedException = new IllegalArgumentException("on update exception")
 
     val nextTipBlock = generateNextSidechainBlock(activeChainBlockList.last, sidechainTransactionsCompanion, params, basicSeed = 11119992L)
-    val nextTipBlockInfo = generateBlockInfo(nextTipBlock, activeChainBlockInfoList.last, params)
+    val nextTipBlockInfo = generateBlockInfo(nextTipBlock, activeChainBlockInfoList.last, params, getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash)
     val nextTipToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     generateStoredData(ListBuffer(nextTipBlock -> nextTipBlockInfo)).map(p => nextTipToUpdate.add(p))
 
     val nextForkTipBlock = generateNextSidechainBlock(forkChainBlockList.last, sidechainTransactionsCompanion, params, basicSeed = 114422L)
-    val nextForkTipBlockInfo = generateBlockInfo(nextForkTipBlock, forkChainBlockInfoList.last, params, Some(forkChainBlockInfoList.last.score + 2))
+    val nextForkTipBlockInfo = generateBlockInfo(nextForkTipBlock, forkChainBlockInfoList.last, params, getLastMainchainBaseInfoInclusion(forkChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash,Some(forkChainBlockInfoList.last.score + 2))
     val forkTipToUpdate: JList[Pair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     generateStoredData(ListBuffer(nextForkTipBlock -> nextForkTipBlockInfo)).map(p => forkTipToUpdate.add(p))
 
@@ -374,7 +390,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     // Test 3: test failed update, when Storage throws an exception
     val nextFailureBlock = generateNextSidechainBlock(activeChainBlockList.last, sidechainTransactionsCompanion, params, basicSeed = 1315692L)
-    val nextFailureBlockInfo = generateBlockInfo(nextFailureBlock, activeChainBlockInfoList.last, params)
+    val nextFailureBlockInfo = generateBlockInfo(nextFailureBlock, activeChainBlockInfoList.last, params, getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash)
     tryRes = historyStorage.update(nextFailureBlock, nextFailureBlockInfo)
     assertTrue("HistoryStorage failure expected during update.", tryRes.isFailure)
     assertEquals("HistoryStorage different exception expected during update.", expectedException, tryRes.failed.get)
@@ -478,7 +494,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       newBestBlock.parentId,
       20,
       ModifierSemanticValidity.Valid,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(newBestBlock, activeChainBlockInfoList.last.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(newBestBlock, getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
       WithdrawalEpochInfo(1, 2),
       Option(VrfGenerator.generateVrfOutput(12)),
