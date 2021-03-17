@@ -48,6 +48,12 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
     // We check, that nonces for new boxes were enforced according to our algorithm. Then do inheritors check.
     @Override
     public final boolean semanticValidity() {
+        // Check that transaction doesn't make a double spend,
+        // by verifying that the the size of the unique set of box ids is equal to the unlockers size.
+        if(unlockers().size() != boxIdsToOpen().size())
+            return false;
+
+        // Check output boxes nonce correctness.
         List<B> boxes = newBoxes();
         for(int i = 0; i < boxes.size(); i++) {
             if(boxes.get(i).nonce() != getNewBoxNonce(boxes.get(i).proposition(), i)) {

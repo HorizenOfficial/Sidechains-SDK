@@ -97,10 +97,32 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
 
   // Validate block itself: version and semanticValidity for block
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
-    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)), s"Incorrect state version!: ${mod.parentId} found, " +
-      s"${version} expected")
+    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
+      s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
+
+
+    validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
+    validateWithdrawalEpochCertificate(mod)
+
+    if (!applicationState.validate(this, mod))
+      throw new Exception("Exception was thrown by ApplicationState validation.")
+  }
+
+  private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
+    val transactionsIds: Seq[String] = mod.transactions.map(_.id())
+    if (transactionsIds.toSet.size != transactionsIds.size) {
+      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated transactions")
+    }
+
+    val allInputBoxesIds: Seq[ByteArrayWrapper] = mod.transactions.flatMap(tx => tx.boxIdsToOpen().asScala)
+    if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
+      throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
+    }
+  }
+
+  private def validateWithdrawalEpochCertificate(mod: SidechainBlock): Unit = {
     //Check content of the backward transfer certificate if it exists
     //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
     //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
@@ -150,9 +172,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage, val 
           throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
     }
-
-    if (!applicationState.validate(this, mod))
-      throw new Exception("Exception was thrown by ApplicationState validation.")
   }
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
