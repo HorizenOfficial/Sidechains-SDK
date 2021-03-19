@@ -134,7 +134,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
-    val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
+    val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
+      val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
+    }
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -142,7 +145,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, prevBaseInfo.cumulativeCommTreeHash),
+      blockMainchainHeaderBaseInfoSeq,
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None

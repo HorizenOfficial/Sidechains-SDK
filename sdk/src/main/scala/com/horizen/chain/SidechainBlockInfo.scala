@@ -34,10 +34,6 @@ case class SidechainBlockInfo(height: Int,
   override def bytes: Array[Byte] = SidechainBlockInfoSerializer.toBytes(this)
 
   lazy val mainchainHeaderHashes: Seq[MainchainHeaderHash] = {mainchainHeaderBaseInfo.map(info => info.hash)}
-
-  def getBlockCumulativeHashByHeaderHash(headerHash: MainchainHeaderHash) : Array[Byte] = {
-    mainchainHeaderBaseInfo.find(info => info.hash == headerHash).get.cumulativeCommTreeHash
-  }
 }
 
 object SidechainBlockInfo {

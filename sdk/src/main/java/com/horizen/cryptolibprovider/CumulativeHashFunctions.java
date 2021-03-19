@@ -8,15 +8,24 @@ public class CumulativeHashFunctions {
     }
 
     public static byte[] computeCumulativeHash(byte[] a, byte[] b) {
-        FieldElement fieldElementA = FieldElement.deserialize(a);
-        FieldElement fieldElementB = FieldElement.deserialize(a);
-        FieldElement fieldElementHash = PoseidonHash.computeHash(new FieldElement[] {fieldElementA, fieldElementB});
-        byte[] hash = fieldElementHash.serializeFieldElement();
+        FieldElement fieldElementA = null;
+        FieldElement fieldElementB = null;
+        FieldElement fieldElementHash = null;
 
-        fieldElementA.freeFieldElement();
-        fieldElementB.freeFieldElement();
-        fieldElementHash.freeFieldElement();
-
-        return hash;
+        try {
+            fieldElementA = FieldElement.deserialize(a);
+            fieldElementB = FieldElement.deserialize(b);
+            fieldElementHash = PoseidonHash.computeHash(new FieldElement[]{fieldElementA, fieldElementB});
+            return fieldElementHash.serializeFieldElement();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Error on computing Cumulative Commitment Tree Hash:" + ex.getMessage(), ex);
+        } finally {
+            if (fieldElementA != null)
+                fieldElementA.freeFieldElement();
+            if (fieldElementB != null)
+                fieldElementB.freeFieldElement();
+            if (fieldElementHash != null)
+                fieldElementHash.freeFieldElement();
+        }
     }
 }

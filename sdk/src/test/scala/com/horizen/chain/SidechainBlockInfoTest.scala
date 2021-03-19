@@ -24,8 +24,6 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val parentId: ModifierId = getRandomModifier()
   val timestamp: Block.Timestamp = 567081L
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
-  val mainchainHeaderHashes: Seq[MainchainHeaderHash] = Seq("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213", "E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70",
-    "77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508").map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
   val mainchainHeadersBaseInfo: Seq[MainchainHeaderBaseInfo] = Seq(
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")),
       BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f32110000")),
@@ -54,9 +52,9 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertEquals("SidechainBlockInfo parentId is different", clonedParentId, info.parentId)
     assertEquals("SidechainBlockInfo timestamp is different", timestamp, info.timestamp)
     assertEquals("SidechainBlockInfo semanticValidity is different", semanticValidity, info.semanticValidity)
-    assertEquals("SidechainBlockInfo mainchain lock reference size is different", mainchainHeaderHashes.length, info.mainchainHeaderHashes.length)
-    mainchainHeaderHashes.zipWithIndex.foreach{case (hash, index) =>
-      assertEquals("SidechainBlockInfo mainchain header is different", hash, info.mainchainHeaderHashes(index))
+    assertEquals("SidechainBlockInfo mainchain lock reference size is different", mainchainHeadersBaseInfo.length, info.mainchainHeaderBaseInfo.length)
+    mainchainHeadersBaseInfo.zipWithIndex.foreach{case (baseInfo, index) =>
+      assertEquals("SidechainBlockInfo mainchain header is different", baseInfo, info.mainchainHeaderBaseInfo(index))
     }
     mainchainReferenceDataHeaderHashes.zipWithIndex.foreach{case (hash, index) =>
       assertEquals("SidechainBlockInfo mainchain reference data header is different", hash, info.mainchainReferenceDataHeaderHashes(index))

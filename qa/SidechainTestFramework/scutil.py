@@ -120,6 +120,7 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "mcBlockHeight": xxx,
     "mcNetwork": regtest|testnet|mainnet
     "withdrawalEpochLength": xxx
+    "initialMcCumulativeCommTreeHash": xxx
 }
 """
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):

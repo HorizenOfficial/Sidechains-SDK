@@ -121,7 +121,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
                                vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
-                               initialCumulativeHash:Array[Byte] = FieldElementFixture.generateFiledElement()
+                               initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElement()
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
     val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))

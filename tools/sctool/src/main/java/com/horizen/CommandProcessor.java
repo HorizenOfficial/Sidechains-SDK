@@ -362,8 +362,10 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            byte[] initialMcCumulativeCommTreeHash = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + FieldElementUtils.maximumFieldElementLength()));
-            offset += FieldElementUtils.maximumFieldElementLength();
+            byte initialMcCumulativeCommTreeHashLength = infoBytes[offset];
+            offset += 1;
+            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + initialMcCumulativeCommTreeHashLength);
+            offset += initialMcCumulativeCommTreeHashLength;
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -448,7 +450,8 @@ public class CommandProcessor {
                         BytesUtils.toHexString(scId),
                         sidechainBlockHex,
                         mcNetworkName,
-                        withdrawalEpochLength
+                        withdrawalEpochLength,
+                        BytesUtils.toHexString(initialMcCumulativeCommTreeHash)
                 );
         } catch (Exception e) {
             printer.print("Error: 'info' data is corrupted.");
@@ -489,7 +492,8 @@ public class CommandProcessor {
             String scId,
             String scBlockHex,
             String mcNetworkName,
-            int withdrawalEpochLength) {
+            int withdrawalEpochLength,
+            String initialCumulativeCommTreeHashHex) {
         try {
             String templateConf = new String(Files.readAllBytes(Paths.get(pathToSourceConfig)), StandardCharsets.UTF_8);
 
@@ -503,6 +507,7 @@ public class CommandProcessor {
                           "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
                           "\t\tmcNetwork = " + mcNetworkName + "\n" +
                           "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
+                          "\t\tinitialMcCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
                           "\t}\n" +
                           "}\n";
 

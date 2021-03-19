@@ -115,7 +115,7 @@ class MainchainBlockReferenceValidatorTest
     val block5: SidechainBlock = mockBlock(getRandomModifier(), block4.id, Seq(ref8.header), Seq(ref6.data, ref7.data, ref8.data))
 
     val blocks: Seq[SidechainBlock] = Seq(genesisBlock, block1, block2, block3, block4, block5)
-    val blocksInfo: Seq[(ModifierId, SidechainBlockInfo)] = blocks.map(b => (b.id, getBlockInfo(b, FieldElementFixture.generateFiledElement())))
+    val blocksInfo: Seq[(ModifierId, SidechainBlockInfo)] = blocks.map(b => (b.id, getBlockInfo(b, FieldElementFixture.generateFieldElement())))
 
     val history: SidechainHistory = mock[SidechainHistory]
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
