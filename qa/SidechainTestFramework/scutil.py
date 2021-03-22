@@ -248,6 +248,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
+        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.genesisinfo,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,

@@ -147,7 +147,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
   def generateBlockInfo(block: SidechainBlock,
                         parentBlockInfo: SidechainBlockInfo,
                         params: NetworkParams,
-                        previousCumulativeHash:Array[Byte],
+                        previousCumulativeHash: Array[Byte],
                         customScore: Option[Long] = None,
                         validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                         timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
