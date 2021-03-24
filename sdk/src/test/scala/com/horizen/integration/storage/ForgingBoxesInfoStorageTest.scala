@@ -1,10 +1,10 @@
 package com.horizen.integration.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
 import com.horizen.storage.{ForgingBoxesInfoStorage, IODBStoreAdapter}
-import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfo, MerklePath}
+import com.horizen.utils.{BytesUtils, ForgingStakeMerklePathInfo, MerklePath}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
@@ -34,18 +34,18 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with 
       forgingBoxesMerklePathStorage.updateForgerBoxes(updateVersion, forgerBoxesToAppend, Seq()).isSuccess)
     assertEquals("Different ForgerBox seq expected.", forgerBoxesToAppend, forgingBoxesMerklePathStorage.getForgerBoxes.get)
 
-    // Test updateForgerBoxMerklePathInfo operation.
+    // Test updateForgingStakeMerklePathInfo operation.
     val epochNumber = ConsensusEpochNumber @@ 2
     val boxMerklePathInfoSeq = Seq(
-      ForgerBoxMerklePathInfo(
-        forgerBox,
+      ForgingStakeMerklePathInfo(
+        ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value()),
         new MerklePath(new JArrayList())
       )
     )
-    assertTrue("updateForgerBoxMerklePathInfo must be successful.", forgingBoxesMerklePathStorage.updateForgerBoxMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isSuccess)
+    assertTrue("updateForgingStakeMerklePathInfo must be successful.", forgingBoxesMerklePathStorage.updateForgingStakeMerklePathInfo(epochNumber, boxMerklePathInfoSeq).isSuccess)
 
     // Test retrieving of merkle path info seq for EXISTING epoch
-    forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(epochNumber) match {
+    forgingBoxesMerklePathStorage.getForgingStakeMerklePathInfoForEpoch(epochNumber) match {
       case Some(merklePathInfoSeq) => assertEquals("MerklePathInfoSeq expected to be equal to the original one.", boxMerklePathInfoSeq, merklePathInfoSeq)
       case None => fail(s"MerklePathInfoSeq expected to be present in storage for epoch $epochNumber.")
     }
@@ -53,7 +53,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with 
     // Test retrieving of merkle path info seq for MISSED epoch
     val missedEpochNumber = ConsensusEpochNumber @@ 3
     assertTrue(s"MerklePathInfoSeq expected to be NOT present in storage for epoch $missedEpochNumber.",
-      forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(missedEpochNumber).isEmpty)
+      forgingBoxesMerklePathStorage.getForgingStakeMerklePathInfoForEpoch(missedEpochNumber).isEmpty)
 
 
     // Test rollback operation
@@ -61,7 +61,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite with IODBStoreFixture with 
     assertEquals("Version in storage must be - " + updateVersion, updateVersion, forgingBoxesMerklePathStorage.lastVersionId.get)
     assertEquals("Storage must contain 1 version.", 1, forgingBoxesMerklePathStorage.rollbackVersions.size)
     assertTrue(s"MerklePathInfoSeq expected to be NOT present in storage for epoch $epochNumber.",
-      forgingBoxesMerklePathStorage.getForgerBoxMerklePathInfoForEpoch(epochNumber).isEmpty)
+      forgingBoxesMerklePathStorage.getForgingStakeMerklePathInfoForEpoch(epochNumber).isEmpty)
   }
 
   @Test

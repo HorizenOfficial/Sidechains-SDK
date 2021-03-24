@@ -825,7 +825,7 @@ class SidechainBlockTest
       mainchainHeaders,
       ommers,
       forgerMetadata.blockSignSecret,
-      forgerBox,
+      forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
       sidechainTransactionsCompanion,

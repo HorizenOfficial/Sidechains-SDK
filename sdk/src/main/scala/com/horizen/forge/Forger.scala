@@ -109,6 +109,11 @@ class Forger(settings: SidechainSettings,
         respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Slot had been skipped")))
       }
 
+      case Success(NoOwnedForgingStake) => {
+        log.info(s"No forging stake.")
+        respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Can't forge block, no forging stake is present for epoch.")))
+      }
+
       case Success(ForgeFailed(ex)) => {
         log.error(s"Forging had been failed. Reason: ${ex.getMessage}")
         respondsToOpt.map(respondsTo => respondsTo ! Failure(ex))
