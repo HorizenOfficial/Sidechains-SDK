@@ -111,9 +111,9 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
-        parser.add_option("--scjarpath", dest="scjarpath", default="../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.6.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        parser.add_option("--scjarpath", dest="scjarpath", default="../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
-        parser.add_option("--tmpdir", dest="tmpdir", default="../examples/simpleapp/target/tmp",
+        parser.add_option("--tmpdir", dest="tmpdir", default="./tmp",
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")

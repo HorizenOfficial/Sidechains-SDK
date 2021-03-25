@@ -5,7 +5,6 @@ import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http._
@@ -17,10 +16,11 @@ import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
+import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
-import com.horizen.secret.{PrivateKey25519Serializer, SchnorrSecretSerializer, SecretSerializer}
+import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -36,12 +36,12 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
+
 
 import scala.util.Try
 
@@ -64,10 +64,14 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]]
+   @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   val sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
+   val sidechainTransactionsCompanion : SidechainTransactionsCompanion
   )
-  extends Application with ScorexLogging with Module
+  extends Application  with ScorexLogging
 {
+
+
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
@@ -88,10 +92,6 @@ class SidechainApp @Inject()
 
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
-  protected val sidechainBoxesDataCompanion: SidechainBoxesDataCompanion = SidechainBoxesDataCompanion(customBoxDataSerializers)
-  protected val sidechainProofsCompanion: SidechainProofsCompanion = SidechainProofsCompanion(customProofSerializers)
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion =
-    SidechainTransactionsCompanion(customTransactionSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
 
   // Deserialize genesis block bytes
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -194,8 +194,6 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
-
-
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -257,9 +255,6 @@ class SidechainApp @Inject()
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
-  val injector: Injector = Guice.createInjector(this)
-  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
-
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
@@ -273,6 +268,9 @@ class SidechainApp @Inject()
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
+  var transactionSubmitProvider : TransactionSubmitProvider =  new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+  var nodeViewProvider : NodeViewProvider =  new NodeViewProviderImpl(nodeViewHolderRef)
+
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
   override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
@@ -281,7 +279,6 @@ class SidechainApp @Inject()
     .union(coreApiRoutes)
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
-
 
   override def stopAll(): Unit = {
     super.stopAll()
@@ -293,15 +290,12 @@ class SidechainApp @Inject()
     storage
   }
 
-  override def configure(binder: Binder): Unit = {
-    binder.bind(classOf[SidechainBoxesDataCompanion])
-      .toInstance(sidechainBoxesDataCompanion)
+  def getTransactionSubmitProvider(): TransactionSubmitProvider = {
+    transactionSubmitProvider
+  }
 
-    binder.bind(classOf[SidechainProofsCompanion])
-      .toInstance(sidechainProofsCompanion)
-
-    binder.install(new FactoryModuleBuilder()
-      .build(classOf[SidechainCoreTransactionFactory]))
+  def getNodeViewProvider(): NodeViewProvider = {
+    nodeViewProvider
   }
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
