@@ -207,7 +207,7 @@
       <version>1.64</version>
       <scope>compile</scope>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.ethereum/leveldbjni-all -->
+    <!-- https://repo.softmotions.com/repository/softmotions-public/org/ethereum/leveldbjni-all -->
     <dependency>
       <groupId>org.ethereum</groupId>
       <artifactId>leveldbjni-all</artifactId>
@@ -217,9 +217,9 @@
   </dependencies>
   <repositories>
     <repository>
-      <id>spring-plugin-repo</id>
-      <name>Spring Plugin Repository</name>
-      <url>https://repo.spring.io/plugins-release</url>
+      <id>softmotions_repository</id>
+      <name>Softmotions Public Repository</name>
+      <url>https://repo.softmotions.com/repository/softmotions-public</url>
     </repository>
   </repositories>
   <build>
