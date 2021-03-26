@@ -983,22 +983,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-  /wallet/balance:
+  /wallet/coinsBalance:
     post:
       tags:
         - wallet
-      summary: the global balance
-      description: Return the global balance for all types of boxes
-      operationId: getBalance
+      summary: the global balance of coins boxes
+      description: Return the global balance for all types of coins boxes
+      operationId: getCoinsBalance
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties:
-                boxType:
-                  description: Filter balance for given box type
-                  type: string
       responses:
         '200':
           description: successful operation
@@ -1021,6 +1017,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/balanceOfType:
+      post:
+        tags:
+          - wallet
+        summary: the total balance of boxes of given type
+        description: Return the global balance for given type of boxes
+        operationId: getBalance
+        requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  boxType:
+                    description: Filter balance for given box type
+                    type: string
+        responses:
+          '200':
+            description: successful operation
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    result:
+                      type: object
+                      properties:
+                        balance:
+                          type: integer
+                          format: int64
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
+          default:
+            description: any kind of http error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/SidechainApiError'
 
   /wallet/createPrivateKey25519:
     post:
