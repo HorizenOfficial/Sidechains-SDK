@@ -110,8 +110,8 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         scnode1name = "node1"
         scnode2name = "node2"
         scnode1address = self.sc_nodes[1].wallet_allPublicKeys()["result"]["propositions"][0]
-        scnode0balance = int(self.sc_nodes[0].wallet_balance()["result"]["balance"])
-        scnode1balance = int(self.sc_nodes[1].wallet_balance()["result"]["balance"])
+        scnode0balance = int(self.sc_nodes[0].wallet_coinsBalance()["result"]["balance"])
+        scnode1balance = int(self.sc_nodes[1].wallet_coinsBalance()["result"]["balance"])
         print("-->SC Node 0 balance: {0}".format(scnode0balance))
         print("-->SC Node 1 balance: {0}".format(scnode1balance))
         sc_amount = random.randint(1, scnode0balance - 100)
@@ -181,8 +181,8 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->MC Node 0 new balance: {0}".format(mcnode0newbalance))
         print("-->MC Node 1 new balance: {0}".format(mcnode1newbalance))
         
-        node0newbalance = int(self.sc_nodes[0].wallet_balances()["totalBalance"])
-        node1newbalance = int(self.sc_nodes[1].wallet_balances()["totalBalance"])
+        node0newbalance = int(self.sc_nodes[0].wallet_coinsBalance()["totalBalance"])
+        node1newbalance = int(self.sc_nodes[1].wallet_coinsBalance()["totalBalance"])
         assert_equal(scnode0balance - (sc_amount+sc_fee), node0newbalance, "Coins sent/total sc_amount mismatch for Node0")
         assert_equal(scnode1balance + sc_amount, node1newbalance, "Coins received/total sc_amount mismatch for Node1")
         print("-->SC Node 0 new balance: {0}".format(node0newbalance))
