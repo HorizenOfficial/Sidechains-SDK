@@ -11,13 +11,14 @@ Install Python 2.7
 
 **Additional settings**
 
-Setup two environment variables.
+Setup these environment variables.
 
 Example for Linux environment:
 
 ```
 BITCOINCLI="/home/user/zen/zen-cli"
 BITCOIND="/home/user/zen/zend"
+SIDECHAIN_SDK="/home/user/Sidechain-SDK"
 ```
 
 **Execution**

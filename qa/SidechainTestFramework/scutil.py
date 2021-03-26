@@ -98,7 +98,7 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               "../tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.5.jar",
+                               os.getenv("SIDECHAIN_SDK", "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     jsone_node = json.loads(sc_bootstrap_output)
@@ -222,7 +222,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
-    with open('./resources/template.conf', 'r') as templateFile:
+    customFileName = './resources/template_' + str(n+1) + '.conf'
+    fileToOpen = './resources/template.conf'
+    if os.path.isfile(customFileName):
+        fileToOpen = customFileName
+
+    with open(fileToOpen, 'r') as templateFile:
         tmpConfig = templateFile.read()
 
     genesis_secrets = []
@@ -343,7 +348,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.5.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     if print_output_to_file:
