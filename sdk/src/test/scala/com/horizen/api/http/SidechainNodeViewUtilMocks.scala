@@ -150,7 +150,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
     Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
-    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => Long.box(5500))
+    Mockito.when(wallet.allCoinsBoxesBalance()).thenAnswer(_ => Long.box(5500))
 
     Mockito.when(wallet.allBoxes()).thenAnswer(_ => allBoxes)
     Mockito.when(wallet.allBoxes(ArgumentMatchers.any[util.List[Array[Byte]]])).thenAnswer(asw => {

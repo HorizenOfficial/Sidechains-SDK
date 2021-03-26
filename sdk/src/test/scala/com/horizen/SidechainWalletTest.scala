@@ -176,15 +176,14 @@ class SidechainWalletTest
       mockedApplicationWallet)
 
     // Prepare list of transactions:
-    /*
-    val secret1 = PrivateKey25519Creator.getInstance.generateSecret("seed1".getBytes())
-    val secret2 = PrivateKey25519Creator.getInstance.generateSecret("seed2".getBytes())
-    val secret3 = PrivateKey25519Creator.getInstance.generateSecret("seed3".getBytes())
-    val secret4 = PrivateKey25519Creator.getInstance.generateSecret("seed4".getBytes())
-    */
 
-    val transaction1 = getRegularTransaction(boxList.slice(0, 3).map(_.box.asInstanceOf[RegularBox]),
-      secretList.map(_.asInstanceOf[PrivateKey25519]), secretList.slice(4, 5).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
+    // We need to be sure that Txs box ids to be opened which are not related to the wallet
+    // will be passed as a part of BoxIdsToRemove to the Storages and ApplicationWallet.
+    val secretNotFromWallet = getPrivateKey25519
+    val regularBoxNotFormWallet = getRegularBox(secretNotFromWallet, 100, 100)
+
+    val transaction1 = getRegularTransaction(boxList.slice(0, 3).map(_.box.asInstanceOf[RegularBox]) += regularBoxNotFormWallet,
+      secretList.map(_.asInstanceOf[PrivateKey25519]) += secretNotFromWallet, secretList.slice(4, 5).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
     val transaction2 = getRegularTransaction(boxList.slice(3, 5).map(_.box.asInstanceOf[RegularBox]),
       secretList.map(_.asInstanceOf[PrivateKey25519]),
       Seq(secretList(1)).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]),
@@ -228,13 +227,9 @@ class SidechainWalletTest
           new WalletBox(transaction2.newBoxes().get(1), ModifierId @@ transaction2.id, transaction2.timestamp())
         ), walletBoxUpdateList)
 
-        assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual boxIdsRemoveList is wrong.", List(
-          new ByteArrayWrapper(transaction1.unlockers().get(0).closedBoxId()),
-          new ByteArrayWrapper(transaction1.unlockers().get(1).closedBoxId()),
-          new ByteArrayWrapper(transaction1.unlockers().get(2).closedBoxId()),
-          new ByteArrayWrapper(transaction2.unlockers().get(0).closedBoxId()),
-          new ByteArrayWrapper(transaction2.unlockers().get(1).closedBoxId())
-        ), boxIdsRemoveList.map(new ByteArrayWrapper(_)))
+        assertEquals("ScanPersistent on WalletBoxStorage.update(...) actual boxIdsRemoveList is wrong.",
+          List(transaction1, transaction2).flatMap(_.unlockers().asScala.map(u => new ByteArrayWrapper(u.closedBoxId))),
+          boxIdsRemoveList.map(new ByteArrayWrapper(_)))
 
         Try {
           mockedWalletBoxStorage
@@ -265,13 +260,9 @@ class SidechainWalletTest
           transaction2.newBoxes().get(1)
         ), boxesToUpdate)
 
-        assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxIdsToRemove list is wrong.", util.Arrays.asList(
-          new ByteArrayWrapper(transaction1.unlockers().get(0).closedBoxId()),
-          new ByteArrayWrapper(transaction1.unlockers().get(1).closedBoxId()),
-          new ByteArrayWrapper(transaction1.unlockers().get(2).closedBoxId()),
-          new ByteArrayWrapper(transaction2.unlockers().get(0).closedBoxId()),
-          new ByteArrayWrapper(transaction2.unlockers().get(1).closedBoxId())
-        ), boxIdsToRemove)
+        assertEquals("ScanPersistent on ApplicationWallet.onChangeBoxes(...) actual boxIdsToRemove list is wrong.",
+          List(transaction1, transaction2).flatMap(_.unlockers().asScala.map(u => new ByteArrayWrapper(u.closedBoxId))).asJava,
+          boxIdsToRemove)
 
       })
 
@@ -300,8 +291,13 @@ class SidechainWalletTest
         .thenAnswer(answer => {
           val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
           val forgerBoxesToAppend = answer.getArgument(1).asInstanceOf[Seq[ForgerBox]]
+          val boxIdsRemoveList = answer.getArgument(2).asInstanceOf[List[Array[Byte]]]
           assertEquals("ScanPersistent on ForgingBoxesInfoStorage.updateForgerBoxes(...) actual version is wrong.", new ByteArrayWrapper(blockId), version)
           assertEquals("ScanPersistent on ForgingBoxesInfoStorage.updateForgerBoxes(...) actual toAppend seq is wrong.", 1,  forgerBoxesToAppend.size)
+
+          assertEquals("ScanPersistent on ForgingBoxesInfoStorage.updateForgerBoxes(...) actual boxIdsRemoveList is wrong.",
+            List(transaction1, transaction2).flatMap(_.unlockers().asScala.map(u => new ByteArrayWrapper(u.closedBoxId))),
+            boxIdsRemoveList.map(new ByteArrayWrapper(_)))
 
           Success(mockedForgingBoxesInfoStorage)
         })

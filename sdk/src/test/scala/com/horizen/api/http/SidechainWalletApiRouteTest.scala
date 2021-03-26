@@ -14,7 +14,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath = "/wallet/"
 
-  "The Api should to" should {
+  "The Api" should {
 
     "reject and reply with http error" in {
       Get(basePath) ~> sidechainWalletApiRoute ~> check {
@@ -33,10 +33,10 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "balance").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "balanceOfType").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "balance").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "balanceOfType").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -101,8 +101,8 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
-    "reply at /balance" in {
-      Post(basePath + "balance") ~> sidechainWalletApiRoute ~> check {
+    "reply at /coinsBalance" in {
+      Post(basePath + "coinsBalance") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         mapper.readTree(entityAs[String]).get("result") match {
@@ -115,9 +115,12 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           case _ => fail("Serialization failed for object SidechainApiResponseBody")
         }
       }
-      Post(basePath + "balance")
+    }
+
+    "reply at /balanceOfType" in {
+      Post(basePath + "balanceOfType")
         .withEntity(
-          SerializationUtil.serialize(ReqBalance(Some("a_class")))) ~> sidechainWalletApiRoute ~> check {
+          SerializationUtil.serialize(ReqBalance("a_class"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }

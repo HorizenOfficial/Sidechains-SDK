@@ -27,17 +27,16 @@ case class withdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               provingKeyFilePath: String,
                                               verificationKeyFilePath: String)
 
+case class ForgerSettings(automaticForging: Boolean = false)
+
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])
-
-case class MainchainSettings(
-                              path: String
-                            )
 
 case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: withdrawalEpochCertificateSettings,
-                              wallet: WalletSettings
+                              wallet: WalletSettings,
+                              forger: ForgerSettings
                             )

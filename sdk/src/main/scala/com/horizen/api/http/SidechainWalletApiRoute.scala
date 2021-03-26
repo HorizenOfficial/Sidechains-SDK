@@ -24,8 +24,8 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
-  override val route: Route = (pathPrefix("wallet")) {
-    allBoxes ~ balance ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
+  override val route: Route = pathPrefix("wallet") {
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
   }
 
   /**
@@ -50,21 +50,26 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-    * Returns the balance for given box type, or all types of boxes
+    * Returns the balance of all types of coins boxes
     */
-  def balance: Route = (post & path("balance")) {
+  def coinsBalance: Route = (post & path("coinsBalance")) {
+    withNodeView { sidechainNodeView =>
+      val wallet = sidechainNodeView.getNodeWallet
+      val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
+      ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+    }
+  }
+
+  /**
+    * Returns the balance for given box type
+    */
+  def balanceOfType: Route = (post & path("balanceOfType")) {
     entity(as[ReqBalance]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        val optBoxType = body.boxType
-        if (optBoxType.isEmpty) {
-          val sumOfBalances: Long = wallet.allBoxesBalance()
-          ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
-        } else {
-          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxType.get)
-          val balance = wallet.boxesBalance(clazz)
-          ApiResponseUtil.toResponse(RespBalance(balance))
-        }
+        val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(body.boxType)
+        val balance = wallet.boxesBalance(clazz)
+        ApiResponseUtil.toResponse(RespBalance(balance))
       }
     }
   }
@@ -147,7 +152,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespAllBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqBalance(boxType: Option[String])
+  private[api] case class ReqBalance(boxType: String)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
