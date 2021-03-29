@@ -24,13 +24,13 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   override def setWebSocketChannel(channel: WebSocketChannel): Unit =
     webSocketChannel = channel
 
-  override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
+  override def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: RequestType, request: Req, responseClazz: Class[Resp]): Future[Resp] = {
     // to-do. Check if the channel is not null
     if (webSocketChannel != null) {
       val requestId = generateRequestId
       var json = mapper.createObjectNode()
       json.put("msgType", 1)
-      json.put("requestType", requestType)
+      json.put("requestType", requestType.code)
       json.put("requestId", requestId)
       json.put("requestPayload", mapper.valueToTree[JsonNode](request))
 
