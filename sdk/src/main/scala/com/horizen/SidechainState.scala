@@ -1,11 +1,13 @@
 package com.horizen
 
+import com.google.common.primitives.{Bytes, Ints}
+
 import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
-
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox}
+import com.horizen.box.data.RegularBoxData
+import com.horizen.box.{Box, CoinsBox, ForgerBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.node.NodeState
@@ -14,11 +16,13 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
-import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
+import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
+import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
 
+import java.math.{BigDecimal, MathContext}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -29,12 +33,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
-  extends
-    BoxMinimalState[SidechainTypes#SCP,
-                    SidechainTypes#SCB,
-                    SidechainTypes#SCBT,
-                    SidechainBlock,
-                    SidechainState]
+  extends MinimalState[SidechainBlock, SidechainState]
+    with TransactionValidation[SidechainTypes#SCBT]
+    with ModifierValidation[SidechainBlock]
     with SidechainTypes
     with NodeState
     with ScorexLogging
@@ -81,13 +82,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   // Note: emit tx.semanticValidity for each tx
-  override def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+  def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     if (!tx.semanticValidity())
       throw new Exception("Transaction is semantically invalid.")
   }
 
   // get closed box from storages
-  override def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
+  def closedBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
     stateStorage
       .getBox(boxId)
       .orElse(forgerBoxStorage.getForgerBox(boxId).asInstanceOf[Option[SidechainTypes#SCB]])
@@ -113,7 +114,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   // Note: aggregate New boxes and spent boxes for Block
-  override def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = {
+  def changes(mod: SidechainBlock) : Try[BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB]] = {
     SidechainState.changes(mod)
   }
 
@@ -247,7 +248,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           timeStampToEpochNumber(mod.timestamp),
-          mod.withdrawalEpochCertificateOpt
+          mod.withdrawalEpochCertificateOpt,
+          mod.feeInfo
         )
       })
     }
@@ -259,16 +261,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   //    if ok -> return updated SDKState -> update SidechainState store
   //    if fail -> rollback applicationState
   // 3) ensure everything applied OK and return new SidechainState. If not -> return error
-  override def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB],
+  def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB],
                             newVersion: VersionTag,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
-                            consensusEpoch: ConsensusEpochNumber, withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainState] = Try {
+                            consensusEpoch: ConsensusEpochNumber,
+                            withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate],
+                            blockFeeInfo: BlockFeeInfo): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
-    val boxesToAppend = changes.toAppend.map(_.box)
+    var boxesToAppend = changes.toAppend.map(_.box)
 
     val withdrawalRequestsToAppend: ListBuffer[WithdrawalRequestBox] = ListBuffer()
     val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
+
+
+    if(WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)) {
+      // Calculate and append fee payment boxes to the boxesToAppend
+      // Note: that current block id and fee info are still not in the state storage, so consider them during result calculation.
+      boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some((versionToId(newVersion), blockFeeInfo)))
+    }
 
     boxesToAppend.foreach(box => {
       if(box.isInstanceOf[ForgerBox])
@@ -288,7 +299,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, withdrawalEpochCertificateOpt).get,
+            withdrawalRequestsToAppend, consensusEpoch, withdrawalEpochCertificateOpt, blockFeeInfo).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           params,
           newVersion,
@@ -330,7 +341,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     blockConsensusEpoch != currentConsensusEpoch
   }
 
-
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq()
@@ -357,6 +367,69 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
   private def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
     ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
+  }
+
+  // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
+  def isWithdrawalEpochLastIndex: Boolean = {
+    WithdrawalEpochUtils.isEpochLastIndex(stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params)
+  }
+
+  def getFeePayments(withdrawalEpochNumber: Int): Seq[SidechainTypes#SCB] = {
+    getFeePayments(withdrawalEpochNumber, None)
+  }
+
+  // Collect Fee payments during the appending of the last withdrawal epoch block, considering that block fee info as well.
+  private def getFeePayments(withdrawalEpochNumber: Int, blockToAppendInfo: Option[(ModifierId, BlockFeeInfo)]): Seq[SidechainTypes#SCB] = {
+    var blockFeeInfoSeq: Seq[BlockFeeInfo] = stateStorage.getFeePayments(withdrawalEpochNumber)
+    blockToAppendInfo.foreach(info => blockFeeInfoSeq = blockFeeInfoSeq :+ info._2)
+
+    if(blockFeeInfoSeq.isEmpty) {
+      return Seq()
+    }
+
+    var poolFee: Long = 0
+    val forgerPercentage: BigDecimal = new BigDecimal(params.forgerBlockFeeCoefficient, MathContext.DECIMAL64)
+
+    val forgersBlockRewards: Seq[(PublicKey25519Proposition, Long)] = blockFeeInfoSeq.map(feeInfo => {
+      val forgerBlockFee: Long = new BigDecimal(feeInfo.fee).multiply(forgerPercentage).longValue()
+      poolFee += (feeInfo.fee - forgerBlockFee)
+      (feeInfo.forgerRewardKey, forgerBlockFee)
+    })
+
+    // Split poolFee in equal parts to be paid to forgers.
+    val forgerPoolFee: Long = poolFee / forgersBlockRewards.size
+    // The rest N satoshis must be paid to the first N forgers (1 satoshi each)
+    val rest = poolFee % forgersBlockRewards.size
+
+    // Calculate final fee for foger considering forger fee, pool fee and the undistributed satoshis
+    val forgersRewards = forgersBlockRewards.zipWithIndex.map {
+      case (forgerBlockReward: (PublicKey25519Proposition, Long), index: Int) =>
+        val finalForgerFee = forgerBlockReward._2 + forgerPoolFee + (if(index < rest) 1 else 0)
+        (forgerBlockReward._1, finalForgerFee)
+    }
+
+    // Aggregate together payments for the same forgers
+    val forgerKeys: Seq[PublicKey25519Proposition] = forgersRewards.map(_._1).distinct
+    val res: Seq[(PublicKey25519Proposition, Long)] = forgerKeys.map { forgerKey =>
+        val forgerTotalFee: Long = forgersRewards.withFilter(r => forgerKey.equals(r._1)).map(_._2).sum
+        (forgerKey, forgerTotalFee)
+    }
+
+    val lastBlockId: ModifierId = blockToAppendInfo.flatMap {
+      case (blockId, _) => Some(blockId)
+    }.getOrElse(versionToId(version))
+
+    val lastBlockIdBytes = idToBytes(lastBlockId)
+
+    // Create and return Boxes with payments
+    // Remove boxes with zero values, that may occur, for example, if all the blocks were without fees.
+    res.zipWithIndex.map {
+      case (forgerRewardInfo: (PublicKey25519Proposition, Long), index: Int) =>
+        val data = new RegularBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
+        // Note: must be replaced with the Poseidon hash later.
+        val nonce = SidechainState.calculateFeePaymentBoxNonce(lastBlockIdBytes, index)
+        new RegularBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
+    }.filter(box => box.value() > 0)
   }
 }
 
@@ -407,5 +480,10 @@ object SidechainState
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")
+  }
+
+  private[horizen] def calculateFeePaymentBoxNonce(blockIdBytes: Array[Byte], index: Int): Long = {
+    val hash = Blake2b256.hash(Bytes.concat(blockIdBytes, Ints.toByteArray(index)))
+    BytesUtils.getLong(hash, 0)
   }
 }

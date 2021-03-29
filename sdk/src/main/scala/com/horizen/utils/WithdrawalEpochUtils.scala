@@ -23,6 +23,10 @@ object WithdrawalEpochUtils {
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
 
+  def isEpochLastIndex(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    epochInfo.lastEpochIndex == params.withdrawalEpochLength
+  }
+
   //Certificate could be sent only then block in specific position in Withdrawal epoch
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
     (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= params.withdrawalEpochLength / 5)
