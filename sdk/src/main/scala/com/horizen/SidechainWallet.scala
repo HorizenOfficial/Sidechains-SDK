@@ -3,15 +3,14 @@ package com.horizen
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.SidechainBlock
-import com.horizen.box.{Box, ForgerBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
 import scorex.core.VersionTag
 import com.horizen.utils._
@@ -135,7 +134,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       .filter(forgerBox => pubKeys.contains(forgerBox.blockSignProposition()))
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
-      .filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
+    val boxesInWalletToRemove = boxIdsToRemove.filter(boxId => boxesInWallet.exists(b => java.util.Arrays.equals(boxId, b)))
 
     // Note: the fee payment boxes have no related transactions
     val transactions: Seq[SidechainTypes#SCBT] = (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove).flatMap(id => txBoxes.get(id)).distinct
@@ -207,8 +206,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
   }
 
-  override def allBoxesBalance(): lang.Long = {
-    walletBoxStorage.getAll.map(_.box.value()).sum
+  override def allCoinsBoxesBalance(): lang.Long = {
+    walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }
 
   override def walletSeed(): Array[Byte] = seed

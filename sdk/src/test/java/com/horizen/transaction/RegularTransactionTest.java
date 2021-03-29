@@ -56,9 +56,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new RegularBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                7648839359131563563L,
-                -7396314805884903748L,
-                8657265668648196842L)
+                8211694539164647149L,
+                -7093185414494403265L,
+                -6490601236381183279L)
         );
     }
 
@@ -95,9 +95,10 @@ public class RegularTransactionTest extends BoxFixtureClass {
     public void newBoxesNonceEnforcingAlgorithmRegressionTest() {
         RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
         List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
-        for(int i = 0; i < newBoxes.size(); i++)
+        for(int i = 0; i < newBoxes.size(); i++){
             assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different.", i),
                     expectedNonces.get(i).longValue(), newBoxes.get(i).nonce());
+        }
     }
 
     // TO DO: extend FailureCreationTest with other cases. Look into semantic validity in SimpleBoxTransaction.

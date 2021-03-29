@@ -8,22 +8,22 @@ class SidechainRejectionApiRouteTest extends SidechainApiRouteTest {
 
   override val basePath: String = "/wallet/"
 
-  "The Api should to" should {
+  "The Api" should {
 
-    "reply at /balance" in {
-      Post(basePath + "balance") ~> (sidechainWalletApiRoute ~ walletBalanceApiRejected) ~> check {
-        response shouldEqual ((Post(basePath + "balance") ~> sidechainWalletApiRoute).response)
+    "reply at /coinsBalance" in {
+      Post(basePath + "coinsBalance") ~> (sidechainWalletApiRoute ~ walletCoinsBalanceApiRejected) ~> check {
+        response shouldEqual ((Post(basePath + "coinsBalance") ~> sidechainWalletApiRoute).response)
       }
     }
 
     "reject and reply with http error" in {
-      Post(basePath + "balance") ~> Route.seal({
-        walletBalanceApiRejected ~ sidechainWalletApiRoute
+      Post(basePath + "coinsBalance") ~> Route.seal({
+        walletCoinsBalanceApiRejected ~ sidechainWalletApiRoute
       }) ~> check {
         status.intValue() shouldBe StatusCodes.NotFound.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
-      Post(basePath + "balance") ~> Route.seal({
+      Post(basePath + "coinsBalance") ~> Route.seal({
         walletApiRejected ~ sidechainWalletApiRoute
       }) ~> check {
         status.intValue() shouldBe StatusCodes.NotFound.intValue

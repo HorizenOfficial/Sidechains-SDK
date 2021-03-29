@@ -58,13 +58,24 @@ class Forger(settings: SidechainSettings,
     }
   }
 
+  override def preStart(): Unit = {
+    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+  }
+
   override def receive: Receive = {
+    checkForger orElse
     processStartForgingMessage orElse
     processStopForgingMessage orElse
     processTryForgeNextBlockForEpochAndSlotMessage orElse
     processGetForgeInfo orElse {
       case message: Any => log.error(s"Forger received strange message: ${message} from ${sender().path.name}")
     }
+  }
+
+  protected def checkForger: Receive = {
+    case SidechainAppEvents.SidechainApplicationStart =>
+      if(settings.forger.automaticForging)
+        self ! StartForging
   }
 
   protected def processStartForgingMessage: Receive = {
