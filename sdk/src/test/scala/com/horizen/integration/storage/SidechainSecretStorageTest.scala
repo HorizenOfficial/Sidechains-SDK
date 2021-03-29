@@ -19,7 +19,7 @@ import scala.util.Try
 class SidechainSecretStorageTest
   extends JUnitSuite
   with SecretFixture
-  with IODBStoreFixture
+  with StoreFixture
   with SidechainTypes
 {
 
@@ -37,7 +37,7 @@ class SidechainSecretStorageTest
 
 
   def testCoreType(secret: Secret, secretList: List[Secret]): Unit = {
-    val sidechainSecretStorage = new SidechainSecretStorage(new IODBStoreAdapter(getStore()), sidechainSecretsCompanion)
+    val sidechainSecretStorage = new SidechainSecretStorage(getStorage(), sidechainSecretsCompanion)
     var res: Try[SidechainSecretStorage] = null
 
 
@@ -103,8 +103,9 @@ class SidechainSecretStorageTest
 
   @Test
   def testCustomTypes() : Unit = {
-    val (store1, dir) = getStoreWithPath()
-    val ss1 = new SidechainSecretStorage(new IODBStoreAdapter(store1), sidechainSecretsCompanion)
+    val pathToDB = tempFile()
+    val storage = getStorage(pathToDB)
+    val ss1 = new SidechainSecretStorage(storage, sidechainSecretsCompanion)
     val customSecret = getCustomPrivateKey
     var exceptionThrown = false
     var ss2 : SidechainSecretStorage = null
@@ -122,18 +123,16 @@ class SidechainSecretStorageTest
 
     // Test 2: try to add Custom Secret again. Failure expected.
     assertTrue("Operation must be unsuccessful.", ss1.add(customSecret).isFailure)
-
-    // close the store for ss1
-    store1.close()
-
+    storage.close()
 
     // Test 3: open the store again and try to create SidechainSecretStorage WITHOUT Custom Secret serializer support
-    val store2 = getStore(dir)
+    val storage2 = getStorage(pathToDB)
     try {
-      ss2 = new SidechainSecretStorage(new IODBStoreAdapter(store2), sidechainSecretsCompanionCore)
+      ss2 = new SidechainSecretStorage(storage2, sidechainSecretsCompanionCore)
     } catch {
       case e : RuntimeException => exceptionThrown = true
     }
+    storage2.close()
 
     assertTrue("Exception must be thrown if serializer for custom secret type was not specified.", exceptionThrown)
 
@@ -142,7 +141,7 @@ class SidechainSecretStorageTest
     exceptionThrown = false
 
     try {
-      ss2 = new SidechainSecretStorage(new IODBStoreAdapter(store2), sidechainSecretsCompanion)
+      ss2 = new SidechainSecretStorage(getStorage(pathToDB), sidechainSecretsCompanion)
       customSecret2 = ss2.get(customSecret.publicImage())
     } catch {
       case _ : Throwable => exceptionThrown = true

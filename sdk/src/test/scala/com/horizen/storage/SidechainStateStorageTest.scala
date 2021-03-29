@@ -9,7 +9,7 @@ import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
@@ -26,7 +26,7 @@ class SidechainStateStorageTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
