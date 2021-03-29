@@ -1,7 +1,7 @@
 package com.horizen.websocket
 
-import com.horizen.block.MainchainBlockReference
-import com.horizen.mainchain.api.{MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader}
+import com.horizen.mainchain.api.MainchainNodeApi
 
 import scala.util.Try
 
@@ -30,6 +30,9 @@ trait MainchainNodeChannel extends MainchainNodeApi {
   // For given locator find the best known block in MC active chain - common point.
   // Return it's height and hash.
   def getBestCommonPoint(locatorHashes: Seq[String]): Try[(Int, String)]
+
+  // Get block headers for given set of hashes in MC node block storage (any chain)
+  def getBlockHeaders(hashes: Seq[String]): Try[Seq[MainchainHeader]]
 
   // Subscribe to receive block info of a new tip in MC node.
   def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit]
