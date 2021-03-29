@@ -32,7 +32,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
-                                       applicationState: ApplicationState)
+                                       val applicationState: ApplicationState)
   extends MinimalState[SidechainBlock, SidechainState]
     with TransactionValidation[SidechainTypes#SCBT]
     with ModifierValidation[SidechainBlock]
@@ -129,8 +129,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     validateWithdrawalEpochCertificate(mod)
 
-    if (!applicationState.validate(this, mod))
-      throw new Exception("Exception was thrown by ApplicationState validation.")
+    applicationState.validate(this, mod)
   }
 
   private def validateBlockTransactionsMutuality(mod: SidechainBlock): Unit = {
@@ -238,8 +237,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     semanticValidity(tx).get
-    if(!applicationState.validate(this, tx))
-      throw new Exception(s"ApplicationState transaction ${tx.id} validation failed.")
+    applicationState.validate(this, tx)
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {

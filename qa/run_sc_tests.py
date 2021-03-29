@@ -8,6 +8,7 @@ from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
 from mc_sc_forging2 import MCSCForging2
 from mc_sc_forging3 import MCSCForging3
+from mc_sc_forging4 import MCSCForging4
 from mc_sc_nodes_alive import MCSCNodesAlive
 from sc_backward_transfer import SCBackwardTransfer
 from sc_bootstrap import SCBootstrap
@@ -39,6 +40,9 @@ def run_tests(log_file):
 
     result = run_test(MCSCForging3())
     assert_equal(0, result, "mc_sc_forging3 test failed!")
+
+    result = run_test(MCSCForging4())
+    assert_equal(0, result, "mc_sc_forging4 test failed!")
 
     result = run_test(MCSCNodesAlive())
     assert_equal(0, result, "mc_sc_nodes_alive test failed!")

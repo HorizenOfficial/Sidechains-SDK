@@ -10,7 +10,7 @@ import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
@@ -34,7 +34,7 @@ class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
@@ -114,11 +114,10 @@ class SidechainStateTest
     val tmpDir = tempDir()
     val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
     stateDir.mkdirs()
-    val store = getStore(stateDir)
 
     initialVersion = getVersion
 
-    stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
     stateStorage.update(
       initialVersion,
       initialWithdrawalEpochInfo,
@@ -133,9 +132,9 @@ class SidechainStateTest
     // Init SidechainStateForgerBoxStorage with forger boxes
     val stateForgerBoxesDir = new JFile(s"${tmpDir.getAbsolutePath}/stateForgerBoxes")
     stateForgerBoxesDir.mkdirs()
-    val forgerBoxesStore = getStore(stateForgerBoxesDir)
+    val forgerBoxesStore = getStorage(stateForgerBoxesDir)
 
-    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(forgerBoxesStore))
+    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(forgerBoxesStore)
     stateForgerBoxStorage.update(
       initialVersion,
       initialForgerBoxes,

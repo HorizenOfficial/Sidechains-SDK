@@ -36,7 +36,7 @@ class SidechainWalletTest
     with SecretFixture
     with TransactionFixture
     with CompanionsFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
 {
   val mockedBoxStorage : Storage = mock[IODBStoreAdapter]

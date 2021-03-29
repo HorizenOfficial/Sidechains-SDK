@@ -5,7 +5,7 @@ import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, Withdrawa
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
@@ -31,7 +31,7 @@ class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
@@ -140,8 +140,8 @@ class SidechainStateTest
       sidechainState.semanticValidity(mockedTransaction).isFailure)
 
     // Mock ApplicationState always successfully validate
-    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
-      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())).thenReturn(true)
+    Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())
 
     //Test validate(Transaction)
     val tryValidate = sidechainState.validate(transactionList.head)
@@ -163,20 +163,23 @@ class SidechainStateTest
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
-    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
-      ArgumentMatchers.any[SidechainBlock]()))
-      .thenAnswer(answer => {
-        true
-      })
-      .thenReturn(false)
+    Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[SidechainBlock]())
 
     val validateTry1 = sidechainState.validate(mockedBlock)
     assertTrue(s"Block validation must be successful. But result is - $validateTry1",
       validateTry1.isSuccess)
 
+    val expectedException = new IllegalArgumentException("Some exception")
+    Mockito.reset(mockedApplicationState)
+    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[SidechainBlock]())).thenThrow(expectedException)
+
     val validateTry2 = sidechainState.validate(mockedBlock)
     assertTrue(s"Block validation must be unsuccessful.",
       validateTry2.isFailure)
+    assertEquals(s"Block validation different exception expected.", expectedException,
+      validateTry2.failed.get)
 
     //Test changes
     val changes = sidechainState.changes(mockedBlock)
@@ -344,11 +347,11 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
-    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
-      ArgumentMatchers.any[SidechainBlock]())).thenReturn(true)
+    Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[SidechainBlock]())
 
-    Mockito.when(mockedApplicationState.validate(ArgumentMatchers.any[SidechainStateReader](),
-      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())).thenReturn(true)
+    Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[BoxTransaction[Proposition, Box[Proposition]]]())
 
     Mockito.when(mockedApplicationState.onApplyChanges(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[Array[Byte]](),

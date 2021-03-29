@@ -14,8 +14,10 @@ trait RequestPayload
 
 trait ResponsePayload
 
+abstract class RequestType(val code:Int)
+
 trait CommunicationClient {
-  def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: Int, request: Req, responseClazz: Class[Resp]): Future[Resp]
+  def sendRequest[Req <: RequestPayload, Resp <: ResponsePayload](requestType: RequestType, request: Req, responseClazz: Class[Resp]): Future[Resp]
 
   def registerEventHandler[E <: EventPayload](eventType: Int, handler: EventHandler[E], eventClazz: Class[E]): Try[Unit]
 

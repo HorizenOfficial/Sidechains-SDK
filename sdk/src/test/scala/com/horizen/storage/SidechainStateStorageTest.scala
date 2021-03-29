@@ -6,10 +6,10 @@ import com.google.common.primitives.{Ints, Longs}
 import com.horizen.SidechainTypes
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, intToConsensusEpochNumber}
+import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
-import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, ListSerializer, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -25,7 +25,7 @@ class SidechainStateStorageTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
