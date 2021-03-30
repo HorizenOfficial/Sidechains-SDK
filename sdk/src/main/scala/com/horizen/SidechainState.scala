@@ -129,9 +129,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     mod.transactions.foreach(tx => validate(tx).get)
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
-    val parentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
-    if(WithdrawalEpochUtils.inReachedCertificateSubmissionWindowEnd(mod, parentWithdrawalEpochInfo, params)) {
-      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, parentWithdrawalEpochInfo, params)
+    val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
+    if(WithdrawalEpochUtils.inReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
       // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
       validateTopQualityCertificate(mod, modWithdrawalEpochInfo.epoch)
     }
