@@ -22,7 +22,7 @@ import java.util.*;
 
 
 public class SidechainCoreTransaction
-        extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
+        extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>>
 {
     private List<byte[]> inputsIds;
     private List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
@@ -92,17 +92,8 @@ public class SidechainCoreTransaction
     }
 
     @Override
-    public synchronized List<NoncedBox<Proposition>> newBoxes() {
-        if(newBoxes == null) {
-            newBoxes = new ArrayList<>();
-            for (int i = 0; i < outputsData.size(); i++) {
-                NoncedBoxData boxData = outputsData.get(i);
-                long nonce = getNewBoxNonce(boxData.proposition(), i);
-                newBoxes.add(boxData.getBox(nonce));
-            }
-        }
-
-        return Collections.unmodifiableList(newBoxes);
+    public List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
+        return outputsData;
     }
 
     @Override

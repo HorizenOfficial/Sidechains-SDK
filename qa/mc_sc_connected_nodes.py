@@ -7,7 +7,7 @@ from test_framework.util import assert_equal, initialize_chain_clean, start_node
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
 from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
     bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
-    check_mainchain_block_reference_info, check_wallet_balance
+    check_mainchain_block_reference_info, check_wallet_coins_balance
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -98,7 +98,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         check_box_balance(first_sidechain_node, genesis_account, 3, 1, wallet_balance)
-        check_wallet_balance(first_sidechain_node, wallet_balance)
+        check_wallet_coins_balance(first_sidechain_node, wallet_balance)
 
         # MC 1 mine a new block
         block_hash = first_mainchain_node.generate(1)[0]

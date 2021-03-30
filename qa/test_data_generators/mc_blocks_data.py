@@ -4,7 +4,7 @@ import json
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_balance, generate_next_blocks
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
 
 """
@@ -47,13 +47,13 @@ class McTxsData(SidechainTestFramework):
 
         # Generate MC block with 3 sidechains mentioned.
         sc_creation_info = SCCreationInfo(mc_node, 100, 1000)
-        boot_info = create_sidechain(sc_creation_info)
+        boot_info = create_sidechain(sc_creation_info, 0)
         sidechain_id_1 = str(boot_info.sidechain_id)
 
-        boot_info = create_sidechain(sc_creation_info)
+        boot_info = create_sidechain(sc_creation_info, 0)
         sidechain_id_2 = str(boot_info.sidechain_id)
 
-        boot_info = create_sidechain(sc_creation_info)
+        boot_info = create_sidechain(sc_creation_info, 0)
         sidechain_id_3 = str(boot_info.sidechain_id)
 
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"

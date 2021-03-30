@@ -8,7 +8,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_balance, check_box_balance
+    check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance
 
 """
 Check the bootstrap feature.
@@ -59,7 +59,7 @@ class SCBootstrap(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 

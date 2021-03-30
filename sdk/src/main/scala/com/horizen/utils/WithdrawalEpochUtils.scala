@@ -42,7 +42,11 @@ object WithdrawalEpochUtils {
     }
   }
 
-  // Certificate can be sent only when mc block is in specific position in the Withdrawal epoch
+  def isEpochLastIndex(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    epochInfo.lastEpochIndex == params.withdrawalEpochLength
+  }
+
+  // Certificate can be sent only when mc block is in a specific position in the Withdrawal epoch
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
     (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
   }

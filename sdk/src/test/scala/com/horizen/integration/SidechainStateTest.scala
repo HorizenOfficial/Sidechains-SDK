@@ -1,28 +1,30 @@
 package com.horizen.integration
 
+import com.google.common.primitives.{Bytes, Ints}
+
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
-
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
 import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{IODBStoreAdapter, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.{SidechainState, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import scorex.core.{bytesToId, bytesToVersion}
+import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
+import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -32,7 +34,7 @@ class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
@@ -48,8 +50,10 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
   val params = MainNetParams()
 
-  val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, 1)
+  val initialWithdrawalEpochInfo = WithdrawalEpochInfo(1, params.withdrawalEpochLength - 1)
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+
+  val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
 
   def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
@@ -110,11 +114,10 @@ class SidechainStateTest
     val tmpDir = tempDir()
     val stateDir = new JFile(s"${tmpDir.getAbsolutePath}/state")
     stateDir.mkdirs()
-    val store = getStore(stateDir)
 
     initialVersion = getVersion
 
-    stateStorage = new SidechainStateStorage(new IODBStoreAdapter(store), sidechainBoxesCompanion)
+    stateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
     stateStorage.update(
       initialVersion,
       initialWithdrawalEpochInfo,
@@ -122,15 +125,16 @@ class SidechainStateTest
       Set(),
       Seq[WithdrawalRequestBox](),
       initialConsensusEpoch,
-      None
+      None,
+      initialBlockFeeInfo
     )
 
     // Init SidechainStateForgerBoxStorage with forger boxes
     val stateForgerBoxesDir = new JFile(s"${tmpDir.getAbsolutePath}/stateForgerBoxes")
     stateForgerBoxesDir.mkdirs()
-    val forgerBoxesStore = getStore(stateForgerBoxesDir)
+    val forgerBoxesStore = getStorage(stateForgerBoxesDir)
 
-    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(forgerBoxesStore))
+    stateForgerBoxStorage = new SidechainStateForgerBoxStorage(forgerBoxesStore)
     stateForgerBoxStorage.update(
       initialVersion,
       initialForgerBoxes,
@@ -186,8 +190,26 @@ class SidechainStateTest
   }
 
   @Test
-  def applyModifier(): Unit = {
+  def feePayments(): Unit = {
+    // Create sidechainState with initial block applied.
     val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
+
+    // Collect and verify getFeePayments value
+    val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
+    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+
+    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
+      1, feePayments.size)
+
+    val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(versionToBytes(sidechainState.version), 0)
+    val expectedFeePaymentBox: RegularBox = new RegularBox(new RegularBoxData(initialBlockFeeInfo.forgerRewardKey, initialBlockFeeInfo.fee), nonce)
+    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
+      Seq(expectedFeePaymentBox), feePayments)
+  }
+
+  @Test
+  def applyModifier(): Unit = {
+    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
 
     // Test applyModifier with a single RegularTransaction with regular and forger outputs
     val mockedBlock = mock[SidechainBlock]
@@ -208,19 +230,26 @@ class SidechainStateTest
       .thenReturn(transactionList.toList)
 
     Mockito.when(mockedBlock.parentId)
-      .thenAnswer(answer => bytesToId(initialVersion.data))
+      .thenReturn(bytesToId(initialVersion.data))
 
+    // Mock 1 MCBlockRefData entry to simulate the last withdrawal epoch SidechainBlock
+    // to check that fee payment boxes were created and appended to closed boxes.
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
-      .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
+      .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
 
     Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+
+    val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
+    Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     assertTrue("ApplyChanges for block must be successful.",
       applyTry.isSuccess)
 
+    sidechainState = applyTry.get
+
     assertEquals(s"State storage version must be updated to $newVersion",
-      bytesToVersion(newVersion.data), applyTry.get.version)
+      bytesToVersion(newVersion.data), sidechainState.version)
 
     assertEquals("Rollback depth must be 2.",
       2, sidechainState.maxRollbackDepth)
@@ -244,6 +273,33 @@ class SidechainStateTest
       3, consensusEpochInfo.forgingStakeInfoTree.leavesNumber)
     assertEquals("Consensus epoch info epoch total stake should be different.",
       initialForgerBoxes.map(_.value()).sum + forgerOutputsAmount, consensusEpochInfo.forgersStake)
+
+
+    // Test that getFeePayments changed after modifier was applied
+    val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
+    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+
+    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
+      2, feePayments.size)
+    assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments.head.id())} for epoch $withdrawalEpochNumber expected to be closed.",
+      sidechainState.closedBox(feePayments.head.id()).isDefined)
+    assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments(1).id())} for epoch $withdrawalEpochNumber expected to be closed.",
+      sidechainState.closedBox(feePayments(1).id()).isDefined)
+
+    val poolPayments: Long = Math.ceil((initialBlockFeeInfo.fee + blockFeeInfo.fee) * (1 - params.forgerBlockFeeCoefficient)).longValue()
+
+    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 0)
+    // Simplified version of fee computation with lower precision, but is quite enough for the tests.
+    val payment1: Long = (initialBlockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2 + poolPayments % 2
+    val expectedFeePaymentBox1: RegularBox = new RegularBox(new RegularBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
+
+    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 1)
+    // Simplified version of fee computation with lower precision, but is quite enough for the tests.
+    val payment2: Long = (blockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2
+    val expectedFeePaymentBox2: RegularBox = new RegularBox(new RegularBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)
+
+    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
+      Seq(expectedFeePaymentBox1, expectedFeePaymentBox2), feePayments)
 
 
     // Test rollback

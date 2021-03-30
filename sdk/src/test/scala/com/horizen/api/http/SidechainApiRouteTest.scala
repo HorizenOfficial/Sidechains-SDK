@@ -62,7 +62,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val peersInfo: Array[PeerInfo] = Array(
     PeerInfo(PeerSpec("app", Version.initial, "first", Some(inetAddr1), Seq()), System.currentTimeMillis() - 100, Some(Incoming)),
     PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr2), Seq()), System.currentTimeMillis() + 100, Some(Outgoing)),
-    PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr3), Seq()), System.currentTimeMillis() + 200, Some(Outgoing))
+    PeerInfo(PeerSpec("app", Version.initial, "third", Some(inetAddr3), Seq()), System.currentTimeMillis() + 200, Some(Outgoing))
   )
   val peers: Map[InetSocketAddress, PeerInfo] = Map(
     inetAddr1 -> peersInfo(0),
@@ -121,8 +121,8 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
-  val mockedSidechainTransactioActor = TestProbe()
-  mockedSidechainTransactioActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+  val mockedSidechainTransactionActor = TestProbe()
+  mockedSidechainTransactionActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case BroadcastTransaction(t) =>
@@ -132,7 +132,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
       TestActor.KeepRunning
     }
   })
-  val mockedSidechainTransactioActorRef: ActorRef = mockedSidechainTransactioActor.ref
+  val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
   val mockedPeerManagerActor = TestProbe()
   mockedPeerManagerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
@@ -233,14 +233,14 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
 
   val params = MainNetParams()
-  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef,
+  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef, sidechainCoreTransactionFactory).route
-  val walletBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "balance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 
 
