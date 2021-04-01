@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, check_box_balance, check_wallet_balance, generate_next_blocks
+    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -73,7 +73,7 @@ class SCBackwardTransfer(SidechainTestFramework):
                      "Genesis info expected to have the same genesis mc block height as in MC node.")
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
         check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
@@ -91,7 +91,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node)
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
         check_box_balance(sc_node, sc_account, 1, 1, ft_amount)
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.

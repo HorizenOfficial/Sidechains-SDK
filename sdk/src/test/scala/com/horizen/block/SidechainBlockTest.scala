@@ -133,7 +133,7 @@ class SidechainBlockTest
 
 
     // Set to true to regenerate regression data
-    if(true) {
+    if(false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/sidechainblock_hex"))
       out.write(BytesUtils.toHexString(blockBytes))
       out.close()

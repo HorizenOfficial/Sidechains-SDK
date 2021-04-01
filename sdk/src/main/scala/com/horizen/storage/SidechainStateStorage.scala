@@ -46,6 +46,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
+  private val undefinedBlockFeeInfoCounter: Int = -1
+  private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+  }
+
+  private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+  }
+
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
@@ -84,6 +93,32 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         }.toOption.getOrElse(undefinedWithdrawalEpochCounter)
       case _ => undefinedWithdrawalEpochCounter
     }
+  }
+
+  private def getBlockFeeInfoCounter(withdrawalEpochNumber: Int): Int = {
+    storage.get(getBlockFeeInfoCounterKey(withdrawalEpochNumber)).asScala match {
+      case Some(baw) =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        }.toOption.getOrElse(undefinedBlockFeeInfoCounter)
+      case _ => undefinedBlockFeeInfoCounter
+    }
+  }
+
+  def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
+    val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
+    val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
+    for(counter <- 0 to lastCounter) {
+      storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
+        case Some(baw) => BlockFeeInfoSerializer.parseBytesTry(baw.data) match {
+          case Success(info) => blockFees.append(info)
+          case Failure(exception) => throw new IllegalStateException("Error while fee payment parsing.", exception)
+        }
+        case None => throw new IllegalStateException("Error while fee payments retrieving: record expected to exist.")
+      }
+    }
+
+    blockFees
   }
 
   def getWithdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
@@ -140,7 +175,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainStateStorage] = Try {
+             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+             blockFeeInfo: BlockFeeInfo): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -148,6 +184,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(!boxIdsRemoveSet.contains(null), "BoxId to remove must be NOT NULL.")
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
+    require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
@@ -177,7 +214,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     // If withdrawal epoch switched to the next one, then:
     // 1) remove outdated withdrawal related records and counters (2 epochs before);
-    // 2) remove outdated topQualityCertificates retrieved in the previous epoch and referenced to the 2 epochs before.
+    // 2) remove outdated topQualityCertificate retrieved in the previous epoch and referenced to the 2 epochs before.
+    // 3) remove outdated BlockFeeInfo records
     val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfo.epoch
       case _ => false
@@ -185,10 +223,16 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     if (isWithdrawalEpochSwitched) {
       val withdrawalEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
       for (counter <- 0 to getWithdrawalEpochCounter(withdrawalEpochNumberToRemove)) {
-        removeList.add(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch - 2, counter))
+        removeList.add(getWithdrawalRequestsKey(withdrawalEpochNumberToRemove, counter))
       }
       removeList.add(getWithdrawalEpochCounterKey(withdrawalEpochNumberToRemove))
       removeList.add(getTopQualityCertificateKey(withdrawalEpochNumberToRemove))
+
+      val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
+      for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
+        removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
+      }
+      removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
     // Store the top quality cert for epoch if present
@@ -196,6 +240,13 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     )
+
+    // Update BlockFeeInfo data
+    val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1
+    updateList.add(new JPair(getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch),
+      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+    updateList.add(new JPair(getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter),
+      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
 
     // Update Consensus related data
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {

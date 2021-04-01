@@ -1,9 +1,9 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
+import com.horizen.fixtures.{BoxFixture, StoreFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, Pair}
+import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import org.junit.{Before, Test}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
 
 
 class ForgingBoxesInfoStorageTest extends JUnitSuite
-  with IODBStoreFixture
+  with StoreFixture
   with MockitoSugar
   with SidechainTypes
   with BoxFixture {

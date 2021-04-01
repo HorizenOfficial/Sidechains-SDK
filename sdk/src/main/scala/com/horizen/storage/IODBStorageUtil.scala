@@ -10,6 +10,4 @@ object IODBStorageUtil {
     storePath.mkdirs()
     new IODBStoreAdapter(new LSMStore(storePath))
   }
-
-
 }
