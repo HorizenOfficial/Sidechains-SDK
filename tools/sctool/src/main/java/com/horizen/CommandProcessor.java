@@ -361,6 +361,11 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
+            byte initialMcCumulativeCommTreeHashLength = infoBytes[offset];
+            offset += 1;
+            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + initialMcCumulativeCommTreeHashLength);
+            offset += initialMcCumulativeCommTreeHashLength;
+
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
             // Uncomment if you want to save mc block hex for some reason

@@ -34,17 +34,25 @@ object MainchainTxCswCrosschainInput {
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val scFieldElementSize: Int = FieldElement.FIELD_ELEMENT_LENGTH
-    val nullifier: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + scFieldElementSize))
-    currentOffset += scFieldElementSize
+    val nullifierSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    currentOffset += nullifierSize.size()
+    if(nullifierSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+      throw new IllegalArgumentException(s"Input data corrupted: nullifier size ${nullifierSize.value()} " +
+        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+    val nullifier: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue()))
+    currentOffset += nullifierSize.value().intValue()
 
     val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 20))
     currentOffset += 20
 
-    val scProofSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()
-    val scProof: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scProofSize)
-    currentOffset += scProofSize
+    val scProofSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    currentOffset += scProofSize.size()
+    if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
+      throw new IllegalArgumentException(s"Input data corrupted: scProof size ${scProofSize.value()} " +
+        s"is expected to be ScProof size ${CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()}")
 
+    val scProof: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
+    currentOffset += scProofSize.value().intValue()
 
     val scriptLength: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
     currentOffset += scriptLength.size()

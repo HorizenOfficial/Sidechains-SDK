@@ -2,7 +2,7 @@ package com.horizen.block
 
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.utils.{BytesUtils, Utils}
+import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
 import scala.util.Try
 
@@ -29,9 +29,13 @@ object MainchainTxBwtRequestCrosschainOutput {
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val scFieldElementSize: Int = FieldElement.FIELD_ELEMENT_LENGTH
-    val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + scFieldElementSize))
-    currentOffset += scFieldElementSize
+    val scRequestDataSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
+    currentOffset += scRequestDataSize.size()
+    if(scRequestDataSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+      throw new IllegalArgumentException(s"Input data corrupted: scRequestData size ${scRequestDataSize.value()} " +
+        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+    val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + scRequestDataSize.value().intValue()))
+    currentOffset += scRequestDataSize.value().intValue()
 
     val mcDestinationAddress: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 20))
     currentOffset += 20
@@ -39,9 +43,14 @@ object MainchainTxBwtRequestCrosschainOutput {
     val scFee: Long = BytesUtils.getReversedLong(bwtRequestOutputBytes, currentOffset)
     currentOffset += 8
 
-    val scProofSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()
-    val scProof: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + scProofSize)
-    currentOffset += scProofSize
+    val scProofSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
+    currentOffset += scProofSize.size()
+    if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
+      throw new IllegalArgumentException(s"Input data corrupted: scProof size ${scProofSize.value()} " +
+        s"is expected to be ScProof size ${CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()}")
+
+    val scProof: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
+    currentOffset += scProofSize.value().intValue()
 
     new MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes.slice(offset, currentOffset),
       sidechainId, scRequestData, mcDestinationAddress, scFee, scProof)

@@ -7,6 +7,9 @@ import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
+case class FieldElementCertificateField(rawData: Array[Byte])
+case class BitVectorCertificateField(rawData: Array[Byte])
+
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("certificateBytes", "transactionInputs", "transactionOutputs"))
 case class WithdrawalEpochCertificate
@@ -16,7 +19,9 @@ case class WithdrawalEpochCertificate
    epochNumber: Int,
    quality: Long,
    endEpochBlockHash: Array[Byte],
-   proof: Array[Byte] = Array(),
+   proof: Array[Byte],
+   fieldElementCertificateFields: Seq[FieldElementCertificateField],
+   bitVectorCertificateFields: Seq[BitVectorCertificateField],
    transactionInputs: Seq[MainchainTransactionInput],
    transactionOutputs: Seq[MainchainTransactionOutput],
    backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput])
@@ -51,9 +56,39 @@ object WithdrawalEpochCertificate {
     val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val scProofSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()
-    val scProof: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + scProofSize)
-    currentOffset += scProofSize
+    val scProofSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    currentOffset += scProofSize.size()
+    if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
+      throw new IllegalArgumentException(s"Input data corrupted: scProof size ${scProofSize.value()} " +
+        s"is expected to be ScProof size ${CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()}")
+
+    val scProof: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
+    currentOffset += scProofSize.value().intValue()
+
+    val fieldElementCertificateFieldsLength: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    currentOffset += fieldElementCertificateFieldsLength.size()
+
+    val fieldElementCertificateFields: Seq[FieldElementCertificateField] =
+      (1 to fieldElementCertificateFieldsLength.size()).map ( _ => {
+        val certFieldSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+        currentOffset += certFieldSize.size()
+        val rawData: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + certFieldSize.value().intValue()))
+        currentOffset += certFieldSize.value().intValue()
+
+        FieldElementCertificateField(rawData)
+      })
+
+    val bitVectorCertificateFieldsLength: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    currentOffset += bitVectorCertificateFieldsLength.size()
+
+    val bitVectorCertificateFields: Seq[BitVectorCertificateField] =
+      (1 to bitVectorCertificateFieldsLength.size()).map ( _ => {
+        val vertBitVectorSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+        currentOffset += vertBitVectorSize.size()
+        val rawData: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + vertBitVectorSize.value().intValue()))
+        currentOffset += vertBitVectorSize.value().intValue()
+        BitVectorCertificateField(rawData)
+      })
 
     val transactionInputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
     currentOffset += transactionInputCount.size()
@@ -96,6 +131,8 @@ object WithdrawalEpochCertificate {
       quality,
       endEpochBlockHash,
       scProof,
+      fieldElementCertificateFields,
+      bitVectorCertificateFields,
       transactionInputs,
       transactionOutputs,
       backwardTransferOutputs)

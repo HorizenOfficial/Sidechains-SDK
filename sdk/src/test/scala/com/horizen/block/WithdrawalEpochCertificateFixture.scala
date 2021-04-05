@@ -20,6 +20,8 @@ trait WithdrawalEpochCertificateFixture {
       getBytes(),
       Seq(),
       Seq(),
+      Seq(),
+      Seq(),
       Seq())
   }
 }

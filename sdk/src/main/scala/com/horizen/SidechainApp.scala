@@ -103,8 +103,8 @@ class SidechainApp @Inject()
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
-  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
+  val calculatedSysDataConstant: Option[Array[Byte]] = Some(CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold))
+  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant.getOrElse(Array[Byte]()))}")
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {

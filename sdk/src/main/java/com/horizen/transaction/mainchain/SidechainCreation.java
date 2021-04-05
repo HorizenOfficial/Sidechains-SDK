@@ -10,9 +10,11 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
+import scala.compat.java8.OptionConverters;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
 
@@ -63,8 +65,8 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         );
     }
 
-    public byte[] getGenSysConstant() {
-        return output.constant();
+    public Optional<byte[]> getGenSysConstantOpt() {
+        return OptionConverters.toJava(output.constant());
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {
