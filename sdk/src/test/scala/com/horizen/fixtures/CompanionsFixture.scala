@@ -12,19 +12,14 @@ import com.horizen.transaction.{RegularTransactionSerializer, TransactionSeriali
 trait CompanionsFixture
 {
   def getDefaultTransactionsCompanion: SidechainTransactionsCompanion = {
-    val sidechainBoxesDataCompanion = SidechainBoxesDataCompanion(new JHashMap())
-    val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
 
     SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]](){{
       put(111.byteValue(), RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
-    }}, sidechainBoxesDataCompanion, sidechainProofsCompanion)
+    }})
   }
 
   def getTransactionsCompanionWithCustomTransactions(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]): SidechainTransactionsCompanion = {
-    val sidechainBoxesDataCompanion = SidechainBoxesDataCompanion(new JHashMap())
-    val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
-
-    SidechainTransactionsCompanion(customSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
+    SidechainTransactionsCompanion(customSerializers)
   }
 
   def getDefaultSecretCompanion: SidechainSecretsCompanion = {

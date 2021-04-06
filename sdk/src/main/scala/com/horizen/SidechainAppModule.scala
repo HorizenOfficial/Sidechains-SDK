@@ -3,19 +3,17 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 
-import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.google.inject.name.Named
-import com.google.inject.{Binder, Provides}
+import com.google.inject.Provides
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.box.BoxSerializer
 import com.horizen.box.data.NoncedBoxDataSerializer
-import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
 import com.horizen.proof.ProofSerializer
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage.Storage
-import com.horizen.transaction.{SidechainCoreTransactionFactory, TransactionSerializer}
+import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
 
@@ -30,9 +28,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
     bind(classOf[TransactionSubmitHelper])
       .to(classOf[TransactionSubmitHelperImpl]);
-
-    install(new FactoryModuleBuilder()
-      .build(classOf[SidechainCoreTransactionFactory]))
 
     configureApp()
 
@@ -59,9 +54,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
                     @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
                     @Named("ConsensusStorage")  consensusStorage: Storage,
                     @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-                    @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
-                    sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
-                    sidechainTransactionsCompanion : SidechainTransactionsCompanion
+                    @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
                   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -83,9 +76,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           walletForgingBoxesInfoStorage,
           consensusStorage,
           customApiGroups,
-          rejectedApiPaths,
-          sidechainCoreTransactionFactory,
-          sidechainTransactionsCompanion
+          rejectedApiPaths
         )
       }
     }

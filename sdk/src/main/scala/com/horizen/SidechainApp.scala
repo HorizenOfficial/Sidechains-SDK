@@ -65,8 +65,6 @@ class SidechainApp @Inject()
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
-   val sidechainCoreTransactionFactory : SidechainCoreTransactionFactory,
-   val sidechainTransactionsCompanion : SidechainTransactionsCompanion
   )
   extends Application  with ScorexLogging
 {
@@ -90,6 +88,7 @@ class SidechainApp @Inject()
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(SidechainSyncInfoMessageSpec)
 
+  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -258,13 +257,13 @@ class SidechainApp @Inject()
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
-  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef, sidechainCoreTransactionFactory))
+  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
-    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params),
+    SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 

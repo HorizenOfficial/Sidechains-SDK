@@ -370,10 +370,7 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
-
-            SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
-            SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;

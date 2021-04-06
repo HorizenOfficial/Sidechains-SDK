@@ -46,11 +46,8 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         long fee = 100L;
         long timestamp = 13213L;
 
-        SidechainBoxesDataCompanion boxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
-        SidechainProofsCompanion proofsCompanion = new SidechainProofsCompanion(new HashMap<>());
 
-
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanion);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
         TransactionSerializer serializer = transaction.serializer();
 
         // Serializer Core transaction that contains only Core types
@@ -63,121 +60,6 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         assertEquals("Deserialized transactions timestamp is different to the origin", transaction.timestamp(), t.get().timestamp());
         assertArrayEquals("Original and deserialized transactions expected to have equal byte representation.", bytes, serializer.toBytes(t.get()));
     }
-
-
-    @Test
-    public void serializeCustomBoxData() {
-        List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
-
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData) getZenBoxData());
-        // Add custom box data
-        outputsData.add((NoncedBoxData)getCustomBoxData());
-
-        List<Proof<Proposition>> proofs = new ArrayList<>();
-        proofs.add((Proof)getRandomSignature25519());
-
-        long fee = 100L;
-        long timestamp = 13213L;
-
-        SidechainProofsCompanion proofsCompanion = new SidechainProofsCompanion(new HashMap<>());
-
-
-        // Test 1: create transaction with CustomBoxData, but WITHOUT support of CustomBox serializer. Serialization expected to be fail.
-        SidechainBoxesDataCompanion boxesDataCompanionWithoutCustomSerializer = new SidechainBoxesDataCompanion(new HashMap<>());
-
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanionWithoutCustomSerializer, proofsCompanion);
-        TransactionSerializer serializerWithCoreOnly = transaction.serializer();
-
-        // Serialize Core transaction that contains only Core types serializers
-        boolean exceptionOccurred = false;
-        try {
-            byte[] bytes = serializerWithCoreOnly.toBytes(transaction);
-        } catch (IllegalArgumentException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Exception during SidechainCoreTransaction with Custom BoxData and missed serializer expected.", exceptionOccurred);
-
-
-        // Test 2: create transaction with CustomBoxData and WITH support of CustomBox serializer. Serialization expected to be successful.
-        HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
-        customBoxDataSerializers.put(CustomBoxData.DATA_TYPE_ID, (NoncedBoxDataSerializer)CustomBoxDataSerializer.getSerializer());
-        SidechainBoxesDataCompanion boxesDataCompanionWithCustomSerializer = new SidechainBoxesDataCompanion(customBoxDataSerializers);
-
-        transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanionWithCustomSerializer, proofsCompanion);
-        TransactionSerializer serializerWithCustom = transaction.serializer();
-
-        byte[] bytes = serializerWithCustom.toBytes(transaction);
-        Try<SidechainCoreTransaction> t = serializerWithCustom.parseBytesTry(bytes);
-        assertTrue("Transaction deserialization failed.", t.isSuccess());
-        assertEquals("Deserialized transactions expected to be equal", transaction.id(), t.get().id());
-        assertEquals("Deserialized transactions fee is different to the origin", transaction.fee(), t.get().fee());
-        assertEquals("Deserialized transactions timestamp is different to the origin", transaction.timestamp(), t.get().timestamp());
-        assertArrayEquals("Original and deserialized transactions expected to have equal byte representation.", bytes, serializerWithCustom.toBytes(t.get()));
-
-
-        // Test 3: deserialize bytes with CustomBoxData entry using Serializer WITHOUT proper custom serializer - exception expected
-        t = serializerWithCoreOnly.parseBytesTry(bytes);
-        assertTrue("Transaction deserialization failed.", t.isFailure());
-    }
-
-
-    @Test
-    public void serializeCustomProofs() {
-        List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
-
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData) getZenBoxData());
-
-        List<Proof<Proposition>> proofs = new ArrayList<>();
-        proofs.add((Proof)getRandomSignature25519());
-        // Add CustomProof entry
-        proofs.add(getRandomCustomProof());
-
-        long fee = 100L;
-        long timestamp = 13213L;
-
-        SidechainBoxesDataCompanion boxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
-
-
-        // Test 1: create transaction with CustomProof, but WITHOUT support of CustomProof serializer. Serialization expected to be fail.
-        SidechainProofsCompanion proofsCompanionWithoutCustomSerializer = new SidechainProofsCompanion(new HashMap<>());
-
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanionWithoutCustomSerializer);
-        TransactionSerializer serializerWithCoreOnly = transaction.serializer();
-
-        // Serialize Core transaction that contains only Core types serializers
-        boolean exceptionOccurred = false;
-        try {
-            byte[] bytes = serializerWithCoreOnly.toBytes(transaction);
-        } catch (IllegalArgumentException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Exception during SidechainCoreTransaction with Custom Proof and missed serializer expected.", exceptionOccurred);
-
-
-        // Test 2: create transaction with CustomProof and WITH support of CustomProof serializer. Serialization expected to be successful.
-        HashMap<Byte, ProofSerializer<Proof<Proposition>>> customProofSerializers = new HashMap<>();
-        customProofSerializers.put(CustomProof.PROOF_TYPE_ID, (ProofSerializer)CustomProofSerializer.getSerializer());
-        SidechainProofsCompanion proofsCompanionWithCustomSerializer = new SidechainProofsCompanion(customProofSerializers);
-
-        transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanionWithCustomSerializer);
-        TransactionSerializer serializerWithCustom = transaction.serializer();
-
-        byte[] bytes = serializerWithCustom.toBytes(transaction);
-        Try<SidechainCoreTransaction> t = serializerWithCustom.parseBytesTry(bytes);
-        assertTrue("Transaction deserialization failed.", t.isSuccess());
-        assertEquals("Deserialized transactions expected to be equal", transaction.id(), t.get().id());
-        assertEquals("Deserialized transactions fee is different to the origin", transaction.fee(), t.get().fee());
-        assertEquals("Deserialized transactions timestamp is different to the origin", transaction.timestamp(), t.get().timestamp());
-        assertArrayEquals("Original and deserialized transactions expected to have equal byte representation.", bytes, serializerWithCustom.toBytes(t.get()));
-
-
-        // Test 3: deserialize bytes with CustomBoxData entry using Serializer WITHOUT proper custom serializer - exception expected
-        t = serializerWithCoreOnly.parseBytesTry(bytes);
-        assertTrue("Transaction deserialization failed.", t.isFailure());
-    }
-
 
     @Test
     public void regressionTest() {
@@ -193,11 +75,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         long fee = 100L;
         long timestamp = 13213L;
 
-        SidechainBoxesDataCompanion boxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
-        SidechainProofsCompanion proofsCompanion = new SidechainProofsCompanion(new HashMap<>());
-
-
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanion);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
         // Set `true` and run if you want to update regression data.
         if(false) {
             try {
