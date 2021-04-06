@@ -3,10 +3,11 @@ package com.horizen.fixtures
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
+import cats.instances.byte
 import com.horizen.SidechainTypes
 import com.horizen.companion.{SidechainBoxesDataCompanion, SidechainProofsCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{RegularTransactionSerializer, TransactionSerializer}
 
 trait CompanionsFixture
 {
@@ -14,7 +15,9 @@ trait CompanionsFixture
     val sidechainBoxesDataCompanion = SidechainBoxesDataCompanion(new JHashMap())
     val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
 
-    SidechainTransactionsCompanion(new JHashMap(), sidechainBoxesDataCompanion, sidechainProofsCompanion)
+    SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]](){{
+      put(111.byteValue(), RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
+    }}, sidechainBoxesDataCompanion, sidechainProofsCompanion)
   }
 
   def getTransactionsCompanionWithCustomTransactions(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]): SidechainTransactionsCompanion = {

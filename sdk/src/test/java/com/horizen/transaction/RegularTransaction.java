@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
-import static com.horizen.transaction.CoreTransactionsIdsEnum.RegularTransactionId;
 
 public final class RegularTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
@@ -168,7 +167,7 @@ public final class RegularTransaction
 
     @Override
     public byte transactionTypeId() {
-        return RegularTransactionId.id();
+        return 111;
     }
 
     @Override
