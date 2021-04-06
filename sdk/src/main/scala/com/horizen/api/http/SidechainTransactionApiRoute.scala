@@ -51,7 +51,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   def allTransactions: Route = (post & path("allTransactions")) {
     entity(as[ReqAllTransactions]) { body =>
       withNodeView { sidechainNodeView =>
-        var unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
+        val unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
         if (body.format.getOrElse(true)) {
           ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
         } else {
@@ -76,7 +76,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
-      withNodeView { sidechainNodeView =>
+      applyOnNodeView { sidechainNodeView =>
         val memoryPool = sidechainNodeView.getNodeMemoryPool
         val history = sidechainNodeView.getNodeHistory
 
@@ -156,15 +156,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def decodeTransactionBytes: Route = (post & path("decodeTransactionBytes")) {
     entity(as[ReqDecodeTransactionBytes]) { body =>
-      withNodeView { sidechainNodeView =>
-        var tryTX = companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes))
-        tryTX match {
-          case Success(tx) =>
-            //TO-DO JSON representation of transaction
-            ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
-          case Failure(exp) =>
-            ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, Some(exp)))
-        }
+      companion.parseBytesTry(BytesUtils.fromHexString(body.transactionBytes)) match {
+        case Success(tx) =>
+          //TO-DO JSON representation of transaction
+          ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
+        case Failure(exp) =>
+          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, Some(exp)))
       }
     }
   }
@@ -175,7 +172,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def createCoreTransaction: Route = (post & path("createCoreTransaction")) {
     entity(as[ReqCreateCoreTransaction]) { body =>
-      withNodeView { sidechainNodeView =>
+      applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
@@ -187,13 +184,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
               MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
           body.forgerOutputs.foreach{element =>
@@ -249,7 +246,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def createCoreTransactionSimplified: Route = (post & path("createCoreTransactionSimplified")) {
     entity(as[ReqCreateCoreTransactionSimplified]) { body =>
-      withNodeView { sidechainNodeView =>
+      applyOnNodeView { sidechainNodeView =>
         var outputList = body.regularOutputs
         var withdrawalRequestList = body.withdrawalRequests
         var forgerOutputList = body.forgerOutputs
@@ -280,63 +277,63 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
     entity(as[ReqSendCoinsToAddress]) { body =>
-      withNodeView { sidechainNodeView =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
         val outputList = body.outputs
         val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
-              case Success(transaction) => validateAndSendTransaction(transaction)
-              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
-            }
+            createCoreTransaction(classOf[RegularBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
-              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+            Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
+      } match {
+        case Success(transaction) => validateAndSendTransaction(transaction)
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
       }
     }
   }
 
   def withdrawCoins: Route = (post & path("withdrawCoins")) {
     entity(as[ReqWithdrawCoins]) { body =>
-      withNodeView { sidechainNodeView =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
         val withdrawalOutputsList = body.outputs
         val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
-              case Success(transaction) => validateAndSendTransaction(transaction)
-              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
-            }
+            createCoreTransaction(classOf[RegularBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
-              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+            Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
+      } match {
+        case Success(transaction) => validateAndSendTransaction(transaction)
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
       }
     }
   }
 
   def makeForgerStake: Route = (post & path("makeForgerStake")) {
     entity(as[ReqCreateForgerStake]) { body =>
-      withNodeView { sidechainNodeView =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
         val forgerOutputsList = body.outputs
         val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView) match {
-              case Success(transaction) => validateAndSendTransaction(transaction)
-              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
-            }
+            createCoreTransaction(classOf[RegularBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
-              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+            Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
+      } match {
+        case Success(transaction) => validateAndSendTransaction(transaction)
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
       }
     }
   }
@@ -347,25 +344,26 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def spendForgingStake: Route = (post & path("spendForgingStake")) {
     entity(as[ReqSpendForgingStake]) { body =>
-      withNodeView { sidechainNodeView =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
-          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
+          Left(ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None)))
         } else {
           val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new RegularBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
+              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
           )
           body.forgerOutputs.foreach{element =>
             val forgerBoxToAdd = new ForgerBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              new lang.Long(element.value),
+              element.value,
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
               VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
@@ -398,12 +396,15 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               } else {
                 tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
               }
-            validateAndSendTransaction(transaction, txRepresentation)
+            Right((transaction, txRepresentation))
           } catch {
             case t: Throwable =>
-              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+              Left(ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t))))
           }
         }
+      } match {
+        case Left(errorResponse) => errorResponse
+        case Right((transaction, txRepresentation)) => validateAndSendTransaction(transaction, txRepresentation)
       }
     }
   }
@@ -415,18 +416,15 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   private def validateAndSendTransaction(transaction: SidechainTypes#SCBT,
                                          transactionResponseRepresentation: (SidechainTypes#SCBT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
-    withNodeView {
-      sidechainNodeView =>
-        val barrier = Await.result(
-          sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-          settings.timeout).asInstanceOf[Future[Unit]]
-        onComplete(barrier) {
-          case Success(_) =>
-            ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-          case Failure(exp) =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
-            )
-        }
+    val barrier = Await.result(
+      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
+      settings.timeout).asInstanceOf[Future[Unit]]
+    onComplete(barrier) {
+      case Success(_) =>
+        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
+      case Failure(exp) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
+        )
     }
   }
 
@@ -436,14 +434,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     */
   def sendTransaction: Route = (post & path("sendTransaction")) {
     entity(as[ReqSendTransactionPost]) { body =>
-      withNodeView { sidechainNodeView =>
-        var transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
-        companion.parseBytesTry(transactionBytes) match {
-          case Success(transaction) =>
-            validateAndSendTransaction(transaction)
-          case Failure(exception) =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exception)))
-        }
+      val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
+      companion.parseBytesTry(transactionBytes) match {
+        case Success(transaction) =>
+          validateAndSendTransaction(transaction)
+        case Failure(exception) =>
+          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exception)))
       }
     }
   }
@@ -476,7 +472,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     regularBoxDataList.foreach(element =>
       outputs.add(new RegularBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+        element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
     withdrawalRequestBoxDataList.foreach(element =>
@@ -484,13 +480,13 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
         MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.publicKey, params)),
-        new lang.Long(element.value)).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+        element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
     forgerBoxDataList.foreach{element =>
       val forgingBoxToAdd = new ForgerBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-        new lang.Long(element.value),
+        element.value,
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.blockSignPublicKey.getOrElse(element.publicKey))),
         VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
       )

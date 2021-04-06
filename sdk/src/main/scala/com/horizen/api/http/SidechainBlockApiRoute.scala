@@ -80,7 +80,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Return here best sidechain block id and height in active chain
     */
   def getBestBlockInfo: Route = (post & path("best")) {
-    withNodeView {
+    applyOnNodeView {
       sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
