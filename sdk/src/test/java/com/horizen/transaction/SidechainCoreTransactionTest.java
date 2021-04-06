@@ -23,7 +23,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData) getZenBoxData());
         outputsData.add((NoncedBoxData)getForgerBoxData());
         outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 
@@ -110,7 +110,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData) getZenBoxData());
         outputsData.add((NoncedBoxData)getForgerBoxData());
         outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 

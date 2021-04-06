@@ -12,47 +12,47 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-// AbstractRegularTransaction is an abstract class that was designed to work with RegularBoxes only.
-// This class can spent RegularBoxes and create new RegularBoxes.
+// AbstractRegularTransaction is an abstract class that was designed to work with ZenBoxes only.
+// This class can spent ZenBoxes and create new ZenBoxes.
 // It also support fee payment logic.
 public abstract class AbstractRegularTransaction
         extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>> {
 
-    protected final List<byte[]> inputRegularBoxIds;
-    protected final List<Signature25519> inputRegularBoxProofs;
-    protected final List<RegularBoxData> outputRegularBoxesData;
+    protected final List<byte[]> inputZenBoxIds;
+    protected final List<Signature25519> inputZenBoxProofs;
+    protected final List<ZenBoxData> outputZenBoxesData;
 
     protected final long fee;
     protected final long timestamp;
 
     List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> allBoxesData;
 
-    protected static ListSerializer<Signature25519> regularBoxProofsSerializer =
+    protected static ListSerializer<Signature25519> zenBoxProofsSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-    protected static ListSerializer<RegularBoxData> regularBoxDataListSerializer =
-            new ListSerializer<>(RegularBoxDataSerializer.getSerializer(), MAX_TRANSACTION_NEW_BOXES);
+    protected static ListSerializer<ZenBoxData> zenBoxDataListSerializer =
+            new ListSerializer<>(ZenBoxDataSerializer.getSerializer(), MAX_TRANSACTION_NEW_BOXES);
 
-    public AbstractRegularTransaction(List<byte[]> inputRegularBoxIds,              // regular box ids to spent
-                                      List<Signature25519> inputRegularBoxProofs,   // proofs to spent regular boxes
-                                      List<RegularBoxData> outputRegularBoxesData,  // destinations where to send regular coins
-                                      long fee,                                     // fee to be paid
-                                      long timestamp) {                             // creation time in milliseconds from epoch
+    public AbstractRegularTransaction(List<byte[]> inputZenBoxIds,              // zen box ids to spent
+                                      List<Signature25519> inputZenBoxProofs,   // proofs to spent zen boxes
+                                      List<ZenBoxData> outputZenBoxesData,      // destinations where to send zen coins
+                                      long fee,                                 // fee to be paid
+                                      long timestamp) {                         // creation time in milliseconds from epoch
 
         // Parameters sanity check
-        if(inputRegularBoxIds == null || inputRegularBoxProofs == null || outputRegularBoxesData == null ||
+        if(inputZenBoxIds == null || inputZenBoxProofs == null || outputZenBoxesData == null ||
            fee < 0 || timestamp < 0 ||
-           inputRegularBoxIds.isEmpty() || inputRegularBoxProofs.isEmpty() || outputRegularBoxesData.isEmpty()){
+           inputZenBoxIds.isEmpty() || inputZenBoxProofs.isEmpty() || outputZenBoxesData.isEmpty()){
             throw new IllegalArgumentException("Some of the input parameters are unacceptable!");
         }
 
         // Number of input ids should be equal to number of proofs, otherwise transaction is for sure invalid.
-        if(inputRegularBoxIds.size() != inputRegularBoxProofs.size()){
-            throw new IllegalArgumentException("Regular box inputs list size is different to proving signatures list size!");
+        if(inputZenBoxIds.size() != inputZenBoxProofs.size()){
+            throw new IllegalArgumentException("Zen box inputs list size is different to proving signatures list size!");
         }
 
-        this.inputRegularBoxIds = inputRegularBoxIds;
-        this.inputRegularBoxProofs = inputRegularBoxProofs;
-        this.outputRegularBoxesData = outputRegularBoxesData;
+        this.inputZenBoxIds = inputZenBoxIds;
+        this.inputZenBoxProofs = inputZenBoxProofs;
+        this.outputZenBoxesData = outputZenBoxesData;
         this.fee = fee;
         this.timestamp = timestamp;
     }
@@ -63,9 +63,9 @@ public abstract class AbstractRegularTransaction
     final public List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
         if(allBoxesData == null){
             allBoxesData = new ArrayList<>();
-            // Add own regular boxes data
-            for(RegularBoxData regularBoxData: outputRegularBoxesData){
-                allBoxesData.add((NoncedBoxData) regularBoxData);
+            // Add own zen boxes data
+            for(ZenBoxData zenBoxData : outputZenBoxesData){
+                allBoxesData.add((NoncedBoxData) zenBoxData);
             }
             // Add custom boxes data from inheritors
             allBoxesData.addAll(getCustomOutputData());
@@ -79,18 +79,18 @@ public abstract class AbstractRegularTransaction
     public List<BoxUnlocker<Proposition>> unlockers() {
         // All the transactions expected to be immutable, so we keep this list cached to avoid redundant calculations.
         List<BoxUnlocker<Proposition>> unlockers = new ArrayList<>();
-        // Fill the list with the regular inputs.
-        for (int i = 0; i < inputRegularBoxIds.size() && i < inputRegularBoxProofs.size(); i++) {
+        // Fill the list with the zen box inputs.
+        for (int i = 0; i < inputZenBoxIds.size() && i < inputZenBoxProofs.size(); i++) {
             int finalI = i;
             BoxUnlocker<Proposition> unlocker = new BoxUnlocker<Proposition>() {
                 @Override
                 public byte[] closedBoxId() {
-                    return inputRegularBoxIds.get(finalI);
+                    return inputZenBoxIds.get(finalI);
                 }
 
                 @Override
                 public Proof boxKey() {
-                    return inputRegularBoxProofs.get(finalI);
+                    return inputZenBoxProofs.get(finalI);
                 }
             };
             unlockers.add(unlocker);
@@ -115,7 +115,7 @@ public abstract class AbstractRegularTransaction
             return false;
 
         // check that we have enough proofs.
-        if(inputRegularBoxIds.size() != inputRegularBoxProofs.size()) {
+        if(inputZenBoxIds.size() != inputZenBoxProofs.size()) {
             return false;
         }
 

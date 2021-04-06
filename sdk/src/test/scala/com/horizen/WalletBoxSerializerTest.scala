@@ -30,7 +30,7 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
     // Test 1: serialization for core Box
     Random.nextBytes(transactionIdBytes)
     val walletBoxWithRegularBox = new WalletBox(
-      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
+      getZenBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(transactionIdBytes),
       10000)
     serializer = walletBoxWithRegularBox.serializer(sidechainBoxesCompanion)

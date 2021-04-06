@@ -19,14 +19,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
-import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
+import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
 import static com.horizen.transaction.CoreTransactionsIdsEnum.RegularTransactionId;
 
 public final class RegularTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
-    private List<RegularBox> inputs;
+    private List<ZenBox> inputs;
     private List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs;
     private List<Signature25519> signatures;
 
@@ -38,12 +38,12 @@ public final class RegularTransaction
     private List<BoxUnlocker<Proposition>> unlockers;
 
     // Serializers definition
-    private static ListSerializer<RegularBox> boxListSerializer =
-            new ListSerializer<>(RegularBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
+    private static ListSerializer<ZenBox> boxListSerializer =
+            new ListSerializer<>(ZenBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
     private static ListSerializer<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
                     new HashMap<Byte, NoncedBoxDataSerializer>() {{
-                        put(RegularBoxId.id(), RegularBoxDataSerializer.getSerializer());
+                        put(ZenBoxId.id(), ZenBoxDataSerializer.getSerializer());
                         put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
                         put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
                     }}, new HashMap<>()
@@ -51,7 +51,7 @@ public final class RegularTransaction
     private static ListSerializer<Signature25519> signaturesSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
-    private RegularTransaction(List<RegularBox> inputs,
+    private RegularTransaction(List<ZenBox> inputs,
                                List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
                                long fee,
@@ -109,8 +109,8 @@ public final class RegularTransaction
             for (int i = 0; i < outputs.size(); i++) {
                 long nonce = getNewBoxNonce(outputs.get(i).proposition(), i);
                 NoncedBoxData boxData = outputs.get(i);
-                if(boxData instanceof RegularBoxData) {
-                    newBoxes.add((NoncedBox)new RegularBox((RegularBoxData) boxData, nonce));
+                if(boxData instanceof ZenBoxData) {
+                    newBoxes.add((NoncedBox)new ZenBox((ZenBoxData) boxData, nonce));
                 } else if(boxData instanceof WithdrawalRequestBoxData) {
                     newBoxes.add((NoncedBox)new WithdrawalRequestBox((WithdrawalRequestBoxData) boxData, nonce));
                 } else if(boxData instanceof ForgerBoxData) {
@@ -208,7 +208,7 @@ public final class RegularTransaction
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<RegularBox> inputs = boxListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<ZenBox> inputs = boxListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
@@ -229,7 +229,7 @@ public final class RegularTransaction
 
     private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
         for(NoncedBoxData boxData: boxDataList) {
-            if (!(boxData instanceof RegularBoxData)
+            if (!(boxData instanceof ZenBoxData)
                     && !(boxData instanceof WithdrawalRequestBoxData)
                     && !(boxData instanceof ForgerBoxData)
                     )
@@ -238,7 +238,7 @@ public final class RegularTransaction
         return true;
     }
 
-    public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
+    public static RegularTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
                                             List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                             long fee,
                                             long timestamp) {
@@ -251,9 +251,9 @@ public final class RegularTransaction
         if(!checkSupportedBoxDataTypes(outputs))
             throw new IllegalArgumentException("Unsupported output box data type found.");
 
-        List<RegularBox> inputs = new ArrayList<>();
+        List<ZenBox> inputs = new ArrayList<>();
         List<Signature25519> fakeSignatures = new ArrayList<>();
-        for(Pair<RegularBox, PrivateKey25519> item : from) {
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
             inputs.add(item.getKey());
             fakeSignatures.add(null);
         }
@@ -262,7 +262,7 @@ public final class RegularTransaction
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         List<Signature25519> signatures = new ArrayList<>();
-        for(Pair<RegularBox, PrivateKey25519> item : from) {
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
             signatures.add(item.getValue().sign(messageToSign));
         }
 

@@ -3,7 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.*;
 import com.horizen.box.data.NoncedBoxData;
 import com.horizen.box.data.ForgerBoxData;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.customtypes.CustomBoxData;
 import com.horizen.proposition.MCPublicKeyHashProposition;
@@ -27,7 +27,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
     long fee;
     long timestamp;
-    ArrayList<Pair<RegularBox, PrivateKey25519>> from;
+    ArrayList<Pair<ZenBox, PrivateKey25519>> from;
     ArrayList<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
 
     ArrayList<Long> expectedNonces;
@@ -42,18 +42,18 @@ public class RegularTransactionTest extends BoxFixtureClass {
         PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
 
         from = new ArrayList<>();
-        from.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 60), pk1));
-        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 50), pk2));
-        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 20), pk3));
+        from.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 60), pk1));
+        from.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 50), pk2));
+        from.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 20), pk3));
 
         PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
         PrivateKey25519 pk6 = creator.generateSecret("test_seed6".getBytes());
 
         to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
-        to.add(new RegularBoxData(pk5.publicImage(), 20L));
-        to.add(new RegularBoxData(pk6.publicImage(), 90L));
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
+        to.add(new ZenBoxData(pk5.publicImage(), 20L));
+        to.add(new ZenBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
                 8211694539164647149L,
@@ -63,7 +63,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
     }
 
     @Test
-    public void regularBoxTest() {
+    public void zenBoxTest() {
         RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
         assertEquals("Exception during RegularTransaction creation: fee is different!", fee, transaction.fee());
         assertEquals("Exception during RegularTransaction creation: fee is different!", timestamp, transaction.timestamp());
@@ -80,7 +80,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         List<BoxUnlocker<Proposition>> unlockers = transaction.unlockers();
         assertEquals("Exception during RegularTransaction creation: unlockers count is different!", from.size(), unlockers.size());
         for(int i = 0; i < from.size(); i++) {
-            Pair<RegularBox, PrivateKey25519> expected = from.get(i);
+            Pair<ZenBox, PrivateKey25519> expected = from.get(i);
             BoxUnlocker<Proposition> actual = unlockers.get(i);
             assertArrayEquals(String.format("Exception during RegularTransaction creation: unlocker %d box id is different!", i),
                     expected.getKey().id(),actual.closedBoxId());
@@ -158,8 +158,8 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         // Test 2: Create new transaction with regular boxes and withdrawal requests
         to.clear();
-        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 30L));
-        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 50L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 30L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 50L));
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 10L));
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 30L));
 
@@ -167,17 +167,17 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
         assertTrue("Transaction must be semantically valid.", tx2.semanticValidity());
-        assertEquals("Count of new boxes must be the same as count of regular boxes and withdrawal requests.",
+        assertEquals("Count of new boxes must be the same as count of zen boxes and withdrawal requests.",
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {
-            if (box instanceof RegularBox)
-                assertTrue("Transaction must contain new box for specified regular boxes data.",
-                        to.contains(new RegularBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
+            if (box instanceof ZenBox)
+                assertTrue("Transaction must contain new box for specified zen boxes data.",
+                        to.contains(new ZenBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
             else if (box instanceof WithdrawalRequestBox)
                 assertTrue("Transaction must contain new box for specified withdrawal requests data.",
                         to.contains(new WithdrawalRequestBoxData((MCPublicKeyHashProposition)box.proposition(), box.value())));
             else
-                fail("Box must be an instance of RegularBox or WithdrawalRequestBox.");
+                fail("Box must be an instance of ZenBox or WithdrawalRequestBox.");
         }
     }
 
@@ -205,8 +205,8 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         // Test 2: Create new transaction with regular boxes and forger boxes
         to.clear();
-        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 30L));
-        to.add(new RegularBoxData(getPrivateKey25519().publicImage(), 50L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 30L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 50L));
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 30L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 10L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
 
@@ -217,9 +217,9 @@ public class RegularTransactionTest extends BoxFixtureClass {
         assertEquals("Count of new boxes must be the same as count of regular boxes and forger boxes.",
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {
-            if (box instanceof RegularBox)
+            if (box instanceof ZenBox)
                 assertTrue("Transaction must contain new box for specified regular boxes data.",
-                        to.contains(new RegularBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
+                        to.contains(new ZenBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
             else if (box instanceof ForgerBox) {
                 ForgerBox forgerBox = (ForgerBox)box;
                 assertTrue("Transaction must contain new box for specified forger boxes data.",

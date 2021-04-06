@@ -1,13 +1,12 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
+
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.RegularBoxData
-import com.horizen.box.{Box, CoinsBox, ForgerBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.node.NodeState
@@ -21,8 +20,10 @@ import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
-
 import java.math.{BigDecimal, MathContext}
+
+import com.horizen.box.data.ZenBoxData
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -425,10 +426,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Remove boxes with zero values, that may occur, for example, if all the blocks were without fees.
     res.zipWithIndex.map {
       case (forgerRewardInfo: (PublicKey25519Proposition, Long), index: Int) =>
-        val data = new RegularBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
+        val data = new ZenBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
         // Note: must be replaced with the Poseidon hash later.
         val nonce = SidechainState.calculateFeePaymentBoxNonce(lastBlockIdBytes, index)
-        new RegularBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
+        new ZenBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
     }.filter(box => box.value() > 0)
   }
 }

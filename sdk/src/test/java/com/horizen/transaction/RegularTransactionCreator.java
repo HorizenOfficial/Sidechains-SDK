@@ -2,9 +2,9 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.box.data.NoncedBoxData;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.node.NodeWallet;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -48,14 +48,14 @@ public class RegularTransactionCreator {
         toAmount += fee;
 
 
-        List<RegularBox> boxes = new ArrayList<>();
-        for(Box box : wallet.boxesOfType(RegularBox.class, boxIdsToExclude)) {
-            boxes.add((RegularBox) box);
+        List<ZenBox> boxes = new ArrayList<>();
+        for(Box box : wallet.boxesOfType(ZenBox.class, boxIdsToExclude)) {
+            boxes.add((ZenBox) box);
         }
 
-        List<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
+        List<Pair<ZenBox, PrivateKey25519>> from = new ArrayList<>();
         long currentAmount = 0;
-        for(RegularBox box : boxes) {
+        for(ZenBox box : boxes) {
             Secret s = wallet.secretByPublicKey(box.proposition()).get();
             if(s instanceof PrivateKey25519) {
                 from.add(new Pair<>(box, (PrivateKey25519)s));
@@ -70,7 +70,7 @@ public class RegularTransactionCreator {
         // add change to outputs
         List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> sendTo = new ArrayList<>(to);
         if(currentAmount > toAmount) {
-            sendTo.add(new RegularBoxData(changeAddress, currentAmount - toAmount));
+            sendTo.add(new ZenBoxData(changeAddress, currentAmount - toAmount));
         }
 
         // NOTE: in HybridApp they use System.currentTimeMillis(). Is it a good solution?

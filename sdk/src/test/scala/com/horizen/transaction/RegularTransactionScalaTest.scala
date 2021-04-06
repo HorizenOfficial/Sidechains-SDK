@@ -4,8 +4,8 @@ import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
-import com.horizen.box.{NoncedBox, RegularBox}
-import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
+import com.horizen.box.{NoncedBox, ZenBox}
+import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
 import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
@@ -23,7 +23,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val fee = 10
     val timestamp = 1547798549470L
 
-    val from = new JArrayList[JPair[RegularBox, PrivateKey25519]]
+    val from = new JArrayList[JPair[ZenBox, PrivateKey25519]]
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     val creator = PrivateKey25519Creator.getInstance
@@ -31,17 +31,17 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val pk2 = creator.generateSecret("test_seed2".getBytes)
     val pk3 = creator.generateSecret("test_seed3".getBytes)
 
-    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk1.publicImage(), 1, 60), pk1))
-    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk2.publicImage(), 1, 50), pk2))
-    from.add(new JPair[RegularBox, PrivateKey25519](getRegularBox(pk3.publicImage(), 1, 20), pk3))
+    from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk1.publicImage(), 1, 60), pk1))
+    from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk2.publicImage(), 1, 50), pk2))
+    from.add(new JPair[ZenBox, PrivateKey25519](getZenBox(pk3.publicImage(), 1, 20), pk3))
 
     val pk4 = creator.generateSecret("test_seed4".getBytes)
     val pk5 = creator.generateSecret("test_seed5".getBytes)
     val pk6 = creator.generateSecret("test_seed6".getBytes)
 
-    to.add(new RegularBoxData(pk4.publicImage, 10L))
-    to.add(new RegularBoxData(pk5.publicImage, 20L))
-    to.add(new RegularBoxData(pk6.publicImage, 90L))
+    to.add(new ZenBoxData(pk4.publicImage, 10L))
+    to.add(new ZenBoxData(pk5.publicImage, 20L))
+    to.add(new ZenBoxData(pk6.publicImage, 90L))
 
     val transaction = RegularTransaction.create(from, to, fee, timestamp)
 

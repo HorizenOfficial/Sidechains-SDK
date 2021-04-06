@@ -1,10 +1,9 @@
 package com.horizen.box.data;
 
 public enum CoreBoxesDataIdsEnum {
-    RegularBoxDataId((byte)1),
+    ZenBoxDataId((byte)1),
     WithdrawalRequestBoxDataId((byte)2),
-    ForgerBoxDataId((byte)3),
-    CertifierRightBoxDataId((byte)4);
+    ForgerBoxDataId((byte)3);
 
     private final byte id;
 

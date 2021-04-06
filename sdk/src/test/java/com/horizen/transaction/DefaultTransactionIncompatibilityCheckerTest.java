@@ -1,9 +1,9 @@
 package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.box.data.NoncedBoxData;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
@@ -32,30 +32,30 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
 
 
         // Set inputs for 'newTx'
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from1 = new ArrayList<>();
-        from1.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
-        from1.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 10), pk2));
+        ArrayList<Pair<ZenBox, PrivateKey25519>> from1 = new ArrayList<>();
+        from1.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), pk1));
+        from1.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 10), pk2));
 
         // Set inputs for 'currentTx1': compatible to 'nexTx'
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from2 = new ArrayList<>();
-        from2.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 10), pk3));
-        from2.add(new Pair<>(getRegularBox(pk4.publicImage(), 1, 10), pk4));
+        ArrayList<Pair<ZenBox, PrivateKey25519>> from2 = new ArrayList<>();
+        from2.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 10), pk3));
+        from2.add(new Pair<>(getZenBox(pk4.publicImage(), 1, 10), pk4));
 
         // Set inputs for 'currentTx2': compatible to 'nexTx'
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from3 = new ArrayList<>();
-        from3.add(new Pair<>(getRegularBox(pk5.publicImage(), 1, 10), pk5));
-        from3.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
+        ArrayList<Pair<ZenBox, PrivateKey25519>> from3 = new ArrayList<>();
+        from3.add(new Pair<>(getZenBox(pk5.publicImage(), 1, 10), pk5));
+        from3.add(new Pair<>(getZenBox(pk6.publicImage(), 1, 10), pk6));
 
         // Set inputs for 'currentTx3': incompatible to 'nexTx'
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from4 = new ArrayList<>();
-        from4.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), pk1));
-        from4.add(new Pair<>(getRegularBox(pk6.publicImage(), 1, 10), pk6));
+        ArrayList<Pair<ZenBox, PrivateKey25519>> from4 = new ArrayList<>();
+        from4.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), pk1));
+        from4.add(new Pair<>(getZenBox(pk6.publicImage(), 1, 10), pk6));
 
 
         // Set outputs, the same for all transactions
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
         List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk7.publicImage(), 10L));
+        to.add(new ZenBoxData(pk7.publicImage(), 10L));
 
         RegularTransaction newTx = RegularTransaction.create(from1, to, fee, timestamp);
         RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee, timestamp);

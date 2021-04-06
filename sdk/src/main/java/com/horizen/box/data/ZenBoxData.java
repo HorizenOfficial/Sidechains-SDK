@@ -2,22 +2,22 @@ package com.horizen.box.data;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.proposition.PublicKey25519PropositionSerializer;
 
 import java.util.Arrays;
 
-import static com.horizen.box.data.CoreBoxesDataIdsEnum.RegularBoxDataId;
+import static com.horizen.box.data.CoreBoxesDataIdsEnum.ZenBoxDataId;
 
-public final class RegularBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, RegularBox, RegularBoxData> {
-    public RegularBoxData(PublicKey25519Proposition proposition, long value) {
+public final class ZenBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ZenBox, ZenBoxData> {
+    public ZenBoxData(PublicKey25519Proposition proposition, long value) {
         super(proposition, value);
     }
 
     @Override
-    public RegularBox getBox(long nonce) {
-        return new RegularBox(this, nonce);
+    public ZenBox getBox(long nonce) {
+        return new ZenBox(this, nonce);
     }
 
     @Override
@@ -30,20 +30,20 @@ public final class RegularBoxData extends AbstractNoncedBoxData<PublicKey25519Pr
 
     @Override
     public NoncedBoxDataSerializer serializer() {
-        return RegularBoxDataSerializer.getSerializer();
+        return ZenBoxDataSerializer.getSerializer();
     }
 
     @Override
     public byte boxDataTypeId() {
-        return RegularBoxDataId.id();
+        return ZenBoxDataId.id();
     }
 
-    public static RegularBoxData parseBytes(byte[] bytes) {
+    public static ZenBoxData parseBytes(byte[] bytes) {
         int valueOffset = PublicKey25519Proposition.getLength();
 
         PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parseBytes(Arrays.copyOf(bytes, valueOffset));
         long value = Longs.fromByteArray(Arrays.copyOfRange(bytes, valueOffset, valueOffset + Longs.BYTES));
 
-        return new RegularBoxData(proposition, value);
+        return new ZenBoxData(proposition, value);
     }
 }

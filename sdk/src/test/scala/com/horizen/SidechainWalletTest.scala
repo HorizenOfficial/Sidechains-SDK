@@ -6,7 +6,7 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 
 import com.horizen.block.SidechainBlock
 import com.horizen.box._
-import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
+import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
 import com.horizen.companion._
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.customtypes._
@@ -113,7 +113,7 @@ class SidechainWalletTest
 
 
     // Set base WalletBox data
-    boxList ++= getWalletBoxList(getRegularBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
+    boxList ++= getWalletBoxList(getZenBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
     boxList += getWalletBox(getForgerBox(secretList.head.asInstanceOf[PrivateKey25519].publicImage()))
 
     boxVersions += getVersion
@@ -180,11 +180,11 @@ class SidechainWalletTest
     // We need to be sure that Txs box ids to be opened which are not related to the wallet
     // will be passed as a part of BoxIdsToRemove to the Storages and ApplicationWallet.
     val secretNotFromWallet = getPrivateKey25519
-    val regularBoxNotFormWallet = getRegularBox(secretNotFromWallet, 100, 100)
+    val zenBoxNotFormWallet = getZenBox(secretNotFromWallet, 100, 100)
 
-    val transaction1 = getRegularTransaction(boxList.slice(0, 3).map(_.box.asInstanceOf[RegularBox]) += regularBoxNotFormWallet,
+    val transaction1 = getRegularTransaction(boxList.slice(0, 3).map(_.box.asInstanceOf[ZenBox]) += zenBoxNotFormWallet,
       secretList.map(_.asInstanceOf[PrivateKey25519]) += secretNotFromWallet, secretList.slice(4, 5).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]))
-    val transaction2 = getRegularTransaction(boxList.slice(3, 5).map(_.box.asInstanceOf[RegularBox]),
+    val transaction2 = getRegularTransaction(boxList.slice(3, 5).map(_.box.asInstanceOf[ZenBox]),
       secretList.map(_.asInstanceOf[PrivateKey25519]),
       Seq(secretList(1)).map(_.publicImage().asInstanceOf[PublicKey25519Proposition]),
       Seq(),
@@ -208,7 +208,7 @@ class SidechainWalletTest
     Mockito.when(mockedSecretStorage.getAll).thenReturn(secretList.toList)
 
     // Define fee payment boxes to be added during scan persistent
-    val feePaymentBoxes: Seq[SidechainTypes#SCB] = getRegularBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+    val feePaymentBoxes: Seq[SidechainTypes#SCB] = getZenBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
 
     // Test:
     // Prepare what we expect to receive for WalletBoxStorage.update
@@ -402,21 +402,21 @@ class SidechainWalletTest
   def testScanPersistentIntegration() : Unit = {
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
-    val from : JList[Pair[RegularBox, PrivateKey25519]] = new JArrayList()
+    val from : JList[Pair[ZenBox, PrivateKey25519]] = new JArrayList()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     Random.nextBytes(blockId)
 
     var inputsAmount: Long = 0L
     for (i <- 0 to 2) {
-      from.add(new Pair(boxList(i).box.asInstanceOf[RegularBox], secretList(i).asInstanceOf[PrivateKey25519]))
+      from.add(new Pair(boxList(i).box.asInstanceOf[ZenBox], secretList(i).asInstanceOf[PrivateKey25519]))
       inputsAmount += boxList(i).box.value()
     }
 
     var outputsAmount: Long = 0L
     for (i <- 0 to 2) {
       val value = 10L
-      to.add(new RegularBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], value))
+      to.add(new ZenBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], value))
       outputsAmount += value
     }
 
@@ -554,45 +554,45 @@ class SidechainWalletTest
     val mockedForgingBoxesMerklePathStorage1: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
     val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
       mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, new CustomApplicationWallet())
-    val walletBoxRegular1 = getWalletBox(classOf[RegularBox])
-    val walletBoxRegular2 = getWalletBox(classOf[RegularBox])
-    val walletBoxCustom = getWalletBox(classOf[RegularBox])
+    val walletBoxZen1 = getWalletBox(classOf[ZenBox])
+    val walletBoxZen2 = getWalletBox(classOf[ZenBox])
+    val walletBoxCustom = getWalletBox(classOf[ZenBox])
 
 
     // Test 1: test test boxes(), allBoxes(), allBoxes(boxIdsToExclude)
-    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxRegular1, walletBoxRegular2, walletBoxCustom))
+    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxZen1, walletBoxZen2, walletBoxCustom))
 
     val actualBoxes = sidechainWallet.boxes()
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      List(walletBoxRegular1, walletBoxRegular2, walletBoxCustom), actualBoxes)
+      List(walletBoxZen1, walletBoxZen2, walletBoxCustom), actualBoxes)
 
     val actualBoxesJava = sidechainWallet.allBoxes
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      util.Arrays.asList(walletBoxRegular1.box, walletBoxRegular2.box, walletBoxCustom.box), actualBoxesJava)
+      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box, walletBoxCustom.box), actualBoxesJava)
 
-    // exclude id of walletBoxRegular1
-    val actualBoxesWithExcludeJava = sidechainWallet.allBoxes(util.Arrays.asList(walletBoxRegular1.box.id()))
+    // exclude id of walletBoxZen1
+    val actualBoxesWithExcludeJava = sidechainWallet.allBoxes(util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes with excluded ids.",
-      util.Arrays.asList(walletBoxRegular2.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
+      util.Arrays.asList(walletBoxZen2.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
 
 
     // Test 2: test boxesOfType(type) and boxesOfType(type, boxIdsToExclude)
-    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[RegularBox])).thenReturn(List(walletBoxRegular1, walletBoxRegular2))
+    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[ZenBox])).thenReturn(List(walletBoxZen1, walletBoxZen2))
 
-    val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[RegularBox])
+    val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[ZenBox])
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox.",
-      util.Arrays.asList(walletBoxRegular1.box, walletBoxRegular2.box), actualBoxesByTypeJava)
+      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box), actualBoxesByTypeJava)
 
-    val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[RegularBox], util.Arrays.asList(walletBoxRegular1.box.id()))
+    val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[ZenBox], util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox with excluded ids.",
-      util.Arrays.asList(walletBoxRegular2.box), actualBoxesByTypeWithExcludeJava)
+      util.Arrays.asList(walletBoxZen2.box), actualBoxesByTypeWithExcludeJava)
 
 
     // Test 3: test boxesBalance(type)
     val balance = 100L
-    Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(classOf[RegularBox])).thenReturn(balance)
+    Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(classOf[ZenBox])).thenReturn(balance)
 
-    val actualBalance = sidechainWallet.boxesBalance(classOf[RegularBox])
+    val actualBalance = sidechainWallet.boxesBalance(classOf[ZenBox])
     assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
   }
 

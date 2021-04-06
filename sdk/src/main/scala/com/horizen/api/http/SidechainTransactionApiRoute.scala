@@ -13,8 +13,8 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData, WithdrawalRequestBoxData}
-import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.{Box, NoncedBox, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
@@ -182,7 +182,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         } else {
           val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
-            outputs.add(new RegularBoxData(
+            outputs.add(new ZenBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
@@ -255,7 +255,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
+            createCoreTransaction(classOf[ZenBox], outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
               case Success(transaction) =>
                 if (body.format.getOrElse(false))
                   ApiResponseUtil.toResponse(TransactionDTO(transaction))
@@ -285,7 +285,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(classOf[ZenBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -306,7 +306,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(classOf[ZenBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -327,7 +327,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[RegularBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(classOf[ZenBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -355,7 +355,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         } else {
           val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
-            outputs.add(new RegularBoxData(
+            outputs.add(new ZenBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
               element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
             )
@@ -470,7 +470,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
     regularBoxDataList.foreach(element =>
-      outputs.add(new RegularBoxData(
+      outputs.add(new ZenBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
@@ -515,7 +515,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     // Add change if need.
     if(inputsTotalAmount > inputsMinimumExpectedAmount)
-      outputs.add(new RegularBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+      outputs.add(new ZenBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
 
     // Create unsigned tx
     val boxIds = boxes.map(_.id()).asJava

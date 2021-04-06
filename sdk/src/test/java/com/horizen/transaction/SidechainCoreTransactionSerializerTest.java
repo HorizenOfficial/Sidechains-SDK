@@ -19,7 +19,9 @@ import org.junit.Test;
 import scala.util.Try;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,9 +36,8 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData) getZenBoxData());
         outputsData.add((NoncedBoxData)getForgerBoxData());
-        outputsData.add((NoncedBoxData)getCertifierRightBoxData());
         outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
@@ -69,7 +70,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData) getZenBoxData());
         // Add custom box data
         outputsData.add((NoncedBoxData)getCustomBoxData());
 
@@ -126,7 +127,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)getRegularBoxData());
+        outputsData.add((NoncedBoxData) getZenBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -183,8 +184,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));
 
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)new RegularBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
-        outputsData.add((NoncedBoxData)new CertifierRightBoxData(getPrivateKey25519("2".getBytes()).publicImage(), 200L, 10L));
+        outputsData.add((NoncedBoxData)new ZenBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
         outputsData.add((NoncedBoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
@@ -198,15 +198,15 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
 
 
         SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanion);
-        // Uncomment and run if you want to update regression data.
-        /*
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/sidechaincoretransaction_hex"));
-            out.write(BytesUtils.toHexString(transaction.bytes()));
-            out.close();
-        } catch (Throwable e) {
+        // Set `true` and run if you want to update regression data.
+        if(false) {
+            try {
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/sidechaincoretransaction_hex"));
+                out.write(BytesUtils.toHexString(transaction.bytes()));
+                out.close();
+            } catch (Throwable e) {
+            }
         }
-        */
         
         byte[] bytes;
         try {

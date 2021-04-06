@@ -2,19 +2,16 @@ package com.horizen.customtypes;
 
 import com.google.common.primitives.Longs;
 import com.horizen.box.BoxUnlocker;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox> {
+public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, ZenBox> {
     private long _timestamp;
 
     public static final byte TRANSACTION_TYPE_ID = 11;
@@ -36,7 +33,7 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     public List<PublicKey25519Proposition> newBoxesPropositions() { return new ArrayList<>(); }
 
     @Override
-    public List<RegularBox> newBoxes() {
+    public List<ZenBox> newBoxes() {
         return new ArrayList<>();
     }
 

@@ -43,7 +43,7 @@ class SidechainStateStorageTest
     assertTrue("WithdrawalEpoch info expected to be undefined.", sidechainStateStorage.getWithdrawalEpochInfo.isEmpty)
     assertTrue("ConsensusEpoch info expected to be undefined.", sidechainStateStorage.getConsensusEpochNumber.isEmpty)
 
-    val bList1: List[SidechainTypes#SCB] = getRegularBoxList(5).asScala.toList
+    val bList1: List[SidechainTypes#SCB] = getZenBoxList(5).asScala.toList
     val bList2: List[SidechainTypes#SCB] = getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB]).toList
 
     val version1 = getVersion
@@ -359,7 +359,7 @@ class SidechainStateStorageTest
   def testExceptions(): Unit = {
     val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
 
-    val bList1 = getRegularBoxList(5).asScala.toSet
+    val bList1 = getZenBoxList(5).asScala.toSet
     val version1 = getVersion
 
     //Try to rollback to non-existent version

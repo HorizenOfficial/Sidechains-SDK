@@ -502,7 +502,7 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
 """
 Verify the wallet coins balance is equal to an expected coins balance.
-Note: core coins boxes are: RegularBox and ForgerBox
+Note: core coins boxes are: ZenBox and ForgerBox
 
 Parameters:
  - sc_node: a sidechain node

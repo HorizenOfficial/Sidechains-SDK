@@ -6,7 +6,7 @@ import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicK
 import com.horizen.secret.PrivateKey25519
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.box.data.{CertifierRightBoxData, ForgerBoxData, RegularBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{ForgerBoxData, ZenBoxData, WithdrawalRequestBoxData}
 import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
@@ -20,58 +20,37 @@ trait BoxFixture
   with SidechainTypes
 {
 
-  def getRegularBoxData: RegularBoxData = {
-    new RegularBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100))
+  def getZenBoxData: ZenBoxData = {
+    new ZenBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100))
   }
 
-  def getRegularBox: RegularBox = {
-    new RegularBox(new RegularBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100)), 1)
+  def getZenBox: ZenBox = {
+    new ZenBox(new ZenBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100)), 1)
   }
 
-  def getRegularBox(privateKey: PrivateKey25519, nonce: Long, value: Long): RegularBox = {
-    new RegularBox(new RegularBoxData(privateKey.publicImage(), value), nonce)
+  def getZenBox(privateKey: PrivateKey25519, nonce: Long, value: Long): ZenBox = {
+    new ZenBox(new ZenBoxData(privateKey.publicImage(), value), nonce)
   }
 
-  def getRegularBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): RegularBox = {
-    new RegularBox(new RegularBoxData(proposition, value), nonce)
+  def getZenBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): ZenBox = {
+    new ZenBox(new ZenBoxData(proposition, value), nonce)
   }
 
 
-  def getRegularBoxList(count: Int): JList[RegularBox] = {
-    val boxList: JList[RegularBox] = new JArrayList[RegularBox]()
+  def getZenBoxList(count: Int): JList[ZenBox] = {
+    val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (i <- 1 to count)
-      boxList.add(getRegularBox)
+      boxList.add(getZenBox)
 
     boxList
   }
 
-  def getRegularBoxList(secretList: JList[PrivateKey25519]): JList[RegularBox] = {
-    val boxList: JList[RegularBox] = new JArrayList[RegularBox]()
+  def getZenBoxList(secretList: JList[PrivateKey25519]): JList[ZenBox] = {
+    val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getRegularBox(s.publicImage(), 1, Random.nextInt(100)))
-
-    boxList
-  }
-
-  def getCertifierRightBoxData: CertifierRightBoxData = {
-    new CertifierRightBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), Random.nextInt(100))
-  }
-
-  def getCertifierRightBox: CertifierRightBox = {
-    new CertifierRightBox(new CertifierRightBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100), Random.nextInt(100)), 1)
-  }
-
-  def getCertifierRightBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long, activeFromWithdrawalEpoch: Long): CertifierRightBox = {
-    new CertifierRightBox(new CertifierRightBoxData(proposition, value, activeFromWithdrawalEpoch), nonce)
-  }
-
-  def getCertifierRightBoxList(count: Int): JList[CertifierRightBox] = {
-    val boxList: JList[CertifierRightBox] = new JArrayList[CertifierRightBox]()
-
-    for (i <- 1 to count)
-      boxList.add(getCertifierRightBox)
+      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(100)))
 
     boxList
   }
@@ -104,8 +83,7 @@ trait BoxFixture
     Random.nextBytes(txId)
 
     boxClass match {
-      case v if v == classOf[RegularBox] => new WalletBox(getRegularBox, bytesToId(txId), Random.nextInt(100000))
-      case v if v == classOf[CertifierRightBox] => new WalletBox(getCertifierRightBox, bytesToId(txId), Random.nextInt(100000))
+      case v if v == classOf[ZenBox] => new WalletBox(getZenBox, bytesToId(txId), Random.nextInt(100000))
       case v if v == classOf[CustomBox] => new WalletBox(getCustomBox.asInstanceOf[SidechainTypes#SCB], bytesToId(txId), Random.nextInt(100000))
       case _ => null
     }
