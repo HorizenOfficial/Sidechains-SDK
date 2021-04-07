@@ -27,9 +27,16 @@ Otherwise, to run SimpleApp outside the IDE:
         java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
         On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
-        While we keep monitoring the memory footprint of the proofs generation process, we have verified that setting the glibc per-thread cache with the following command 'export GLIBC_TUNABLES=glibc.malloc.tcache_count=0' just before starting the sidechain node in order keeps the memory consumption in check.
+While we keep monitoring the memory footprint of the proofs generation process, we have verified that using Jemalloc library instead of Glibc keeps the memory consumption in check. Glibc starting from version 2.26 is affected by this issue. To check and fix this issue on Linux OS follow those steps:
+		 - Check your version of Glibc. To check your version of Glibc on Ubuntu, run the command `ldd --version`
+		 - Install Jemalloc library. Jemalloc is available as apt package on Ubuntu, just execute the command line `sudo apt-get install libjemalloc-dev`
+		 - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be installed as `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
+		 - After the installation, just use `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
+			
+			```
+			LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+			```
 
-    
 **Running Simple App isolated from Mainchain**
 
 You can use the predefined [sc_settings.conf](./src/main/resources/sc_settings.conf "sc_settings.conf") configuration file, which contains some genesis data that will start a node with a first mainchain block reference and some coins transferred to the sidechain.
