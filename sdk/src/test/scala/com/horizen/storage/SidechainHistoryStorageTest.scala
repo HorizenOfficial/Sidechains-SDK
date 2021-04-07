@@ -502,7 +502,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
       newBestBlock.parentId,
       20,
       ModifierSemanticValidity.Valid,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(newBestBlock, getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).get.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(newBestBlock, getLastMainchainBaseInfoInclusion(activeChainBlockInfoList).get.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(newBestBlock),
       WithdrawalEpochInfo(1, 2),
       Option(VrfGenerator.generateVrfOutput(12)),

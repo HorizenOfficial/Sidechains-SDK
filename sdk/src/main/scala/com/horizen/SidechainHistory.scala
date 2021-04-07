@@ -136,7 +136,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
     val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
       val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
     }
 
     SidechainBlockInfo(
@@ -560,7 +560,7 @@ object SidechainHistory
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, params.initialCumulativeCommTreeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, params.initialCumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
       None,

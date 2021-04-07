@@ -26,7 +26,7 @@ case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
 }
 
 object MainchainHeaderBaseInfo {
-  def getMainchainHeaderBaseInfoFromBlock(sidechainBlock: SidechainBlock, initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
+  def getMainchainHeaderBaseInfoSeqFromBlock(sidechainBlock: SidechainBlock, initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     val mcHeaderBaseInfoList: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
     var prevCumulativeHash: Array[Byte] = initialCumulativeHash
 

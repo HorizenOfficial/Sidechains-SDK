@@ -158,7 +158,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       block.parentId,
       block.timestamp,
       validity,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, previousCumulativeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, previousCumulativeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),

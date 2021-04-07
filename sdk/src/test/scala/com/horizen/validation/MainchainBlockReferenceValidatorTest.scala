@@ -252,7 +252,7 @@ class MainchainBlockReferenceValidatorTest
       block.parentId,
       0L,
       ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoFromBlock(block, initialCumulativeHash),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, initialCumulativeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(0, 0),
       Option(VrfGenerator.generateVrfOutput(0)),
