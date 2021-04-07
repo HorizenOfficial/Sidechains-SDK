@@ -102,7 +102,11 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             val host = InetAddress.getByName(addressAndPort.group(1))
             val port = addressAndPort.group(2).toInt
             val peerAddress = new InetSocketAddress(host, port)
+            // remove the peer info to prevent automatic reconnection attempts after disconnection.
             peerManager ! RemovePeer(peerAddress)
+            // Disconnect the connection if present and active.
+            // Note: `Blacklisted` name is misleading, because the message supposed to be used only during peer penalize
+            // procedure. Actually inside NetworkController it looks for connection and emits `CloseConnection`.
             networkController ! Blacklisted(peerAddress)
             ApiResponseUtil.toResponse(RespDisconnect(host + ":" + port))
         }

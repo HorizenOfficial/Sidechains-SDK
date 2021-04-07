@@ -212,7 +212,7 @@ object MainchainBlockReference extends ScorexLogging {
               topQualityCertificate)
           } else {
             MainchainBlockReferenceData(header.hash,
-              mc2scTransaction,
+              None,
               None,
               sidechainsCommitmentTree.getNeighbourSidechainCommitmentEntryProofs(sidechainId),
               Seq(),
