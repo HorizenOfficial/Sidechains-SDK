@@ -102,17 +102,17 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         scnode1address = self.sc_nodes[1].wallet_allPublicKeys()["result"]["propositions"][0]["publicKey"]
 
         boxes_request_on_regular_boxes = json.dumps({"boxType": "com.horizen.box.RegularBox"})
-        sc_node_0_regular_box_balance = int(self.sc_nodes[0].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
-        sc_node_1_regular_box_balance = int(self.sc_nodes[1].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
-        sc_node_2_regular_box_balance = int(self.sc_nodes[2].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
+        sc_node_0_regular_box_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
+        sc_node_1_regular_box_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
+        sc_node_2_regular_box_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
         print("-->SC Node 0 regular boxes balance: {0}".format(sc_node_0_regular_box_balance))
         print("-->SC Node 1 regular boxes balance: {0}".format(sc_node_1_regular_box_balance))
         print("-->SC Node 2 regular boxes balance: {0}".format(sc_node_2_regular_box_balance))
 
         balance_request_on_forger_boxes = json.dumps({"boxType": "com.horizen.box.ForgerBox"})
-        sc_node_0_forger_box_balance = int(self.sc_nodes[0].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
-        sc_node_1_forger_box_balance = int(self.sc_nodes[1].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
-        sc_node_2_forger_box_balance = int(self.sc_nodes[2].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
+        sc_node_0_forger_box_balance = int(self.sc_nodes[0].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
+        sc_node_1_forger_box_balance = int(self.sc_nodes[1].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
+        sc_node_2_forger_box_balance = int(self.sc_nodes[2].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
         print("-->SC Node 0 forger boxes balance: {0}".format(sc_node_0_forger_box_balance))
         print("-->SC Node 1 forger boxes balance: {0}".format(sc_node_1_forger_box_balance))
         print("-->SC Node 2 forger boxes balance: {0}".format(sc_node_2_forger_box_balance))
@@ -169,9 +169,9 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         #Checking that node0 balance has decreased by amount-fee, node1 balance has increased by amount and node2 balance has increased of blockreward+txfee
         print("Checking balance changed...")
         scblockreward = 1
-        node_0_new_forger_balance = int(self.sc_nodes[0].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
-        node_1_new_forger_balance = int(self.sc_nodes[1].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
-        node_2_new_forger_balance = int(self.sc_nodes[2].wallet_balance(balance_request_on_forger_boxes)["result"]["balance"])
+        node_0_new_forger_balance = int(self.sc_nodes[0].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
+        node_1_new_forger_balance = int(self.sc_nodes[1].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
+        node_2_new_forger_balance = int(self.sc_nodes[2].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
         assert_equal(sc_node_0_forger_box_balance - (sc_amount+sc_fee), node_0_new_forger_balance, "Coins sent/total sc_amount mismatch for Node0")
         #@TODO verify that balance forger boxes for node 1 and node 2 are not changed after node 0 forger box spent spent
         print("-->Node 0 new forger boxes balance: {0}".format(node_0_new_forger_balance))
@@ -179,9 +179,9 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->Node 2 new forger boxes balance: {0}".format(node_2_new_forger_balance))
         print("OK\n")
 
-        node_0_new_regular_balance = int(self.sc_nodes[0].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
-        node_1_new_regular_balance = int(self.sc_nodes[1].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
-        node_2_new_regular_balance = int(self.sc_nodes[2].wallet_balance(boxes_request_on_regular_boxes)["result"]["balance"])
+        node_0_new_regular_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
+        node_1_new_regular_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
+        node_2_new_regular_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
         assert_equal(sc_node_0_regular_box_balance, node_0_new_regular_balance, "Coins sent/total sc_amount mismatch for Node0")
         assert_equal(sc_node_1_regular_box_balance + sc_amount, node_1_new_regular_balance, "Coins received/total sc_amount mismatch for Node1")
         assert_equal(sc_node_2_regular_box_balance, node_2_new_regular_balance, "Coins received/total sc_amount mismatch for Node2")

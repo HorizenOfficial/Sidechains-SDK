@@ -27,7 +27,7 @@ import scorex.core.utils.NetworkTimeProvider
 import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
-  extends IODBStoreFixture
+  extends StoreFixture
     with CompanionsFixture
 {
 

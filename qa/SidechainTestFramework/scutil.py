@@ -501,16 +501,17 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
     return is_mac_block_included
 
 """
-Verify the wallet balance is equal to an expected balance.
+Verify the wallet coins balance is equal to an expected coins balance.
+Note: core coins boxes are: RegularBox and ForgerBox
 
 Parameters:
  - sc_node: a sidechain node
  - expected_wallet_balance
 """
-def check_wallet_balance(sc_node, expected_wallet_balance):
-    response = sc_node.wallet_balance()
+def check_wallet_coins_balance(sc_node, expected_wallet_balance):
+    response = sc_node.wallet_coinsBalance()
     balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected balance")
+    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
 
 
 """
@@ -690,7 +691,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
     while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
         if("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
-        print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
+        print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 

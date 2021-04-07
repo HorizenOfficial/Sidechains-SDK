@@ -14,8 +14,10 @@ import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, Sid
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
+import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen.wallet.ApplicationWallet
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
 import scorex.util.{ModifierId, bytesToId, idToBytes}
@@ -148,7 +150,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
     Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
-    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => Long.box(5500))
+    Mockito.when(wallet.allCoinsBoxesBalance()).thenAnswer(_ => Long.box(5500))
 
     Mockito.when(wallet.allBoxes()).thenAnswer(_ => allBoxes)
     Mockito.when(wallet.allBoxes(ArgumentMatchers.any[util.List[Array[Byte]]])).thenAnswer(asw => {
@@ -233,6 +235,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         getNodeHistoryMock(sidechainApiMockConfiguration),
         getNodeStateMock(sidechainApiMockConfiguration),
         getNodeWalletMock(sidechainApiMockConfiguration),
-        getNodeMemoryPoolMock(sidechainApiMockConfiguration))
+        getNodeMemoryPoolMock(sidechainApiMockConfiguration),
+        mock[ApplicationState],
+        mock[ApplicationWallet])
 
 }

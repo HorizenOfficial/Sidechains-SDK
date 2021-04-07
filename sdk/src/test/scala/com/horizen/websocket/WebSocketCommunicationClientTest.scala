@@ -93,7 +93,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     Mockito.when(mockedConnector.stop()).thenAnswer(asw => Success())
     Mockito.when(mockedConnector.start()).thenAnswer(asw => Try(mockedChannel))
 
-    val fut = webSocketClient.sendRequest(0, null, null)
+    val fut = webSocketClient.sendRequest(GET_SINGLE_BLOCK_REQUEST_TYPE, null, null)
     assertTrue(fut.isCompleted)
     assertEquals(classOf[Failure[_]], fut.value.get.getClass)
 
@@ -127,21 +127,21 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     )
 
     try {
-      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](0, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
+      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](GET_SINGLE_BLOCK_REQUEST_TYPE, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
       val welFormedBlockResponsePayload_1 : BlockResponsePayload = Await.result(future_1, webSocketClient.requestTimeoutDuration())
       assertTrue(future_1.value.get.isSuccess)
       assertEquals(welFormedBlockResponsePayload_1.hash, "0372229473df1b966945e2b307b86bd856323a54c645ccb91cabd1a49d8f87bf")
       assertEquals(welFormedBlockResponsePayload_1.block, "the block hex")
       assertEquals(welFormedBlockResponsePayload_1.height, 50)
 
-      val future_2 : Future[BlockResponsePayload] = webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](0, wellFormedGetBlockByHashRequestPayload, classOf[BlockResponsePayload])
+      val future_2 : Future[BlockResponsePayload] = webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](GET_SINGLE_BLOCK_REQUEST_TYPE, wellFormedGetBlockByHashRequestPayload, classOf[BlockResponsePayload])
       val welFormedBlockResponsePayload_2 : BlockResponsePayload = Await.result(future_2, webSocketClient.requestTimeoutDuration())
       assertTrue(future_2.value.get.isSuccess)
       assertEquals(welFormedBlockResponsePayload_2.hash, "0372229473df1b966945e2b307b86bd856323a54c645ccb91cabd1a49d8f87bf")
       assertEquals(welFormedBlockResponsePayload_2.block, "the block hex")
       assertEquals(welFormedBlockResponsePayload_2.height, 50)
 
-      val future_3 : Future[NewBlocksResponsePayload] = webSocketClient.sendRequest[RequestPayload, NewBlocksResponsePayload](2, wellFormedGetNewBlocksRequestPayload, classOf[NewBlocksResponsePayload])
+      val future_3 : Future[NewBlocksResponsePayload] = webSocketClient.sendRequest[RequestPayload, NewBlocksResponsePayload](GET_NEW_BLOCK_HASHES_REQUEST_TYPE, wellFormedGetNewBlocksRequestPayload, classOf[NewBlocksResponsePayload])
       val welFormedNewBlocksResponsePayload : NewBlocksResponsePayload = Await.result(future_3, webSocketClient.requestTimeoutDuration())
       assertTrue(future_3.value.get.isSuccess)
       assertEquals(welFormedNewBlocksResponsePayload.hashes, Seq[String](
@@ -185,7 +185,8 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     )
 
     try {
-      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](10, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
+      case object UNEXISTED_REQUEST_TYPE extends RequestType(10)
+      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](UNEXISTED_REQUEST_TYPE, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
       Await.result(future_1, webSocketClient.requestTimeoutDuration())
       fail("The response must be an error.")
     } catch {
@@ -220,7 +221,8 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
     )
 
     try {
-      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](10, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
+      case object UNEXISTED_REQUEST_TYPE extends RequestType(10)
+      val future_1 : Future[BlockResponsePayload]= webSocketClient.sendRequest[RequestPayload, BlockResponsePayload](UNEXISTED_REQUEST_TYPE, wellFormedGetBlockByHeightRequestPayload, classOf[BlockResponsePayload])
       Await.result(future_1, webSocketClient.requestTimeoutDuration())
       fail("The response must be an error.")
     } catch {

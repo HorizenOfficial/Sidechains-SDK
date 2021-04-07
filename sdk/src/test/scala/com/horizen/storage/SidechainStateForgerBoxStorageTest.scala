@@ -2,7 +2,7 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import com.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
@@ -20,7 +20,7 @@ class SidechainStateForgerBoxStorageTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {

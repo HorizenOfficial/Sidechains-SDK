@@ -89,7 +89,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def getCurrentSidechainNodeViewInfo: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
     }
     catch {
       case e: Exception => sender() ! akka.actor.Status.Failure(e)
@@ -98,7 +98,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def applyFunctionOnNodeView: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(function) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()))
+      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
     }
     catch {
       case e: Exception => sender() ! akka.actor.Status.Failure(e)
@@ -107,7 +107,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def applyBiFunctionOnNodeView[T, A]: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(function, functionParameter) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool()), functionParameter)
+      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet), functionParameter)
     }
     catch {
       case e: Exception => sender() ! akka.actor.Status.Failure(e)
@@ -269,7 +269,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           case Success(stateAfterApply) =>
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-            val walletAfterApply = newWallet.scanPersistent(modToApply)
+            val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
+              newWallet.scanPersistent(modToApply, stateAfterApply.getFeePayments(stateAfterApply.getWithdrawalEpochInfo.epoch))
+            } else
+              newWallet.scanPersistent(modToApply)
+
             SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
