@@ -398,6 +398,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     height
   }
 
+  override def getBlockHeight(blockId: String): JOptional[Integer] = {
+    storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
+  }
+
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
     storage.blockById(ModifierId(blockId)) match {
       case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
