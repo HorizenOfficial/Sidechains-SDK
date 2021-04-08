@@ -2,7 +2,7 @@ package com.horizen.websocket
 
 import com.horizen.WebSocketSettings
 import org.glassfish.tyrus.server.Server
-import org.junit.{Before, Test}
+import org.junit.{After, Before, Test}
 import org.junit.Assert.{assertEquals, assertFalse, _}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
@@ -21,19 +21,35 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
   @Before
   def setUp(): Unit = {
-    // start server on available port
-    server = new Server(serverHost, 0, null, null, classOf[WebSocketServerEchoEndpoint])
-    // get real port value
-    serverPort = server.getPort
+    var isStarted: Boolean = false
+    var attemptsLeft = 10
+    while(!isStarted && attemptsLeft > 0) {
+      try {
+        // start server on available port
+        server = new Server(serverHost, 0, null, null, classOf[WebSocketServerEchoEndpoint])
+        // get real port value
+        serverPort = server.getPort
+
+        server.start()
+        isStarted = true;
+
+      } catch {
+        case _: Throwable =>  {
+          attemptsLeft -= 1
+          Thread.sleep(100)
+        }
+      }
+    }
+  }
+
+  @After
+  def afterAllTests(): Unit = {
+    server.stop()
   }
 
   @Test
   def multipleStartConnectionOperations(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
-
-    server.start()
 
     val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
@@ -72,20 +88,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     assertTrue("Web socket connector is not started.", connector.isStarted())
-
-    server.stop()
-
   }
 
   @Test
   def multipleCloseConnectionOperationsWithoutStart(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    server.start()
-
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -117,18 +126,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     assertFalse("Web socket connector is started.", connector.isStarted())
-
-    server.stop()
-
   }
 
   @Test
   def multipleCloseConnectionOperationsWithoutServerStarted(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -160,18 +164,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     assertFalse("Web socket connector is started.", connector.isStarted())
-
   }
 
   @Test
   def multipleCloseConnectionOperations(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    server.start()
-
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -206,20 +205,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     assertFalse("Web socket connector is started.", connector.isStarted())
-
-    server.stop()
-
   }
 
   @Test
   def openAndCloseConnection(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    server.start()
-
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -280,6 +272,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     server.stop()
+    Thread.sleep(100)
 
     // The 'onDisconnection' is called once.
     // Other mocked methods are not called.
@@ -287,18 +280,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onConnectionFailed(ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketMessageHandler, Mockito.never()).onSendMessageErrorOccurred(ArgumentMatchers.any(), ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
-
   }
 
   @Test
   def successEchoMessage(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    server.start()
-
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -329,7 +317,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val message: String = "the message"
 
     connector.sendMessage(message)
-    Thread.sleep(100)
+    Thread.sleep( 500)
 
     // Verify that the mocked handler received from the server the same message sent by the client.
     // Other mocked methods are not called.
@@ -339,7 +327,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onDisconnection(ArgumentMatchers.any(), ArgumentMatchers.any())
 
     server.stop()
-    Thread.sleep(100)
+    Thread.sleep(500)
 
     /**
       * Post-conditions:
@@ -351,7 +339,6 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onConnectionFailed(ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketMessageHandler, Mockito.never()).onSendMessageErrorOccurred(ArgumentMatchers.any(), ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.UNEXPECTED), ArgumentMatchers.any())
-
   }
 
   @Test
@@ -362,7 +349,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -406,7 +393,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -462,19 +449,13 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(4)).onConnectionFailed(ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketMessageHandler, Mockito.never()).onSendMessageErrorOccurred(ArgumentMatchers.any(), ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
-
-    server.stop()
   }
 
   @Test
   def failEchoMessage(): Unit = {
-    server.stop()
-
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    server.start()
-
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -523,11 +504,10 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def asyncConnectorStart(): Unit = {
-    server.stop()
 
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -545,8 +525,6 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
-    server.start()
-
     val futureOfChannel = connector.asyncStart()
     assertFalse("The connector is started.", connector.isStarted)
 
@@ -560,7 +538,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onDisconnection(ArgumentMatchers.any(), ArgumentMatchers.any())
 
     server.stop()
-    Thread.sleep(100)
+    Thread.sleep(500)
 
     Mockito.verify(mockedWebSocketMessageHandler, Mockito.never()).onReceivedMessage(ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.never()).onConnectionFailed(ArgumentMatchers.any())
@@ -576,7 +554,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -630,7 +608,6 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.atMost(3)).onConnectionFailed(ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketMessageHandler, Mockito.never()).onSendMessageErrorOccurred(ArgumentMatchers.any(), ArgumentMatchers.any())
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.UNEXPECTED), ArgumentMatchers.any())
-
   }
 
   @Test
@@ -641,12 +618,12 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val pushServerHost = "localhost"
 
-    var pushServer: Server = new Server(pushServerHost, 0, null, null, classOf[WebSocketServerPushEndpoint])
+    val pushServer: Server = new Server(pushServerHost, 0, null, null, classOf[WebSocketServerPushEndpoint])
     val pushServerPort = pushServer.getPort
 
     pushServer.start()
 
-    val conf = new WebSocketSettings(
+    val conf = WebSocketSettings(
       address = "ws://" + pushServerHost + ":" + pushServerPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -670,7 +647,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     assertEquals(classOf[Success[_]], startOp.getClass)
     assertTrue("Web socket connector is not started.", connector.isStarted())
 
-    Thread.sleep(200)
+    Thread.sleep(500)
 
 
     // Verify that the mocked handler received from the server the 'pushedMessages' number of messages.
@@ -696,7 +673,6 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     Mockito.verify(mockedWebSocketReconnectionHandler, Mockito.times(1)).onDisconnection(ArgumentMatchers.eq(DisconnectionCode.ON_SUCCESS), ArgumentMatchers.any())
 
     pushServer.stop()
-
   }
 
 }
