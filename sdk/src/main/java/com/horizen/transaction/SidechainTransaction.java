@@ -65,13 +65,21 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
         if(unlockers().size() != boxIdsToOpen().size())
             return false;
 
-        // Check output boxes nonce correctness.
+        // Check output boxes nonce correctness and non-negative value.
         List<B> boxes = newBoxes();
         for(int i = 0; i < boxes.size(); i++) {
-            if(boxes.get(i).nonce() != getNewBoxNonce(boxes.get(i).proposition(), i)) {
+            B box = boxes.get(i);
+            if(box.nonce() != getNewBoxNonce(box.proposition(), i)) {
                 return false;
             }
+            // check box values
+            if(box.value() < 0)
+                return false;
         }
+
+        if(fee() < 0)
+            return false;
+
         return transactionSemanticValidity();
     }
 }

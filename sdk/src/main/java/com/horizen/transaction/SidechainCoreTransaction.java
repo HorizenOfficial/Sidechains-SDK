@@ -103,7 +103,7 @@ public class SidechainCoreTransaction
 
     @Override
     public boolean transactionSemanticValidity() {
-        if(fee < 0 || timestamp < 0)
+        if(timestamp < 0)
             return false;
 
         if(inputsIds.isEmpty() || outputsData.isEmpty())

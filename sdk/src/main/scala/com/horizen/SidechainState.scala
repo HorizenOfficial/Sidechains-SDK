@@ -204,11 +204,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // 2) check if for each B, that is instance of CoinBox interface, that total sum is equal to new CoinBox'es sum minus tx.fee
   // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
-
-  // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
-  // TO DO check logic in Hybrid.BoxMinimalState.validate
-  // TO DO TBD
   override def validate(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+    semanticValidity(tx).get
+
     var closedCoinsBoxesAmount : Long = 0L
     var newCoinsBoxesAmount : Long = 0L
 
@@ -237,7 +235,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     }
 
-    semanticValidity(tx).get
     applicationState.validate(this, tx)
   }
 
