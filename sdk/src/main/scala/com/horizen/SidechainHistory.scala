@@ -3,7 +3,7 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -129,12 +129,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
-
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
+    val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
+      val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
+    }
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -142,7 +145,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      blockMainchainHeaderBaseInfoSeq,
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None
@@ -557,7 +560,7 @@ object SidechainHistory
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, params.initialCumulativeCommTreeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
       None,

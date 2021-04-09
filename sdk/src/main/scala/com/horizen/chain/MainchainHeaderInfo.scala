@@ -5,4 +5,5 @@ import scorex.util.ModifierId
 case class MainchainHeaderInfo(hash: MainchainHeaderHash,
                                parentHash: MainchainHeaderHash,
                                height: Int,
-                               sidechainBlockId: ModifierId)
+                               sidechainBlockId: ModifierId,
+                               cumulativeHash: Array[Byte])

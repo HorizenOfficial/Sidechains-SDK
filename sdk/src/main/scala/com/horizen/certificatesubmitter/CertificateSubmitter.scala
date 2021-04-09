@@ -30,6 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+
 class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
@@ -174,6 +175,8 @@ class CertificateSubmitter
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endWithdrawalEpochBlockHash: Array[Byte],
                                     prevEndWithdrawalEpochBlockHash: Array[Byte],
+                                    endWithdrawalEpochBlockCumulativeCommTreeHash: Array[Byte],
+                                    prevEndWithdrawalEpochBlockCumulativeCommTreeHash: Array[Byte],
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   protected def getDataForProofGeneration(sidechainNodeView: View): Option[DataForProofGeneration] = {
@@ -201,6 +204,9 @@ class CertificateSubmitter
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
     val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber - 1)
 
+    val endEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val previousEndEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber - 1)
+
     // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
     val endEpochBlockHashLE = BytesUtils.reverseBytes(endEpochBlockHash)
     val previousEndEpochBlockHashLE = BytesUtils.reverseBytes(previousEndEpochBlockHash)
@@ -217,9 +223,10 @@ class CertificateSubmitter
     // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
     // Quality is equal to the number of valid schnorr signatures.
     val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
-    if(newCertQuality > currentCertificateTopQuality)
-      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, signersPublicKeyWithSignatures))
-    else {
+    if(newCertQuality > currentCertificateTopQuality) {
+      // TODO After switching for SNARK proof generation remove endEpochBlockHash and previousEndEpochBlockHash from DataForProofGeneration
+      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, endEpochBlockCumulativeCommTreeHash, previousEndEpochBlockCumulativeCommTreeHash, signersPublicKeyWithSignatures))
+    } else {
       log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
         s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
       None
@@ -237,6 +244,21 @@ class CertificateSubmitter
     log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
 
     mcBlockHash
+  }
+
+  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+    val mcBlockHash = withdrawalEpochNumber match {
+      case -1 => params.parentHashOfGenesisMainchainBlock
+      case _  => {
+        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
+        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+      }
+    }
+    log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
+
+    val headerInfo = history.getMainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+
+    headerInfo.cumulativeHash
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
