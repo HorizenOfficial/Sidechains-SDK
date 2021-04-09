@@ -120,6 +120,7 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "mcBlockHeight": xxx,
     "mcNetwork": regtest|testnet|mainnet
     "withdrawalEpochLength": xxx
+    "initialMcCumulativeCommTreeHash": xxx
 }
 """
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
@@ -252,6 +253,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
+        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.genesisinfo,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
@@ -259,7 +261,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
+                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number])
     }
 
     configsData.append({
@@ -427,6 +430,23 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
             break
         time.sleep(WAIT_CONST)
 
+
+def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
+    """
+    Disconnect a SC node, from_connection, to another one, specifying its node_num.
+    Method will attempt to disconnect for maximum wait_for seconds.
+    """
+    j = {"host": "127.0.0.1", \
+         "port": str(sc_p2p_port(node_num))}
+    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
+    print("Disconnecting from " + ip_port)
+    from_connection.node_disconnect(json.dumps(j))
+    time.sleep(WAIT_CONST)
+
+
+def disconnect_sc_nodes_bi(nodes, a, b):
+    disconnect_sc_nodes(nodes[a], b)
+    disconnect_sc_nodes(nodes[b], a)
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)

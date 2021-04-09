@@ -8,7 +8,6 @@ import java.util.{Optional => JOptional}
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
@@ -106,8 +105,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(epoch)
   }
 
-  def getUnprocessedWithdrawalRequests(epoch: Integer): Option[Seq[WithdrawalRequestBox]] = {
-    stateStorage.getUnprocessedWithdrawalRequests(epoch)
+  def certificateTopQuality(epoch: Int): Long = {
+    stateStorage.getTopQualityCertificate(epoch) match {
+      case Some(cert) => cert.quality
+      case None => 0 // there are no certificates for epoch
+    }
   }
 
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
@@ -124,11 +126,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
 
-
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
-    validateWithdrawalEpochCertificate(mod)
+    // If SC block has reached the certificate submission window end -> check the top quality certificate
+    val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
+    if(WithdrawalEpochUtils.inReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+      // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
+      validateTopQualityCertificate(mod, modWithdrawalEpochInfo.epoch)
+    }
 
     applicationState.validate(this, mod)
   }
@@ -145,54 +152,36 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def validateWithdrawalEpochCertificate(mod: SidechainBlock): Unit = {
-    //Check content of the backward transfer certificate if it exists
-    //Currently sidechain block can contain 0 or 1 certificate (this is checked in validation of the block in history)
-    //so flatMap returns collection with only 1 certificate if it exists or empty collection if certificate does not exist in block
-    for (certificate <- mod.withdrawalEpochCertificateOpt) {
-      getUnprocessedWithdrawalRequests(certificate.epochNumber) match {
-        case Some(withdrawalRequests) => {
-          if (withdrawalRequests.size != certificate.backwardTransferOutputs.size)
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
+  private def validateTopQualityCertificate(mod: SidechainBlock, blockWithdrawalEpochNumber: Int): Unit = {
+    val certReferencedEpochNumber: Int = blockWithdrawalEpochNumber - 1
 
-          for (o <- certificate.backwardTransferOutputs) {
-            if (!withdrawalRequests.exists(r => {
-              util.Arrays.equals(r.proposition().bytes(), o.pubKeyHash) &&
-                r.value().equals(o.amount)
-            })) {
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but list of it's outputs and list of withdrawal requests for this epoch are different.".format(certificate.epochNumber))
-            }
-          }
+    // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+    val topQualityCertificate: WithdrawalEpochCertificate = mod.topQualityCertificateOpt.getOrElse(
+      stateStorage.getTopQualityCertificate(certReferencedEpochNumber)
+        .getOrElse(throw new IllegalStateException(s"In the end of the certificate submission window of epoch $blockWithdrawalEpochNumber " +
+          s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain is ceased."))
+    )
 
-          val previousEndEpochBlockHash: Array[Byte] =
-            stateStorage
-              .getLastCertificateEndEpochMcBlockHashOpt
-              .getOrElse({
-                require(certificate.epochNumber == 0, "Certificate epoch number > 0, but end previous epoch mc block hash was not found.")
-                params.parentHashOfGenesisMainchainBlock
-              })
+    // Check that the top quality certificate data is relevant to the SC active chain cert data.
+    // There is no need to check endEpochBlockHash, epoch number and Snark proof, because SC trusts MC consensus.
+    // Currently we need to check only the consistency of backward transfers.
+    val expectedWithdrawalRequests = withdrawalRequests(certReferencedEpochNumber)
 
-          log.info(s"Verify backward transfer certificate with parameters: withdrawalRequests = ${withdrawalRequests.foreach(_.toString)}, certificate.endEpochBlockHash = ${BytesUtils.toHexString(certificate.endEpochBlockHash)}, previousEndEpochBlockHash = ${BytesUtils.toHexString(previousEndEpochBlockHash)}, certificate.quality = ${certificate.quality}, certificate.proof=${BytesUtils.toHexString(certificate.proof)}")
+    // Simple size check
+    if (topQualityCertificate.backwardTransferOutputs.size != expectedWithdrawalRequests.size) {
+      throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
+        s"number ${topQualityCertificate.backwardTransferOutputs.size} is different than expected ${expectedWithdrawalRequests.size}. " +
+        s"Node's active chain is the fork from MC perspective.")
+    }
 
-          val proofInCertificateIsValid = CryptoLibProvider.sigProofThresholdCircuitFunctions.verifyProof(
-            withdrawalRequests.asJava,
-            BytesUtils.reverseBytes(certificate.endEpochBlockHash),
-            BytesUtils.reverseBytes(previousEndEpochBlockHash),
-            certificate.quality,
-            certificate.proof,
-            params.calculatedSysDataConstant,
-            verificationKeyFullFilePath)
-
-          if (proofInCertificateIsValid) {
-            log.info("Block contains successfully verified backward transfer certificate for epoch %d")
-          }
-          else {
-            throw new Exception("Block contains backward transfer certificate for epoch %d, but proof is not correct.".format(certificate.epochNumber))
-          }
+    // Check that BTs are identical for both Cert and State
+    topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
+      case (certOutput, expectedWithdrawalRequestBox) => {
+        if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
+              !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
+          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
+            s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
-
-        case None =>
-          throw new Exception("Block contains backward transfer certificate for epoch %d, but list of withdrawal certificates for this epoch is empty.".format(certificate.epochNumber))
       }
     }
   }
@@ -246,7 +235,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           timeStampToEpochNumber(mod.timestamp),
-          mod.withdrawalEpochCertificateOpt,
+          mod.topQualityCertificateOpt,
           mod.feeInfo
         )
       })
@@ -263,7 +252,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                             newVersion: VersionTag,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
                             consensusEpoch: ConsensusEpochNumber,
-                            withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate],
+                            topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
                             blockFeeInfo: BlockFeeInfo): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
@@ -297,7 +286,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, withdrawalEpochCertificateOpt, blockFeeInfo).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
           params,
           newVersion,

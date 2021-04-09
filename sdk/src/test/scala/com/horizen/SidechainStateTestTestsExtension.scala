@@ -113,6 +113,7 @@ class SidechainStateTestTestsExtension
         boxList.find(_.id().sameElements(boxId))
       })
 
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
     // Mock get and update methods of StateForgerBoxStorage
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -152,7 +153,7 @@ class SidechainStateTestTestsExtension
     //Test validate(Block)
     val mockedBlock = mock[SidechainBlock]
 
-    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
@@ -191,7 +192,7 @@ class SidechainStateTestTestsExtension
 
     //test mutuality transaction check
     val mutualityMockedBlock = mock[SidechainBlock]
-    Mockito.when(mutualityMockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mutualityMockedBlock.topQualityCertificateOpt).thenReturn(None)
     Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -212,7 +213,7 @@ class SidechainStateTestTestsExtension
 
 
     val doubleSpendTransactionMockedBlock = mock[SidechainBlock]
-    Mockito.when(doubleSpendTransactionMockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(doubleSpendTransactionMockedBlock.topQualityCertificateOpt).thenReturn(None)
     Mockito.when(doubleSpendTransactionMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
@@ -344,7 +345,7 @@ class SidechainStateTestTestsExtension
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenAnswer(answer => Seq[MainchainBlockReferenceData]())
 
-    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 

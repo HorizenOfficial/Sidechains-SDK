@@ -24,7 +24,7 @@ case class WithdrawalEpochCertificate
 {
   override type M = WithdrawalEpochCertificate
 
-  override def serializer: ScorexSerializer[WithdrawalEpochCertificate] = MainchainBackwardTransferCertificateSerializer
+  override def serializer: ScorexSerializer[WithdrawalEpochCertificate] = WithdrawalEpochCertificateSerializer
 
   def size: Int = certificateBytes.length
 
@@ -103,7 +103,7 @@ object WithdrawalEpochCertificate {
   }
 }
 
-object MainchainBackwardTransferCertificateSerializer
+object WithdrawalEpochCertificateSerializer
   extends ScorexSerializer[WithdrawalEpochCertificate]
 {
   override def serialize(certificate: WithdrawalEpochCertificate, w: Writer): Unit = {

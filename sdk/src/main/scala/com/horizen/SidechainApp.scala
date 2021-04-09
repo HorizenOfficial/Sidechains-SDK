@@ -120,7 +120,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
   )
 
     case "testnet" => TestNetParams(
@@ -136,7 +137,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
 
     case "mainnet" => MainNetParams(
@@ -152,7 +154,8 @@ class SidechainApp @Inject()
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
       provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
       verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
-      calculatedSysDataConstant = calculatedSysDataConstant
+      calculatedSysDataConstant = calculatedSysDataConstant,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

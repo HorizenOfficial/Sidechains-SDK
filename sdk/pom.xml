@@ -297,7 +297,8 @@
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
           <include>new_mc_blocks/mc_block_with_3_sidechains</include>
-          <include>new_mc_blocks/mc_block_with_backward_transfer</include>
+          <include>new_mc_blocks/mc_block_with_certificate</include>
+          <include>new_mc_blocks/mc_block_with_2_certificates</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>
         </includes>

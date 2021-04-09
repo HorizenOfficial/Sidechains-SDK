@@ -8,9 +8,9 @@ import com.horizen.api.http.SidechainNodeRestSchema._
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
-import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
+import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, ShutdownNetwork}
 import scorex.core.network.peer.PeerInfo
-import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
@@ -24,7 +24,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = (pathPrefix("node")) {
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -90,6 +90,29 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def disconnect: Route = (post & path("disconnect")) {
+    entity(as[ReqDisconnect]) {
+      body =>
+        var address = body.host + ":" + body.port
+        val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
+        maybeAddress match {
+          case None =>
+            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", None))
+          case Some(addressAndPort) =>
+            val host = InetAddress.getByName(addressAndPort.group(1))
+            val port = addressAndPort.group(2).toInt
+            val peerAddress = new InetSocketAddress(host, port)
+            // remove the peer info to prevent automatic reconnection attempts after disconnection.
+            peerManager ! RemovePeer(peerAddress)
+            // Disconnect the connection if present and active.
+            // Note: `Blacklisted` name is misleading, because the message supposed to be used only during peer penalize
+            // procedure. Actually inside NetworkController it looks for connection and emits `CloseConnection`.
+            networkController ! Blacklisted(peerAddress)
+            ApiResponseUtil.toResponse(RespDisconnect(host + ":" + port))
+        }
+    }
+  }
+
 }
 
 object SidechainNodeRestSchema {
@@ -108,6 +131,13 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespConnect(connectedTo: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqDisconnect(host: String, port: Int)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespDisconnect(disconnectedFrom: String) extends SuccessResponse
+
 
 }
 

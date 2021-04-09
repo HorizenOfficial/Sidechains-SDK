@@ -18,6 +18,7 @@ import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.cryptolibprovider.FieldElementUtils;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -343,7 +344,7 @@ public class CommandProcessor {
         // can be used only in Regtest network
         int regtestBlockTimestampRewind = json.has("regtestBlockTimestampRewind") ? json.get("regtestBlockTimestampRewind").asInt() : 0;
 
-        // Parsing the info: scid, powdata vector, mc block height, mc block hex
+        // Parsing the info: scid, powdata vector, mc block height, mc block hex, mc initial BlockSCTxCommTreeCumulativeHash
         int offset = 0;
         try {
             byte network = infoBytes[offset];
@@ -360,6 +361,11 @@ public class CommandProcessor {
 
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
+
+            byte initialMcCumulativeCommTreeHashLength = infoBytes[offset];
+            offset += 1;
+            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + initialMcCumulativeCommTreeHashLength);
+            offset += initialMcCumulativeCommTreeHashLength;
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -428,6 +434,7 @@ public class CommandProcessor {
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
             resJson.put("withdrawalEpochLength", withdrawalEpochLength);
+            resJson.put("initialMcCumulativeCommTreeHash", BytesUtils.toHexString(initialMcCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
 
@@ -440,7 +447,8 @@ public class CommandProcessor {
                         BytesUtils.toHexString(scId),
                         sidechainBlockHex,
                         mcNetworkName,
-                        withdrawalEpochLength
+                        withdrawalEpochLength,
+                        BytesUtils.toHexString(initialMcCumulativeCommTreeHash)
                 );
         } catch (Exception e) {
             printer.print("Error: 'info' data is corrupted.");
@@ -463,11 +471,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }
@@ -481,7 +489,8 @@ public class CommandProcessor {
             String scId,
             String scBlockHex,
             String mcNetworkName,
-            int withdrawalEpochLength) {
+            int withdrawalEpochLength,
+            String initialCumulativeCommTreeHashHex) {
         try {
             String templateConf = new String(Files.readAllBytes(Paths.get(pathToSourceConfig)), StandardCharsets.UTF_8);
 
@@ -495,6 +504,7 @@ public class CommandProcessor {
                           "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
                           "\t\tmcNetwork = " + mcNetworkName + "\n" +
                           "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
+                          "\t\tinitialMcCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
                           "\t}\n" +
                           "}\n";
 
