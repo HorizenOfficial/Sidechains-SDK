@@ -28,7 +28,7 @@ import scala.util.Try
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
   with BoxFixture
-  with IODBStoreFixture
+  with StoreFixture
   with MockitoSugar
   with SidechainTypes
 {

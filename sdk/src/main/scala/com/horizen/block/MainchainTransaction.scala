@@ -19,17 +19,13 @@ class MainchainTransaction(
       val sidechainId: ByteArrayWrapper = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(hash, index)
       new MainchainTxSidechainCreationCrosschainOutput(sidechainId, outputData)}
 
-  private val crosschainOutputsMap = (sidechainCreationOutputs ++ forwardTransferOutputs).groupBy[ByteArrayWrapper](output => new ByteArrayWrapper(output.sidechainId))
-
   lazy val bytes: Array[Byte] = transactionsBytes.clone()
 
   lazy val hashHex: String = BytesUtils.toHexString(hash)
 
   def size: Int = transactionsBytes.length
 
-  def getRelatedSidechains: Set[ByteArrayWrapper] = crosschainOutputsMap.keySet
-
-  def getCrosschainOutputs(sidechainId: ByteArrayWrapper): Seq[MainchainTxCrosschainOutput] = crosschainOutputsMap.getOrElse(sidechainId, Seq())
+  def getCrosschainOutputs: Seq[MainchainTxCrosschainOutput] = sidechainCreationOutputs ++ forwardTransferOutputs
 }
 
 

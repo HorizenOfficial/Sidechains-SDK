@@ -81,13 +81,11 @@ class MainchainTransactionTest extends JUnitSuite {
 
     assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
     assertEquals("Tx Size is different.", expectedTxSize, tx.size)
-    assertEquals("Tx contains different number of mentioned sidechains.", 1, tx.getRelatedSidechains.size)
-    assertTrue(s"SidechainId '$sidechainIdHex' is missed.",
-      tx.getRelatedSidechains.contains(sidechainId))
 
-    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs(sidechainId)
+    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs
     assertEquals(s"Tx expected to have different number of crosschain outputs related to sidechainId '$sidechainIdHex'.", 1, crosschainOutputs.size)
     assertTrue("Crosschain output type is different.", crosschainOutputs.head.isInstanceOf[MainchainTxForwardTransferCrosschainOutput])
+    assertEquals("Crosschain output sidechain is different.", sidechainId, new ByteArrayWrapper(crosschainOutputs.head.sidechainId))
 
     val ft: MainchainTxForwardTransferCrosschainOutput = crosschainOutputs.head.asInstanceOf[MainchainTxForwardTransferCrosschainOutput]
     assertEquals("Forward Transfer type is different.", MainchainTxForwardTransferCrosschainOutput.OUTPUT_TYPE, ft.outputType)
@@ -111,10 +109,8 @@ class MainchainTransactionTest extends JUnitSuite {
 
     assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
     assertEquals("Tx Size is different.", expectedTxSize, tx.size)
-    assertEquals("Tx contains different number of mentioned sidechains.", 1, tx.getRelatedSidechains.size)
-    assertTrue(s"SidechainId '$sidechainIdHex' is missed.", tx.getRelatedSidechains.contains(sidechainId))
 
-    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs(sidechainId)
+    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs
     assertEquals(s"Tx expected to have different number of crosschain outputs related to sidechainId '$sidechainIdHex'.", 3, crosschainOutputs.size)
 
 
@@ -159,11 +155,8 @@ class MainchainTransactionTest extends JUnitSuite {
 
     assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
     assertEquals("Tx Size is different.", expectedTxSize, tx.size)
-    assertEquals("Tx contains different number of mentioned sidechains.", 1, tx.getRelatedSidechains.size)
-    assertTrue(s"SidechainId '$sidechainIdHex' is missed.",
-      tx.getRelatedSidechains.contains(sidechainId))
 
-    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs(sidechainId)
+    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs
     assertEquals(s"Tx expected to have different number of crosschain outputs related to sidechainId '$sidechainIdHex'.", 1, crosschainOutputs.size)
 
 

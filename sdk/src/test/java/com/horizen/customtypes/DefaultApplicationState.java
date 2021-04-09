@@ -13,22 +13,22 @@ import java.util.List;
 
 public class DefaultApplicationState implements ApplicationState {
     @Override
-    public boolean validate(SidechainStateReader stateReader, SidechainBlock block) {
-        return true;
+    public void validate(SidechainStateReader stateReader, SidechainBlock block) throws IllegalArgumentException {
+        // do nothing always successful
     }
 
     @Override
-    public boolean validate(SidechainStateReader stateReader, BoxTransaction<Proposition, Box<Proposition>> transaction) {
-        return true;
+    public void validate(SidechainStateReader stateReader, BoxTransaction<Proposition, Box<Proposition>> transaction) throws IllegalArgumentException {
+        // do nothing always successful
     }
 
     @Override
-    public Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] version, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove) {
+    public Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove) {
         return new Success<>(this);
     }
 
     @Override
-    public Try<ApplicationState> onRollback(byte[] version) {
+    public Try<ApplicationState> onRollback(byte[] blockId) {
         return new Success<>(this);
     }
 }

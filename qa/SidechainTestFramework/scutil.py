@@ -98,7 +98,7 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               "../tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.6.jar",
+                               os.getenv("SIDECHAIN_SDK", "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     jsone_node = json.loads(sc_bootstrap_output)
@@ -223,7 +223,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
-    with open('./resources/template.conf', 'r') as templateFile:
+    customFileName = './resources/template_' + str(n+1) + '.conf'
+    fileToOpen = './resources/template.conf'
+    if os.path.isfile(customFileName):
+        fileToOpen = customFileName
+
+    with open(fileToOpen, 'r') as templateFile:
         tmpConfig = templateFile.read()
 
     genesis_secrets = []
@@ -256,7 +261,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_secrets)
+        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
+                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number])
     }
 
     configsData.append({
@@ -345,7 +351,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.6.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     if print_output_to_file:
@@ -425,6 +431,23 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
         time.sleep(WAIT_CONST)
 
 
+def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
+    """
+    Disconnect a SC node, from_connection, to another one, specifying its node_num.
+    Method will attempt to disconnect for maximum wait_for seconds.
+    """
+    j = {"host": "127.0.0.1", \
+         "port": str(sc_p2p_port(node_num))}
+    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
+    print("Disconnecting from " + ip_port)
+    from_connection.node_disconnect(json.dumps(j))
+    time.sleep(WAIT_CONST)
+
+
+def disconnect_sc_nodes_bi(nodes, a, b):
+    disconnect_sc_nodes(nodes[a], b)
+    disconnect_sc_nodes(nodes[b], a)
+
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)
     connect_sc_nodes(nodes[b], a)
@@ -498,16 +521,17 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
     return is_mac_block_included
 
 """
-Verify the wallet balance is equal to an expected balance.
+Verify the wallet coins balance is equal to an expected coins balance.
+Note: core coins boxes are: RegularBox and ForgerBox
 
 Parameters:
  - sc_node: a sidechain node
  - expected_wallet_balance
 """
-def check_wallet_balance(sc_node, expected_wallet_balance):
-    response = sc_node.wallet_balance()
+def check_wallet_coins_balance(sc_node, expected_wallet_balance):
+    response = sc_node.wallet_coinsBalance()
     balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected balance")
+    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
 
 
 """
@@ -687,7 +711,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
     while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
         if("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
-        print("Skip block generation for {epochNumber} epoch and {slotNumber} slot".format(epochNumber = next_epoch, slotNumber = next_slot))
+        print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 

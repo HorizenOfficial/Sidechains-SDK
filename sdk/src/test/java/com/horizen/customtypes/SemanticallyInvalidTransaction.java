@@ -33,6 +33,9 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
+    public List<PublicKey25519Proposition> newBoxesPropositions() { return new ArrayList<>(); }
+
+    @Override
     public List<RegularBox> newBoxes() {
         return new ArrayList<>();
     }

@@ -23,8 +23,29 @@ object WithdrawalEpochUtils {
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
 
-  //Certificate could be sent only then block in specific position in Withdrawal epoch
+  def inReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    if (block.mainchainBlockReferencesData.nonEmpty && inSubmitCertificateWindow(parentEpochInfo, params)) {
+      val mcBlocksLeft = certificateSubmissionWindowLength(params) - parentEpochInfo.lastEpochIndex
+      // It can be no blocks left if parent reached exactly the end of the window.
+      // SC block may have multiple MCBlockRefData entries that reach or even exceed the CertificateSubmissionWindowEnd
+      mcBlocksLeft > 0 && block.mainchainBlockReferencesData.size >= mcBlocksLeft
+    } else {
+      // SC block has no MCBlockRefData or parent is not inside the window at all
+      false
+    }
+  }
+
+  def isEpochLastIndex(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    epochInfo.lastEpochIndex == params.withdrawalEpochLength
+  }
+
+  // Certificate can be sent only when mc block is in a specific position in the Withdrawal epoch
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= params.withdrawalEpochLength / 5)
+    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
+  }
+
+  def certificateSubmissionWindowLength(params: NetworkParams): Int = {
+    // MC consensus cert submission window length is 1/5 of the withdrawal epoch length, but at least 2 mc blocks
+    Math.max(2, params.withdrawalEpochLength / 5)
   }
 }

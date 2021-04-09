@@ -38,6 +38,8 @@ trait NetworkParams {
 
   val maxHistoryRewritingLength: Int = 100
 
+  // fee payment params:
+  final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC

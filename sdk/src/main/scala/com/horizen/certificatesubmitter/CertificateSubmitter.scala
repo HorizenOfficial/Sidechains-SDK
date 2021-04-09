@@ -141,7 +141,7 @@ class CertificateSubmitter
       }
       checkDataResult match {
         case Success(Some(dataForProofGeneration)) => {
-          log.debug(s"Get data for certificate proof calculation: ${dataForProofGeneration}")
+          log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
             dataForProofGeneration.processedEpochNumber,
@@ -185,30 +185,32 @@ class CertificateSubmitter
     val withdrawalEpochInfo: WithdrawalEpochInfo = state.getWithdrawalEpochInfo
     if (WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params)) {
       log.info("In submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
-      val processedWithdrawalEpochNumber = withdrawalEpochInfo.epoch - 1
-      state.getUnprocessedWithdrawalRequests(processedWithdrawalEpochNumber)
-        .map(unprocessedWithdrawalRequests => buildDataForProofGeneration(sidechainNodeView, processedWithdrawalEpochNumber, unprocessedWithdrawalRequests))
+      val referencedWithdrawalEpochNumber = withdrawalEpochInfo.epoch - 1
+      buildDataForProofGeneration(sidechainNodeView, referencedWithdrawalEpochNumber)
     }
     else {
-      log.debug("Not in submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
+      log.info("Not in submit certificate window, withdrawal epoch info = " + withdrawalEpochInfo.toString)
       None
     }
   }
 
-  private def buildDataForProofGeneration(sidechainNodeView: View, processedWithdrawalEpochNumber: Int, unprocessedWithdrawalRequests: Seq[WithdrawalRequestBox]): DataForProofGeneration = {
-    log.debug(s"Start to build data for certificate proof generation, unprocessedWithdrawalRequests size is ${unprocessedWithdrawalRequests.size} ")
+  private def buildDataForProofGeneration(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Option[DataForProofGeneration] = {
     val history = sidechainNodeView.history
+    val state = sidechainNodeView.state
 
-    val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
-    val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
+    val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
+    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    val endEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber)
-    val previousEndEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, processedWithdrawalEpochNumber - 1)
+    val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber - 1)
+
+    val endEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val previousEndEpochBlockCumulativeCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber - 1)
 
     // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
     val endEpochBlockHashLE = BytesUtils.reverseBytes(endEpochBlockHash)
     val previousEndEpochBlockHashLE = BytesUtils.reverseBytes(previousEndEpochBlockHash)
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(unprocessedWithdrawalRequests.asJava, endEpochBlockHashLE, previousEndEpochBlockHashLE)
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, endEpochBlockHashLE, previousEndEpochBlockHashLE)
 
     val sidechainWallet = sidechainNodeView.vault
     val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
@@ -217,8 +219,18 @@ class CertificateSubmitter
         (signerPublicKey, signature)
       }
 
-    // TODO After switching for SNARK proof generation remove endEpochBlockHash and previousEndEpochBlockHash from DataForProofGeneration
-    DataForProofGeneration(processedWithdrawalEpochNumber, unprocessedWithdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, endEpochBlockCumulativeCommTreeHash, previousEndEpochBlockCumulativeCommTreeHash, signersPublicKeyWithSignatures)
+    // The quality of data generated must be greater then current top certificate quality.
+    // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
+    // Quality is equal to the number of valid schnorr signatures.
+    val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
+    if(newCertQuality > currentCertificateTopQuality) {
+      // TODO After switching for SNARK proof generation remove endEpochBlockHash and previousEndEpochBlockHash from DataForProofGeneration
+      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, endEpochBlockCumulativeCommTreeHash, previousEndEpochBlockCumulativeCommTreeHash, signersPublicKeyWithSignatures))
+    } else {
+      log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
+        s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
+      None
+    }
   }
 
   private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {

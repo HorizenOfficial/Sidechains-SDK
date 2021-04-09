@@ -58,7 +58,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         responce = node.wallet_allBoxes()
         boxes = responce["result"]["boxes"]
 
-        responce = node.wallet_balance()
+        responce = node.wallet_coinsBalance()
         balance = responce["result"]
         assert_equal(expected_keys_count, len(public_keys), "Unexpected number of public keys")
         assert_equal(expected_boxes_count, len(boxes), "Unexpected number of boxes")
