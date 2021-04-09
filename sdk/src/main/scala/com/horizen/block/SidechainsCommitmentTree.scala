@@ -1,5 +1,6 @@
 package com.horizen.block
 
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerklePath, MerkleTree}
 
 import scala.collection.JavaConverters._
@@ -9,12 +10,22 @@ class SidechainsCommitmentTree
 {
   val sidechainsHashMap: mutable.Map[ByteArrayWrapper, SidechainCommitmentEntry] = new mutable.HashMap[ByteArrayWrapper, SidechainCommitmentEntry]()
 
-  def addForwardTransferMerkleRootHash(sidechainId: ByteArrayWrapper, rootHash: Array[Byte]): Unit = {
+  def addSidechainCreation(sidechainId: ByteArrayWrapper, sc: SidechainCreation): Unit = {
     sidechainsHashMap.get(sidechainId) match {
-      case Some(entry) => entry.setForwardTransfersHash(rootHash)
+      case Some(entry) => entry.addSidechainCreation(sc)
       case None =>
         val entry = new SidechainCommitmentEntry()
-        entry.setForwardTransfersHash(rootHash)
+        entry.addSidechainCreation(sc)
+        sidechainsHashMap.put(sidechainId, entry)
+    }
+  }
+
+  def addForwardTransfer(sidechainId: ByteArrayWrapper, ft: ForwardTransfer): Unit = {
+    sidechainsHashMap.get(sidechainId) match {
+      case Some(entry) => entry.addForwardTransfer(ft)
+      case None =>
+        val entry = new SidechainCommitmentEntry()
+        entry.addForwardTransfer(ft)
         sidechainsHashMap.put(sidechainId, entry)
     }
   }
@@ -22,17 +33,24 @@ class SidechainsCommitmentTree
   def addCertificate(certificate: WithdrawalEpochCertificate): Unit = {
     val sidechainId = new ByteArrayWrapper(certificate.sidechainId)
     sidechainsHashMap.get(sidechainId) match {
-      case Some(entry) => entry.setWithdrawalCertificateHash(certificate.hash)
+      case Some(entry) => entry.addCertificate(certificate)
       case None =>
         val entry = new SidechainCommitmentEntry()
-        entry.setWithdrawalCertificateHash(certificate.hash)
+        entry.addCertificate(certificate)
         sidechainsHashMap.put(sidechainId, entry)
+    }
+  }
+
+  def getCertLeaves(sidechainId: ByteArrayWrapper): Seq[Array[Byte]] = {
+    sidechainsHashMap.get(sidechainId) match {
+      case Some(entry) => entry.getCertLeaves
+      case None => Seq()
     }
   }
 
   def getSidechainCommitmentEntryHash(sidechainId: ByteArrayWrapper): Array[Byte] = {
     sidechainsHashMap.get(sidechainId) match {
-      case Some(entry) => entry.getSidechainCommitmentEntryHash(sidechainId.data)
+      case Some(entry) => entry.getCommitment(sidechainId.data)
       case None => Array.emptyByteArray
     }
   }
@@ -50,7 +68,7 @@ class SidechainsCommitmentTree
     sidechainsHashMap.get(sidechainId) match {
       case Some(entry) =>
         val merkleTree = getMerkleTree
-        val entryHash = new ByteArrayWrapper(entry.getSidechainCommitmentEntryHash(sidechainId.data))
+        val entryHash = new ByteArrayWrapper(entry.getCommitment(sidechainId.data))
         val leafIndex = merkleTree.leaves().asScala.map(l => new ByteArrayWrapper(l)).indexOf(entryHash)
         Some(merkleTree.getMerklePathForLeaf(leafIndex))
       case None => None
@@ -84,7 +102,7 @@ class SidechainsCommitmentTree
   private def getSidechainCommitmentEntryProof(sidechainId: Array[Byte], leafIndex: Int): SidechainCommitmentEntryProof = {
     val merkleTree = getMerkleTree
     val entry = sidechainsHashMap(new ByteArrayWrapper(sidechainId))
-    SidechainCommitmentEntryProof(sidechainId, entry.getTxsHash, entry.getWCertHash, merkleTree.getMerklePathForLeaf(leafIndex))
+    SidechainCommitmentEntryProof(sidechainId, entry.getTxsHash, entry.getCertCommitment, merkleTree.getMerklePathForLeaf(leafIndex))
   }
 
   // Sidechain ids are represented in a little-endian and ordered lexicographically same as in the MC.

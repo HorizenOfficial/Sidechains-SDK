@@ -35,6 +35,11 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
+    public byte[] sidechainId() {
+        return output.sidechainId();
+    }
+
+    @Override
     public ForgerBox getBox() {
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
         long value = output.amount();

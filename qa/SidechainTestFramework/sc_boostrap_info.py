@@ -53,9 +53,11 @@ SCNodeConfiguration: {
 """
 class SCNodeConfiguration(object):
 
-    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True):
+    # Currently we have Cert Signature threshold snark proof with the max PK number = 7
+    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True, submitter_private_keys_number=7):
         self.mc_connection_info = mc_connection_info
         self.cert_submitter_enabled = cert_submitter_enabled
+        self.submitter_private_keys_number = submitter_private_keys_number
 
 
 """

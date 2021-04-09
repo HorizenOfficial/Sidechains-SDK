@@ -1,16 +1,18 @@
 package com.horizen.block
 
 import java.util
-
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
+import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
+import org.scalatest.mockito.MockitoSugar
 
 import scala.util.Random
 
-class SidechainsCommitmentTreeTest extends JUnitSuite {
+class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar {
 
   private val size = 32;
 
@@ -64,10 +66,13 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(11)
 
-    sidechainIdSeq.foreach(v => {
-      val forwardTransferMerkleRootHash = new Array[Byte](size)
-      Random.nextBytes(forwardTransferMerkleRootHash)
-      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
+    sidechainIdSeq.foreach(scId => {
+      val output = mock[MainchainTxForwardTransferCrosschainOutput]
+      val forwardTransferHash = new Array[Byte](32)
+      Random.nextBytes(forwardTransferHash)
+      Mockito.when(output.hash).thenReturn(forwardTransferHash)
+      val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
+      shm.addForwardTransfer(scId, ft)
     })
 
     val merkleTree = shm.getMerkleTree
@@ -80,7 +85,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof1.get))
       )
     )
 
@@ -92,14 +97,14 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 4", 4, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 5", 5, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof2.get))
       )
     )
 
@@ -109,10 +114,10 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getCommitment(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof3.get))
       )
     )
 
@@ -125,10 +130,13 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(23)
 
-    sidechainIdSeq.foreach(v => {
-      val forwardTransferMerkleRootHash = new Array[Byte](size)
-      Random.nextBytes(forwardTransferMerkleRootHash)
-      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
+    sidechainIdSeq.foreach(scId => {
+      val output = mock[MainchainTxForwardTransferCrosschainOutput]
+      val forwardTransferHash = new Array[Byte](32)
+      Random.nextBytes(forwardTransferHash)
+      Mockito.when(output.hash).thenReturn(forwardTransferHash)
+      val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
+      shm.addForwardTransfer(scId, ft)
     })
 
     val merkleTree = shm.getMerkleTree
@@ -141,7 +149,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof1.get))
       )
     )
 
@@ -153,14 +161,14 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 4", 10, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 5", 11, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof2.get))
       )
     )
 
@@ -170,10 +178,10 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getCommitment(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof3.get))
       )
     )
 
@@ -186,10 +194,13 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
 
     val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(47)
 
-    sidechainIdSeq.foreach(v => {
-      val forwardTransferMerkleRootHash = new Array[Byte](size)
-      Random.nextBytes(forwardTransferMerkleRootHash)
-      shm.addForwardTransferMerkleRootHash(v, forwardTransferMerkleRootHash)
+    sidechainIdSeq.foreach(scId => {
+      val output = mock[MainchainTxForwardTransferCrosschainOutput]
+      val forwardTransferHash = new Array[Byte](32)
+      Random.nextBytes(forwardTransferHash)
+      Mockito.when(output.hash).thenReturn(forwardTransferHash)
+      val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
+      shm.addForwardTransfer(scId, ft)
     })
 
     val merkleTree = shm.getMerkleTree
@@ -202,7 +213,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Right neighbour must be leftmost", rProof1.get.merklePath.isLeftmost)
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof1.get))
+        rProof1.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof1.get))
       )
     )
 
@@ -214,14 +225,14 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertEquals("Left neighbour must have leaf index 22", 22, lProof2.get.merklePath.leafIndex())
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof2.get))
+        lProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof2.get))
       )
     )
 
     assertEquals("Right neighbour must have leaf index 23", 23, rProof2.get.merklePath.leafIndex())
     assertTrue("Right neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(rProof2.get))
+        rProof2.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(rProof2.get))
       )
     )
 
@@ -231,10 +242,10 @@ class SidechainsCommitmentTreeTest extends JUnitSuite {
     assertTrue("Proof for right neighbour must not exist.", rProof3.isEmpty)
 
     assertTrue("Left neighbour must be rightmost",
-      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get)))
+      lProof3.get.merklePath.isRightmost(SidechainCommitmentEntry.getCommitment(lProof3.get)))
     assertTrue("Left neighbour proof must be valid.",
       util.Arrays.equals(merkleTree.rootHash(),
-        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getSidechainCommitmentEntryHash(lProof3.get))
+        lProof3.get.merklePath.apply(SidechainCommitmentEntry.getCommitment(lProof3.get))
       )
     )
 

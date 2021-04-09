@@ -237,7 +237,7 @@ class SidechainStateTest
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
 
-    Mockito.when(mockedBlock.withdrawalEpochCertificateOpt).thenReturn(None)
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
