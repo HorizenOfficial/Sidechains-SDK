@@ -1,13 +1,13 @@
 package com.horizen.api.http;
 
-import scala.Option;
+import java.util.Optional;
 
 public class ErrorAllSecrets implements ErrorResponse {
 
     private String description;
-    private Option<Throwable> exception;
+    private Optional<Throwable> exception;
 
-    public ErrorAllSecrets(String description, Option<Throwable> exception) {
+    public ErrorAllSecrets(String description, Optional<Throwable> exception) {
         this.description = description;
         this.exception = exception;
     }
@@ -23,7 +23,7 @@ public class ErrorAllSecrets implements ErrorResponse {
     }
 
     @Override
-    public Option<Throwable> exception() {
+    public Optional<Throwable> exception() {
         return exception;
     }
 }

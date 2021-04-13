@@ -8,8 +8,10 @@ import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
+import java.util.{Optional => JOptional}
 
 import scala.collection.JavaConverters._
+import java.util.{Optional => JOptional}
 
 class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
 
@@ -27,7 +29,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "blockReferenceInfoBy").withEntity("maybe_a_json") ~> mainchainBlockApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "blockReferenceInfoBy").withEntity("maybe_a_json") ~> Route.seal(mainchainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -35,7 +37,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "blockReferenceByHash").withEntity("maybe_a_json") ~> mainchainBlockApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "blockReferenceByHash").withEntity("maybe_a_json") ~> Route.seal(mainchainBlockApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -53,7 +55,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "bestBlockReferenceInfo") ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", JOptional.empty()).code)
       }
     }
 
@@ -67,7 +69,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "genesisBlockReferenceInfo") ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", JOptional.empty()).code)
       }
     }
 
@@ -121,7 +123,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqBlockInfoBy(Some("AABBCC"), None))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockReferenceNotFound("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockReferenceNotFound("", JOptional.empty()).code)
       }
       // blockReferenceInfoBy height but no result
       sidechainApiMockConfiguration.setShould_history_getMainchainBlockReferenceInfoByMainchainBlockHeight_return_value(false)
@@ -129,13 +131,13 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqBlockInfoBy(None, Some(300)))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockReferenceNotFound("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockReferenceNotFound("", JOptional.empty()).code)
       }
       // blockReferenceInfoBy invalid parameters
       Post(basePath + "blockReferenceInfoBy") ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainInvalidParameter("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainInvalidParameter("", JOptional.empty()).code)
       }
     }
 
@@ -163,7 +165,7 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity((SerializationUtil.serialize(ReqBlockBy("AABBCC")))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorMainchainBlockNotFound("", JOptional.empty()).code)
       }
     }
   }

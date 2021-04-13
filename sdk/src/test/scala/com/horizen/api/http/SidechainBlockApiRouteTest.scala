@@ -12,6 +12,7 @@ import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
+import java.util.{Optional => JOptional}
 
 class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
 
@@ -91,7 +92,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById("invalid_block_id_00000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockId("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockId("", JOptional.empty()).code)
       }
     }
 
@@ -177,7 +178,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindIdByHeight(20))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", JOptional.empty()).code)
       }
     }
 
@@ -199,7 +200,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", JOptional.empty()).code)
       }
     }
 
@@ -218,7 +219,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", JOptional.empty()).code)
       }
     }
 
@@ -237,7 +238,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", JOptional.empty()).code)
       }
     }
 
@@ -267,7 +268,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 2}") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", JOptional.empty()).code)
       }
     }
 
@@ -308,7 +309,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", JOptional.empty()).code)
       }
     }
   }

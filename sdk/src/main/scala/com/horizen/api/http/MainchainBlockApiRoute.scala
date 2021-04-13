@@ -15,6 +15,7 @@ import scorex.core.utils.ScorexEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
+import java.util.{Optional => JOptional}
 
 case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -40,7 +41,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
         .getBestMainchainBlockReferenceInfo.asScala match {
         case Some(mcBlockRef) =>
           ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
-        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", None))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", JOptional.empty()))
       }
     }
   }
@@ -52,7 +53,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
       sidechainNodeView.getNodeHistory
         .getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainCreationBlockHeight).asScala match {
         case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
-        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", None))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", JOptional.empty()))
       }
     }
   }
@@ -68,7 +69,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                 if (body.format)
                   ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
                 else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
-              case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", None))
+              case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", JOptional.empty()))
             }
           case None =>
             body.height match {
@@ -78,9 +79,9 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                     if (body.format)
                       ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
                     else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
-                  case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", None))
+                  case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", JOptional.empty()))
                 }
-              case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", None))
+              case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", JOptional.empty()))
             }
         }
       }
@@ -101,7 +102,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))
             else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes)))
-          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", None))
+          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", JOptional.empty()))
         }
       }
     }
@@ -129,15 +130,15 @@ object MainchainRestSchema {
 
 object MainchainErrorResponse {
 
-  case class ErrorMainchainBlockNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainBlockNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0501"
   }
 
-  case class ErrorMainchainBlockReferenceNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainBlockReferenceNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0502"
   }
 
-  case class ErrorMainchainInvalidParameter(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainInvalidParameter(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0503"
   }
 

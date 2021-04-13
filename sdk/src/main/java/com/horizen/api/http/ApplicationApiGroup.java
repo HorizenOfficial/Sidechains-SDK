@@ -17,6 +17,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static akka.http.javadsl.server.Directives.*;
+import java.util.Optional;
 
 public abstract class ApplicationApiGroup {
     private FunctionsApplierOnSidechainNodeView functionsApplierOnSidechainNodeView;
@@ -84,7 +85,7 @@ public abstract class ApplicationApiGroup {
             return getFunctionsApplierOnSidechainNodeView().applyFunctionOnSidechainNodeView(func);
         }
         catch (Exception e) {
-            return new InternalExceptionApiErrorResponse(Some.apply(e));
+            return new InternalExceptionApiErrorResponse(Optional.of(e));
         }
     }
 
@@ -94,7 +95,7 @@ public abstract class ApplicationApiGroup {
             return getFunctionsApplierOnSidechainNodeView().applyBiFunctionOnSidechainNodeView(func, functionParameter);
         }
         catch (Exception e) {
-            return new InternalExceptionApiErrorResponse(Some.apply(e));
+            return new InternalExceptionApiErrorResponse(Optional.of(e));
         }
     }
 

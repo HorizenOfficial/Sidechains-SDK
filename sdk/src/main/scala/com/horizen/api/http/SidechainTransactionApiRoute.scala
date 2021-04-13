@@ -30,6 +30,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
@@ -144,7 +145,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             }
           case None =>
             // TO-DO Change the errorCode
-            ApiResponseUtil.toResponse(ErrorNotFoundTransactionId(error, None))
+            ApiResponseUtil.toResponse(ErrorNotFoundTransactionId(error, JOptional.empty()))
         }
       }
     }
@@ -160,7 +161,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           //TO-DO JSON representation of transaction
           ApiResponseUtil.toResponse(RespDecodeTransactionBytes(tx))
         case Failure(exp) =>
-          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, Some(exp)))
+          ApiResponseUtil.toResponse(ErrorByteTransactionParsing(exp.getMessage, JOptional.of(exp)))
       }
     }
   }
@@ -177,7 +178,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
-          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None))
+          ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty()))
         } else {
           val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
@@ -208,7 +209,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           val fee: Long = inputsTotalAmount - outputsTotalAmount
           if(fee < 0) {
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
-              Some(new IllegalArgumentException("Total inputs amount is less then total outputs amount."))))
+              JOptional.of(new IllegalArgumentException("Total inputs amount is less then total outputs amount."))))
           }
           else try {
             // Create unsigned tx
@@ -232,7 +233,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
           } catch {
             case t: Throwable =>
-              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t)))
+              ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(t)))
           }
         }
       }
@@ -260,11 +261,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                   ApiResponseUtil.toResponse(TransactionDTO(transaction))
                 else
                   ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
-              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+              case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
             }
           case None =>
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
-              Some(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
+              JOptional.of(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
         }
       }
     }
@@ -290,7 +291,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         }
       } match {
         case Success(transaction) => validateAndSendTransaction(transaction)
-        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
       }
     }
   }
@@ -311,7 +312,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         }
       } match {
         case Success(transaction) => validateAndSendTransaction(transaction)
-        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
       }
     }
   }
@@ -332,7 +333,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         }
       } match {
         case Success(transaction) => validateAndSendTransaction(transaction)
-        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(e)))
+        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
       }
     }
   }
@@ -350,7 +351,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
-          Left(ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", None)))
+          Left(ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty())))
         } else {
           val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
@@ -398,7 +399,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             Right((transaction, txRepresentation))
           } catch {
             case t: Throwable =>
-              Left(ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(t))))
+              Left(ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(t))))
           }
         }
       } match {
@@ -422,7 +423,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exp))
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
         )
     }
   }
@@ -438,7 +439,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         case Success(transaction) =>
           validateAndSendTransaction(transaction)
         case Failure(exception) =>
-          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", Some(exception)))
+          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
       }
     }
   }
@@ -632,19 +633,19 @@ object SidechainTransactionRestScheme {
 
 object SidechainTransactionErrorResponse {
 
-  case class ErrorNotFoundTransactionId(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorNotFoundTransactionId(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0201"
   }
 
-  case class ErrorNotFoundTransactionInput(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorNotFoundTransactionInput(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0202"
   }
 
-  case class ErrorByteTransactionParsing(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorByteTransactionParsing(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0203"
   }
 
-  case class GenericTransactionError(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class GenericTransactionError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0204"
   }
 

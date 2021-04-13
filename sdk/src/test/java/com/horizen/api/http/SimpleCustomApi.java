@@ -10,6 +10,7 @@ import scala.Some;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class SimpleCustomApi extends ApplicationApiGroup
 {
@@ -35,7 +36,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
             resp.setSecrets(res.subList(0, ent.getSecretCount()));
             return resp;
         } catch (Exception e) {
-            return new ErrorAllSecrets(e.getMessage(), Option.apply(e));
+            return new ErrorAllSecrets(e.getMessage(), Optional.of(e));
         }
     }
 
@@ -46,7 +47,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
             resp.setSecrets(res.subList(0, ent.getSecretCount()));
             return resp;
         } catch (Exception e) {
-            return new ErrorAllSecrets("Error.", Some.apply(e));
+            return new ErrorAllSecrets("Error.", Optional.of(e));
         }
     }
 
@@ -57,7 +58,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
             resp.setSecrets(res);
             return resp;
         } catch (Exception e) {
-            return new ErrorAllSecrets("Error.", Some.apply(e));
+            return new ErrorAllSecrets("Error.", Optional.of(e));
         }
     }
 
@@ -101,9 +102,9 @@ public class SimpleCustomApi extends ApplicationApiGroup
     public class ErrorAllSecrets implements ErrorResponse
     {
         private String description;
-        private Option<Throwable> exception;
+        private Optional<Throwable> exception;
 
-        public ErrorAllSecrets(String description, Option<Throwable> exception) {
+        public ErrorAllSecrets(String description, Optional<Throwable> exception) {
             this.description = description;
             this.exception = exception;
         }
@@ -124,7 +125,7 @@ public class SimpleCustomApi extends ApplicationApiGroup
         }
 
         @Override
-        public Option<Throwable> exception() {
+        public Optional<Throwable> exception() {
             return exception;
         }
     }

@@ -11,6 +11,7 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
+import java.util.{Optional => JOptional}
 
 class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
 
@@ -142,7 +143,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
       // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
       // searchTransactionInMemoryPool not found
@@ -248,7 +249,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, None, Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
       // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
       // searchTransactionInBlock not found
@@ -258,7 +259,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdNotValid, Some("blockHash"), Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionId("", JOptional.empty()).code)
       }
       // Case --> blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)
       // searchTransactionInBlock found
@@ -306,7 +307,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
           BytesUtils.toHexString(RegularTransactionSerializer.getSerializer.toBytes(memoryPool.get(0)))))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorByteTransactionParsing("", JOptional.empty()).code)
       }
       // BytesUtils.fromHexString -> ERROR
       Post(basePath + "decodeTransactionBytes")
@@ -359,14 +360,14 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         //println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", JOptional.empty()).code)
       }
       Post(basePath + "createCoreTransaction")
         .withEntity(SerializationUtil.serialize(ReqCreateCoreTransaction(List(transactionInput_2.head), transactionOutput, withdrawalRequests, forgerOutputs, None))) ~> sidechainTransactionApiRoute ~> check {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", JOptional.empty()).code)
       }
     }
 
@@ -482,14 +483,14 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqSendTransactionPost(BytesUtils.toHexString(RegularTransactionSerializer.getSerializer.toBytes(transaction))))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", JOptional.empty()).code)
       }
       sidechainApiMockConfiguration.setShould_transactionActor_BroadcastTransaction_reply(false)
       Post(basePath + "sendTransaction")
         .withEntity(SerializationUtil.serialize(ReqSendTransactionPost(BytesUtils.toHexString(transactionBytes)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", JOptional.empty()).code)
       }
     }
   }

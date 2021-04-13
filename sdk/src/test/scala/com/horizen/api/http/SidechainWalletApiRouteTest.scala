@@ -9,6 +9,7 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
+import java.util.{Optional => JOptional}
 
 class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
 
@@ -148,7 +149,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
       }
     }
 
@@ -175,7 +176,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "createPrivateKey25519") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
       }
     }
 
