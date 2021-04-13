@@ -4,19 +4,17 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.util
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.javadsl.marshallers.jackson.Jackson
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
+import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.Forger
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.params.MainNetParams
@@ -228,8 +226,6 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val mockedsidechainBlockActorRef: ActorRef = mockedSidechainBlockActor.ref
 
   implicit def default() = RouteTestTimeout(3.second)
-
-  val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
 
   val params = MainNetParams()
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,

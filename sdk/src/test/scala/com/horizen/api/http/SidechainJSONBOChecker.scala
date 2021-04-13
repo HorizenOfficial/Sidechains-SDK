@@ -28,9 +28,9 @@ class SidechainJSONBOChecker {
     unlockersJsonNode.foreach(node => {
       assertTrue(node.get("closedBoxId").isTextual)
       assertTrue(node.get("boxKey").isObject)
-      assertEquals(2, node.get("boxKey").elements().asScala.length)
+      assertEquals(1, node.get("boxKey").elements().asScala.length)
       val sign = node.get("boxKey")
-      assertEquals(2, sign.elements().asScala.length)
+      assertEquals(1, sign.elements().asScala.length)
       assertTrue(sign.get("signature").isTextual)
     })
     newBoxesJsonNode.foreach(node => {
@@ -80,9 +80,9 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("closedBoxId").isTextual)
     assertEquals(BytesUtils.toHexString(boxUnlocker.closedBoxId()), json.get("closedBoxId").asText())
     assertTrue(json.get("boxKey").isObject)
-    assertEquals(2, json.get("boxKey").elements().asScala.length)
+    assertEquals(1, json.get("boxKey").elements().asScala.length)
     val sign = json.get("boxKey")
-    assertEquals(2, sign.elements().asScala.length)
+    assertEquals(1, sign.elements().asScala.length)
     assertTrue(sign.get("signature").isTextual)
   }
 

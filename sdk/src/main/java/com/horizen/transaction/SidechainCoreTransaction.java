@@ -5,16 +5,15 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
-import com.horizen.companion.SidechainBoxesDataCompanion;
-import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.proof.Proof;
+import com.horizen.proof.ProofSerializer;
+import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import scorex.core.NodeViewModifier$;
 
-import static com.horizen.box.CoreBoxesIdsEnum.*;
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
 
 import java.io.ByteArrayOutputStream;
@@ -24,18 +23,25 @@ import java.util.*;
 public class SidechainCoreTransaction
         extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>>
 {
-    private List<byte[]> inputsIds;
-    private List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
-    private List<Proof<Proposition>> proofs;
+    private final List<byte[]> inputsIds;
+    private final List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
+    private final List<Proof<Proposition>> proofs;
 
     // Serializers definition
     private final static ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(
-            new SidechainBoxesDataCompanion(new HashMap<>()), MAX_TRANSACTION_NEW_BOXES);
-    private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(
-            new SidechainProofsCompanion(new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
+            new DynamicTypedSerializer<>(new HashMap<Byte, NoncedBoxDataSerializer>() {{
+                put((byte)1, ZenBoxDataSerializer.getSerializer());
+                put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
+                put((byte)3, ForgerBoxDataSerializer.getSerializer());
+            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
 
-    private long fee;
-    private long timestamp;
+    private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(
+            new DynamicTypedSerializer<>(new HashMap<Byte, ProofSerializer>() {{
+                put((byte)1, Signature25519Serializer.getSerializer());
+            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
+
+    private final long fee;
+    private final long timestamp;
 
     private List<BoxUnlocker<Proposition>> unlockers;
 

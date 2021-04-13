@@ -3,9 +3,8 @@ package com.horizen.fixtures
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
-import cats.instances.byte
 import com.horizen.SidechainTypes
-import com.horizen.companion.{SidechainBoxesDataCompanion, SidechainProofsCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.{SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.{RegularTransactionSerializer, TransactionSerializer}
 

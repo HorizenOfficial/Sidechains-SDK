@@ -8,8 +8,6 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 
 import java.util.Arrays;
 
-import static com.horizen.box.data.CoreBoxesDataIdsEnum.ZenBoxDataId;
-
 public final class ZenBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ZenBox, ZenBoxData> {
     public ZenBoxData(PublicKey25519Proposition proposition, long value) {
         super(proposition, value);
@@ -31,11 +29,6 @@ public final class ZenBoxData extends AbstractNoncedBoxData<PublicKey25519Propos
     @Override
     public NoncedBoxDataSerializer serializer() {
         return ZenBoxDataSerializer.getSerializer();
-    }
-
-    @Override
-    public byte boxDataTypeId() {
-        return ZenBoxDataId.id();
     }
 
     public static ZenBoxData parseBytes(byte[] bytes) {

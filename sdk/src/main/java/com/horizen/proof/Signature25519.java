@@ -7,9 +7,6 @@ import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
 
-import static com.horizen.proof.CoreProofsIdsEnum.Signature25519Id;
-
-
 public final class Signature25519 extends AbstractSignature25519<PrivateKey25519, PublicKey25519Proposition>
 {
     public static int SIGNATURE_LENGTH = Ed25519.signatureLength();
@@ -19,11 +16,6 @@ public final class Signature25519 extends AbstractSignature25519<PrivateKey25519
         if (signatureBytes.length != SIGNATURE_LENGTH)
             throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
                     signatureBytes.length));
-    }
-
-    @Override
-    public byte proofTypeId() {
-        return Signature25519Id.id();
     }
 
     @Override

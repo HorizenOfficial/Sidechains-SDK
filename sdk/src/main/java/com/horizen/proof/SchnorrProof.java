@@ -1,6 +1,5 @@
 package com.horizen.proof;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
@@ -10,10 +9,7 @@ import com.horizen.serialization.Views;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.proof.CoreProofsIdsEnum.SchnorrSignatureId;
-
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties("typeId")
 public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition>
 {
     private final byte[] signature;
@@ -22,11 +18,6 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
         Objects.requireNonNull(signatureBytes, "SchnorrProofBytes can't be null");
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
-    }
-
-    @Override
-    public byte proofTypeId() {
-        return SchnorrSignatureId.id();
     }
 
     @Override

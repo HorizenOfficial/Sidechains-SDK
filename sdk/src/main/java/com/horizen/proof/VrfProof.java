@@ -1,6 +1,5 @@
 package com.horizen.proof;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.VrfPublicKey;
@@ -14,10 +13,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.horizen.proof.CoreProofsIdsEnum.VrfProofId;
-
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties("typeId")
 public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
     private final byte[] proofBytes;
 
@@ -45,11 +41,6 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     @Override
     public ProofSerializer serializer() {
         return VrfProofSerializer.getSerializer();
-    }
-
-    @Override
-    public byte proofTypeId() {
-        return VrfProofId.id();
     }
 
     @Override

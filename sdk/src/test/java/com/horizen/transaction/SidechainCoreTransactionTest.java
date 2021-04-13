@@ -2,8 +2,6 @@ package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
 import com.horizen.box.data.NoncedBoxData;
-import com.horizen.companion.SidechainBoxesDataCompanion;
-import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
@@ -11,7 +9,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.Assert.*;
