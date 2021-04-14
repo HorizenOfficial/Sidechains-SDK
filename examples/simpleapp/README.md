@@ -36,6 +36,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
 			```
 			LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
 			```
+		 - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
 
 **Running Simple App isolated from Mainchain**
 
