@@ -10,7 +10,6 @@ import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.box.data.NoncedBoxDataSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
@@ -18,7 +17,6 @@ import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
-import com.horizen.proof.ProofSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
@@ -49,9 +47,7 @@ import scala.util.Try
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
-   @Named("CustomBoxDataSerializers") val customBoxDataSerializers: JHashMap[JByte, NoncedBoxDataSerializer[SidechainTypes#SCBD]],
    @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   @Named("CustomProofSerializers") val customProofSerializers: JHashMap[JByte, ProofSerializer[SidechainTypes#SCPR]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
