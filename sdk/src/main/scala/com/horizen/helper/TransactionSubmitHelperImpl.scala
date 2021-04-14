@@ -15,10 +15,10 @@ class TransactionSubmitHelperImpl @Inject()(val appProvider: Provider[SidechainA
 
   @throws(classOf[IllegalArgumentException])
   override def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit = {
-    appProvider.get().getTransactionSubmitProvider().submitTransaction(tx)
+    appProvider.get().getTransactionSubmitProvider.submitTransaction(tx)
   }
 
   override def asyncSubmitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]], callback: BiConsumer[lang.Boolean, Optional[Throwable]]): Unit = {
-    appProvider.get().getTransactionSubmitProvider().asyncSubmitTransaction(tx, (res, t) => callback.accept(res, t.asJava))
+    appProvider.get().getTransactionSubmitProvider.asyncSubmitTransaction(tx, (res, t) => callback.accept(res, t.asJava))
   }
 }

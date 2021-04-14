@@ -16,7 +16,7 @@ import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proof.ProofSerializer
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
@@ -36,12 +36,12 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
+
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
-
 
 import scala.util.Try
 
@@ -270,8 +270,9 @@ class SidechainApp @Inject()
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
 
-  var transactionSubmitProvider : TransactionSubmitProvider =  new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
-  var nodeViewProvider : NodeViewProvider =  new NodeViewProviderImpl(nodeViewHolderRef)
+  val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
+  val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
+  val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
@@ -292,13 +293,11 @@ class SidechainApp @Inject()
     storage
   }
 
-  def getTransactionSubmitProvider(): TransactionSubmitProvider = {
-    transactionSubmitProvider
-  }
+  def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
 
-  def getNodeViewProvider(): NodeViewProvider = {
-    nodeViewProvider
-  }
+  def getNodeViewProvider: NodeViewProvider = nodeViewProvider
+
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

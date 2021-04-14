@@ -115,18 +115,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   protected def processLocallyGeneratedSecret: Receive = {
-    case ls: SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret[SidechainTypes#SCS] =>
-      secretModify(ls.secret)
-  }
-
-  protected def secretModify(secret: SidechainTypes#SCS): Unit = {
-    vault().addSecret(secret) match {
-      case Success(newVault) =>
-        updateNodeView(updatedVault = Some(newVault))
-        sender() ! Success(Unit)
-      case Failure(ex) =>
-        sender() ! Failure(ex)
-    }
+    case SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
+      vault().addSecret(secret) match {
+        case Success(newVault) =>
+          updateNodeView(updatedVault = Some(newVault))
+          sender() ! Success(Unit)
+        case Failure(ex) =>
+          sender() ! Failure(ex)
+      }
   }
 
   override def receive: Receive = {

@@ -13,7 +13,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
-class TransactionSubmitProviderImpl(var transactionActor: ActorRef) extends TransactionSubmitProvider {
+class TransactionSubmitProviderImpl(transactionActor: ActorRef) extends TransactionSubmitProvider {
 
   implicit val timeout: Timeout = 20 seconds
 
