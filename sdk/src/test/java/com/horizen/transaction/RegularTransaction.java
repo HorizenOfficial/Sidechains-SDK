@@ -10,6 +10,7 @@ import com.horizen.proposition.*;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
@@ -133,36 +134,33 @@ public final class RegularTransaction
     }
 
     @Override
-    public boolean transactionSemanticValidity() {
-        if(fee < 0 || timestamp < 0)
-            return false;
-
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         // check that we have enough proofs and try to open each box only once.
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs number is not consistent to proofs number.", id()));
 
         // check supported new boxes data
         if(!checkSupportedBoxDataTypes(outputs))
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "contains box data output of invalid type.", id()));
 
-        Long outputsAmount = 0L;
+        long outputsAmount = 0L;
         for(NoncedBoxData output: outputs) {
-            if (output.value() <= 0)
-                return false;
             outputsAmount += output.value();
         }
 
-        Long inputsAmount = 0L;
+        long inputsAmount = 0L;
         for(int i = 0; i < inputs.size(); i++) {
             if (!signatures.get(i).isValid(inputs.get(i).proposition(), messageToSign()))
-                return false;
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "inputs input [%d] signature.", id(), i));
             inputsAmount += inputs.get(i).value();
         }
 
         if(inputsAmount != outputsAmount + fee)
-            return false;
-
-        return true;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inconsistent inputs, outputs and fee amount.", id()));
     }
 
     @Override

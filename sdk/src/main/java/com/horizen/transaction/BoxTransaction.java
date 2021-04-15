@@ -9,6 +9,7 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;
@@ -45,7 +46,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("typeId")
     public abstract byte transactionTypeId();
 
-    public abstract boolean semanticValidity();
+    public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
     // Transaction Id must depend on the whole transaction content including proof
     // Note: In future inside snarks id calculation will be different

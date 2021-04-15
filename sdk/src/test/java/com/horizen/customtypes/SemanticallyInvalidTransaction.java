@@ -6,6 +6,7 @@ import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.TransactionSerializer;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 
 import java.util.ArrayList;
@@ -20,8 +21,8 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public boolean transactionSemanticValidity() {
-        return false;
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
+        throw new TransactionSemanticValidityException("invalid tx");
     }
 
     @Override

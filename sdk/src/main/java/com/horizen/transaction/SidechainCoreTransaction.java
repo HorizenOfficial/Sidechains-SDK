@@ -9,6 +9,7 @@ import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
@@ -108,18 +109,19 @@ public class SidechainCoreTransaction
     }
 
     @Override
-    public boolean transactionSemanticValidity() {
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         if(timestamp < 0)
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "timestamp is negative.", id()));
 
         if(inputsIds.isEmpty() || outputsData.isEmpty())
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no input and output data present.", id()));
 
         // check that we have enough proofs and try to open each box only once.
         if(inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
-            return false;
-
-        return true;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs number is not consistent to proofs number.", id()));
     }
 
     @Override

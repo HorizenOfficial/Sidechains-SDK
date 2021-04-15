@@ -6,6 +6,7 @@ import com.horizen.proof.Proof;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.ListSerializer;
 
 import java.util.ArrayList;
@@ -110,15 +111,11 @@ public abstract class AbstractRegularTransaction
     }
 
     @Override
-    public boolean transactionSemanticValidity() {
-        if(fee < 0 || timestamp < 0)
-            return false;
-
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         // check that we have enough proofs.
         if(inputZenBoxIds.size() != inputZenBoxProofs.size()) {
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs number is not consistent to proofs number.", id()));
         }
-
-        return true;
     }
 }

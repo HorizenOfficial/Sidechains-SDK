@@ -6,12 +6,13 @@ import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, Withdrawa
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{SidechainTypesTestsExtension, SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
@@ -132,12 +133,11 @@ class SidechainStateTestTestsExtension
     //Test semanticValidity
     val mockedTransaction = mock[SidechainTypes#SCBT]
 
-    Mockito.when(mockedTransaction.semanticValidity())
-      .thenReturn(true)
-      .thenReturn(false)
-
     assertTrue("Call of semanticValidity must be successful.",
       sidechainState.semanticValidity(mockedTransaction).isSuccess)
+
+    Mockito.when(mockedTransaction.semanticValidity())
+      .thenThrow(new TransactionSemanticValidityException("test case exception."))
     assertTrue("Call of semanticValidity must be unsuccessful.",
       sidechainState.semanticValidity(mockedTransaction).isFailure)
 
@@ -225,7 +225,7 @@ class SidechainStateTestTestsExtension
 
     val doubleSpendInTransaction = sidechainState.validate(doubleSpendTransactionMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $doubleSpendInTransaction",
-      "Transaction is semantically invalid." == doubleSpendInTransaction.failed.get.getMessage)
+      doubleSpendInTransaction.failed.get.getMessage.contains("inputs double spend found."))
 
     for(b <- changes.get.toRemove) {
       assertFalse("Box to remove is not found in storage.",

@@ -11,6 +11,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +89,16 @@ public class RegularTransactionTest extends BoxFixtureClass {
                     actual.boxKey().isValid(expected.getValue().publicImage(), transaction.messageToSign()));
         }
 
-        assertTrue("Transaction should be semantically valid.", transaction.semanticValidity());
+        boolean isValid = true;
+        try {
+            transaction.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically valid.", isValid);
     }
 
     @Test
@@ -146,7 +156,18 @@ public class RegularTransactionTest extends BoxFixtureClass {
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
 
         List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
-        assertTrue("Transaction must be semantically valid.", tx1.semanticValidity());
+
+        boolean isValid = true;
+        try {
+            tx1.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically valid.", isValid);
+
         assertEquals("Count of new boxes must be the same as count of withdrawal requests.",
                 to.size(), tx1NewBoxes.size());
         for(NoncedBox box : tx1NewBoxes ) {
@@ -166,7 +187,17 @@ public class RegularTransactionTest extends BoxFixtureClass {
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
 
         List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
-        assertTrue("Transaction must be semantically valid.", tx2.semanticValidity());
+
+        try {
+            tx2.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically valid.", isValid);
+
         assertEquals("Count of new boxes must be the same as count of zen boxes and withdrawal requests.",
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {
@@ -192,7 +223,18 @@ public class RegularTransactionTest extends BoxFixtureClass {
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
 
         List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
-        assertTrue("Transaction must be semantically valid.", tx1.semanticValidity());
+
+        boolean isValid = true;
+        try {
+            tx1.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically valid.", isValid);
+
         assertEquals("Count of new boxes must be the same as count of forger boxes.",
                 to.size(), tx1NewBoxes.size());
         for(NoncedBox box : tx1NewBoxes ) {
@@ -213,7 +255,17 @@ public class RegularTransactionTest extends BoxFixtureClass {
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
 
         List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
-        assertTrue("Transaction must be semantically valid.", tx2.semanticValidity());
+
+        try {
+            tx2.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically valid.", isValid);
+
         assertEquals("Count of new boxes must be the same as count of regular boxes and forger boxes.",
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {

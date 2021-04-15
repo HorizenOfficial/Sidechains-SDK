@@ -10,6 +10,7 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -118,8 +119,8 @@ public final class MC2SCAggregatedTransaction
         return Collections.unmodifiableList(mc2scTransactionsOutputs);
     }
 
-    public boolean semanticValidity() {
-        return true;
+    public void semanticValidity() throws TransactionSemanticValidityException {
+        // no specific checks
     }
 
 

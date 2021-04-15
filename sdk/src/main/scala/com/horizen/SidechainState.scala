@@ -83,8 +83,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: emit tx.semanticValidity for each tx
   def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
-    if (!tx.semanticValidity())
-      throw new Exception("Transaction is semantically invalid.")
+    tx.semanticValidity()
   }
 
   // get closed box from storages

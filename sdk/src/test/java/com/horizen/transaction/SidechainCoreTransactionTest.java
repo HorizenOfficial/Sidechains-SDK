@@ -5,6 +5,7 @@ import com.horizen.box.data.NoncedBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -96,37 +97,94 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
 
         // Test 1: create semantically valid transaction
         SidechainCoreTransaction tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
-        assertTrue("Transaction expected to be semantically Valid.", tx.semanticValidity());
+        boolean isValid = true;
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertTrue("Transaction expected to be semantically Valid.", isValid);
 
 
         // Test 2: create semantically invalid transaction - fee is negative
         tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, -10L, timestamp);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
         // Test 3: create semantically invalid transaction - timestamp is negative
         tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, -10L);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
         // Test 4: create semantically invalid transaction - inputs ids list is empty
         tx = new SidechainCoreTransaction(new ArrayList<>(), outputsData, proofs, fee, timestamp);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
         // Test 5: create semantically invalid transaction - outputs data list is empty
         tx = new SidechainCoreTransaction(inputsIds, new ArrayList<>(), proofs, fee, timestamp);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
         // Test 6: create semantically invalid transaction - number of inputs (1) is different to number of proofs (2)
         tx = new SidechainCoreTransaction(Arrays.asList(getRandomBoxId()), outputsData, proofs, fee, timestamp);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
         // Test 7: create semantically invalid transaction - inputs list contains duplicates
         byte[] boxId = getRandomBoxId();
         tx = new SidechainCoreTransaction(Arrays.asList(boxId, boxId), outputsData, proofs, fee, timestamp);
-        assertFalse("Transaction expected to be semantically Invalid.", tx.semanticValidity());
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
     }
 }

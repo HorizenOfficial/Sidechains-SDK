@@ -8,6 +8,7 @@ import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.ZenCoinsUtils;
 import scorex.crypto.hash.Blake2b256;
@@ -58,7 +59,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
 
     protected abstract List<P> newBoxesPropositions();
 
-    public abstract boolean transactionSemanticValidity();
+    public abstract void transactionSemanticValidity() throws TransactionSemanticValidityException;
 
     // We check, that:
     // 1) there is no double spend boxes.
@@ -68,11 +69,12 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
     // 5) fee is non-negative.
     // Then do inheritors check.
     @Override
-    public final boolean semanticValidity() {
+    public final void semanticValidity() throws TransactionSemanticValidityException {
         // Check that transaction doesn't make a double spend,
         // by verifying that the the size of the unique set of box ids is equal to the unlockers size.
         if(unlockers().size() != boxIdsToOpen().size())
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs double spend found.", id()));
 
         // Check output boxes nonce correctness and coin box values.
         long coinsCumulatedValue = 0;
@@ -80,25 +82,30 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
         for(int i = 0; i < boxes.size(); i++) {
             B box = boxes.get(i);
             if(box.nonce() != getNewBoxNonce(box.proposition(), i)) {
-                return false;
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "output box [%d] nonce is invalid", id(), i));
             }
             // check coins box value
             if(box instanceof CoinsBox || box instanceof WithdrawalRequestBox) {
                 if(!ZenCoinsUtils.isValidMoneyRange(box.value()))
-                    return false;
+                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "output coin box [%d] value is out of range.", id(), i));
                 coinsCumulatedValue += box.value();
                 if(!ZenCoinsUtils.isValidMoneyRange(coinsCumulatedValue))
-                    return false;
+                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "output coin boxes total value is out of range.", id()));
             } else {
                 // Non-coins box should have at least non-negative value
                 if (box.value() < 0)
-                    return false;
+                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "output non-coin box [%d] value is negative.", id(), i));
             }
         }
 
         if(fee() < 0)
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "fee is negative.", id()));
 
-        return transactionSemanticValidity();
+        transactionSemanticValidity();
     }
 }
