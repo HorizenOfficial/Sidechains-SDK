@@ -37,6 +37,11 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
     public byte[] sidechainId() {
         return output.sidechainId();
     }
@@ -63,6 +68,15 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
                 containingTxHash,
                 Ints.toByteArray(index)
         );
+    }
+
+    @Override
+    public int transactionIndex() {
+        return index;
+    }
+
+    public MainchainTxSidechainCreationCrosschainOutput getScCrOutput() {
+        return output;
     }
 
     public Optional<byte[]> getGenSysConstantOpt() {

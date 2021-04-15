@@ -30,9 +30,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
-    assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
-    assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
+    assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
+    assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -58,9 +57,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
-    assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
-    assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
+    assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
+    assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -85,9 +83,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be parsed", block.isSuccess)
     assertEquals("Block Hash is different.", "0000000009b9f4a9f2abe5cd129421df969d1eb1b02d3fd685ab0781939ead07", block.get.header.hashHex)
-    assertFalse("Old Block occurred, MProof expected to be undefined.", block.get.data.mProof.isDefined)
-    assertFalse("Old Block occurred, proof of no data for left neighbour expected to be undefined.", block.get.data.proofOfNoData._1.isDefined)
-    assertFalse("Old Block occurred, proof of no data for right neighbour expected to be undefined.", block.get.data.proofOfNoData._2.isDefined)
+    assertFalse("Old Block occurred, proof of existence expected to be undefined.", block.get.data.existenceProof.isDefined)
+    assertFalse("Old Block occurred, proof of absence expected to be undefined.", block.get.data.absenceProof.isDefined)
     assertFalse("Old Block occurred, MC2SCAggTx expected to be undefined.", block.get.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertFalse("Old Block occurred, Certificate expected to be undefined.", block.get.data.topQualityCertificate.isDefined)
     assertEquals("Block version = 536870912 expected.", 536870912, block.get.header.version)
@@ -121,9 +118,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock.data.mProof.isEmpty)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must not contain proof of existence.", mcblock.data.existenceProof.isEmpty)
+    assertTrue("Block must not contain proof of absence", mcblock.data.absenceProof.isEmpty)
 
     assertEquals("Block Hash is different.", "036af1a575b50d4c4fa97e23bc9be952846dbf1e10379c3a825624a5448904c6", mcblock.header.hashHex)
     assertEquals("Block version = 3 expected.", 536870912, mcblock.header.version)
@@ -160,9 +156,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
 
     // Test 2: Check for the sidechain in the middle, that is mentioned in the block.
@@ -181,9 +176,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock2.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock2.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock2.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isEmpty)
 
 
     // Test 3:  Check for the rightmost sidechain mentioned in the block.
@@ -202,9 +196,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isDefined)
     assertTrue("Block must not contain certificate.", mcblock3.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must contain proof.", mcblock3.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock3.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock3.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock3.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock3.data.absenceProof.isEmpty)
 
 
     // Test 4: Check for the sidechain that is not mentioned in the block and has a leftmost neighbour.
@@ -222,9 +215,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock4.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock4.data.mProof.isEmpty)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock4.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must contain proof for right neighbour.", mcblock4.data.proofOfNoData._2.isDefined)
+    assertTrue("Block must not contain proof of existence.", mcblock4.data.existenceProof.isEmpty)
+    assertTrue("Block must not contain proof of absence", mcblock4.data.absenceProof.isEmpty)
 
 
     // Test 5: Check for the sidechain that is not mentioned in the block and has a rightmost neighbour.
@@ -242,9 +234,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock5.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock5.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock5.data.mProof.isEmpty)
-    assertTrue("Block must contain proof for left neighbour.", mcblock5.data.proofOfNoData._1.isDefined)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock5.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must not contain proof of existence.", mcblock5.data.existenceProof.isEmpty)
+    assertTrue("Block must contain proof of absence.", mcblock5.data.absenceProof.isDefined)
 
 
     // Test 6: Check for the sidechain that is not mentioned in the block and has a both left and right neighbours.
@@ -263,9 +254,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock6.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock6.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock6.data.mProof.isEmpty)
-    assertTrue("Block must contain proof for left neighbour.", mcblock6.data.proofOfNoData._1.isDefined)
-    assertTrue("Block must contain proof for right neighbour.", mcblock6.data.proofOfNoData._2.isDefined)
+    assertTrue("Block must not contain proof of existence.", mcblock6.data.existenceProof.isEmpty)
+    assertTrue("Block must contain proof of absence.", mcblock6.data.absenceProof.isDefined)
 
 
     // Test 7: Check for the sidechain that is not mentioned in the block and has a both left and right neighbours.
@@ -284,9 +274,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock7.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock7.data.topQualityCertificate.isEmpty)
-    assertTrue("Block must not contain proof.", mcblock7.data.mProof.isEmpty)
-    assertTrue("Block must contain proof for left neighbour.", mcblock7.data.proofOfNoData._1.isDefined)
-    assertTrue("Block must contain proof for right neighbour.", mcblock7.data.proofOfNoData._2.isDefined)
+    assertTrue("Block must not contain proof of existence.", mcblock7.data.existenceProof.isEmpty)
+    assertTrue("Block must contain proof of absence.", mcblock7.data.absenceProof.isDefined)
   }
 
   @Test
@@ -310,9 +299,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
-    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
   }
 
   @Test
@@ -336,8 +324,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain top quality certificate.", mcblock1.data.topQualityCertificate.isDefined)
     assertEquals("Block must contain 1 low quality certificate.", 1, mcblock1.data.lowerCertificateLeaves.size)
-    assertTrue("Block must contain proof.", mcblock1.data.mProof.isDefined)
-    assertTrue("Block must not contain proof for left neighbour.", mcblock1.data.proofOfNoData._1.isEmpty)
-    assertTrue("Block must not contain proof for right neighbour.", mcblock1.data.proofOfNoData._2.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence.", mcblock1.data.absenceProof.isEmpty)
   }
 }

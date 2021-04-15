@@ -29,6 +29,11 @@ public final class BwtRequest implements SidechainRelatedMainchainOutput<Withdra
     }
 
     @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
     public byte[] sidechainId() {
         return output.sidechainId();
     }
@@ -45,6 +50,15 @@ public final class BwtRequest implements SidechainRelatedMainchainOutput<Withdra
                 containingTxHash,
                 Ints.toByteArray(index)
         );
+    }
+
+    @Override
+    public int transactionIndex() {
+        return index;
+    }
+
+    public MainchainTxBwtRequestCrosschainOutput getBwtOutput() {
+        return output;
     }
 
     public static BwtRequest parseBytes(byte[] bytes) {

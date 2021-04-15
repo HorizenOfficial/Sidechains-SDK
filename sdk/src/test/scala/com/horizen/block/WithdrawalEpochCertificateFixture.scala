@@ -22,6 +22,7 @@ trait WithdrawalEpochCertificateFixture {
       Seq(),
       Seq(),
       Seq(),
-      Seq())
+      Seq(),
+      new Array[Byte](0))
   }
 }

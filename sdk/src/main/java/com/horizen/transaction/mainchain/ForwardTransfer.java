@@ -35,6 +35,16 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
+    public int transactionIndex() {
+        return index;
+    }
+
+    @Override
     public byte[] sidechainId() {
         return output.sidechainId();
     }
@@ -57,6 +67,18 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
                 containingTxHash,
                 Ints.toByteArray(index)
         );
+    }
+
+    public MainchainTxForwardTransferCrosschainOutput getFtOutput() {
+        return output;
+    }
+
+    public long outputAmount() {
+        return output.amount();
+    }
+
+    public byte[] outputTx() {
+        return output.forwardTransferOutputBytes();
     }
 
     public static ForwardTransfer parseBytes(byte[] bytes) {
