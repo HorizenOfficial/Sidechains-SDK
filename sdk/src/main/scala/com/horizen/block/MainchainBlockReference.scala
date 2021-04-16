@@ -53,62 +53,51 @@ case class MainchainBlockReference(
     if(!data.headerHash.sameElements(header.hash))
       throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
 
-    if (util.Arrays.equals(header.hashScTxsCommitment, params.zeroHashBytes)) {
-      // If there is not SC related outputs in MC block, then proofs, AggTx and Certificates expected to be not defined.
-      if (data.existenceProof.isDefined ||
-          data.absenceProof.isDefined ||
-          data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.lowerCertificateLeaves.nonEmpty ||
-          data.topQualityCertificate.isDefined)
+    val sidechainId = new ByteArrayWrapper(params.sidechainId)
+
+    // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
+    if (data.existenceProof.isDefined) {
+      // Check for defined transaction and/or certificate.
+      if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
-    }
-    else {
-      val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
-      // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
-      if (data.existenceProof.isDefined) {
-        // Check for defined transaction and/or certificate.
-        if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+      // Check for absence proof.
+      if (data.absenceProof.isDefined)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-        // Check for absence proof.
-        if (data.absenceProof.isDefined)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+      val sidechainsCommitmentTreeWrapper = new SidechainCommitmentTree();
 
-        val sidechainsCommitmentTreeWrapper = new SidechainCommitmentTree();
-
-        if (data.sidechainRelatedAggregatedTransaction.isDefined) {
-          data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala.foreach {
-            case sc: SidechainCreation => sidechainsCommitmentTreeWrapper.addSidechainCreation(sc)
-            case ft: ForwardTransfer => sidechainsCommitmentTreeWrapper.addForwardTransfer(ft)
-          }
+      if (data.sidechainRelatedAggregatedTransaction.isDefined) {
+        data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala.foreach {
+          case sc: SidechainCreation => sidechainsCommitmentTreeWrapper.addSidechainCreation(sc)
+          case ft: ForwardTransfer => sidechainsCommitmentTreeWrapper.addForwardTransfer(ft)
         }
-
-        // Add certificates in the original order
-        data.lowerCertificateLeaves.foreach(leaf => sidechainsCommitmentTreeWrapper.addCertLeaf(sidechainId.data,leaf))
-        data.topQualityCertificate.foreach(cert => sidechainsCommitmentTreeWrapper.addCertificate(cert))
-
-        if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
-          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
-
-        val scCommitmentOpt = sidechainsCommitmentTreeWrapper.getSidechainCommitmentEntryHash(sidechainId);
-        if (scCommitmentOpt.isEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
-
-        if (!SidechainCommitmentTree.verifyExistanceProof(scCommitmentOpt.get, data.existenceProof.get, header.hashScTxsCommitment))
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
-      } else { // Current sidechain was not mentioned in MainchainBlockReference.
-        // Check for empty transaction and certificates.
-        if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
-
-        // Check for absence proof to be defined.
-        if (data.absenceProof.isEmpty)
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
-
-        if (!SidechainCommitmentTree.verifyAbsenceProof(sidechainId.data, data.absenceProof.get, header.hashScTxsCommitment))
-          throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
       }
+
+      // Add certificates in the original order
+      data.lowerCertificateLeaves.foreach(leaf => sidechainsCommitmentTreeWrapper.addCertLeaf(sidechainId.data,leaf))
+      data.topQualityCertificate.foreach(cert => sidechainsCommitmentTreeWrapper.addCertificate(cert))
+
+      if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
+        throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
+
+      val scCommitmentOpt = sidechainsCommitmentTreeWrapper.getSidechainCommitmentEntryHash(sidechainId);
+      if (scCommitmentOpt.isEmpty)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
+
+      if (!SidechainCommitmentTree.verifyExistanceProof(scCommitmentOpt.get, data.existenceProof.get, header.hashScTxsCommitment))
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
+    } else { // Current sidechain was not mentioned in MainchainBlockReference.
+      // Check for empty transaction and certificates.
+      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+
+      // Check for absence proof to be defined.
+      if (data.absenceProof.isEmpty)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
+
+      if (!SidechainCommitmentTree.verifyAbsenceProof(sidechainId.data, data.absenceProof.get, header.hashScTxsCommitment))
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
     }
   }
 }
@@ -151,6 +140,7 @@ object MainchainBlockReference extends ScorexLogging {
         val sidechainRelatedCrosschainOutputs: Map[ByteArrayWrapper, Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]]] =
           crosschainOutputs.groupBy(output => new ByteArrayWrapper(output.sidechainId()))
 
+        scIds = scIds ++ sidechainRelatedCrosschainOutputs.keys
         crosschainOutputs.foreach{
           case sc: SidechainCreation => sidechainsCommitmentTreeWrapper.addSidechainCreation(sc);
           case ft: ForwardTransfer => sidechainsCommitmentTreeWrapper.addForwardTransfer(ft);
@@ -170,9 +160,7 @@ object MainchainBlockReference extends ScorexLogging {
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
-          if (scIds.isEmpty) {
-            MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)
-          } else if (scIds.contains(sidechainId)) {
+          if (scIds.contains(sidechainId)) {
             val scExistenceProof = sidechainsCommitmentTreeWrapper.getExistanceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,
               mc2scTransaction,

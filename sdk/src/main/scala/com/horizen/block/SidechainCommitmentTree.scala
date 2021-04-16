@@ -36,8 +36,15 @@ class SidechainCommitmentTree {
   }
 
   def addCertificate(certificate: WithdrawalEpochCertificate): Unit = {
+    val sampleField:Array[Byte] = Array(
+      0xffb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f
+    ).map(value => value.toByte);
+
     val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput => new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount));
-    commitmentTree.addCert(certificate.sidechainId, certificate.epochNumber, certificate.quality, certificate.hash, btrList.toArray, certificate.merkelRoot, certificate.endEpochBlockHash);
+    commitmentTree.addCert(certificate.sidechainId, certificate.epochNumber, certificate.quality, certificate.hash, btrList.toArray, sampleField, certificate.endEpochBlockHash);
   }
 
   def addCertLeaf(scid: Array[Byte], leaf: Array[Byte])  = {

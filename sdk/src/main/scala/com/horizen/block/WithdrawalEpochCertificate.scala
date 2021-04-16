@@ -24,8 +24,7 @@ case class WithdrawalEpochCertificate
    bitVectorCertificateFields: Seq[BitVectorCertificateField],
    transactionInputs: Seq[MainchainTransactionInput],
    transactionOutputs: Seq[MainchainTransactionOutput],
-   backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput],
-   merkelRoot: Array[Byte])
+   backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput])
   extends BytesSerializable
 {
   override type M = WithdrawalEpochCertificate
@@ -136,8 +135,7 @@ object WithdrawalEpochCertificate {
       bitVectorCertificateFields,
       transactionInputs,
       transactionOutputs,
-      backwardTransferOutputs,
-      new Array[Byte](0)) //TODO Add merkel root deserialization
+      backwardTransferOutputs)
   }
 }
 
