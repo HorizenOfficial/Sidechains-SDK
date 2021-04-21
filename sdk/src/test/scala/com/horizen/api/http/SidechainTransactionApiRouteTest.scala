@@ -100,32 +100,32 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqAllTransactions(None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transactions").isArray)
-            assertEquals(memoryPool.size(), result.get("transactions").elements().asScala.length)
-            val transactionJsonNode = result.get("transactions").elements().asScala.toList
-            for (i <- 0 to transactionJsonNode.size - 1)
-              jsonChecker.assertsOnTransactionJson(transactionJsonNode(i), memoryPool.get(i))
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactions").isArray)
+        assertEquals(memoryPool.size(), result.get("transactions").elements().asScala.length)
+        val transactionJsonNode = result.get("transactions").elements().asScala.toList
+        for (i <- 0 to transactionJsonNode.size - 1)
+          jsonChecker.assertsOnTransactionJson(transactionJsonNode(i), memoryPool.get(i))
       }
       // parameter 'format' = false
       Post(basePath + "allTransactions")
         .withEntity(SerializationUtil.serialize(ReqAllTransactions(Some(false)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transactionIds").isArray)
-            assertEquals(memoryPool.size(), result.get("transactionIds").elements().asScala.length)
-            val transactionIdsJsonNode = result.get("transactionIds").elements().asScala.toList
-            for (i <- 0 to transactionIdsJsonNode.size - 1)
-              assertEquals(memoryPool.get(i).id, transactionIdsJsonNode(i).asText())
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionIds").isArray)
+        assertEquals(memoryPool.size(), result.get("transactionIds").elements().asScala.length)
+        val transactionIdsJsonNode = result.get("transactionIds").elements().asScala.toList
+        for (i <- 0 to transactionIdsJsonNode.size - 1)
+          assertEquals(memoryPool.get(i).id, transactionIdsJsonNode(i).asText())
       }
     }
 
@@ -155,13 +155,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transactionBytes").isTextual)
-            assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionBytes").isTextual)
+        assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
       }
       // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
       // searchTransactionInMemoryPool not found
@@ -172,13 +172,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transaction").isObject)
-            jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transaction").isObject)
+        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
       // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
       // searchTransactionInMemoryPool found
@@ -188,13 +188,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transactionBytes").isTextual)
-            assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionBytes").isTextual)
+        assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
       }
       // Case --> blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain
       // searchTransactionInMemoryPool found
@@ -203,13 +203,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(true), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transaction").isObject)
-            jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transaction").isObject)
+        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
       // Case --> blockHash not set, txIndex = false -> Search in memory pool
       // searchTransactionInMemoryPool found
@@ -218,13 +218,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(false), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transactionBytes").isTextual)
-            assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionBytes").isTextual)
+        assertEquals(BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(transactionFound)), result.get("transactionBytes").asText())
       }
       // Case --> blockHash not set, txIndex = false -> Search in memory pool
       // searchTransactionInMemoryPool found
@@ -233,13 +233,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, None, Some(false), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transaction").isObject)
-            jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transaction").isObject)
+        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
       // Case --> blockHash not set, txIndex = false -> Search in memory pool
       // searchTransactionInMemoryPool not found
@@ -277,13 +277,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById(transactionIdValid, Some("blockHash"), Some(false), Some(true)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("transaction").isObject)
-            jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transaction").isObject)
+        jsonChecker.assertsOnTransactionJson(result.get("transaction"), transactionFound)
       }
     }
 
@@ -293,13 +293,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
           BytesUtils.toHexString(sidechainTransactionsCompanion.toBytes(memoryPool.get(0)))))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            val tNode = result.get("transaction")
-            jsonChecker.assertsOnTransactionJson(tNode)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        val tNode = result.get("transaction")
+        jsonChecker.assertsOnTransactionJson(tNode)
       }
       // companion.parseBytesTry -> FAILURE
       Post(basePath + "decodeTransactionBytes")
@@ -329,13 +329,13 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         //println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            val tNode = result.get("transaction")
-            jsonChecker.assertsOnTransactionJson(tNode)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        val tNode = result.get("transaction")
+        jsonChecker.assertsOnTransactionJson(tNode)
       }
       // parameter 'format' = false
       Post(basePath + "createCoreTransaction")
@@ -343,15 +343,15 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         println(response)
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            try {
-              BytesUtils.fromHexString(result.get("transactionBytes").asText())
-            } catch {
-              case _: Throwable => fail()
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        try {
+          BytesUtils.fromHexString(result.get("transactionBytes").asText())
+        } catch {
+          case _: Throwable => fail()
         }
       }
       val transactionInput_2: List[TransactionInput] = transactionInput :+ TransactionInput("a_boxId")
@@ -461,15 +461,15 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqSendTransactionPost(BytesUtils.toHexString(transactionBytes)))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            try {
-              BytesUtils.fromHexString(result.get("transactionId").asText())
-            } catch {
-              case _: Throwable => fail()
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        try {
+          BytesUtils.fromHexString(result.get("transactionId").asText())
+        } catch {
+          case _: Throwable => fail()
         }
       }
       // BytesUtils.fromHexString(body.transactionBytes) -> ERROR

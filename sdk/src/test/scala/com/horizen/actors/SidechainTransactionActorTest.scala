@@ -18,6 +18,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import org.junit.Assert._
 import scorex.util.ModifierId
+import scala.language.postfixOps
 
 import scala.concurrent.duration._
 

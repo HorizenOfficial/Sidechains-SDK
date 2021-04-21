@@ -252,7 +252,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
     else
-      Success()
+      Success(Unit)
   }
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)

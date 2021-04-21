@@ -16,6 +16,7 @@ import scorex.util.ModifierId
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar with TransactionFixture with SidechainTypesTestsExtension {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("tx-actor-test")

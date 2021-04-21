@@ -23,7 +23,7 @@ trait OmmersContainer {
 
     // Return in case if there no Ommers
     if(ommers.isEmpty)
-      return Success()
+      return Success(Unit)
 
     // Ommers list must be a consistent SidechainBlocks chain.
     // First Ommer must have the same parent as current SidechainBlock.

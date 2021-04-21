@@ -10,6 +10,7 @@ import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.existentials
 
 // TODO: This checker is not sustainable
 class SidechainJSONBOChecker {

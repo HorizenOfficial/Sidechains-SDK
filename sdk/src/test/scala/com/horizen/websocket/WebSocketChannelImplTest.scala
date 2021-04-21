@@ -12,6 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.Await
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
 

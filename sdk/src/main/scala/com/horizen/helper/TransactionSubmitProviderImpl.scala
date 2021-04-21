@@ -12,6 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
+import scala.language.postfixOps
 
 class TransactionSubmitProviderImpl(transactionActor: ActorRef) extends TransactionSubmitProvider {
 

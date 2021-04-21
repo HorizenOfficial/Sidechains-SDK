@@ -8,6 +8,7 @@ import com.horizen.secret.Secret
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
+import scala.language.postfixOps
 
 class SecretSubmitProviderImpl(sidechainNodeViewHolderRef: ActorRef) extends SecretSubmitProvider {
 
@@ -15,13 +16,17 @@ class SecretSubmitProviderImpl(sidechainNodeViewHolderRef: ActorRef) extends Sec
 
   @throws(classOf[IllegalArgumentException])
   override def submitSecret(s: Secret): Unit = {
-    Await.ready(sidechainNodeViewHolderRef ? LocallyGeneratedSecret(s), timeout.duration).value.get match {
-      case Success(res: Try[Unit]) =>
-        res match {
-          case Success(_) =>
-          case Failure(exception) => throw new IllegalArgumentException(exception)
-        }
-      case Failure(exception) => throw new IllegalArgumentException(exception)
+    Await.ready(sidechainNodeViewHolderRef ? LocallyGeneratedSecret(s), timeout.duration).value match {
+      case Some(value) => value match {
+        case Success(res) =>
+          res match {
+            case Success(_) => {}
+            case Failure(exception) => throw new IllegalArgumentException(exception)
+            case _ => throw new IllegalArgumentException("Fail to submit secret.")
+          }
+        case Failure(exception) => throw new IllegalArgumentException(exception)
+      }
+      case None => throw new IllegalStateException("Fail to submit secret.")
     }
   }
 }

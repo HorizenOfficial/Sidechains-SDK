@@ -82,7 +82,7 @@ class Forger(settings: SidechainSettings,
     case StartForging => {
       log.info("Receive StartForging message")
       startTimer()
-      sender() ! Success()
+      sender() ! Success(Unit)
     }
   }
 
@@ -90,7 +90,7 @@ class Forger(settings: SidechainSettings,
     case StopForging => {
       log.info("Receive StopForging message")
       stopTimer()
-      sender() ! Success()
+      sender() ! Success(Unit)
     }
   }
 

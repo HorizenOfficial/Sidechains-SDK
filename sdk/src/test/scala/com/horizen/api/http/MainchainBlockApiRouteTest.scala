@@ -81,12 +81,12 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqBlockInfoBy(Some("AABBCC"), None))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("blockHex").isTextual)
-          case _ => fail("Serialization failed for object MainchainApiResponse")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("blockHex").isTextual)
       }
       // blockReferenceInfoBy hash
       // parameter 'format' = true
@@ -102,12 +102,11 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqBlockInfoBy(None, Some(300)))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("blockHex").isTextual)
-          case _ => fail("Serialization failed for object MainchainApiResponse")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("blockHex").isTextual)
       }
       // blockReferenceInfoBy height
       // parameter 'format' = true
@@ -147,12 +146,12 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity((SerializationUtil.serialize(ReqBlockBy("AABBCC")))) ~> mainchainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("blockHex").isTextual)
-          case _ => fail("Serialization failed for object MainchainBlockResponse")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("blockHex").isTextual)
       }
       // parameter 'format' = true
       Post(basePath + "blockReferenceByHash")
@@ -171,24 +170,24 @@ class MainchainBlockApiRouteTest extends SidechainApiRouteTest {
   }
 
   private def assertsOnMainchainApiResponse(json: String, mcRef: MainchainBlockReferenceInfo): Unit = {
-    mapper.readTree(json).get("result") match {
-      case result =>
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("blockReferenceInfo").isObject)
-        val node = result.get("blockReferenceInfo")
-        assertEquals(5, node.elements().asScala.length)
-        assertTrue(node.get("hash").isTextual)
-        assertTrue(node.get("parentHash").isTextual)
-        assertTrue(node.get("height").isInt)
-        assertTrue(node.get("mainchainHeaderSidechainBlockId").isTextual)
-        assertTrue(node.get("mainchainReferenceDataSidechainBlockId").isTextual)
+    val result = mapper.readTree(json).get("result")
+    if (result == null)
+      fail("Serialization failed for object SidechainApiResponseBody")
 
-        assertEquals(node.get("hash").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderHash))
-        assertEquals(node.get("parentHash").textValue(), BytesUtils.toHexString(mcRef.getParentMainchainHeaderHash))
-        assertEquals(node.get("height").asInt(), mcRef.getMainchainHeight)
-        assertEquals(node.get("mainchainHeaderSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderSidechainBlockId))
-        assertEquals(node.get("mainchainReferenceDataSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainReferenceDataSidechainBlockId))
-      case _ => fail("Serialization failed for object MainchainApiResponse")
-    }
+    assertEquals(1, result.elements().asScala.length)
+    assertTrue(result.get("blockReferenceInfo").isObject)
+    val node = result.get("blockReferenceInfo")
+    assertEquals(5, node.elements().asScala.length)
+    assertTrue(node.get("hash").isTextual)
+    assertTrue(node.get("parentHash").isTextual)
+    assertTrue(node.get("height").isInt)
+    assertTrue(node.get("mainchainHeaderSidechainBlockId").isTextual)
+    assertTrue(node.get("mainchainReferenceDataSidechainBlockId").isTextual)
+
+    assertEquals(node.get("hash").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderHash))
+    assertEquals(node.get("parentHash").textValue(), BytesUtils.toHexString(mcRef.getParentMainchainHeaderHash))
+    assertEquals(node.get("height").asInt(), mcRef.getMainchainHeight)
+    assertEquals(node.get("mainchainHeaderSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainHeaderSidechainBlockId))
+    assertEquals(node.get("mainchainReferenceDataSidechainBlockId").textValue(), BytesUtils.toHexString(mcRef.getMainchainReferenceDataSidechainBlockId))
   }
 }

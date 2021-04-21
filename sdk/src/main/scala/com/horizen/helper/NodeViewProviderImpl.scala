@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.node.SidechainNodeView
-
+import scala.language.postfixOps
 import scala.concurrent.duration.DurationInt
 
 class NodeViewProviderImpl(var nodeViewActor: ActorRef) extends  NodeViewProvider {

@@ -40,6 +40,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import akka.http.javadsl.marshallers.jackson.Jackson
+import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
 abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
@@ -111,7 +112,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
-            sender ! Success()
+            sender ! Success(Unit)
           else sender ! Failure(new Exception("Secret not added."))
       }
       TestActor.KeepRunning
@@ -124,7 +125,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case BroadcastTransaction(t) =>
-          if (sidechainApiMockConfiguration.getShould_transactionActor_BroadcastTransaction_reply()) sender ! Future.successful()
+          if (sidechainApiMockConfiguration.getShould_transactionActor_BroadcastTransaction_reply()) sender ! Future.successful(Unit)
           else sender ! Future.failed(new Exception("Broadcast failed."))
       }
       TestActor.KeepRunning
@@ -173,7 +174,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
       msg match {
         case Forger.ReceivableMessages.StopForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StopForging_reply) {
-            sender ! Success()
+            sender ! Success(Unit)
           }
           else {
             sender ! Failure(new IllegalStateException("Stop forging error"))
@@ -181,7 +182,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
         }
         case Forger.ReceivableMessages.StartForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StartForging_reply) {
-            sender ! Success()
+            sender ! Success(Unit)
           }
           else {
             sender ! Failure(new IllegalStateException("Start forging error"))

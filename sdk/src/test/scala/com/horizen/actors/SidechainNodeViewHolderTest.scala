@@ -16,6 +16,7 @@ import scala.concurrent.duration._
 import org.scalatest._
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import scala.language.postfixOps
 
 
 @RunWith(classOf[JUnitRunner])

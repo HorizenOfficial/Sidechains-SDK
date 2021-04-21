@@ -55,20 +55,19 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "allBoxes") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.findValues("boxes").size())
-            result.get("boxes") match {
-              case node =>
-                assertTrue(node.isArray)
-                assertEquals(allBoxes.size(), node.elements().asScala.length)
-                val box_json = node.elements().asScala.toList
-                for (i <- 0 to box_json.size - 1)
-                  jsonChecker.assertsOnBoxJson(box_json(i), allBoxes.get(i))
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.findValues("boxes").size())
+        val node = result.get("boxes")
+        if (node == null)
+          fail("Result serialization failed")
+        assertTrue(node.isArray)
+        assertEquals(allBoxes.size(), node.elements().asScala.length)
+        val box_json = node.elements().asScala.toList
+        for (i <- 0 to box_json.size - 1)
+          jsonChecker.assertsOnBoxJson(box_json(i), allBoxes.get(i))
       }
       Post(basePath + "allBoxes")
         .withEntity(
@@ -82,17 +81,17 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
             BytesUtils.toHexString(allBoxes.get(0).id()), BytesUtils.toHexString(allBoxes.get(1).id())))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.findValues("boxes").size())
-            result.get("boxes") match {
-              case node =>
-                assertTrue(node.isArray)
-                assertEquals(4, node.elements().asScala.length)
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.findValues("boxes").size())
+        val node = result.get("boxes")
+        if (result == null)
+          fail("Result serialization failed")
+
+        assertTrue(node.isArray)
+        assertEquals(4, node.elements().asScala.length)
       }
       Post(basePath + "allBoxes")
         .withEntity(
@@ -106,15 +105,16 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "coinsBalance") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.fieldNames().asScala.length)
-            result.get("balance") match {
-              case node => node.asInt() shouldBe 5500
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.fieldNames().asScala.length)
+
+        val node = result.get("balance")
+        if (node == null)
+          fail("Result serialization failed")
+
+        node.asInt() shouldBe 5500
       }
     }
 
@@ -133,16 +133,17 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.findValues("proposition").size())
-            assertEquals(1, result.path("proposition").findValues("publicKey").size())
-            result.get("proposition").get("publicKey") match {
-              case node => assertTrue(node.isTextual)
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.findValues("proposition").size())
+        assertEquals(1, result.path("proposition").findValues("publicKey").size())
+        val node = result.get("proposition").get("publicKey")
+        if (node == null)
+          fail("Result serialization failed")
+
+        assertTrue(node.isTextual)
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
@@ -160,16 +161,17 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
-        fr.get("result") match {
-          case result =>
-            assertEquals(1, result.findValues("proposition").size())
-            assertEquals(1, result.path("proposition").findValues("publicKey").size())
-            result.get("proposition").get("publicKey") match {
-              case node => assertTrue(node.isTextual)
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = fr.get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.findValues("proposition").size())
+        assertEquals(1, result.path("proposition").findValues("publicKey").size())
+        val node = result.get("proposition").get("publicKey")
+        if (node == null)
+          fail("Result serialization failed")
+
+        assertTrue(node.isTextual)
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
@@ -184,17 +186,17 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.findValues("propositions").size())
-            result.get("propositions") match {
-              case node =>
-                assertTrue(node.isArray)
-                assertEquals(2, node.findValues("publicKey").size())
-              case _ => fail("Result serialization failed")
-            }
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.findValues("propositions").size())
+        val node = result.get("propositions")
+        if (node == null) {
+          fail("Result serialization failed")
         }
+        assertTrue(node.isArray)
+        assertEquals(2, node.findValues("publicKey").size())
       }
       Post(basePath + "allPublicKeys")
         .withEntity(
@@ -203,7 +205,5 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
-
   }
-
 }
