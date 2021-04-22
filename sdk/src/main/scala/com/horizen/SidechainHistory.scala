@@ -32,7 +32,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       SidechainSyncInfo,
       SidechainHistory]
   with NetworkParamsUtils
-  with TimeToEpochSlotConverter
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
   with NodeHistory

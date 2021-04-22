@@ -14,7 +14,7 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
@@ -39,7 +39,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with SidechainTypes
     with NodeState
     with ScorexLogging
-    with TimeToEpochSlotConverter
 {
 
   checkVersion()
@@ -233,7 +232,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           cs,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          timeStampToEpochNumber(mod.timestamp),
+          TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
           mod.topQualityCertificateOpt,
           mod.feeInfo
         )
@@ -321,7 +320,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
     val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch

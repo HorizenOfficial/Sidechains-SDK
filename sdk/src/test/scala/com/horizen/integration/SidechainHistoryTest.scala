@@ -545,7 +545,7 @@ class SidechainHistoryTest extends JUnitSuite
   }
 
   @Test
-  def checkSidechainBlockInfoCreation(): Unit = {
+  def chXeckSidechainBlockInfoCreation(): Unit = {
     val firstBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(241))
     val secondBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(242))
 
@@ -562,7 +562,7 @@ class SidechainHistoryTest extends JUnitSuite
     Mockito.doAnswer(_ => firstBlockVrfOutputOpt).when(history).getVrfOutput(ArgumentMatchers.any[SidechainBlockHeader], ArgumentMatchers.any[NonceConsensusEpochInfo])
 
     val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, testParams)
-    assertEquals(2, history.timeStampToEpochNumber(block1.timestamp))
+    assertEquals(2, TimeToEpochUtils.timeStampToEpochNumber(testParams, block1.timestamp))
 
     history = history.append(block1).get._1
     history = history.reportModifierIsValid(block1)
@@ -579,7 +579,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals(genesisBlock.id, block2Info.lastBlockInPreviousConsensusEpoch)
 
     val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, testParams)
-    assertEquals(3, history.timeStampToEpochNumber(block3.timestamp))
+    assertEquals(3, TimeToEpochUtils.timeStampToEpochNumber(testParams, block3.timestamp))
     history = history.append(block3).get._1
     history = history.reportModifierIsValid(block3)
     val block3Info = history.bestBlockInfo

@@ -1,9 +1,9 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.consensus.TimeToEpochSlotConverterUtils
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import com.horizen.utils.TimeToEpochUtils
 import com.horizen.validation.InvalidOmmerDataException
 
 import scala.util.{Failure, Success, Try}
@@ -36,9 +36,8 @@ trait OmmersContainer {
 
     // Verify that Ommers order is valid in context of OmmersContainer epoch&slot order
     // Last ommer epoch&slot number must be before verified block epoch&slot
-    val converter = TimeToEpochSlotConverterUtils(params)
     val timestamps = ommers.map(_.header.timestamp) :+ header.timestamp
-    val absoluteSlots = timestamps.map(t => converter.timeStampToAbsoluteSlotNumber(t))
+    val absoluteSlots = timestamps.map(t => TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, t))
     for(i <- 1 until absoluteSlots.size) {
       if(absoluteSlots(i) <= absoluteSlots(i-1))
         throw new InvalidOmmerDataException(s"OmmerContainer Ommers slots are not consistent.")

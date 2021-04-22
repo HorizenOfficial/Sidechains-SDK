@@ -8,6 +8,7 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{ConsensusEpochNumber, _}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertEquals, fail => jFail}
 import org.junit.Test
@@ -73,14 +74,14 @@ class ConsensusValidatorOmmersTest
     // Test 1: Valid Ommers in correct order from the same epoch as VerifiedBlock
     // Mock ommers
     val ommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 8))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 7)),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 8))
     )
 
     // Mock block with ommers
     val parentId: ModifierId = getRandomBlockId()
     val parentInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 11)
+    val verifiedBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 11)
     val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     val header = mock[SidechainBlockHeader]
     Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
@@ -119,8 +120,8 @@ class ConsensusValidatorOmmersTest
 
     // Test 3: Valid ommers with valid subommers in correct order from the same epoch as VerifiedBlock
     val ommersWithSubommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 9), ommers), // with subommers for 3/7, 3/8
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 9), ommers), // with subommers for 3/7, 3/8
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10))
     )
     Mockito.when(verifiedBlock.ommers).thenReturn(ommersWithSubommers)
 
@@ -153,14 +154,14 @@ class ConsensusValidatorOmmersTest
     // Test 1: Valid Ommers in correct order from the previous epoch to VerifiedBlock
     // Mock ommers
     val ommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 20)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 21))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 20)),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 21))
     )
 
     // Mock block with ommers
     val parentId: ModifierId = getRandomBlockId()
     val parentInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
+    val verifiedBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 3, ConsensusSlotNumber @@ 10)
     val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     Mockito.when(verifiedBlock.id).thenReturn(verifiedBlockId)
     val header = mock[SidechainBlockHeader]
@@ -185,12 +186,12 @@ class ConsensusValidatorOmmersTest
 
     // Test 2: Valid ommers with valid subommers in correct order from previous epoch to VerifiedBlock
     val anotherOmmers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 44)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 46))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 44)),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 46))
     )
     val ommersWithSubommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 40), ommers), // with subommers for 2/20, 2/21
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 50), anotherOmmers) // with subommers for 2/44, 2/46
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 40), ommers), // with subommers for 2/20, 2/21
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, ConsensusEpochNumber @@ 2, ConsensusSlotNumber @@ 50), anotherOmmers) // with subommers for 2/44, 2/46
     )
     Mockito.when(verifiedBlock.ommers).thenReturn(ommersWithSubommers)
 
@@ -240,9 +241,9 @@ class ConsensusValidatorOmmersTest
 
     // Mock ommers
     val ommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 5)), // quite slot - no impact on nonce calculation
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 1)),
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 5))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 5)), // quite slot - no impact on nonce calculation
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 1)),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 5))
     )
 
     // Set initialNonceData (reverse order expected)
@@ -253,7 +254,7 @@ class ConsensusValidatorOmmersTest
     // Mock block with ommers
     val parentId: ModifierId = getRandomBlockId()
     val parentInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 6)
+    val verifiedBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 6)
     val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     val header = mock[SidechainBlockHeader]
     Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
@@ -279,7 +280,7 @@ class ConsensusValidatorOmmersTest
 
     var switchedEpochConsensusValidator = new ConsensusValidator {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
-        val epochAndSlot = history.timestampToEpochAndSlot(header.timestamp)
+        val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
           case `currentEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -310,9 +311,9 @@ class ConsensusValidatorOmmersTest
     history = mockHistory(slotsInEpoch)
 
     val anotherOmmers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 3)), // active slot - has impact on nonce calculation
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 4)), // active slot - has impact on nonce calculation
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 5))
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 3)), // active slot - has impact on nonce calculation
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 4)), // active slot - has impact on nonce calculation
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 5))
     )
 
     // Set initialNonceData (reverse order expected)
@@ -341,7 +342,7 @@ class ConsensusValidatorOmmersTest
 
     switchedEpochConsensusValidator = new ConsensusValidator {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
-        val epochAndSlot = history.timestampToEpochAndSlot(header.timestamp)
+        val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
           case `currentEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", switchedOmmersFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -401,23 +402,23 @@ class ConsensusValidatorOmmersTest
 
     // Mock ommers
     val ommers: Seq[Ommer] = Seq(
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 4),  // active slot - has impact on nonce calculation
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 4),  // active slot - has impact on nonce calculation
         Seq(
-          getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 3))
+          getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 3))
         )),
 
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 6), // quite slot - no impact on nonce calculation
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 6), // quite slot - no impact on nonce calculation
         Seq(
-          getMockedOmmer(history.getTimeStampForEpochAndSlot(previousEpochNumber, ConsensusSlotNumber @@ 5))
+          getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, previousEpochNumber, ConsensusSlotNumber @@ 5))
         )),
 
-      getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 4),
+      getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 4),
         Seq(
-          getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 2),
+          getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 2),
             Seq(
-              getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 1))
+              getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 1))
             )),
-          getMockedOmmer(history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 3))
+          getMockedOmmer(TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 3))
         ))
     )
 
@@ -430,7 +431,7 @@ class ConsensusValidatorOmmersTest
     // Mock block with ommers
     val parentId: ModifierId = getRandomBlockId()
     val parentInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
-    val verifiedBlockTimestamp = history.getTimeStampForEpochAndSlot(currentEpochNumber, ConsensusSlotNumber @@ 5)
+    val verifiedBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(history.params, currentEpochNumber, ConsensusSlotNumber @@ 5)
     val verifiedBlock: SidechainBlock = mock[SidechainBlock]
     val header = mock[SidechainBlockHeader]
     Mockito.when(header.timestamp).thenReturn(verifiedBlockTimestamp)
@@ -456,7 +457,7 @@ class ConsensusValidatorOmmersTest
 
     val switchedEpochConsensusValidator = new ConsensusValidator {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
-        val epochAndSlot = history.timestampToEpochAndSlot(header.timestamp)
+        val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
           case `currentEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", switchedOmmersFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -492,30 +493,7 @@ class ConsensusValidatorOmmersTest
 
   private def mockHistory(slotsInEpoch: Int = 720): SidechainHistory = {
     val params: NetworkParams = MainNetParams(consensusSlotsInEpoch = slotsInEpoch)
-    // Because TimeToEpochSlotConverter is a trait, we need to do this dirty stuff to use its methods as a part of mocked SidechainHistory
-    class TimeToEpochSlotConverterImpl(val params: NetworkParams) extends TimeToEpochSlotConverter
-    val converter = new TimeToEpochSlotConverterImpl(params)
-
     val history: SidechainHistory = mock[SidechainHistory]
-    Mockito.when(history.timeStampToEpochNumber(ArgumentMatchers.any[Long])).thenAnswer(answer => {
-      converter.timeStampToEpochNumber(answer.getArgument(0))
-    })
-
-    Mockito.when(history.timeStampToSlotNumber(ArgumentMatchers.any[Long])).thenAnswer(answer => {
-      converter.timeStampToSlotNumber(answer.getArgument(0))
-    })
-
-    Mockito.when(history.timeStampToAbsoluteSlotNumber(ArgumentMatchers.any[Long])).thenAnswer(answer => {
-      converter.timeStampToAbsoluteSlotNumber(answer.getArgument(0))
-    })
-
-    Mockito.when(history.timestampToEpochAndSlot(ArgumentMatchers.any[Long])).thenAnswer(answer => {
-      converter.timestampToEpochAndSlot(answer.getArgument(0))
-    })
-
-    Mockito.when(history.getTimeStampForEpochAndSlot(ArgumentMatchers.any[ConsensusEpochNumber], ArgumentMatchers.any[ConsensusSlotNumber])).thenAnswer(answer => {
-      converter.getTimeStampForEpochAndSlot(answer.getArgument(0), answer.getArgument(1))
-    })
 
     Mockito.when(history.params).thenReturn(params)
 
