@@ -20,13 +20,13 @@ import scala.language.postfixOps
 
 
 @RunWith(classOf[JUnitRunner])
-class SidechainNodeViewHolderTest extends Suites(
-  new SidechainNodeViewHolderTest1,
-  new SidechainNodeViewHolderTest2
+class SidechainNodeViewHolderActorTest extends Suites(
+  new SidechainNodeViewHolderActorTest1,
+  new SidechainNodeViewHolderActorTest2
 )
 
 @RunWith(classOf[JUnitRunner])
-class SidechainNodeViewHolderTest1
+class SidechainNodeViewHolderActorTest1
   extends TestKit(ActorSystem("testsystem"))
   with FunSuiteLike
   with BeforeAndAfterAll
@@ -55,7 +55,7 @@ class SidechainNodeViewHolderTest1
 }
 
 @RunWith(classOf[JUnitRunner])
-class SidechainNodeViewHolderTest2
+class SidechainNodeViewHolderActorTest2
   extends TestKit(ActorSystem("testSystem"))
   with FeatureSpecLike
   with BeforeAndAfterAll
