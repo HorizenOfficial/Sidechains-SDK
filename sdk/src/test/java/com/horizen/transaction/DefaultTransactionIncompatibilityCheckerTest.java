@@ -21,7 +21,6 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
     @Test
     public void DefaultTransactionIncompatibilityCheckerTest_IncompatibilityTest() {
         long fee = 10;
-        long timestamp = 1547798549470L;
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
         PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
@@ -57,10 +56,10 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
         List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk7.publicImage(), 10L));
 
-        RegularTransaction newTx = RegularTransaction.create(from1, to, fee, timestamp);
-        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee, timestamp);
-        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, fee, timestamp);
-        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, fee, timestamp);
+        RegularTransaction newTx = RegularTransaction.create(from1, to, fee);
+        RegularTransaction currentTx1 = RegularTransaction.create(from2, to, fee);
+        RegularTransaction currentTx2 = RegularTransaction.create(from3, to, fee);
+        RegularTransaction currentTx3 = RegularTransaction.create(from4, to, fee);
 
         DefaultTransactionIncompatibilityChecker checker = new DefaultTransactionIncompatibilityChecker();
 

@@ -36,10 +36,9 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         proofs.add((Proof)getRandomSignature25519());
 
         long fee = 100L;
-        long timestamp = 13213L;
 
 
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
         TransactionSerializer serializer = transaction.serializer();
 
         // Serializer Core transaction that contains only Core types
@@ -49,7 +48,6 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         assertTrue("Transaction deserialization failed.", t.isSuccess());
         assertEquals("Deserialized transactions expected to be equal", transaction.id(), t.get().id());
         assertEquals("Deserialized transactions fee is different to the origin", transaction.fee(), t.get().fee());
-        assertEquals("Deserialized transactions timestamp is different to the origin", transaction.timestamp(), t.get().timestamp());
         assertArrayEquals("Original and deserialized transactions expected to have equal byte representation.", bytes, serializer.toBytes(t.get()));
     }
 
@@ -67,7 +65,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         long fee = 100L;
         long timestamp = 13213L;
 
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
         // Set `true` and run if you want to update regression data.
         if(false) {
             try {
@@ -97,6 +95,5 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         SidechainCoreTransaction parsedTransaction = t.get();
         assertEquals("Transaction is different to the origin.", transaction.id(), parsedTransaction.id());
         assertEquals("Deserialized transactions fee is different to the origin", transaction.fee(), parsedTransaction.fee());
-        assertEquals("Deserialized transactions timestamp is different to the origin", transaction.timestamp(), parsedTransaction.timestamp());
     }
 }

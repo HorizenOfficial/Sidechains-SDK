@@ -89,7 +89,7 @@ class SidechainStateTestTestsExtension
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 
   @Before

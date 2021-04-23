@@ -50,7 +50,7 @@ trait TransactionFixture extends BoxFixture {
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, transactionBaseTimeStamp - rnd.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 
   def getRegularTransaction(inputBoxes: Seq[ZenBox], inputSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
@@ -75,7 +75,7 @@ trait TransactionFixture extends BoxFixture {
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 
   def getRegularTransaction: RegularTransaction = {
@@ -87,7 +87,7 @@ trait TransactionFixture extends BoxFixture {
 
     to.add(new ZenBoxData(pk7.publicImage(), 20L))
 
-    RegularTransaction.create(from, to, 10L, 1547798549470L)
+    RegularTransaction.create(from, to, 10L)
   }
 
   def getCompatibleTransaction: RegularTransaction = {
@@ -99,7 +99,7 @@ trait TransactionFixture extends BoxFixture {
 
     to.add(new ZenBoxData(pk7.publicImage(), 15L))
 
-    RegularTransaction.create(from, to, 5L, 1547798549470L)
+    RegularTransaction.create(from, to, 5L)
   }
 
   def getIncompatibleTransaction: RegularTransaction = {
@@ -111,7 +111,7 @@ trait TransactionFixture extends BoxFixture {
 
     to.add(new ZenBoxData(pk7.publicImage(), 15L))
 
-    RegularTransaction.create(from, to, 5L, 1547798549470L)
+    RegularTransaction.create(from, to, 5L)
   }
 
 
@@ -172,6 +172,6 @@ trait TransactionFixture extends BoxFixture {
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 }

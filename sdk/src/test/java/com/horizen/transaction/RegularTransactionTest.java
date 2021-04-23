@@ -27,7 +27,6 @@ import com.horizen.fixtures.*;
 public class RegularTransactionTest extends BoxFixtureClass {
 
     long fee;
-    long timestamp;
     ArrayList<Pair<ZenBox, PrivateKey25519>> from;
     ArrayList<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
 
@@ -36,7 +35,6 @@ public class RegularTransactionTest extends BoxFixtureClass {
     @Before
     public void BeforeEachTest() {
         fee = 10;
-        timestamp = 1547798549470L;
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
         PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
@@ -57,17 +55,16 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ZenBoxData(pk6.publicImage(), 90L));
 
         expectedNonces = new ArrayList<>(Arrays.asList(
-                8211694539164647149L,
-                -7093185414494403265L,
-                -6490601236381183279L)
+                -4413338919968165681L,
+                -2557784382151979925L,
+                -36253851566087546L)
         );
     }
 
     @Test
     public void zenBoxTest() {
-        RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction transaction = RegularTransaction.create(from, to, fee);
         assertEquals("Exception during RegularTransaction creation: fee is different!", fee, transaction.fee());
-        assertEquals("Exception during RegularTransaction creation: fee is different!", timestamp, transaction.timestamp());
 
         List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
         assertEquals("Exception during RegularTransaction creation: new boxes count is different!", to.size(), newBoxes.size());
@@ -103,10 +100,10 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
     @Test
     public void newBoxesNonceEnforcingAlgorithmRegressionTest() {
-        RegularTransaction transaction = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction transaction = RegularTransaction.create(from, to, fee);
         List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
         for(int i = 0; i < newBoxes.size(); i++){
-            assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different.", i),
+            assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different(%x, %x).", i, expectedNonces.get(i).longValue(), newBoxes.get(i).nonce()),
                     expectedNonces.get(i).longValue(), newBoxes.get(i).nonce());
         }
     }
@@ -117,7 +114,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         // Test 1: from is null
         boolean exceptionOccurred = false;
         try {
-            RegularTransaction.create(null, to, fee, timestamp);
+            RegularTransaction.create(null, to, fee);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -127,7 +124,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         // Test 2: to is null
         exceptionOccurred = false;
         try {
-            RegularTransaction.create(from, null, fee, timestamp);
+            RegularTransaction.create(from, null, fee);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -138,7 +135,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         exceptionOccurred = false;
         to.add(new CustomBoxData(getCustomPrivateKey().publicImage(), 5L));
         try {
-            RegularTransaction.create(from, to, fee, timestamp);
+            RegularTransaction.create(from, to, fee);
         }
         catch (IllegalArgumentException e) {
             exceptionOccurred = true;
@@ -153,7 +150,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 70L));
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 50L));
 
-        RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction tx1 = RegularTransaction.create(from, to, fee);
 
         List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
 
@@ -184,7 +181,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 10L));
         to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 30L));
 
-        RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction tx2 = RegularTransaction.create(from, to, fee);
 
         List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
 
@@ -220,7 +217,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 40L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 10L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
 
-        RegularTransaction tx1 = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction tx1 = RegularTransaction.create(from, to, fee);
 
         List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
 
@@ -252,7 +249,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 30L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
         to.add(new ForgerBoxData(getPrivateKey25519().publicImage(), 10L, getPrivateKey25519().publicImage(), getVRFPublicKey()));
 
-        RegularTransaction tx2 = RegularTransaction.create(from, to, fee, timestamp);
+        RegularTransaction tx2 = RegularTransaction.create(from, to, fee);
 
         List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
 

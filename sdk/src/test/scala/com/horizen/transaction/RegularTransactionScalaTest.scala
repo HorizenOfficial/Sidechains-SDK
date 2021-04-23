@@ -21,7 +21,6 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
   @Test
   def testToJson(): Unit = {
     val fee = 10
-    val timestamp = 1547798549470L
 
     val from = new JArrayList[JPair[ZenBox, PrivateKey25519]]
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
@@ -43,7 +42,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     to.add(new ZenBoxData(pk5.publicImage, 20L))
     to.add(new ZenBoxData(pk6.publicImage, 90L))
 
-    val transaction = RegularTransaction.create(from, to, fee, timestamp)
+    val transaction = RegularTransaction.create(from, to, fee)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()
@@ -66,14 +65,6 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
         transaction.fee(), fee_parsed)
     } catch {
       case _: Throwable => fail("Transaction fee doesn't not found in json.")
-    }
-
-    try {
-      val timestamp_parsed = node.path("timestamp").asLong()
-      assertEquals("Transaction timestamp json value must be the same.",
-        transaction.timestamp(), timestamp_parsed)
-    } catch {
-      case _: Throwable => fail("Transaction timestamp doesn't not found in json.")
     }
 
     try {

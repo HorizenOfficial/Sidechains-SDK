@@ -42,7 +42,6 @@ public class SidechainCoreTransaction
             }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
 
     private final long fee;
-    private final long timestamp;
 
     private List<BoxUnlocker<Proposition>> unlockers;
 
@@ -50,8 +49,7 @@ public class SidechainCoreTransaction
     public SidechainCoreTransaction(List<byte[]> inputsIds,
                              List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
                              List<Proof<Proposition>> proofs,
-                             long fee,
-                             long timestamp) {
+                             long fee) {
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
@@ -61,7 +59,6 @@ public class SidechainCoreTransaction
         this.outputsData = outputsData;
         this.proofs = proofs;
         this.fee = fee;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -104,16 +101,7 @@ public class SidechainCoreTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
-        if(timestamp < 0)
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "timestamp is negative.", id()));
-
         if(inputsIds.isEmpty() || outputsData.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input and output data present.", id()));
@@ -143,7 +131,6 @@ public class SidechainCoreTransaction
 
         return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 36 bytes
                 Longs.toByteArray(fee()),                           // 8 bytes
-                Longs.toByteArray(timestamp()),                     // 8 bytes
                 Ints.toByteArray(inputIdsBytes.length),             // 4 bytes
                 inputIdsBytes,                                      // depends in previous value(>=0 bytes)
                 Ints.toByteArray(outputBoxDataBytes.length),        // 4 bytes
@@ -163,9 +150,6 @@ public class SidechainCoreTransaction
         int offset = 0;
 
         long fee = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
-        long timestamp = BytesUtils.getLong(bytes, offset);
         offset += 8;
 
         int batchSize = BytesUtils.getInt(bytes, offset);
@@ -192,6 +176,6 @@ public class SidechainCoreTransaction
 
         List<Proof<Proposition>> proofs = proofsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
+        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
     }
 }

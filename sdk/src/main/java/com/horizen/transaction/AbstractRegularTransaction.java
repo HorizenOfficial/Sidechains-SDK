@@ -24,7 +24,6 @@ public abstract class AbstractRegularTransaction
     protected final List<ZenBoxData> outputZenBoxesData;
 
     protected final long fee;
-    protected final long timestamp;
 
     List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> allBoxesData;
 
@@ -36,12 +35,10 @@ public abstract class AbstractRegularTransaction
     public AbstractRegularTransaction(List<byte[]> inputZenBoxIds,              // zen box ids to spent
                                       List<Signature25519> inputZenBoxProofs,   // proofs to spent zen boxes
                                       List<ZenBoxData> outputZenBoxesData,      // destinations where to send zen coins
-                                      long fee,                                 // fee to be paid
-                                      long timestamp) {                         // creation time in milliseconds from epoch
+                                      long fee) {                                 // fee to be paid
 
         // Parameters sanity check
-        if(inputZenBoxIds == null || inputZenBoxProofs == null || outputZenBoxesData == null ||
-           fee < 0 || timestamp < 0 ||
+        if(inputZenBoxIds == null || inputZenBoxProofs == null || outputZenBoxesData == null || fee < 0 ||
            inputZenBoxIds.isEmpty() || inputZenBoxProofs.isEmpty() || outputZenBoxesData.isEmpty()){
             throw new IllegalArgumentException("Some of the input parameters are unacceptable!");
         }
@@ -55,7 +52,6 @@ public abstract class AbstractRegularTransaction
         this.inputZenBoxProofs = inputZenBoxProofs;
         this.outputZenBoxesData = outputZenBoxesData;
         this.fee = fee;
-        this.timestamp = timestamp;
     }
 
     abstract protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getCustomOutputData();
@@ -103,11 +99,6 @@ public abstract class AbstractRegularTransaction
     @Override
     public long fee() {
         return fee;
-    }
-
-    @Override
-    public long timestamp() {
-        return timestamp;
     }
 
     @Override

@@ -40,9 +40,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("fee")
     public abstract long fee();
 
-    @JsonProperty("timestamp")
-    public abstract long timestamp();
-
     @JsonProperty("typeId")
     public abstract byte transactionTypeId();
 
@@ -92,6 +89,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
             newBoxesStream.write(boxBytes, 0, boxBytes.length);
         }
 
-        return Bytes.concat(unlockersStream.toByteArray(), newBoxesStream.toByteArray(), Longs.toByteArray(timestamp()), Longs.toByteArray(fee()));
+        return Bytes.concat(unlockersStream.toByteArray(), newBoxesStream.toByteArray(), Longs.toByteArray(fee()));
     }
 }

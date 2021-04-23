@@ -44,11 +44,6 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public long timestamp() {
-        return _timestamp;
-    }
-
-    @Override
     public byte[] bytes() {
         return Longs.toByteArray(_timestamp);
     }

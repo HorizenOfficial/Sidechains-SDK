@@ -201,7 +201,7 @@ object MainchainBlockReference extends ScorexLogging {
 
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
-          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, header.time))
+          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))

@@ -31,7 +31,6 @@ public final class RegularTransaction
     private List<Signature25519> signatures;
 
     private long fee;
-    private long timestamp;
 
     private List<Proposition> newBoxesPropositions;
     private List<NoncedBox<Proposition>> newBoxes;
@@ -54,15 +53,13 @@ public final class RegularTransaction
     private RegularTransaction(List<ZenBox> inputs,
                                List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
-                               long fee,
-                               long timestamp) {
+                               long fee) {
         if(inputs.size() != signatures.size())
             throw new IllegalArgumentException("Inputs list size is different to signatures list size!");
         this.inputs = inputs;
         this.outputs = outputs;
         this.signatures = signatures;
         this.fee = fee;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -129,11 +126,6 @@ public final class RegularTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         // check that we have enough proofs and try to open each box only once.
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
@@ -176,8 +168,7 @@ public final class RegularTransaction
         byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
 
         return Bytes.concat(                                            // minimum RegularTransaction length is 40 bytes
-                Longs.toByteArray(fee()),                       // 8 bytes
-                Longs.toByteArray(timestamp()),                         // 8 bytes
+                Longs.toByteArray(fee()),                               // 8 bytes
                 Ints.toByteArray(inputBoxesBytes.length),               // 4 bytes
                 inputBoxesBytes,                                        // depends on previous value (>=4 bytes)
                 Ints.toByteArray(outputBoxDataBytes.length),            // 4 bytes
@@ -199,9 +190,6 @@ public final class RegularTransaction
         long fee = BytesUtils.getLong(bytes, offset);
         offset += 8;
 
-        long timestamp = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
@@ -221,7 +209,7 @@ public final class RegularTransaction
 
         List<Signature25519> signatures = signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
+        return new RegularTransaction(inputs, outputs, signatures, fee);
     }
 
     private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
@@ -237,8 +225,7 @@ public final class RegularTransaction
 
     public static RegularTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
                                             List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
-                                            long fee,
-                                            long timestamp) {
+                                            long fee) {
         if(from == null || outputs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
         if(from.size() > MAX_TRANSACTION_UNLOCKERS)
@@ -255,7 +242,7 @@ public final class RegularTransaction
             fakeSignatures.add(null);
         }
 
-        RegularTransaction unsignedTransaction = new RegularTransaction(inputs, outputs, fakeSignatures, fee, timestamp);
+        RegularTransaction unsignedTransaction = new RegularTransaction(inputs, outputs, fakeSignatures, fee);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         List<Signature25519> signatures = new ArrayList<>();
@@ -263,7 +250,7 @@ public final class RegularTransaction
             signatures.add(item.getValue().sign(messageToSign));
         }
 
-        RegularTransaction transaction = new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
+        RegularTransaction transaction = new RegularTransaction(inputs, outputs, signatures, fee);
         // We don't need to check semantic validity here.
         //if(!transaction.semanticValidity())
         //    throw new IllegalArgumentException("Created transaction is semantically invalid.");
@@ -277,8 +264,7 @@ public final class RegularTransaction
                 ", outputs=" + outputs +
                 ", signatures=" + signatures +
                 ", fee=" + fee +
-                ", timestamp=" + timestamp +
-                ", newBoxes=" + newBoxes +
+                  ", newBoxes=" + newBoxes +
                 ", unlockers=" + unlockers +
                 '}';
     }

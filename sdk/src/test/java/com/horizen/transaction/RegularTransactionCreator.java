@@ -75,6 +75,6 @@ public class RegularTransactionCreator {
 
         // NOTE: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
         long timestamp = System.currentTimeMillis();
-        return RegularTransaction.create(from, sendTo, fee, timestamp);
+        return RegularTransaction.create(from, sendTo, fee);
     }
 }

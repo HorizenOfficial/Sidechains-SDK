@@ -124,7 +124,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       .map(box => {
         if (txBoxes.contains(box.id())) {
           val boxTransaction = txBoxes(box.id())
-          new WalletBox(box, ModifierId @@ boxTransaction.id, boxTransaction.timestamp())
+          new WalletBox(box, ModifierId @@ boxTransaction.id, modifier.timestamp)
         } else { // For fee payment boxes which have no containing transaction.
           new WalletBox(box)
         }

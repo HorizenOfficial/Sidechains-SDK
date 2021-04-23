@@ -40,7 +40,6 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         }
 
         long fee = 10;
-        long timestamp = 1547798549470L;
 
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
@@ -69,7 +68,7 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed2)));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
-        transaction = RegularTransaction.create(from, to, fee, timestamp);
+        transaction = RegularTransaction.create(from, to, fee);
 
         // Set to true and run if you want to update regression data.
         if (false) {
@@ -123,6 +122,5 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         //assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
         assertArrayEquals("Transaction message to sign is different to origin.", transaction.messageToSign(), parsedTransaction.messageToSign());
         assertEquals("Transaction fee is different to origin.", transaction.fee(), parsedTransaction.fee());
-        assertEquals("Transaction timestamp is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
     }
 }

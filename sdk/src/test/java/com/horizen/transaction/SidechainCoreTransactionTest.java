@@ -30,13 +30,12 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         proofs.add((Proof)getRandomSignature25519());
 
         long fee = 100L;
-        long timestamp = 13213L;
 
 
         // Test 1: everything is correct
         boolean exceptionOccurred = false;
         try {
-            new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
+            new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -47,7 +46,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         // Test 2: inputs ids is null
         exceptionOccurred = false;
         try {
-            new SidechainCoreTransaction(null, outputsData, proofs, fee, timestamp);
+            new SidechainCoreTransaction(null, outputsData, proofs, fee);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -58,7 +57,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         // Test 3: outputs data is null
         exceptionOccurred = false;
         try {
-            new SidechainCoreTransaction(inputsIds, null, proofs, fee, timestamp);
+            new SidechainCoreTransaction(inputsIds, null, proofs, fee);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -69,7 +68,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         // Test 4: proofs is null
         exceptionOccurred = false;
         try {
-            new SidechainCoreTransaction(inputsIds, outputsData, null, fee, timestamp);
+            new SidechainCoreTransaction(inputsIds, outputsData, null, fee);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -96,7 +95,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
 
 
         // Test 1: create semantically valid transaction
-        SidechainCoreTransaction tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp);
+        SidechainCoreTransaction tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
         boolean isValid = true;
         try {
             tx.semanticValidity();
@@ -110,7 +109,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
 
 
         // Test 2: create semantically invalid transaction - fee is negative
-        tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, -10L, timestamp);
+        tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, -10L);
         try {
             tx.semanticValidity();
             isValid = true;
@@ -122,8 +121,8 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
-        // Test 3: create semantically invalid transaction - timestamp is negative
-        tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, -10L);
+        // Test 3: create semantically invalid transaction - inputs ids list is empty
+        tx = new SidechainCoreTransaction(new ArrayList<>(), outputsData, proofs, fee);
         try {
             tx.semanticValidity();
             isValid = true;
@@ -135,8 +134,8 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
-        // Test 4: create semantically invalid transaction - inputs ids list is empty
-        tx = new SidechainCoreTransaction(new ArrayList<>(), outputsData, proofs, fee, timestamp);
+        // Test 4: create semantically invalid transaction - outputs data list is empty
+        tx = new SidechainCoreTransaction(inputsIds, new ArrayList<>(), proofs, fee);
         try {
             tx.semanticValidity();
             isValid = true;
@@ -148,8 +147,8 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
-        // Test 5: create semantically invalid transaction - outputs data list is empty
-        tx = new SidechainCoreTransaction(inputsIds, new ArrayList<>(), proofs, fee, timestamp);
+        // Test 5: create semantically invalid transaction - number of inputs (1) is different to number of proofs (2)
+        tx = new SidechainCoreTransaction(Arrays.asList(getRandomBoxId()), outputsData, proofs, fee);
         try {
             tx.semanticValidity();
             isValid = true;
@@ -161,22 +160,9 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
 
-        // Test 6: create semantically invalid transaction - number of inputs (1) is different to number of proofs (2)
-        tx = new SidechainCoreTransaction(Arrays.asList(getRandomBoxId()), outputsData, proofs, fee, timestamp);
-        try {
-            tx.semanticValidity();
-            isValid = true;
-        } catch (TransactionSemanticValidityException e) {
-            isValid = false;
-        } catch (Exception e) {
-            fail("TransactionSemanticValidityException type expected.");
-        }
-        assertFalse("Transaction expected to be semantically Invalid.", isValid);
-
-
-        // Test 7: create semantically invalid transaction - inputs list contains duplicates
+        // Test 6: create semantically invalid transaction - inputs list contains duplicates
         byte[] boxId = getRandomBoxId();
-        tx = new SidechainCoreTransaction(Arrays.asList(boxId, boxId), outputsData, proofs, fee, timestamp);
+        tx = new SidechainCoreTransaction(Arrays.asList(boxId, boxId), outputsData, proofs, fee);
         try {
             tx.semanticValidity();
             isValid = true;

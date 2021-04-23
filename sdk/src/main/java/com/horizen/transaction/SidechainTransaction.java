@@ -37,7 +37,6 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
                     Bytes.concat(
                             unlockersStream.toByteArray(),
                             newBoxesPropositionsStream.toByteArray(),
-                            Longs.toByteArray(timestamp()),
                             Longs.toByteArray(fee())
                     )
             );
