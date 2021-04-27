@@ -91,8 +91,6 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         proofs.add((Proof)getRandomSignature25519());
 
         long fee = 100L;
-        long timestamp = 13213L;
-
 
         // Test 1: create semantically valid transaction
         SidechainCoreTransaction tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);

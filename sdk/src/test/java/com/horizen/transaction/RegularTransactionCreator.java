@@ -28,7 +28,7 @@ public class RegularTransactionCreator {
         // 1. calculate sum of to.getValue(...) + fee
         // 2. get from wallet proper number of closed RegularBox ordered by creation time, which ids is not in boxIdsToExclude and sum of their values >= sum above
         // 3. set change to changeAddress if need
-        // 4. construct inputs and outputs lists, timestamp
+        // 4. construct inputs and outputs lists
         // 5. try to do RegularTransaction.create(...)
 
         Objects.requireNonNull(wallet, "Wallet can't be null");
@@ -74,7 +74,6 @@ public class RegularTransactionCreator {
         }
 
         // NOTE: in HybridApp they use System.currentTimeMillis(). Is it a good solution?
-        long timestamp = System.currentTimeMillis();
         return RegularTransaction.create(from, sendTo, fee);
     }
 }

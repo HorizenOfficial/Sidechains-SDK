@@ -545,7 +545,7 @@ class SidechainHistoryTest extends JUnitSuite
   }
 
   @Test
-  def chXeckSidechainBlockInfoCreation(): Unit = {
+  def checkSidechainBlockInfoCreation(): Unit = {
     val firstBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(241))
     val secondBlockVrfOutputOpt = Option(VrfGenerator.generateVrfOutput(242))
 

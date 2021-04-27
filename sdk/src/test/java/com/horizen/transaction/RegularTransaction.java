@@ -167,7 +167,7 @@ public final class RegularTransaction
 
         byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
 
-        return Bytes.concat(                                            // minimum RegularTransaction length is 40 bytes
+        return Bytes.concat(                                            // minimum RegularTransaction length is 32 bytes
                 Longs.toByteArray(fee()),                               // 8 bytes
                 Ints.toByteArray(inputBoxesBytes.length),               // 4 bytes
                 inputBoxesBytes,                                        // depends on previous value (>=4 bytes)
@@ -179,7 +179,7 @@ public final class RegularTransaction
     }
 
     public static RegularTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 40)
+        if(bytes.length < 32)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if(bytes.length > MAX_TRANSACTION_SIZE)

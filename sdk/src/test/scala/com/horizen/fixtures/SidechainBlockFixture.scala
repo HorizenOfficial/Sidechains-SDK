@@ -220,7 +220,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + 10,
       sidechainTransactions = Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]](
-        new SemanticallyInvalidTransaction(sidechainBlock.timestamp - 100).asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
+        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
       companion = companion,
       params = params,
       basicSeed = basicSeed)

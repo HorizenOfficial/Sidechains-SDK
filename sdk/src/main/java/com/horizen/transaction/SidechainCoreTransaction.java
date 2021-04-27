@@ -129,7 +129,7 @@ public class SidechainCoreTransaction
 
         byte[] proofsBytes = proofsSerializer.toBytes(proofs);
 
-        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 36 bytes
+        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 28 bytes
                 Longs.toByteArray(fee()),                           // 8 bytes
                 Ints.toByteArray(inputIdsBytes.length),             // 4 bytes
                 inputIdsBytes,                                      // depends in previous value(>=0 bytes)
@@ -141,7 +141,7 @@ public class SidechainCoreTransaction
     }
 
     public static SidechainCoreTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 36)
+        if(bytes.length < 28)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if(bytes.length > MAX_TRANSACTION_SIZE)

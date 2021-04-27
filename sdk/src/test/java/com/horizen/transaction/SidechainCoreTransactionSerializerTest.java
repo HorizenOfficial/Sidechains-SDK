@@ -63,7 +63,6 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         proofs.add((Proof)new Signature25519(BytesUtils.fromHexString("34098ab081a042cb9a4da5faf05c9d1b970cf365a776acd356e980313335ac55eb41d80a6aa816e311cd1ed488b18ef8a10f278b4de19a5b5865a16f6e5bb001")));
 
         long fee = 100L;
-        long timestamp = 13213L;
 
         SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
         // Set `true` and run if you want to update regression data.

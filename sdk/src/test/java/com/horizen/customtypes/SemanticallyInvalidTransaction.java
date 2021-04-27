@@ -13,12 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, ZenBox> {
-    private long _timestamp;
-
     public static final byte TRANSACTION_TYPE_ID = 11;
-    public SemanticallyInvalidTransaction(long timestamp) {
-        _timestamp = timestamp;
-    }
+    public SemanticallyInvalidTransaction() {}
 
     @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
@@ -44,9 +40,7 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public byte[] bytes() {
-        return Longs.toByteArray(_timestamp);
-    }
+    public byte[] bytes() {return new byte[0];}
 
     @Override
     public TransactionSerializer serializer() {
@@ -54,7 +48,7 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     public static SemanticallyInvalidTransaction parseBytes(byte[] bytes) {
-        return new SemanticallyInvalidTransaction(BytesUtils.getLong(bytes, 0));
+        return new SemanticallyInvalidTransaction();
     }
 
     @Override
