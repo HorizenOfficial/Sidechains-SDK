@@ -580,11 +580,11 @@ class SidechainWalletTest
     Mockito.when(mockedWalletBoxStorage1.getByType(classOf[ZenBox])).thenReturn(List(walletBoxZen1, walletBoxZen2))
 
     val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[ZenBox])
-    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox.",
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox.",
       util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box), actualBoxesByTypeJava)
 
     val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[ZenBox], util.Arrays.asList(walletBoxZen1.box.id()))
-    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type RegularBox with excluded ids.",
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox with excluded ids.",
       util.Arrays.asList(walletBoxZen2.box), actualBoxesByTypeWithExcludeJava)
 
 
@@ -593,7 +593,7 @@ class SidechainWalletTest
     Mockito.when(mockedWalletBoxStorage1.getBoxesBalance(classOf[ZenBox])).thenReturn(balance)
 
     val actualBalance = sidechainWallet.boxesBalance(classOf[ZenBox])
-    assertEquals("SidechainWallet failed to retrieve a proper balance for type RegularBox.", balance, actualBalance)
+    assertEquals("SidechainWallet failed to retrieve a proper balance for type ZenBox.", balance, actualBalance)
   }
 
   @Test

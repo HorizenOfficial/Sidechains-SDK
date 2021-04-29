@@ -26,7 +26,7 @@ public class RegularTransactionCreator {
                                             List<byte[]> boxIdsToExclude) {
         // 0. check parameters (fee >= 0, to.values >= 0, etc.)
         // 1. calculate sum of to.getValue(...) + fee
-        // 2. get from wallet proper number of closed RegularBox ordered by creation time, which ids is not in boxIdsToExclude and sum of their values >= sum above
+        // 2. get from wallet proper number of closed ZenBox ordered by creation time, which ids is not in boxIdsToExclude and sum of their values >= sum above
         // 3. set change to changeAddress if need
         // 4. construct inputs and outputs lists
         // 5. try to do RegularTransaction.create(...)

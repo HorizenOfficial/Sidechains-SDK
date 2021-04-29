@@ -1,6 +1,6 @@
 package com.horizen.transaction.exception;
 
-public class TransactionSemanticValidityException extends RuntimeException {
+public class TransactionSemanticValidityException extends Exception {
     public TransactionSemanticValidityException() {
         super();
     }

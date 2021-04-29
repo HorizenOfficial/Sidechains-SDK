@@ -9,7 +9,6 @@ import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.Route;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
 import com.horizen.node.SidechainNodeView;
-import scala.Some;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.node.SidechainNodeView;
 import com.horizen.secret.Secret;
 import com.horizen.serialization.Views;
-import scala.Option;
-import scala.Some;
 
 import java.util.ArrayList;
 import java.util.List;

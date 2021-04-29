@@ -451,7 +451,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   private def createCoreTransaction(inputBoxesType: Class[_<: Box[_ <: Proposition]],
-                                    regularBoxDataList: List[TransactionOutput],
+                                    zenBoxDataList: List[TransactionOutput],
                                     withdrawalRequestBoxDataList: List[TransactionWithdrawalRequestOutput],
                                     forgerBoxDataList: List[TransactionForgerOutput],
                                     fee: Long,
@@ -467,7 +467,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         boxIdsToExclude.add(id.data)
 
     val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
-    regularBoxDataList.foreach(element =>
+    zenBoxDataList.foreach(element =>
       outputs.add(new ZenBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
         element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])

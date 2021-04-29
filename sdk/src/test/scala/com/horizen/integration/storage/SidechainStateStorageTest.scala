@@ -70,7 +70,7 @@ class SidechainStateStorageTest
 
     assertEquals("Different consensus epoch expected.", consensusEpoch, sidechainStateStorage.getConsensusEpochNumber.get)
 
-    // Test delete operation: first RegularBox and first CustomBox
+    // Test delete operation: first ZenBox and first CustomBox
     val boxIdsToRemoveSet: Set[ByteArrayWrapper] = Set(new ByteArrayWrapper(bList1.head.id()), new ByteArrayWrapper(bList2.head.id()))
     assertTrue("Update(delete) operation must be successful.",
       sidechainStateStorage.update(version2, withdrawalEpochInfo, Set(),

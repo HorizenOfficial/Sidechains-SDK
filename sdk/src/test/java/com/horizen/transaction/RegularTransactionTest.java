@@ -174,7 +174,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         }
 
 
-        // Test 2: Create new transaction with regular boxes and withdrawal requests
+        // Test 2: Create new transaction with zen boxes and withdrawal requests
         to.clear();
         to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 30L));
         to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 50L));
@@ -242,7 +242,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
         }
 
 
-        // Test 2: Create new transaction with regular boxes and forger boxes
+        // Test 2: Create new transaction with zen boxes and forger boxes
         to.clear();
         to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 30L));
         to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 50L));
@@ -263,11 +263,11 @@ public class RegularTransactionTest extends BoxFixtureClass {
         }
         assertTrue("Transaction expected to be semantically valid.", isValid);
 
-        assertEquals("Count of new boxes must be the same as count of regular boxes and forger boxes.",
+        assertEquals("Count of new boxes must be the same as count of zen boxes and forger boxes.",
                 to.size(), tx2NewBoxes.size());
         for(NoncedBox box : tx2NewBoxes ) {
             if (box instanceof ZenBox)
-                assertTrue("Transaction must contain new box for specified regular boxes data.",
+                assertTrue("Transaction must contain new box for specified zen boxes data.",
                         to.contains(new ZenBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
             else if (box instanceof ForgerBox) {
                 ForgerBox forgerBox = (ForgerBox)box;
@@ -275,7 +275,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
                         to.contains(new ForgerBoxData(forgerBox.proposition(), forgerBox.value(), forgerBox.blockSignProposition(), forgerBox.vrfPubKey())));
             }
             else
-                fail("Box must be an instance of RegularBox or ForgerBox.");
+                fail("Box must be an instance of ZenBox or ForgerBox.");
         }
     }
 }
