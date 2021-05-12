@@ -50,7 +50,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public ForgerBox getBox() {
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customCreationData());
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 
@@ -80,7 +80,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     public Optional<byte[]> getGenSysConstantOpt() {
-        return OptionConverters.toJava(output.constant());
+        return OptionConverters.toJava(output.constantOpt());
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {

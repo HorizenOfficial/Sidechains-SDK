@@ -46,14 +46,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
                                                 .stream()
-                                                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
+                                                .map(signatureBytesOpt -> signatureBytesOpt.map(bytes -> SchnorrSignature.deserialize(bytes, true)).orElse(signaturePlaceHolder))
                                                 .collect(Collectors.toList());
 
         List<SchnorrPublicKey> publicKeys =
-                schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
+                schnorrPublicKeysBytesList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
 
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
-                backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, signatures, publicKeys, threshold, provingKeyPath);
+                backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, signatures, publicKeys, threshold, provingKeyPath, true);
 
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
@@ -68,7 +68,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement constant = FieldElement.deserialize(sysDataConstant);
         boolean verificationResult =
-                NaiveThresholdSigProof.verifyProof(backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, constant, quality, proof, verificationKeyPath);
+                NaiveThresholdSigProof.verifyProof(backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, constant, quality, proof, true, verificationKeyPath, true);
 
         constant.freeFieldElement();
 
@@ -78,7 +78,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     @Override
     public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
-        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
+        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
 
         FieldElement sysDataConstant = NaiveThresholdSigProof.getConstant(schnorrPublicKeys, threshold);
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();

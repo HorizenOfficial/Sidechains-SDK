@@ -165,6 +165,6 @@ class MainchainTransactionTest extends JUnitSuite {
     assertEquals("Sidechain creation address is different.", "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac",
       BytesUtils.toHexString(creation.address))
     assertEquals("Sidechain creation custom data is different.", "2df6c69c3b5d7636512eea9241ebaf0138179ed2b4a3a9d3e06c24d99d5c04712ff31a8cd55bd4b347c39081143031087b28d4c46f31e07eda35256699697e94fcdc95c99855231a0bc499d5e760de37a682a728e34e5ab07a8fdac4b2120100e3eb23a3a2222cc636896601b94697cda1cf6e4df9dfe74db44c90f7d15d1b722f93dd6c754e3bddf80baa2961503ec64c4b3979e558fe3293f88d3031cfd079b325a6db009ca77088aaa55f237e517b4579d2bacf99fade605eab96f636010000",
-      BytesUtils.toHexString(creation.customData))
+      BytesUtils.toHexString(creation.customCreationData))
   }
 }

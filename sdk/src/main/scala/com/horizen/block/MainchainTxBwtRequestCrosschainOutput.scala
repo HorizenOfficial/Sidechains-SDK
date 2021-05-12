@@ -8,7 +8,7 @@ import scala.util.Try
 
 case class MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes: Array[Byte],
                                                  override val sidechainId: Array[Byte], // uint256
-                                                 scRequestData: Array[Byte],            // ScFieldElement
+                                                 scRequestData: Array[Array[Byte]],     // ScFieldElement[]
                                                  mcDestinationAddress: Array[Byte],     // uint160
                                                  scFee: Long,                           // CAmount (int64_t)
                                                  scProof: Array[Byte]                   // ScProof
@@ -29,13 +29,23 @@ object MainchainTxBwtRequestCrosschainOutput {
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
+    // TODO: check fields order serialization in MC
     val scRequestDataSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
     currentOffset += scRequestDataSize.size()
-    if(scRequestDataSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
-      throw new IllegalArgumentException(s"Input data corrupted: scRequestData size ${scRequestDataSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
-    val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + scRequestDataSize.value().intValue()))
-    currentOffset += scRequestDataSize.value().intValue()
+
+    val scRequestDataSeq: Seq[Array[Byte]] = (1 to scRequestDataSize.value().intValue()).map(idx => {
+      val dataSize = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
+      currentOffset += scRequestDataSize.size()
+
+      if(dataSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+        throw new IllegalArgumentException(s"Input data corrupted: scRequestData[$idx] size ${dataSize.value()} " +
+          s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+
+      val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + scRequestDataSize.value().intValue()))
+      currentOffset += scRequestDataSize.value().intValue()
+
+      scRequestData
+    })
 
     val mcDestinationAddress: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 20))
     currentOffset += 20
@@ -43,6 +53,7 @@ object MainchainTxBwtRequestCrosschainOutput {
     val scFee: Long = BytesUtils.getReversedLong(bwtRequestOutputBytes, currentOffset)
     currentOffset += 8
 
+    // TODO: Proof will have variable size
     val scProofSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
     currentOffset += scProofSize.size()
     if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
@@ -53,6 +64,6 @@ object MainchainTxBwtRequestCrosschainOutput {
     currentOffset += scProofSize.value().intValue()
 
     new MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes.slice(offset, currentOffset),
-      sidechainId, scRequestData, mcDestinationAddress, scFee, scProof)
+      sidechainId, scRequestDataSeq.toArray, mcDestinationAddress, scFee, scProof)
   }
 }

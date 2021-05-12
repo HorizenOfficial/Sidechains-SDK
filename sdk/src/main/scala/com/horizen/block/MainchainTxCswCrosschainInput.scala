@@ -7,12 +7,13 @@ import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scala.util.Try
 
 case class MainchainTxCswCrosschainInput(cswInputBytes: Array[Byte],
-                                         amount: Long,                    // CAmount (int64_t)
-                                         sidechainId: Array[Byte],        // uint256
-                                         nullifier: Array[Byte],          // ScFieldElement
-                                         pubKeyHash: Array[Byte],         // uint160
-                                         scProof: Array[Byte],            // ScProof
-                                         redeemScript: Array[Byte]        // CScript
+                                         amount: Long,                                    // CAmount (int64_t)
+                                         sidechainId: Array[Byte],                        // uint256
+                                         nullifier: Array[Byte],                          // ScFieldElement
+                                         mcPubKeyHash: Array[Byte],                       // uint160
+                                         scProof: Array[Byte],                            // ScProof
+                                         redeemScript: Array[Byte],                       // CScript
+                                         endCumulativeScTxCommitmentTreeRoot: Array[Byte] // ScFieldElement
                                         ) {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(cswInputBytes))
@@ -42,7 +43,7 @@ object MainchainTxCswCrosschainInput {
     val nullifier: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue()))
     currentOffset += nullifierSize.value().intValue()
 
-    val pubKeyHash: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 20))
+    val mcPubKeyHash: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 20))
     currentOffset += 20
 
     val scProofSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
@@ -60,7 +61,17 @@ object MainchainTxCswCrosschainInput {
     val redeemScript: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
     currentOffset += scriptLength.value().intValue()
 
+    // TODO: check fields order serialization in MC
+    val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
+    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+      throw new IllegalArgumentException(s"Input data corrupted: endCumulativeScTxCommitmentTreeRoot size ${nullifierSize.value()} " +
+        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+    val endCumulativeScTxCommitmentTreeRoot: Array[Byte] = BytesUtils.reverseBytes(
+      cswInputBytes.slice(currentOffset, currentOffset + endCumulativeScTxCommitmentTreeRootSize.value().intValue()))
+    currentOffset += endCumulativeScTxCommitmentTreeRootSize.value().intValue()
+
     new MainchainTxCswCrosschainInput(cswInputBytes.slice(offset, currentOffset),
-      amount, sidechainId, nullifier, pubKeyHash, scProof, redeemScript)
+      amount, sidechainId, nullifier, mcPubKeyHash, scProof, redeemScript, endCumulativeScTxCommitmentTreeRoot)
   }
 }
