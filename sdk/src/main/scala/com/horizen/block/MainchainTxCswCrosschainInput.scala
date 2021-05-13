@@ -7,13 +7,14 @@ import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scala.util.Try
 
 case class MainchainTxCswCrosschainInput(cswInputBytes: Array[Byte],
-                                         amount: Long,                                    // CAmount (int64_t)
-                                         sidechainId: Array[Byte],                        // uint256
-                                         nullifier: Array[Byte],                          // ScFieldElement
-                                         mcPubKeyHash: Array[Byte],                       // uint160
-                                         scProof: Array[Byte],                            // ScProof
-                                         redeemScript: Array[Byte],                       // CScript
-                                         endCumulativeScTxCommitmentTreeRoot: Array[Byte] // ScFieldElement
+                                         amount: Long,                                        // CAmount (int64_t)
+                                         sidechainId: Array[Byte],                            // uint256
+                                         nullifier: Array[Byte],                              // CFieldElement
+                                         mcPubKeyHash: Array[Byte],                           // uint160
+                                         scProof: Array[Byte],                                // ScProof
+                                         actCertDataHashOpt: Option[Array[Byte]],             // CFieldElement
+                                         ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte],// CFieldElement
+                                         redeemScript: Array[Byte]                            // CScript
                                         ) {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(cswInputBytes))
@@ -55,23 +56,44 @@ object MainchainTxCswCrosschainInput {
     val scProof: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
     currentOffset += scProofSize.value().intValue()
 
+    val actCertDataHashSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    currentOffset += actCertDataHashSize.size()
+
+    // Note: There are two valid cases for actCertDataHash: to be null or to have a FE size
+    // Null case is for ceased sidechains without active certificates.
+    val actCertDataHashOpt: Option[Array[Byte]] = if(actCertDataHashSize.value() == 0) {
+      None
+    } else {
+      if (actCertDataHashSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+        throw new IllegalArgumentException(s"Input data corrupted: actCertDataHash size ${nullifierSize.value()} " +
+          s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+
+      val actCertDataHash: Array[Byte] = BytesUtils.reverseBytes(
+        cswInputBytes.slice(currentOffset, currentOffset + actCertDataHashSize.value().intValue()))
+      currentOffset += actCertDataHashSize.value().intValue()
+
+      Some(actCertDataHash)
+    }
+
+    val ceasingCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.size()
+
+    if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+      throw new IllegalArgumentException(s"Input data corrupted: ceasingCumulativeScTxCommitmentTreeRoot size ${nullifierSize.value()} " +
+        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+    val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = BytesUtils.reverseBytes(
+      cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()))
+    currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()
+
     val scriptLength: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
     val redeemScript: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
     currentOffset += scriptLength.value().intValue()
 
-    // TODO: check fields order serialization in MC
-    val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
-    currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
-    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
-      throw new IllegalArgumentException(s"Input data corrupted: endCumulativeScTxCommitmentTreeRoot size ${nullifierSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
-    val endCumulativeScTxCommitmentTreeRoot: Array[Byte] = BytesUtils.reverseBytes(
-      cswInputBytes.slice(currentOffset, currentOffset + endCumulativeScTxCommitmentTreeRootSize.value().intValue()))
-    currentOffset += endCumulativeScTxCommitmentTreeRootSize.value().intValue()
 
     new MainchainTxCswCrosschainInput(cswInputBytes.slice(offset, currentOffset),
-      amount, sidechainId, nullifier, mcPubKeyHash, scProof, redeemScript, endCumulativeScTxCommitmentTreeRoot)
+      amount, sidechainId, nullifier, mcPubKeyHash, scProof, actCertDataHashOpt,
+      ceasingCumulativeScTxCommitmentTreeRoot, redeemScript)
   }
 }

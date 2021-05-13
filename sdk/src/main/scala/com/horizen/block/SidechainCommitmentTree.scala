@@ -15,7 +15,7 @@ class SidechainCommitmentTree {
   val commitmentTree = CommitmentTree.init();
 
   def addCswInput(csw: MainchainTxCswCrosschainInput): Boolean = {
-    // TODO: add csw.endCumulativeScTxCommitmentTreeRoot
+    // TODO: add csw.actCertDataHashOpt and csw.endCumulativeScTxCommitmentTreeRoot parameters
     commitmentTree.addCsw(csw.sidechainId, csw.amount, csw.nullifier, csw.mcPubKeyHash)
   }
 
