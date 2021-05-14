@@ -29,4 +29,10 @@ public interface ThresholdSignatureCircuit {
     int proofSizeLength();
 
     int certVkSize();
+
+    boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath);
+
+    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath);
+
+    String getCoboundaryMarlinSnarkVerificationKeyHex(String verificationKeyPath);
 }
