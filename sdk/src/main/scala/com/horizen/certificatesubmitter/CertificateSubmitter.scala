@@ -146,8 +146,8 @@ class CertificateSubmitter
           log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
-            dataForProofGeneration.processedEpochNumber,
-            dataForProofGeneration.endWithdrawalEpochBlockHash,
+            dataForProofGeneration.referencedEpochNumber,
+            dataForProofGeneration.endCumulativeScTxCommTreeRoot,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
@@ -173,10 +173,11 @@ class CertificateSubmitter
     }
   }
 
-  case class DataForProofGeneration(processedEpochNumber: Int,
+  case class DataForProofGeneration(referencedEpochNumber: Int,
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endWithdrawalEpochBlockHash: Array[Byte],
-                                    prevEndWithdrawalEpochBlockHash: Array[Byte],
+                                    endCumulativeScTxCommTreeRoot: Array[Byte],
+                                    btrFee: Long,
+                                    ftMinAmount: Long,
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   protected def getDataForProofGeneration(sidechainNodeView: View): Option[DataForProofGeneration] = {
@@ -201,13 +202,18 @@ class CertificateSubmitter
     val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-    val previousEndEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber - 1)
+    // TODO: fix and return CommTreeRoot as soon as proper code is merged to the branch
+    val endCumulativeScTxCommTreeRoot = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+
+
+    // TODO: define proper values
+    val btrFee: Long = 0;
+    val ftMinAmount: Long = 0;
 
     // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
-    val endEpochBlockHashLE = BytesUtils.reverseBytes(endEpochBlockHash)
-    val previousEndEpochBlockHashLE = BytesUtils.reverseBytes(previousEndEpochBlockHash)
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, endEpochBlockHashLE, previousEndEpochBlockHashLE)
+    val endCumulativeScTxCommTreeRootLE = BytesUtils.reverseBytes(endCumulativeScTxCommTreeRoot)
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
+      withdrawalRequests.asJava, referencedWithdrawalEpochNumber, endCumulativeScTxCommTreeRootLE, btrFee, ftMinAmount)
 
     val sidechainWallet = sidechainNodeView.vault
     val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
@@ -221,7 +227,8 @@ class CertificateSubmitter
     // Quality is equal to the number of valid schnorr signatures.
     val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
     if(newCertQuality > currentCertificateTopQuality)
-      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endEpochBlockHash, previousEndEpochBlockHash, signersPublicKeyWithSignatures))
+      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endCumulativeScTxCommTreeRoot,
+        btrFee, ftMinAmount, signersPublicKeyWithSignatures))
     else {
       log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
         s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
@@ -246,16 +253,25 @@ class CertificateSubmitter
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
-    log.info(s"Start generating proof for ${dataForProofGeneration.processedEpochNumber} withdrawal epoch number, with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, endWithdrawalEpochBlockHash=${BytesUtils.toHexString(dataForProofGeneration.endWithdrawalEpochBlockHash)}, prevEndWithdrawalEpochBlockHash=${BytesUtils.toHexString(dataForProofGeneration.prevEndWithdrawalEpochBlockHash)}, signersThreshold=${params.signersThreshold}. It can a while")
+    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
+      s"with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
+      s"endCumulativeScTxCommTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.endCumulativeScTxCommTreeRoot)}, " +
+      s"signersThreshold=${params.signersThreshold}. " +
+      s"It can take a while.")
+
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
-      BytesUtils.reverseBytes(dataForProofGeneration.endWithdrawalEpochBlockHash), // Pass block hash in LE endianness
-      BytesUtils.reverseBytes(dataForProofGeneration.prevEndWithdrawalEpochBlockHash), // Pass block hash in LE endianness
-      signersPublicKeysBytes.asJava,
+      dataForProofGeneration.referencedEpochNumber,
+      BytesUtils.reverseBytes(dataForProofGeneration.endCumulativeScTxCommTreeRoot), // Pass block hash in LE endianness
+      dataForProofGeneration.btrFee,
+      dataForProofGeneration.ftMinAmount,
       signaturesBytes.asJava,
+      signersPublicKeysBytes.asJava,
       params.signersThreshold,
-      provingFileAbsolutePath)
+      provingFileAbsolutePath,
+      true,
+      true)
   }
 }
 

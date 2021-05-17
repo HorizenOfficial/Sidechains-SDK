@@ -54,6 +54,7 @@ object CertificateRequestCreator {
 
   val ZEN_COINS_DIVISOR: BigDecimal = new BigDecimal(100000000)
 
+  // TODO update interface and its usage
   def create(epochNumber: Int,
              endEpochBlockHash: Array[Byte],
              proofBytes: Array[Byte],

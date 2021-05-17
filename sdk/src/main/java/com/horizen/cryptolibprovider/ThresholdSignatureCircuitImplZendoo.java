@@ -8,7 +8,6 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.CreateProofResult;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
-import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 
 import java.util.List;
@@ -23,24 +22,38 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt, byte[] endWithdrawalEpochBlockHash, byte[] prevEndWithdrawalEpochBlockHash) {
+    public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+                                            int epochNumber,
+                                            byte[] endCumulativeScTxCommTreeRoot,
+                                            long btrFee,
+                                            long ftMinAmount) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
-        FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, endWithdrawalEpochBlockHash, prevEndWithdrawalEpochBlockHash);
+
+        FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
+
+        FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, epochNumber,
+                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount);
         byte[] messageAsBytes = messageToSign.serializeFieldElement();
 
+        endCumulativeScTxCommTreeRootFe.freeFieldElement();
         messageToSign.freeFieldElement();
+
         return messageAsBytes;
     }
 
     @Override
     public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
-                                          byte[] endEpochBlockHash,
-                                          byte[] prevEndEpochBlockHash,
-                                          List<byte[]> schnorrPublicKeysBytesList,
+                                          int epochNumber,
+                                          byte[] endCumulativeScTxCommTreeRoot,
+                                          long btrFee,
+                                          long ftMinAmount,
                                           List<Optional<byte[]>> schnorrSignatureBytesList,
+                                          List<byte[]> schnorrPublicKeysBytesList,
                                           long threshold,
-                                          String provingKeyPath){
+                                          String provingKeyPath,
+                                          boolean checkProvingKey,
+                                          boolean zk) {  // TODO: what is zk
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
@@ -52,9 +65,13 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         List<SchnorrPublicKey> publicKeys =
                 schnorrPublicKeysBytesList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
 
+        FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
-                backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, signatures, publicKeys, threshold, provingKeyPath, true);
+                backwardTransfers, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, signatures,
+                publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
 
+        // TODO: actually it will be more effective to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
+        endCumulativeScTxCommTreeRootFe.freeFieldElement();
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
 
@@ -62,15 +79,29 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt, byte[] endEpochBlockHash, byte[] prevEndEpochBlockHash, long quality, byte[] proof, byte[] sysDataConstant, String verificationKeyPath) {
+    public Boolean verifyProof(List<WithdrawalRequestBox> bt,
+                               int epochNumber,
+                               byte[] endCumulativeScTxCommTreeRoot,
+                               long btrFee,
+                               long ftMinAmount,
+                               byte[] constant,
+                               long quality,
+                               byte[] proof,
+                               boolean checkProof,
+                               String verificationKeyPath,
+                               boolean checkVerificationKey) {
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
-        FieldElement constant = FieldElement.deserialize(sysDataConstant);
-        boolean verificationResult =
-                NaiveThresholdSigProof.verifyProof(backwardTransfers, endEpochBlockHash, prevEndEpochBlockHash, constant, quality, proof, true, verificationKeyPath, true);
+        FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
+        FieldElement constantFe = FieldElement.deserialize(constant);
 
-        constant.freeFieldElement();
+        boolean verificationResult =
+                NaiveThresholdSigProof.verifyProof(backwardTransfers, epochNumber, endCumulativeScTxCommTreeRootFe,
+                        btrFee, ftMinAmount, constantFe, quality, proof, checkProof, verificationKeyPath, checkVerificationKey);
+
+        endCumulativeScTxCommTreeRootFe.freeFieldElement();
+        constantFe.freeFieldElement();
 
         return verificationResult;
     }
@@ -87,11 +118,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         schnorrPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
 
         return sysDataConstantBytes;
-    }
-
-    @Override
-    public int sysDataConstantLength() {
-        return PoseidonHash.HASH_LENGTH;
     }
 
     @Override

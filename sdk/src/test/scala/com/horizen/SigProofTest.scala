@@ -50,12 +50,14 @@ class SigProofTest {
 
     val sysConstant = sigCircuit.generateSysDataConstant(publicKeysBytes, threshold)
 
-    val mcBlockHash = Array.fill(32)(Random.nextInt().toByte)
-    val previousMcBlockHash = Array.fill(32)(Random.nextInt().toByte)
+    val epochNumber: Int = 10;
+    val btrFee: Long = 100;
+    val ftMinAmount: Long = 100;
+    val endCumulativeScTxCommTreeRoot = Array.fill(32)(Random.nextInt().toByte)
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
-    val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, mcBlockHash, previousMcBlockHash)
+    val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount)
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
     val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
@@ -65,9 +67,11 @@ class SigProofTest {
       .toList ++ emptySigs)
       .asJava
 
-    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, mcBlockHash, previousMcBlockHash, publicKeysBytes, signatures, threshold, provingKeyPath)
+    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, epochNumber, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, signatures, publicKeysBytes, threshold, provingKeyPath, true, true)
 
-    val result = sigCircuit.verifyProof(wb, mcBlockHash, previousMcBlockHash, proofAndQuality.getValue, proofAndQuality.getKey, sysConstant, verificationKeyPath)
+    val result = sigCircuit.verifyProof(wb, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, sysConstant,
+      proofAndQuality.getValue, proofAndQuality.getKey, true, verificationKeyPath, true)
 
     assertTrue("Proof verification expected to be successfully", result)
   }

@@ -14,14 +14,12 @@ case class MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOut
                                                             customCreationData: Array[Byte],
                                                             constantOpt: Option[Array[Byte]],
                                                             certVk: Array[Byte],
-                                                            certProvingSystem: Byte,
                                                             ceasedVkOpt: Option[Array[Byte]],
-                                                            cswProvingSystemOpt: Option[java.lang.Byte],
                                                             mainchainBackwardTransferRequestDataLength: Byte,
                                                             fieldElementCertificateFieldConfigs: Seq[CustomFieldElementsConfig],
                                                             bitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig],
-                                                            forwardTransferScFee: Long,
-                                                            mainchainBackwardTransferRequestScFee: Long) {
+                                                            ftMinAmount: Long,
+                                                            btrFee: Long) {
   def size: Int = sidechainCreationOutputBytes.length
 }
 
@@ -64,9 +62,6 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize)
     currentOffset += vkSize
 
-    val certProvingSystem: Byte = sidechainCreationOutputBytes(currentOffset)
-    currentOffset += 1
-
     // TODO: Vk will have variable size
     val ceasedVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
     currentOffset += 1
@@ -76,16 +71,6 @@ object MainchainTxSidechainCreationCrosschainOutputData {
       None
     }
     if(ceasedVkPresence) currentOffset += vkSize
-
-    val cswProvingSystemPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
-    currentOffset += 1
-    val cswProvingSystemOpt: Option[java.lang.Byte] = if(cswProvingSystemPresence) {
-      val cswProvingSystem = sidechainCreationOutputBytes(currentOffset)
-      currentOffset += 1
-      Some(cswProvingSystem)
-    } else {
-      None
-    }
 
     // TODO: check fields order serialization in MC
     val mainchainBackwardTransferRequestDataLength: Byte = sidechainCreationOutputBytes(currentOffset)
@@ -115,16 +100,16 @@ object MainchainTxSidechainCreationCrosschainOutputData {
       })
 
 
-    val forwardTransferScFee: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
+    val ftMinAmount: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 8
 
-    val mainchainBackwardTransferRequestScFee: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
+    val btrFee: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 8
 
     MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes.slice(offset, currentOffset),
-      withdrawalEpochLength, amount, address, customCreationData, constantOpt, certVk, certProvingSystem,
-      ceasedVk, cswProvingSystemOpt, mainchainBackwardTransferRequestDataLength, fieldElementCertificateFieldConfigs,
-      bitVectorCertificateFieldConfigs, forwardTransferScFee, mainchainBackwardTransferRequestScFee)
+      withdrawalEpochLength, amount, address, customCreationData, constantOpt, certVk,
+      ceasedVk, mainchainBackwardTransferRequestDataLength, fieldElementCertificateFieldConfigs,
+      bitVectorCertificateFieldConfigs, ftMinAmount, btrFee)
   }
 }
 
@@ -137,14 +122,12 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
                                                       data.customCreationData,
                                                       data.constantOpt,
                                                       data.certVk,
-                                                      data.certProvingSystem,
                                                       data.ceasedVkOpt,
-                                                      data.cswProvingSystemOpt,
                                                       data.mainchainBackwardTransferRequestDataLength,
                                                       data.fieldElementCertificateFieldConfigs,
                                                       data.bitVectorCertificateFieldConfigs,
-                                                      data.forwardTransferScFee,
-                                                      data.mainchainBackwardTransferRequestScFee
+                                                      data.ftMinAmount,
+                                                      data.btrFee
                                                     ) with MainchainTxCrosschainOutput {
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(sidechainCreationOutputBytes))

@@ -22,10 +22,10 @@ class SidechainCommitmentTree {
   def addSidechainCreation(sc: SidechainCreation): Boolean = {
     val scOutput: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
 
-    commitmentTree.addScCr(sc.sidechainId, scOutput.amount, scOutput.address, sc.hash(), sc.transactionIndex(),
-      sc.withdrawalEpochLength, scOutput.certProvingSystem, scOutput.cswProvingSystemOpt.asJava,
-      scOutput.mainchainBackwardTransferRequestDataLength, scOutput.fieldElementCertificateFieldConfigs.toArray,
-      scOutput.bitVectorCertificateFieldConfigs.toArray, scOutput.mainchainBackwardTransferRequestScFee, scOutput.forwardTransferScFee,
+    commitmentTree.addScCr(sc.sidechainId, scOutput.amount, scOutput.address, sc.transactionHash(), sc.transactionIndex(),
+      sc.withdrawalEpochLength, scOutput.mainchainBackwardTransferRequestDataLength,
+      scOutput.fieldElementCertificateFieldConfigs.toArray, scOutput.bitVectorCertificateFieldConfigs.toArray,
+      scOutput.btrFee, scOutput.ftMinAmount,
       scOutput.customCreationData, scOutput.constantOpt.asJava, scOutput.certVk, scOutput.ceasedVkOpt.asJava)
   }
 
