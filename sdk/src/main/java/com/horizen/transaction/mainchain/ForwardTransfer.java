@@ -73,14 +73,6 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         return output;
     }
 
-    public long outputAmount() {
-        return output.amount();
-    }
-
-    public byte[] outputTx() {
-        return output.forwardTransferOutputBytes();
-    }
-
     public static ForwardTransfer parseBytes(byte[] bytes) {
         if(bytes.length < 36 + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
             throw new IllegalArgumentException("Input data corrupted.");

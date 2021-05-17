@@ -40,23 +40,17 @@ class SidechainCommitmentTree {
   }
 
   def addCertificate(certificate: WithdrawalEpochCertificate): Boolean = {
-    val sampleField:Array[Byte] = Array(
-      0xffb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f
-    ).map(value => value.toByte)
-
     val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput => new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount))
+
     commitmentTree.addCert(certificate.sidechainId, certificate.epochNumber, certificate.quality, btrList.toArray,
       certificate.customFieldsOpt.asJava, certificate.endCumulativeScTxCommitmentTreeRoot, certificate.btrFee, certificate.ftMinAmount)
   }
 
-  def addCertLeaf(scid: Array[Byte], leaf: Array[Byte]): Boolean = {
-    commitmentTree.addCertLeaf(scid, leaf)
+  def addCertLeaf(sidechainId: Array[Byte], leaf: Array[Byte]): Boolean = {
+    commitmentTree.addCertLeaf(sidechainId, leaf)
   }
 
-  def getTreeCommitment(): Option[Array[Byte]] = {
+  def getCommitment: Option[Array[Byte]] = {
     commitmentTree.getCommitment.asScala match {
       case Some(fe) => {
         val res = fe.serializeFieldElement()
@@ -67,7 +61,7 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getSidechainCommitmentEntryHash(sidechainId: ByteArrayWrapper): Option[Array[Byte]] = {
+  def getSidechainCommitment(sidechainId: ByteArrayWrapper): Option[Array[Byte]] = {
     commitmentTree.getScCommitment(sidechainId.data).asScala match {
       case Some(fe) => {
         val res = fe.serializeFieldElement()
@@ -88,8 +82,8 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getExistanceProof(scid: Array[Byte]): Option[Array[Byte]] = {
-    commitmentTree.getScExistenceProof(scid).asScala match {
+  def getExistenceProof(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScExistenceProof(sidechainId).asScala match {
       case Some(proof) => {
         val proofBytes = proof.serialize()
         proof.freeScExistenceProof()
@@ -99,8 +93,8 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getAbsenceProof(scid: Array[Byte]): Option[Array[Byte]] = {
-    commitmentTree.getScAbsenceProof(scid).asScala match {
+  def getAbsenceProof(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScAbsenceProof(sidechainId).asScala match {
       case Some(proof) => {
         val proofBytes = proof.serialize()
         proof.freeScAbsenceProof()
@@ -112,7 +106,7 @@ class SidechainCommitmentTree {
 }
 
 object SidechainCommitmentTree {
-  def verifyExistanceProof(scCommitment: Array[Byte], commitmentProof: Array[Byte], commitment: Array[Byte]): Boolean = {
+  def verifyExistenceProof(scCommitment: Array[Byte], commitmentProof: Array[Byte], commitment: Array[Byte]): Boolean = {
     val scCommitmentFe = FieldElement.deserialize(scCommitment)
     val commitmentProofFe = ScExistenceProof.deserialize(commitmentProof)
     val commitmentFe = FieldElement.deserialize(commitment)
@@ -123,10 +117,10 @@ object SidechainCommitmentTree {
     res
   }
 
-  def verifyAbsenceProof(scid: Array[Byte], absenceProof: Array[Byte], commitment: Array[Byte]): Boolean = {
+  def verifyAbsenceProof(sidechainId: Array[Byte], absenceProof: Array[Byte], commitment: Array[Byte]): Boolean = {
     val absenceProofFe = ScAbsenceProof.deserialize(absenceProof)
     val commitmentFe = FieldElement.deserialize(commitment)
-    val res = CommitmentTree.verifyScAbsence(scid, absenceProofFe, commitmentFe)
+    val res = CommitmentTree.verifyScAbsence(sidechainId, absenceProofFe, commitmentFe)
     absenceProofFe.freeScAbsenceProof()
     commitmentFe.freeFieldElement()
     res

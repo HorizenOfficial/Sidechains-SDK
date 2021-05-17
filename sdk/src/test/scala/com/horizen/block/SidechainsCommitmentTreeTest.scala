@@ -1,26 +1,23 @@
 package com.horizen.block
 
-import java.util
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.fixtures.SecretFixture
 import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.Mockito
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 
 import scala.util.Random
 
-class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar {
-
-  private val size = 32;
+class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with SecretFixture {
 
   def getWithPadding(bytes: Array[Byte]): Array[Byte] =
     Bytes.concat(new Array[Byte](32 - bytes.length), bytes)
 
   def getSidechains(sidechainsCount: Int): (Seq[ByteArrayWrapper], ByteArrayWrapper, ByteArrayWrapper, ByteArrayWrapper) = {
-    val beforeLeftMostSidechainId = new ByteArrayWrapper(
+    val beforeLeftmostSidechainId = new ByteArrayWrapper(
       getWithPadding(
         Bytes.concat(
           BytesUtils.fromHexString("abcdef"),
@@ -29,7 +26,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar {
       )
     )
 
-    val afterRightMostSidechainId = new ByteArrayWrapper(
+    val afterRightmostSidechainId = new ByteArrayWrapper(
       getWithPadding(
         Bytes.concat(
           BytesUtils.fromHexString("abcdef"),
@@ -38,7 +35,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar {
       )
     )
 
-    val innerSidechainId = new ByteArrayWrapper(
+    val innerMissedSidechainId = new ByteArrayWrapper(
       getWithPadding(
         Bytes.concat(
           BytesUtils.fromHexString("abcdef"),
@@ -56,74 +53,72 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar {
       )
       .map(v => new ByteArrayWrapper(getWithPadding(v)))
 
-    (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId)
+    (sidechainIdSeq, beforeLeftmostSidechainId, innerMissedSidechainId, afterRightmostSidechainId)
   }
 
   @Test
   def addNeighbourProofs(): Unit = {
-    val shm = new SidechainCommitmentTree()
+    val commitmentTree = new SidechainCommitmentTree()
 
-    val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(11)
+    val (sidechainIdSeq, beforeLeftmostSidechainId, innerMissedSidechainId, afterRightmostSidechainId) = getSidechains(11)
 
-    sidechainIdSeq.foreach(_ => {
-      val output = mock[MainchainTxForwardTransferCrosschainOutput]
+    sidechainIdSeq.foreach(scId => {
+      val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), scId.data,
+        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes())
       val forwardTransferHash = new Array[Byte](32)
       Random.nextBytes(forwardTransferHash)
-      Mockito.when(output.hash).thenReturn(forwardTransferHash)
       val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
-      shm.addForwardTransfer(ft)
+      commitmentTree.addForwardTransfer(ft)
     })
 
-    val treeCommitment = shm.getTreeCommitment();
-    assertTrue("Tree commitment must exist", treeCommitment.isDefined)
+    val commitment = commitmentTree.getCommitment
+    assertTrue("Tree commitment must exist", commitment.isDefined)
 
-    val absenceProof1 = shm.getAbsenceProof(beforeLeftMostSidechainId.data)
+    val absenceProof1 = commitmentTree.getAbsenceProof(beforeLeftmostSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof1.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof1.get, treeCommitment.get))
+    assertTrue("Absence proof must be valid.",
+      SidechainCommitmentTree.verifyAbsenceProof(beforeLeftmostSidechainId.data, absenceProof1.get, commitment.get))
 
-    val absenceProof2 = shm.getAbsenceProof(innerSidechainId.data)
+    val absenceProof2 = commitmentTree.getAbsenceProof(innerMissedSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof2.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof2.get, treeCommitment.get))
+    assertTrue("Absence proof must be valid.",
+      SidechainCommitmentTree.verifyAbsenceProof(innerMissedSidechainId.data, absenceProof2.get, commitment.get))
 
-    val absenceProof3 = shm.getAbsenceProof(afterRightMostSidechainId.data)
+    val absenceProof3 = commitmentTree.getAbsenceProof(afterRightmostSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof3.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof3.get, treeCommitment.get))
+    assertTrue("Absence proof must be valid.",
+      SidechainCommitmentTree.verifyAbsenceProof(afterRightmostSidechainId.data, absenceProof3.get, commitment.get))
   }
 
   @Test
   def existenceProofs(): Unit = {
-    val shm = new SidechainCommitmentTree()
+    val commitmentTree = new SidechainCommitmentTree()
 
-    val (sidechainIdSeq, beforeLeftMostSidechainId, innerSidechainId, afterRightMostSidechainId) = getSidechains(11)
+    val (sidechainIdSeq, _, _, _) = getSidechains(11)
 
     sidechainIdSeq.foreach(scId => {
-      val output = mock[MainchainTxForwardTransferCrosschainOutput]
+      val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), scId.data,
+        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes())
       val forwardTransferHash = new Array[Byte](32)
       Random.nextBytes(forwardTransferHash)
-      Mockito.when(output.hash).thenReturn(forwardTransferHash)
       val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
-      shm.addForwardTransfer(ft)
+      commitmentTree.addForwardTransfer(ft)
     })
 
-    val treeCommitment = shm.getTreeCommitment();
-    assertTrue("Tree commitment must exist", treeCommitment.isDefined)
+    val commitment = commitmentTree.getCommitment
+    assertTrue("Tree commitment must exist", commitment.isDefined)
 
-    val absenceProof1 = shm.getAbsenceProof(beforeLeftMostSidechainId.data)
+    sidechainIdSeq.foreach(scId => {
+      val scCommitmentOpt = commitmentTree.getSidechainCommitment(scId)
+      assertTrue("Sidechain commitment must exist.", scCommitmentOpt.isDefined)
+      val existenceProof = commitmentTree.getExistenceProof(scId.data)
+      assertTrue("Existence proof must exist.", existenceProof.isDefined)
 
-    assertTrue("Absence proof must exist.", absenceProof1.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof1.get, treeCommitment.get))
-
-    val absenceProof2 = shm.getAbsenceProof(innerSidechainId.data)
-
-    assertTrue("Absence proof must exist.", absenceProof2.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof2.get, treeCommitment.get))
-
-    val absenceProof3 = shm.getAbsenceProof(afterRightMostSidechainId.data)
-
-    assertTrue("Absence proof must exist.", absenceProof3.isDefined)
-    assertTrue("Absence proof must be valid.", SidechainCommitmentTree.verifyAbsenceProof(beforeLeftMostSidechainId.data, absenceProof3.get, treeCommitment.get))
+      assertTrue("Absence proof must be valid.",
+        SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, existenceProof.get, commitment.get))
+    })
   }
 }

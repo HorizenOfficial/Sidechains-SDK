@@ -10,7 +10,7 @@ import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, Sidechain
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
@@ -65,27 +65,27 @@ case class MainchainBlockReference(
       if (data.absenceProof.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-      val sidechainsCommitmentTreeWrapper = new SidechainCommitmentTree();
+      val commitmentTree = new SidechainCommitmentTree();
 
       if (data.sidechainRelatedAggregatedTransaction.isDefined) {
         data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala.foreach {
-          case sc: SidechainCreation => sidechainsCommitmentTreeWrapper.addSidechainCreation(sc)
-          case ft: ForwardTransfer => sidechainsCommitmentTreeWrapper.addForwardTransfer(ft)
+          case sc: SidechainCreation => commitmentTree.addSidechainCreation(sc)
+          case ft: ForwardTransfer => commitmentTree.addForwardTransfer(ft)
         }
       }
 
       // Add certificates in the original order
-      data.lowerCertificateLeaves.foreach(leaf => sidechainsCommitmentTreeWrapper.addCertLeaf(sidechainId.data,leaf))
-      data.topQualityCertificate.foreach(cert => sidechainsCommitmentTreeWrapper.addCertificate(cert))
+      data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data,leaf))
+      data.topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
 
       if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
         throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
 
-      val scCommitmentOpt = sidechainsCommitmentTreeWrapper.getSidechainCommitmentEntryHash(sidechainId);
+      val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId);
       if (scCommitmentOpt.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
 
-      if (!SidechainCommitmentTree.verifyExistanceProof(scCommitmentOpt.get, data.existenceProof.get, header.hashScTxsCommitment))
+      if (!SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, data.existenceProof.get, header.hashScTxsCommitment))
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
     } else { // Current sidechain was not mentioned in MainchainBlockReference.
       // Check for empty transaction and certificates.
@@ -117,7 +117,7 @@ object MainchainBlockReference extends ScorexLogging {
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
 
         val sidechainId = new ByteArrayWrapper(params.sidechainId)
-        val sidechainsCommitmentTreeWrapper = new SidechainCommitmentTree();
+        val commitmentTree = new SidechainCommitmentTree();
 
         // Collect all CSW inputs
         val cswInputs: ListBuffer[MainchainTxCswCrosschainInput] = ListBuffer()
@@ -130,7 +130,7 @@ object MainchainBlockReference extends ScorexLogging {
         scIds = scIds ++ sidechainRelatedCswInputs.keys
 
         // cctp CommitmentTree
-        cswInputs.foreach(input => sidechainsCommitmentTreeWrapper.addCswInput(input));
+        cswInputs.foreach(input => commitmentTree.addCswInput(input));
 
         // Collect all sidechain related outputs
         val crosschainOutputs: ListBuffer[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = ListBuffer()
@@ -142,13 +142,13 @@ object MainchainBlockReference extends ScorexLogging {
 
         scIds = scIds ++ sidechainRelatedCrosschainOutputs.keys
         crosschainOutputs.foreach{
-          case sc: SidechainCreation => sidechainsCommitmentTreeWrapper.addSidechainCreation(sc);
-          case ft: ForwardTransfer => sidechainsCommitmentTreeWrapper.addForwardTransfer(ft);
-          case btr: BwtRequest => sidechainsCommitmentTreeWrapper.addBwtRequest(btr);
+          case sc: SidechainCreation => commitmentTree.addSidechainCreation(sc);
+          case ft: ForwardTransfer => commitmentTree.addForwardTransfer(ft);
+          case btr: BwtRequest => commitmentTree.addBwtRequest(btr);
         }
 
         scIds = scIds ++ certificates.map(c => new ByteArrayWrapper(c.sidechainId))
-        certificates.foreach(cert => sidechainsCommitmentTreeWrapper.addCertificate(cert))
+        certificates.foreach(cert => commitmentTree.addCertificate(cert))
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, header.time))
@@ -156,12 +156,12 @@ object MainchainBlockReference extends ScorexLogging {
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
-        val certLeaves = sidechainsCommitmentTreeWrapper.getCertLeafs(sidechainId.data);
+        val certLeaves = commitmentTree.getCertLeafs(sidechainId.data);
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
           if (scIds.contains(sidechainId)) {
-            val scExistenceProof = sidechainsCommitmentTreeWrapper.getExistanceProof(sidechainId.data);
+            val scExistenceProof = commitmentTree.getExistenceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,
               mc2scTransaction,
               scExistenceProof,
@@ -169,7 +169,7 @@ object MainchainBlockReference extends ScorexLogging {
               lowerCertificateLeaves,
               topQualityCertificate)
           } else {
-            val scAbsenceProof = sidechainsCommitmentTreeWrapper.getAbsenceProof(sidechainId.data);
+            val scAbsenceProof = commitmentTree.getAbsenceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,
               None,
               None,
