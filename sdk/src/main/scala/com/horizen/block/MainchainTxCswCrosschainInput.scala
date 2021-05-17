@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
@@ -49,9 +48,6 @@ object MainchainTxCswCrosschainInput {
 
     val scProofSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
     currentOffset += scProofSize.size()
-    if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
-      throw new IllegalArgumentException(s"Input data corrupted: scProof size ${scProofSize.value()} " +
-        s"is expected to be ScProof size ${CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()}")
 
     val scProof: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
     currentOffset += scProofSize.value().intValue()
@@ -65,7 +61,7 @@ object MainchainTxCswCrosschainInput {
       None
     } else {
       if (actCertDataHashSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
-        throw new IllegalArgumentException(s"Input data corrupted: actCertDataHash size ${nullifierSize.value()} " +
+        throw new IllegalArgumentException(s"Input data corrupted: actCertDataHash size ${actCertDataHashSize.value()} " +
           s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
 
       val actCertDataHash: Array[Byte] = BytesUtils.reverseBytes(
@@ -79,7 +75,7 @@ object MainchainTxCswCrosschainInput {
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.size()
 
     if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
-      throw new IllegalArgumentException(s"Input data corrupted: ceasingCumulativeScTxCommitmentTreeRoot size ${nullifierSize.value()} " +
+      throw new IllegalArgumentException(s"Input data corrupted: ceasingCumulativeScTxCommitmentTreeRoot size ${ceasingCumulativeScTxCommitmentTreeRootSize.value()} " +
         s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
     val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = BytesUtils.reverseBytes(
       cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()))

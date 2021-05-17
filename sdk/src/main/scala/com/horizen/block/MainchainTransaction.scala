@@ -98,7 +98,7 @@ object MainchainTransaction {
       currentOffset += bwtRequestOutputsNumber.size()
       for (_ <- 1 to bwtRequestOutputsNumber.value().intValue()) {
         val output = MainchainTxBwtRequestCrosschainOutput.create(transactionBytes, currentOffset).get
-        currentOffset += MainchainTxBwtRequestCrosschainOutput.BWT_REQUEST_OUTPUT_SIZE
+        currentOffset += output.size
         bwtRequestOutputs += output
       }
     }

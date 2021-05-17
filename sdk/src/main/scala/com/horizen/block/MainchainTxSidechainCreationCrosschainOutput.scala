@@ -2,8 +2,8 @@ package com.horizen.block
 
 import com.google.common.primitives.Ints
 import com.horizen.commitmenttree.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
 
 import scala.util.Try
 
@@ -15,16 +15,15 @@ case class MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOut
                                                             constantOpt: Option[Array[Byte]],
                                                             certVk: Array[Byte],
                                                             ceasedVkOpt: Option[Array[Byte]],
-                                                            mainchainBackwardTransferRequestDataLength: Byte,
                                                             fieldElementCertificateFieldConfigs: Seq[CustomFieldElementsConfig],
                                                             bitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig],
                                                             ftMinAmount: Long,
-                                                            btrFee: Long) {
+                                                            btrFee: Long,
+                                                            mainchainBackwardTransferRequestDataLength: Byte) {
   def size: Int = sidechainCreationOutputBytes.length
 }
 
 object MainchainTxSidechainCreationCrosschainOutputData {
-  val OUTPUT_TYPE: Byte = 3.toByte
 
   def create(sidechainCreationOutputBytes: Array[Byte], offset: Int): Try[MainchainTxSidechainCreationCrosschainOutputData] = Try {
 
@@ -57,25 +56,22 @@ object MainchainTxSidechainCreationCrosschainOutputData {
       None
     }
 
-    // TODO: Vk will have variable size
-    val vkSize: Int = CryptoLibProvider.sigProofThresholdCircuitFunctions.certVkSize()
-    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize)
-    currentOffset += vkSize
+    val certVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    currentOffset += certVkSize.size()
+    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize.value().intValue())
+    currentOffset += certVkSize.value().intValue()
 
-    // TODO: Vk will have variable size
     val ceasedVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
     currentOffset += 1
     val ceasedVk: Option[Array[Byte]] = if(ceasedVkPresence) {
-      Some(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + vkSize))
+      val ceasedVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+      currentOffset += ceasedVkSize.size()
+      val ceasedVk = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + ceasedVkSize.value().intValue())
+      currentOffset += ceasedVkSize.value().intValue()
+      Some(ceasedVk)
     } else {
       None
     }
-    if(ceasedVkPresence) currentOffset += vkSize
-
-    // TODO: check fields order serialization in MC
-    val mainchainBackwardTransferRequestDataLength: Byte = sidechainCreationOutputBytes(currentOffset)
-    currentOffset += 1
-
 
     val fieldElementCertificateFieldConfigsLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
     currentOffset += fieldElementCertificateFieldConfigsLength.size()
@@ -99,17 +95,19 @@ object MainchainTxSidechainCreationCrosschainOutputData {
         new CustomBitvectorElementsConfig(bitVectorSizeBits, maxCompressedSizeBytes)
       })
 
-
     val ftMinAmount: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 8
 
     val btrFee: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 8
 
+    val mainchainBackwardTransferRequestDataLength: Byte = sidechainCreationOutputBytes(currentOffset)
+    currentOffset += 1
+
     MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes.slice(offset, currentOffset),
       withdrawalEpochLength, amount, address, customCreationData, constantOpt, certVk,
-      ceasedVk, mainchainBackwardTransferRequestDataLength, fieldElementCertificateFieldConfigs,
-      bitVectorCertificateFieldConfigs, ftMinAmount, btrFee)
+      ceasedVk, fieldElementCertificateFieldConfigs, bitVectorCertificateFieldConfigs,
+      ftMinAmount, btrFee, mainchainBackwardTransferRequestDataLength)
   }
 }
 
@@ -123,11 +121,11 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
                                                       data.constantOpt,
                                                       data.certVk,
                                                       data.ceasedVkOpt,
-                                                      data.mainchainBackwardTransferRequestDataLength,
                                                       data.fieldElementCertificateFieldConfigs,
                                                       data.bitVectorCertificateFieldConfigs,
                                                       data.ftMinAmount,
-                                                      data.btrFee
+                                                      data.btrFee,
+                                                      data.mainchainBackwardTransferRequestDataLength
                                                     ) with MainchainTxCrosschainOutput {
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(sidechainCreationOutputBytes))
@@ -136,13 +134,7 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
 
 object MainchainTxSidechainCreationCrosschainOutput {
   def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
-    val scId: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256HashOfConcatenation(BytesUtils.reverseBytes(transactionHash), BytesUtils.reverseBytes(Ints.toByteArray(index))))
-    // TODO temporary until we can use a PoseidonHash instead of a SHA one
-    // TODO: fix as soon as will be changed on MC side.
-    //----
-    // clear last two bits for rendering it a valid tweedle field element
-    scId(scId.length - 1) = (scId.last & 0x3f).byteValue()
-    scId
+    ScCryptoUtils.calculateSidechainId(transactionHash, index)
   }
 }
 

@@ -62,13 +62,10 @@ public final class BwtRequest implements SidechainRelatedMainchainOutput<Withdra
     }
 
     public static BwtRequest parseBytes(byte[] bytes) {
-        if(bytes.length < 36 + MainchainTxBwtRequestCrosschainOutput.BWT_REQUEST_OUTPUT_SIZE())
-            throw new IllegalArgumentException("Input data corrupted.");
-
         int offset = 0;
 
         MainchainTxBwtRequestCrosschainOutput output = MainchainTxBwtRequestCrosschainOutput.create(bytes, offset).get();
-        offset += MainchainTxBwtRequestCrosschainOutput.BWT_REQUEST_OUTPUT_SIZE();
+        offset += output.size();
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;

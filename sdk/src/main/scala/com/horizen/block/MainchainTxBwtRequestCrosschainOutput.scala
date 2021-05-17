@@ -8,41 +8,39 @@ import scala.util.Try
 
 case class MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes: Array[Byte],
                                                  override val sidechainId: Array[Byte], // uint256
-                                                 scRequestData: Array[Array[Byte]],     // ScFieldElement[]
+                                                 scRequestData: Array[Array[Byte]],     // vector<ScFieldElement>
                                                  mcDestinationAddress: Array[Byte],     // uint160
-                                                 scFee: Long,                           // CAmount (int64_t)
-                                                 scProof: Array[Byte]                   // ScProof
+                                                 scFee: Long                            // CAmount (int64_t)
                                                 ) extends MainchainTxCrosschainOutput {
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bwtRequestOutputBytes))
+
+  def size: Int = bwtRequestOutputBytes.length
 }
 
 object MainchainTxBwtRequestCrosschainOutput {
-  val BWT_REQUEST_OUTPUT_SIZE: Int = 32 + FieldElement.FIELD_ELEMENT_LENGTH + 20 + 8 + CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()
-
   def create(bwtRequestOutputBytes: Array[Byte], offset: Int): Try[MainchainTxBwtRequestCrosschainOutput] = Try {
-    if(offset < 0 || bwtRequestOutputBytes.length - offset < BWT_REQUEST_OUTPUT_SIZE)
-      throw new IllegalArgumentException("Input data corrupted.")
+    if(offset < 0)
+      throw new IllegalArgumentException("Input data corrupted. Offset is negative.")
 
     var currentOffset: Int = offset
 
     val sidechainId: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    // TODO: check fields order serialization in MC
     val scRequestDataSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
     currentOffset += scRequestDataSize.size()
 
     val scRequestDataSeq: Seq[Array[Byte]] = (1 to scRequestDataSize.value().intValue()).map(idx => {
       val dataSize = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
-      currentOffset += scRequestDataSize.size()
+      currentOffset += dataSize.size()
 
       if(dataSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
         throw new IllegalArgumentException(s"Input data corrupted: scRequestData[$idx] size ${dataSize.value()} " +
           s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
 
-      val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + scRequestDataSize.value().intValue()))
-      currentOffset += scRequestDataSize.value().intValue()
+      val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + dataSize.value().intValue()))
+      currentOffset += dataSize.value().intValue()
 
       scRequestData
     })
@@ -53,17 +51,7 @@ object MainchainTxBwtRequestCrosschainOutput {
     val scFee: Long = BytesUtils.getReversedLong(bwtRequestOutputBytes, currentOffset)
     currentOffset += 8
 
-    // TODO: Proof will have variable size
-    val scProofSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
-    currentOffset += scProofSize.size()
-    if(scProofSize.value() != CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength())
-      throw new IllegalArgumentException(s"Input data corrupted: scProof size ${scProofSize.value()} " +
-        s"is expected to be ScProof size ${CryptoLibProvider.sigProofThresholdCircuitFunctions.proofSizeLength()}")
-
-    val scProof: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
-    currentOffset += scProofSize.value().intValue()
-
     new MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes.slice(offset, currentOffset),
-      sidechainId, scRequestDataSeq.toArray, mcDestinationAddress, scFee, scProof)
+      sidechainId, scRequestDataSeq.toArray, mcDestinationAddress, scFee)
   }
 }

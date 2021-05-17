@@ -40,8 +40,4 @@ public interface ThresholdSignatureCircuit {
                         boolean checkVerificationKey);
 
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
-
-    int proofSizeLength();
-
-    int certVkSize();
 }

@@ -61,7 +61,7 @@ class MainchainTransactionTest extends JUnitSuite {
 
     val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
 
-    assertEquals("Tx Hash is different.", "b20a27bf54eb7bded0d4680994a89ab4e7001ceaef4b66b7bbdcbe76346d01fb", tx.hashHex)
+    assertEquals("Tx Hash is different.", "0bbb7b4fe43a5d25ade5c35834f65c0829a75a7aa6ab0656adba97dfd43acc4d", tx.hashHex)
     assertEquals("Tx Size is different.", 295, tx.size)
   }
 
