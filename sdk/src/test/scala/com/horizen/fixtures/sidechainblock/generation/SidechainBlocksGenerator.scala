@@ -22,7 +22,8 @@ import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.cryptolibprovider.{VrfFunctions, CryptoLibProvider}
+import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
+import com.horizen.librustsidechains.FieldElement
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -524,6 +525,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val provingKeyFilePath: String = params.provingKeyFilePath
       override val verificationKeyFilePath: String = params.verificationKeyFilePath
       override val calculatedSysDataConstant: Option[Array[Byte]] = None //calculate if we need for some reason that data
+      override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
     }
   }
 

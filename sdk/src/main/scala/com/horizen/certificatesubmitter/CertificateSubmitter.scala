@@ -30,6 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+
 class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
@@ -147,7 +148,7 @@ class CertificateSubmitter
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
             dataForProofGeneration.referencedEpochNumber,
-            dataForProofGeneration.endCumulativeScTxCommTreeRoot,
+            dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
@@ -175,7 +176,7 @@ class CertificateSubmitter
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endCumulativeScTxCommTreeRoot: Array[Byte],
+                                    endEpochCumulativeScTxCommTreeRoot: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
@@ -202,18 +203,19 @@ class CertificateSubmitter
     val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    // TODO: fix and return CommTreeRoot as soon as proper code is merged to the branch
-    val endCumulativeScTxCommTreeRoot = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-
-
     // TODO: define proper values
     val btrFee: Long = 0;
     val ftMinAmount: Long = 0;
 
-    // NOTE: we should pass all the data in LE endianness, mc block hashes stored in BE endianness.
-    val endCumulativeScTxCommTreeRootLE = BytesUtils.reverseBytes(endCumulativeScTxCommTreeRoot)
+    val endEpochCumulativeScTxCommTreeRoot = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+
+    // NOTE: we should pass all the data in LE endianness, CumulativeScTxCommTreeRoot stored in BE endianness.
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-      withdrawalRequests.asJava, referencedWithdrawalEpochNumber, endCumulativeScTxCommTreeRootLE, btrFee, ftMinAmount)
+      withdrawalRequests.asJava,
+      referencedWithdrawalEpochNumber,
+      BytesUtils.reverseBytes(endEpochCumulativeScTxCommTreeRoot),
+      btrFee,
+      ftMinAmount)
 
     val sidechainWallet = sidechainNodeView.vault
     val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
@@ -227,8 +229,8 @@ class CertificateSubmitter
     // Quality is equal to the number of valid schnorr signatures.
     val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
     if(newCertQuality > currentCertificateTopQuality)
-      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests, endCumulativeScTxCommTreeRoot,
-        btrFee, ftMinAmount, signersPublicKeyWithSignatures))
+      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
+        endEpochCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, signersPublicKeyWithSignatures))
     else {
       log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
         s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
@@ -236,7 +238,7 @@ class CertificateSubmitter
     }
   }
 
-  private def lastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _  => {
@@ -246,7 +248,9 @@ class CertificateSubmitter
     }
     log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
 
-    mcBlockHash
+    val headerInfo = history.getMainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+
+    headerInfo.cumulativeHash
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
@@ -255,7 +259,7 @@ class CertificateSubmitter
 
     log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
       s"with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
-      s"endCumulativeScTxCommTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.endCumulativeScTxCommTreeRoot)}, " +
+      s"endEpochCumulativeScTxCommTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
 
@@ -263,7 +267,7 @@ class CertificateSubmitter
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.referencedEpochNumber,
-      BytesUtils.reverseBytes(dataForProofGeneration.endCumulativeScTxCommTreeRoot), // Pass block hash in LE endianness
+      BytesUtils.reverseBytes(dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot), // Pass block hash in LE endianness
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
       signaturesBytes.asJava,

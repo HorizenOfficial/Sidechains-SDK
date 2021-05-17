@@ -65,7 +65,8 @@ trait SidechainNodeViewHolderFixture
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -75,7 +76,8 @@ trait SidechainNodeViewHolderFixture
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "mainnet" => MainNetParams(
       sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
@@ -85,7 +87,8 @@ trait SidechainNodeViewHolderFixture
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

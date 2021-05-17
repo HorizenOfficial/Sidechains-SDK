@@ -108,6 +108,15 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId ${blockId}"))
   }
 
+  def getLastMainchainHeaderBaseInfoInclusion(blockId: ModifierId): MainchainHeaderBaseInfo = {
+    var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
+    while(sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty) {
+      sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
+    }
+
+    sidechainBlockInfo.mainchainHeaderBaseInfo.last
+  }
+
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)
 
   def chainScoreFor(blockId: ModifierId): Option[Long] = blockInfoOptionById(blockId).map(_.score)
@@ -189,7 +198,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       mcHeight <- activeChain.mcHeadersHeightByMcHash(mcHash)
       sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
-    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId)
+      blockInfo <- activeChain.blockInfoById(sidechainBlockId)
+      mainchainBaseInfo = getLastMainchainHeaderBaseInfoInclusion(blockInfo.parentId)
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, mainchainBaseInfo.cumulativeCommTreeHash)
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {

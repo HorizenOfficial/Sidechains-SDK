@@ -2,6 +2,7 @@ package com.horizen.consensus
 
 import java.math.BigInteger
 
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import org.junit.Assert.assertEquals
@@ -36,6 +37,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val provingKeyFilePath: String = ""
     override val verificationKeyFilePath: String = ""
     override val calculatedSysDataConstant: Option[Array[Byte]] = None
+    override val initialCumulativeCommTreeHash: Array[Byte] = Array()
   }
 
   class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,

@@ -1,15 +1,17 @@
 package com.horizen.fixtures
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils, BytesUtils}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.Random
+import scala.collection.mutable.ArrayBuffer
 
 trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
@@ -31,11 +33,24 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
     getRandomModifiersSeq(count)
   }
 
+  def getMainchainBaseInfoFromReferences(references: Seq[MainchainBlockReference], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
+    var prevCumulativeHash = initialCumulativeHash
+    references.map(ref => {
+      val header = byteArrayToMainchainHeaderHash(ref.data.headerHash)
+      val hashBytes: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()) // TODO Remove temporary buffer after switching to 256-bit Filed Element
+      Array.copy(ref.header.hashScTxsCommitment, 0, hashBytes, 0, ref.header.hashScTxsCommitment.length)
+      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, hashBytes)
+      prevCumulativeHash = cumulativeHash
+      MainchainHeaderBaseInfo(header, cumulativeHash)
+    })
+  }
+
   ///////
   private val initialMainchainReference = byteArrayToMainchainHeaderHash(generateBytes())
   private val initialSidechainBlockId = bytesToId(generateBytes())
   val mainchainReferences: Seq[MainchainBlockReference] = generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference))
   val mainchainHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.header.hash))
+  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, FieldElementFixture.generateFieldElement())
   val mainchainReferencesDataHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.data.headerHash))
   private val initialSidechainBlockInfo =
     SidechainBlockInfo(
@@ -44,7 +59,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
       getRandomModifier(),
       Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      mainchainHeadersHashes,
+      mainchainHeaderBaseInfo,
       mainchainReferencesDataHeadersHashes,
       WithdrawalEpochInfo(1, 1),
       Option(VrfGenerator.generateVrfOutput(Random.nextLong())),
@@ -65,21 +80,21 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
 
   // TODO: add support of Data and Headers as inputs of method
-  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams()): (ModifierId, (SidechainBlockInfo, Option[MainchainHeaderHash])) = {
+  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())): (ModifierId, (SidechainBlockInfo, Option[MainchainHeaderHash])) = {
     val id = getRandomModifier()
     val parentData: (SidechainBlockInfo, Option[MainchainHeaderHash]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId, Seq(), params)._2)
     val parentSidechainBlockInfo = parentData._1
-
     val allRefs: Seq[MainchainBlockReference] = refs ++ generateMainchainReferences(parentOpt = parentData._2)
-    val allRefsHeadersHashes = allRefs.map(d => byteArrayToMainchainHeaderHash(d.header.hash))
     val allRefsDataHeadersHashes = allRefs.map(d => byteArrayToMainchainHeaderHash(d.data.headerHash))
+    //val allRefsMainchainHeaderBaseInfo: Seq[MainchainHeaderBaseInfo] = getMainchainBaseInfoFromReferences(allRefs, parentSidechainBlockInfo.mainchainHeaderBaseInfo.last.cumulativeCommTreeHash)
+    val allRefsMainchainHeaderBaseInfo: Seq[MainchainHeaderBaseInfo] = getMainchainBaseInfoFromReferences(allRefs, params.initialCumulativeCommTreeHash)
     val generatedScBlockInfo = SidechainBlockInfo(
       parentSidechainBlockInfo.height + 1,
       parentSidechainBlockInfo.score + (refs.size.toLong << 32) + 1,
       parent,
       Random.nextLong(),
       ModifierSemanticValidity.Valid,
-      allRefsHeadersHashes,
+      allRefsMainchainHeaderBaseInfo,
       allRefsDataHeadersHashes,
       WithdrawalEpochUtils.getWithdrawalEpochInfo(
         new SidechainBlock(null, null, allRefs.map(_.data), allRefs.map(_.header), null, null),
@@ -106,7 +121,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
                                                params: NetworkParams = RegTestParams()): (ModifierId, SidechainBlockInfo, Option[MainchainHeaderHash]) = {
     val (newId, data) = generateEntry(parent, Seq(), params)
     val dataWithoutReferences =
-      data.copy(_1 = data._1.copy(mainchainHeaderHashes = Seq(), mainchainReferenceDataHeaderHashes = Seq()), _2 = None)
+      data.copy(_1 = data._1.copy(mainchainHeaderBaseInfo = Seq(), mainchainReferenceDataHeaderHashes = Seq()), _2 = None)
     generatedData.put(newId, dataWithoutReferences)
     generatedData.get(newId).map { case (sbInfo, newParent) =>
       (newId, sbInfo, if (sbInfo.mainchainHeaderHashes.nonEmpty) newParent else None)

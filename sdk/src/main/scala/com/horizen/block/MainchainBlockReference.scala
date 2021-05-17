@@ -171,7 +171,7 @@ object MainchainBlockReference extends ScorexLogging {
           } else {
             val scAbsenceProof = sidechainsCommitmentTreeWrapper.getAbsenceProof(sidechainId.data);
             MainchainBlockReferenceData(header.hash,
-              mc2scTransaction,
+              None,
               None,
               scAbsenceProof,
               Seq(),
