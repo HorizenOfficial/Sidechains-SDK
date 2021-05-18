@@ -40,4 +40,10 @@ public interface ThresholdSignatureCircuit {
                         boolean checkVerificationKey);
 
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
+
+    boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath);
+
+    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath);
+
+    String getCoboundaryMarlinSnarkVerificationKeyHex(String verificationKeyPath);
 }

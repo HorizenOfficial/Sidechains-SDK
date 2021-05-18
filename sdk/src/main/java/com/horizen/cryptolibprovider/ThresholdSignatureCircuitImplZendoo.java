@@ -2,14 +2,19 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.librustsidechains.FieldElement;
-import com.horizen.poseidonnative.PoseidonHash;
+import com.horizen.provingsystemnative.ProvingSystem;
+import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.sigproofnative.BackwardTransfer;
 import com.horizen.sigproofnative.CreateProofResult;
 import com.horizen.sigproofnative.NaiveThresholdSigProof;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -118,5 +123,30 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         schnorrPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
 
         return sysDataConstantBytes;
+    }
+
+    // Note: segmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network.
+    private static final int segmentSize = 2^15;
+
+    @Override
+    public boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath) {
+        return ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, segmentSize, g1KeyPath, Optional.empty());
+    }
+
+    @Override
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, provingKeyPath, verificationKeyPath);
+    }
+
+    @Override
+    public String getCoboundaryMarlinSnarkVerificationKeyHex(String verificationKeyPath) {
+        if(!Files.exists(Paths.get(verificationKeyPath)))
+            return "";
+
+        try {
+            return BytesUtils.toHexString(Files.readAllBytes(Paths.get(verificationKeyPath)));
+        } catch (IOException e) {
+            return "";
+        }
     }
 }
