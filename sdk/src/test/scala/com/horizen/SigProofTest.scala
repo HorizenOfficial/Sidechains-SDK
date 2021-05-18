@@ -1,11 +1,12 @@
 package com.horizen
 
-import java.io.{BufferedReader, File, FileReader}
+import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter}
 import java.util.Optional
 import java.{lang, util}
 
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
+import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
 import com.horizen.cryptolibprovider.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
@@ -20,6 +21,17 @@ class SigProofTest {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val sigCircuit: ThresholdSignatureCircuitImplZendoo = new ThresholdSignatureCircuitImplZendoo()
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
+
+  // Use this method to regenerate Schnorr PrivateKeys and save them to resources.
+  // Note: currently schnorr keys are generated non-deterministically
+  private def generateSchnorrPrivateKeys(): Unit = {
+    (0 to 9).foreach(index => {
+      val bts = schnorrFunctions.generateSchnorrKeys(s"$index".getBytes()).get(KeyType.SECRET)
+      val bw = new BufferedWriter(new FileWriter("src/test/resources/schnorr_sk0"+ index + "_hex"))
+      bw.write(BytesUtils.toHexString(bts))
+      bw.close()
+    })
+  }
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
     var bytes: Array[Byte] = null

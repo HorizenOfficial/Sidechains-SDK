@@ -12,10 +12,9 @@ import scala.collection.JavaConverters._
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation}
 
 class SidechainCommitmentTree {
-  val commitmentTree = CommitmentTree.init();
+  val commitmentTree: CommitmentTree = CommitmentTree.init();
 
   def addCswInput(csw: MainchainTxCswCrosschainInput): Boolean = {
-    // TODO: add csw.actCertDataHashOpt and csw.endCumulativeScTxCommitmentTreeRoot parameters
     commitmentTree.addCsw(csw.sidechainId, csw.amount, csw.nullifier, csw.mcPubKeyHash)
   }
 
