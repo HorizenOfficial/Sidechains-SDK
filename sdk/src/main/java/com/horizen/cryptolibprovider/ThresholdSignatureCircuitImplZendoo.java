@@ -75,7 +75,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 backwardTransfers, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, signatures,
                 publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
 
-        // TODO: actually it will be more effective to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
+        // TODO: actually it will be more efficient to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
@@ -126,7 +126,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Note: segmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network.
-    private static final int segmentSize = 2^15;
+    private static final int segmentSize = (1 << 17);
 
     @Override
     public boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath) {

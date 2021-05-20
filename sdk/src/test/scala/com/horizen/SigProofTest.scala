@@ -7,12 +7,15 @@ import java.{lang, util}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
-import com.horizen.cryptolibprovider.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Ignore, Test}
+import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.{After, Ignore, Test}
+import com.google.common.io.Files
+
+import com.horizen.fixtures.FieldElementFixture
 
 import scala.collection.JavaConverters._
 import scala.util.Random
@@ -21,6 +24,19 @@ class SigProofTest {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val sigCircuit: ThresholdSignatureCircuitImplZendoo = new ThresholdSignatureCircuitImplZendoo()
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
+
+  private val tmpDir: File = Files.createTempDir
+  private val g1KeyPath: String = tmpDir.getAbsolutePath + "/g1key"
+  private val provingKeyPath: String = tmpDir.getAbsolutePath + "/snark_pk"
+  private val verificationKeyPath: String = tmpDir.getAbsolutePath + "/snark_vk"
+
+  @After
+  def cleanup(): Unit = {
+    new File(g1KeyPath).delete()
+    new File(provingKeyPath).delete()
+    new File(verificationKeyPath).delete()
+    tmpDir.delete()
+  }
 
   // Use this method to regenerate Schnorr PrivateKeys and save them to resources.
   // Note: currently schnorr keys are generated non-deterministically
@@ -57,15 +73,13 @@ class SigProofTest {
 
     val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava
-    val provingKeyPath = new File(classLoader.getResource("sample_proving_key_7_keys_with_threshold_5").getFile).getAbsolutePath;
-    val verificationKeyPath = new File(classLoader.getResource("sample_vk_7_keys_with_threshold_5").getFile).getAbsolutePath;
 
     val sysConstant = sigCircuit.generateSysDataConstant(publicKeysBytes, threshold)
 
     val epochNumber: Int = 10;
     val btrFee: Long = 100;
     val ftMinAmount: Long = 100;
-    val endCumulativeScTxCommTreeRoot = Array.fill(32)(Random.nextInt().toByte)
+    val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
@@ -79,6 +93,18 @@ class SigProofTest {
       .toList ++ emptySigs)
       .asJava
 
+    // Setup proving system keys
+    println(s"Generating Marlin dlog key. Path: $g1KeyPath")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
+      fail("Error occurred during dlog key generation.")
+    }
+
+    println(s"Generating Marlin snark keys. Path: pk=$provingKeyPath, vk=$verificationKeyPath")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath)) {
+      fail("Error occurred during snark keys generation.")
+    }
+
+    println("Generating snark proof...")
     val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, epochNumber, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signatures, publicKeysBytes, threshold, provingKeyPath, true, true)
 
