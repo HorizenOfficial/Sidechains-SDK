@@ -27,19 +27,18 @@ Otherwise, to run SimpleApp outside the IDE:
         java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
         On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
-While we keep monitoring the memory footprint of the proofs generation process, we have verified that using Jemalloc library instead of Glibc keeps the memory consumption in check. Glibc starting from version 2.26 is affected by this issue. To check and fix this issue on Linux OS follow these steps:
-		 - Check your version of Glibc. To check your version of Glibc on Ubuntu, run the command `ldd --version`
-		 - Install Jemalloc library. Jemalloc is available as apt package (Ubuntu and Debian) or yum (CentOS), just execute the command line:
-			 - `sudo apt-get install libjemalloc1` (Ubuntu)
-			 - `sudo apt-get install libjemalloc2` (Debian)
-			 - `yum install jemalloc` (CentOS, you should enable EPEL repository first running: `yum install epel-release`)
-		 - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
-		 - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
-			
-			```
-			LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
-			```
-		 - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
+
+While we keep monitoring the memory footprint of the proofs generation process, we have verified that using Jemalloc library (version 3.x only) instead of Glibc keeps the memory consumption in check. Glibc starting from version 2.26 is affected by this issue. To check and fix this issue on Linux OS follow these steps:
+ - Check your version of Glibc. To check your version of Glibc on Ubuntu, run the command `ldd --version`
+ - Install Jemalloc library. Please remember that only version 3.x of the Jemalloc library is tested and will solve the issue. Jemalloc is available as apt package, just execute the command line:
+           - `sudo apt-get install libjemalloc1` (Ubuntu)
+	    - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
+	     - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
+
+	     ```
+	     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+	     ```
+	      - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
 
 **Running Simple App isolated from Mainchain**
 
