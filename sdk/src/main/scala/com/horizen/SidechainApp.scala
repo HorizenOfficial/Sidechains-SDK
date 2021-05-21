@@ -251,7 +251,7 @@ class SidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
-    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel, mainchainNodeChannel)
   }
 
   // Init API

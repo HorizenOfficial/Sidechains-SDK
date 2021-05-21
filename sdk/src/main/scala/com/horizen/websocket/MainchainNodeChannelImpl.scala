@@ -1,4 +1,5 @@
 package com.horizen.websocket
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
@@ -16,7 +17,8 @@ case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) ex
 case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
 case class BackwardTransfer(pubkeyhash: String, amount: String)
 case class SendCertificateRequestPayload(scid: String, epochNumber: Int, quality: Long, endEpochBlockHash: String,
-                                        scProof: String, backwardTransfers: Seq[BackwardTransfer]) extends RequestPayload
+                                         scProof: String, backwardTransfers: Seq[BackwardTransfer]) extends RequestPayload
+case class TopQualityCertificatePayload(scid: String) extends RequestPayload
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
@@ -24,6 +26,7 @@ case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends Respo
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
+case class TopQualityCertificateResponsePayload(mempool_top_quality_cert: ObjectNode, chain_top_quality_cert: ObjectNode) extends ResponsePayload
 
 
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
@@ -31,6 +34,7 @@ case object GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE extends RequestType(1)
 case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
 case object SEND_CERTIFICATE_REQUEST_TYPE extends RequestType(3)
 case object GET_MULTIPLE_HEADERS_REQUEST_TYPE extends RequestType(4)
+case object GET_TOP_QUALITY_CERTIFICATES_TYPE extends RequestType(5)
 
 class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
 
@@ -125,5 +129,27 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   private def processCertificateResponsePayload(future: Future[CertificateResponsePayload]): SendCertificateResponse = {
     val response: CertificateResponsePayload = Await.result(future, client.requestTimeoutDuration())
     SendCertificateResponse(BytesUtils.fromHexString(response.certificateHash))
+  }
+
+  override def getTopQualityCertificates(scId: String): Try[TopQualityCertificates] = Try {
+    val future: Future[TopQualityCertificateResponsePayload] =
+      client.sendRequest(GET_TOP_QUALITY_CERTIFICATES_TYPE, TopQualityCertificatePayload(scId), classOf[TopQualityCertificateResponsePayload])
+
+    processTopQualityCertificatesPayload(future).get
+  }
+
+  private def processTopQualityCertificatesPayload(future: Future[TopQualityCertificateResponsePayload]): Try[TopQualityCertificates] = Try {
+    val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration());
+
+    val mempoolQuality: Option[Int] = Some(response.mempool_top_quality_cert.get("quality").asInt())
+    val mempoolCertHash: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.mempool_top_quality_cert.get("certHash").asText()))
+    val mempoolRawCertHex: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.mempool_top_quality_cert.get("rawCertificateHex").asText()))
+    val mempoolFee: Option[Double] = Some(response.mempool_top_quality_cert.get("fee").asDouble())
+
+    val chainQuality: Option[Int] = Some(response.chain_top_quality_cert.get("quality").asInt())
+    val chainCertHash: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.chain_top_quality_cert.get("certHash").asText()))
+    val chainRawCertHex: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.chain_top_quality_cert.get("rawCertificateHex").asText()))
+
+    new TopQualityCertificates(mempoolCertHash, mempoolRawCertHex, mempoolQuality, mempoolFee, chainCertHash, chainRawCertHex, chainQuality)
   }
 }

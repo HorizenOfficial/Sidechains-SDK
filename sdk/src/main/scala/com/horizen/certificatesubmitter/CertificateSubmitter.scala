@@ -18,6 +18,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.websocket.MainchainNodeChannel
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -35,7 +36,8 @@ class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
    params: NetworkParams,
-   mainchainApi: MainchainNodeApi)
+   mainchainApi: MainchainNodeApi,
+   client: MainchainNodeChannel)
   (implicit ec: ExecutionContext)
   extends Actor
   with ScorexLogging
@@ -194,11 +196,19 @@ class CertificateSubmitter
     }
   }
 
+  private def getTopQuality(): Int = {
+    client.getTopQualityCertificates(BytesUtils.toHexString(params.sidechainId)) match {
+      case Success(topQualityCertificates)=>
+        topQualityCertificates.mempoolCertQuality.getOrElse(0).max(topQualityCertificates.chainCertQuality.getOrElse(0))
+      case Failure(_) => 0
+    }
+  }
+
   private def buildDataForProofGeneration(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Option[DataForProofGeneration] = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
+    val currentCertificateTopQuality: Long = getTopQuality()
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
     val endEpochBlockHash = lastMainchainBlockHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
@@ -281,17 +291,17 @@ class CertificateSubmitter
 object CertificateSubmitterRef {
 
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi, client))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi, client))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi, client), name)
 }

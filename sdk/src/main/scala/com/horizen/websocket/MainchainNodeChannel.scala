@@ -34,6 +34,9 @@ trait MainchainNodeChannel extends MainchainNodeApi {
   // Get block headers for given set of hashes in MC node block storage (any chain)
   def getBlockHeaders(hashes: Seq[String]): Try[Seq[MainchainHeader]]
 
+  // Get information about best certificates in mempool and chain
+  def getTopQualityCertificates(scId: String): Try[TopQualityCertificates]
+
   // Subscribe to receive block info of a new tip in MC node.
   def subscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Try[Unit]
 
