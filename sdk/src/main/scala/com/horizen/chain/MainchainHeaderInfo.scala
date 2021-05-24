@@ -6,4 +6,4 @@ case class MainchainHeaderInfo(hash: MainchainHeaderHash,
                                parentHash: MainchainHeaderHash,
                                height: Int,
                                sidechainBlockId: ModifierId,
-                               cumulativeHash: Array[Byte])
+                               cumulativeCommTreeHash: Array[Byte])

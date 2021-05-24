@@ -1,9 +1,8 @@
 package com.horizen.block
 
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.commitmenttree.CommitmentTree
-import com.horizen.commitmenttree.ScExistenceProof
-import com.horizen.commitmenttree.ScAbsenceProof
+import com.google.common.primitives.{Ints, Longs}
+import com.horizen.utils.BytesUtils
+import com.horizen.commitmenttree.{CommitmentTree, CustomBitvectorElementsConfig, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.sigproofnative.BackwardTransfer
 
@@ -12,41 +11,93 @@ import scala.collection.JavaConverters._
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation}
 
 class SidechainCommitmentTree {
-  val commitmentTree: CommitmentTree = CommitmentTree.init();
+  val commitmentTree: CommitmentTree = CommitmentTree.init()
 
   def addCswInput(csw: MainchainTxCswCrosschainInput): Boolean = {
     commitmentTree.addCsw(csw.sidechainId, csw.amount, csw.nullifier, csw.mcPubKeyHash)
   }
 
+  private def toLE(bytes: Array[Byte]): Array[Byte] = BytesUtils.reverseBytes(bytes)
+
+  private def toLE(value: Int): Int = BytesUtils.getReversedInt(Ints.toByteArray(value), 0)
+
+  private def toLE(value: Long): Long = BytesUtils.getReversedLong(Longs.toByteArray(value), 0)
+
+  // TODO: fix endianness hear and below
   def addSidechainCreation(sc: SidechainCreation): Boolean = {
     val scOutput: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
-
-    commitmentTree.addScCr(sc.sidechainId, scOutput.amount, scOutput.address, sc.transactionHash(), sc.transactionIndex(),
-      sc.withdrawalEpochLength, scOutput.mainchainBackwardTransferRequestDataLength,
-      scOutput.fieldElementCertificateFieldConfigs.toArray, scOutput.bitVectorCertificateFieldConfigs.toArray,
-      scOutput.btrFee, scOutput.ftMinAmount,
-      scOutput.customCreationData, scOutput.constantOpt.asJava, scOutput.certVk, scOutput.ceasedVkOpt.asJava)
+    commitmentTree.addScCr(
+      toLE(sc.sidechainId),
+      toLE(scOutput.amount),
+      toLE(scOutput.address),
+      toLE(sc.transactionHash()),
+      toLE(sc.transactionIndex()),
+      toLE(sc.withdrawalEpochLength),
+      scOutput.mainchainBackwardTransferRequestDataLength,
+      scOutput.fieldElementCertificateFieldConfigs.toArray,
+      scOutput.bitVectorCertificateFieldConfigs.map(cfg => {
+        new CustomBitvectorElementsConfig(
+          toLE(cfg.getBitVectorSizeBits),
+          toLE(cfg.getMaxCompressedByteSize)
+        )
+      }).toArray,
+      toLE(scOutput.btrFee),
+      toLE(scOutput.ftMinAmount),
+      toLE(scOutput.customCreationData),
+      scOutput.constantOpt.map(toLE).asJava,
+      toLE(scOutput.certVk),
+      scOutput.ceasedVkOpt.map(toLE).asJava
+    )
   }
 
   def addForwardTransfer(ft: ForwardTransfer): Boolean = {
     val ftOutput: MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
-    commitmentTree.addFwt(ft.sidechainId, ftOutput.amount, ftOutput.propositionBytes, ft.hash, ft.transactionIndex())
+    commitmentTree.addFwt(
+      toLE(ft.sidechainId()),
+      toLE(ftOutput.amount),
+      toLE(ftOutput.propositionBytes),
+      toLE(ft.hash),
+      toLE(ft.transactionIndex())
+    )
   }
 
   def addBwtRequest(btr: BwtRequest): Boolean = {
     val btrOutput: MainchainTxBwtRequestCrosschainOutput = btr.getBwtOutput
-    commitmentTree.addBtr(btr.sidechainId, btrOutput.scFee, btrOutput.mcDestinationAddress, btrOutput.scRequestData, btr.hash, btr.transactionIndex())
+    commitmentTree.addBtr(
+      toLE(btr.sidechainId()),
+      toLE(btrOutput.scFee),
+      toLE(btrOutput.mcDestinationAddress),
+      btrOutput.scRequestData.map(toLE),
+      toLE(btr.hash),
+      toLE(btr.transactionIndex())
+    )
   }
 
   def addCertificate(certificate: WithdrawalEpochCertificate): Boolean = {
-    val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput => new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount))
+    val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput =>
+      new BackwardTransfer(
+        toLE(btrOutput.pubKeyHash),
+        toLE(btrOutput.amount)
+      )
+    )
 
-    commitmentTree.addCert(certificate.sidechainId, certificate.epochNumber, certificate.quality, btrList.toArray,
-      certificate.customFieldsOpt.asJava, certificate.endCumulativeScTxCommitmentTreeRoot, certificate.btrFee, certificate.ftMinAmount)
+    commitmentTree.addCert(
+      toLE(certificate.sidechainId),
+      toLE(certificate.epochNumber),
+      toLE(certificate.quality),
+      btrList.toArray,
+      certificate.customFieldsOpt.map(_.map(toLE)).asJava,
+      toLE(certificate.endCumulativeScTxCommitmentTreeRoot),
+      toLE(certificate.btrFee),
+      toLE(certificate.ftMinAmount)
+    )
   }
 
   def addCertLeaf(sidechainId: Array[Byte], leaf: Array[Byte]): Boolean = {
-    commitmentTree.addCertLeaf(sidechainId, leaf)
+    commitmentTree.addCertLeaf(
+      toLE(sidechainId),
+      leaf
+    )
   }
 
   def getCommitment: Option[Array[Byte]] = {
@@ -60,8 +111,8 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getSidechainCommitment(sidechainId: ByteArrayWrapper): Option[Array[Byte]] = {
-    commitmentTree.getScCommitment(sidechainId.data).asScala match {
+  def getSidechainCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScCommitment(toLE(sidechainId)).asScala match {
       case Some(fe) => {
         val res = fe.serializeFieldElement()
         fe.freeFieldElement()
@@ -72,7 +123,7 @@ class SidechainCommitmentTree {
   }
 
   def getCertLeafs(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
-    val certLeafsOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
+    val certLeafsOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(toLE(sidechainId)).asScala
     certLeafsOpt match {
       case Some(certList) => {
         certList.asScala.map(cert => cert.serializeFieldElement())
@@ -82,7 +133,7 @@ class SidechainCommitmentTree {
   }
 
   def getExistenceProof(sidechainId: Array[Byte]): Option[Array[Byte]] = {
-    commitmentTree.getScExistenceProof(sidechainId).asScala match {
+    commitmentTree.getScExistenceProof(toLE(sidechainId)).asScala match {
       case Some(proof) => {
         val proofBytes = proof.serialize()
         proof.freeScExistenceProof()
@@ -93,7 +144,7 @@ class SidechainCommitmentTree {
   }
 
   def getAbsenceProof(sidechainId: Array[Byte]): Option[Array[Byte]] = {
-    commitmentTree.getScAbsenceProof(sidechainId).asScala match {
+    commitmentTree.getScAbsenceProof(toLE(sidechainId)).asScala match {
       case Some(proof) => {
         val proofBytes = proof.serialize()
         proof.freeScAbsenceProof()
@@ -106,9 +157,10 @@ class SidechainCommitmentTree {
 
 object SidechainCommitmentTree {
   def verifyExistenceProof(scCommitment: Array[Byte], commitmentProof: Array[Byte], commitment: Array[Byte]): Boolean = {
+    val commitmentLE = BytesUtils.reverseBytes(commitment)
     val scCommitmentFe = FieldElement.deserialize(scCommitment)
     val commitmentProofFe = ScExistenceProof.deserialize(commitmentProof)
-    val commitmentFe = FieldElement.deserialize(commitment)
+    val commitmentFe = FieldElement.deserialize(commitmentLE)
     val res = CommitmentTree.verifyScCommitment(scCommitmentFe, commitmentProofFe, commitmentFe)
     scCommitmentFe.freeFieldElement()
     commitmentProofFe.freeScExistenceProof()
@@ -117,9 +169,11 @@ object SidechainCommitmentTree {
   }
 
   def verifyAbsenceProof(sidechainId: Array[Byte], absenceProof: Array[Byte], commitment: Array[Byte]): Boolean = {
+    val scIdLE = BytesUtils.reverseBytes(sidechainId)
+    val commitmentLE = BytesUtils.reverseBytes(commitment)
     val absenceProofFe = ScAbsenceProof.deserialize(absenceProof)
-    val commitmentFe = FieldElement.deserialize(commitment)
-    val res = CommitmentTree.verifyScAbsence(sidechainId, absenceProofFe, commitmentFe)
+    val commitmentFe = FieldElement.deserialize(commitmentLE)
+    val res = CommitmentTree.verifyScAbsence(scIdLE, absenceProofFe, commitmentFe)
     absenceProofFe.freeScAbsenceProof()
     commitmentFe.freeFieldElement()
     res

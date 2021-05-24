@@ -41,7 +41,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val customCreationDataLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
     currentOffset += customCreationDataLength.size()
 
-    val customCreationData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customCreationDataLength.value().intValue())
+    val customCreationData: Array[Byte] = BytesUtils.reverseBytes(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customCreationDataLength.value().intValue()))
     currentOffset += customCreationDataLength.value().intValue()
 
     val constantPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
@@ -49,7 +49,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val constantOpt: Option[Array[Byte]] = if(constantPresence) {
       val constantLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
       currentOffset += constantLength.size()
-      val constant = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue())
+      val constant = BytesUtils.reverseBytes(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue()))
       currentOffset += constantLength.value().intValue()
       Some(constant)
     } else {
@@ -58,7 +58,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
 
     val certVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
     currentOffset += certVkSize.size()
-    val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize.value().intValue())
+    val certVk: Array[Byte] = BytesUtils.reverseBytes(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize.value().intValue()))
     currentOffset += certVkSize.value().intValue()
 
     val ceasedVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
@@ -66,7 +66,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val ceasedVk: Option[Array[Byte]] = if(ceasedVkPresence) {
       val ceasedVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
       currentOffset += ceasedVkSize.size()
-      val ceasedVk = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + ceasedVkSize.value().intValue())
+      val ceasedVk = BytesUtils.reverseBytes(sidechainCreationOutputBytes.slice(currentOffset, currentOffset + ceasedVkSize.value().intValue()))
       currentOffset += ceasedVkSize.value().intValue()
       Some(ceasedVk)
     } else {
@@ -134,7 +134,13 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
 
 object MainchainTxSidechainCreationCrosschainOutput {
   def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
-    ScCryptoUtils.calculateSidechainId(transactionHash, index)
+    // Note: sc-cryptolib returns the fe bytes in LE, but we keep it in BE as the data returned from MC RPC.
+    BytesUtils.reverseBytes(
+      ScCryptoUtils.calculateSidechainId(
+        BytesUtils.reverseBytes(transactionHash),
+        BytesUtils.getReversedInt(Ints.toByteArray(index), 0) // LE integer
+      )
+    )
   }
 }
 

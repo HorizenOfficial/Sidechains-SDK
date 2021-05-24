@@ -116,6 +116,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
         List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
 
+        // Note: sc-cryptolib return constant in LittleEndian
         FieldElement sysDataConstant = NaiveThresholdSigProof.getConstant(schnorrPublicKeys, threshold);
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
 

@@ -91,7 +91,8 @@ class CertificateSubmitter
     val actualSysDataConstantOpt = params.calculatedSysDataConstant
     val actualSysDataConstant = actualSysDataConstantOpt.getOrElse(Array[Byte]())
     val expectedSysDataConstantOpt = getSidechainCreationTransaction(sidechainNodeView.history).getGenSysConstantOpt.asScala
-    val expectedSysDataConstant = expectedSysDataConstantOpt.getOrElse(Array[Byte]())
+    // Note: constant in Tx is kept in BE
+    val expectedSysDataConstant = BytesUtils.reverseBytes(expectedSysDataConstantOpt.getOrElse(Array[Byte]()))
 
     if(actualSysDataConstantOpt.isDefined != expectedSysDataConstantOpt.isDefined ||
       actualSysDataConstant.deep != expectedSysDataConstant.deep) {
@@ -250,7 +251,7 @@ class CertificateSubmitter
 
     val headerInfo = history.getMainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
 
-    headerInfo.cumulativeHash
+    headerInfo.cumulativeCommTreeHash
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {

@@ -142,7 +142,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for the leftmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex1 = "7f056e570ede40aee29236ada94740f01bcbba90fd4c889f6ddea8f1223a4105"
+    val scIdHex1 = "3f5fedb78dcbb36dcc0ed68905ae5f1bfc9ffce95dd271f5fdc3d0139a5be95c"
     val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
 
     val params1 = RegTestParams(scId1.data)
@@ -162,7 +162,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for the sidechain in the middle, that is mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex2 = "9b82a324500a432279f52083bcf1065b2af17b4c91c7f6887fa7b3606e2780bb"
+    val scIdHex2 = "084ea3027e94c2febc83e4fc0b95ac1ea867a64746ae0dc4eb51d6499b64a26a"
     val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
 
     val params2 = RegTestParams(scId2.data)
@@ -182,7 +182,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 3:  Check for the rightmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex3 = "0539ad367573d166fc70ffb0e961552bb3923ee97c6fc0cda9eb77cfff338ef9"
+    val scIdHex3 = "2cc6d7d3b4f517939b938ba2c25c0ef7588d6e8dbc837234fb4882deb15f6df7"
     val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
 
     val params3 = RegTestParams(scId3.data)
@@ -216,12 +216,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must not contain certificate.", mcblock4.data.topQualityCertificate.isEmpty)
     assertTrue("Block must not contain proof of existence.", mcblock4.data.existenceProof.isEmpty)
-    assertTrue("Block must not contain proof of absence", mcblock4.data.absenceProof.isEmpty)
+    assertTrue("Block must not contain proof of absence", mcblock4.data.absenceProof.isDefined)
 
 
     // Test 5: Check for the sidechain that is not mentioned in the block and has a rightmost neighbour.
     // We expect to get a MainchainBlockReference with only left neighbour proof of no data.
-    val scIdHex5 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    val scIdHex5 = "3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     val scId5 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex5))
     val params5 = RegTestParams(scId5.data)
 
@@ -261,7 +261,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 7: Check for the sidechain that is not mentioned in the block and has a both left and right neighbours.
     // We expect to get a MainchainBlockReference with left and right neighbour proofs of no data.
     // Take the value near to scIdHex1. Quite enough condition to have id, where, scIdHex1 < id < scIdHex2
-    val scIdHex7 = "ffff" + scIdHex1.substring(4)
+    val scIdHex7 = "3fff" + scIdHex1.substring(4)
     val scId7 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex7))
     val params7 = RegTestParams(scId7.data)
 

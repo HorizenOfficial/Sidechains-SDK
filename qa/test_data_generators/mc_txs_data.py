@@ -1,10 +1,11 @@
 #!/usr/bin/env python2
 import json
+import os
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
 
 """
@@ -21,6 +22,7 @@ Test:
 
 
 class McTxsData(SidechainTestFramework):
+
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
 
@@ -53,7 +55,10 @@ class McTxsData(SidechainTestFramework):
         withdrawal_epoch_length = 1000
 
         sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length)
-        boot_info = create_sidechain(sc_creation_info, 0)
+        ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+        if not os.path.isdir(ps_keys_dir):
+            os.makedirs(ps_keys_dir)
+        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
 
         sidechain_id = boot_info.sidechain_id
         sc_creation_tx_id = mc_node.getblock(mc_node.getbestblockhash())["tx"][-1]

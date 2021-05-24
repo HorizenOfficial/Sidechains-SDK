@@ -4,7 +4,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -101,8 +101,14 @@ def launch_bootstrap_tool(command_name, json_parameters):
                                os.getenv("SIDECHAIN_SDK", "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
-    jsone_node = json.loads(sc_bootstrap_output)
-    return jsone_node
+    try:
+        jsone_node = json.loads(sc_bootstrap_output)
+        return jsone_node
+    except ValueError:
+        print("Bootstrap tool error occurred for command=" + command_name + "\nparams: " +
+              json_param + "\nError: " + sc_bootstrap_output + "\n")
+        raise Exception("Bootstrap tool error occurred")
+
 
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
@@ -177,13 +183,21 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
- - number_of_accounts: the number of schnorr keys to be generated
+ - number_of_schnorr_keys: the number of schnorr keys to be generated
+ - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin dlog key and snark pk&vk
 
 Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
-def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold):
-    jsonParameters = {"seed": seed, "keyCount": number_of_schnorr_keys, "threshold": threshold}
-    output = launch_bootstrap_tool("generateProofInfo", jsonParameters)
+def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths):
+    json_parameters = {
+        "seed": seed,
+        "maxPks": number_of_schnorr_keys,
+        "threshold": threshold,
+        "g1KeyPath": keys_paths.g1_key_path,
+        "provingKeyPath": keys_paths.proving_key_path,
+        "verificationKeyPath": keys_paths.verification_key_path
+    }
+    output = launch_bootstrap_tool("generateProofInfo", json_parameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
@@ -196,7 +210,6 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold):
         keys = schnorr_keys[i]
         schnorr_secrets.append(keys["schnorrSecret"])
         schnorr_public_keys.append(keys["schnorrPublicKey"])
-
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
     return certificate_proof_info
@@ -253,7 +266,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
-        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.genesisinfo,
+        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_mc_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
@@ -262,7 +275,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
-                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number])
+                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number]),
+        "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
+        "G1_KEY_PATH": bootstrap_info.keys_paths.g1_key_path,
+        "PROVING_KEY_PATH": bootstrap_info.keys_paths.proving_key_path,
+        "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path
     }
 
     configsData.append({
@@ -620,7 +637,11 @@ network: {
 def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
-    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info, block_timestamp_rewind)
+    ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+    if not os.path.isdir(ps_keys_dir):
+        os.makedirs(ps_keys_dir)
+    keys_paths = proof_keys_paths(ps_keys_dir)
+    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -630,7 +651,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
                                                             sc_nodes_bootstrap_info.network,
                                                             sc_nodes_bootstrap_info.withdrawal_epoch_length,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
-                                                            sc_nodes_bootstrap_info.certificate_proof_info)
+                                                            sc_nodes_bootstrap_info.certificate_proof_info,
+                                                            sc_nodes_bootstrap_info.initial_mc_cumulative_comm_tree_hash,
+                                                            keys_paths)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -639,6 +662,12 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
             bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf)
 
     return sc_nodes_bootstrap_info
+
+
+def proof_keys_paths(dirname):
+    return ProofKeysPaths(os.path.join(dirname, "marlin_g1_key"),
+                          os.path.join(dirname, "marlin_snark_pk"),
+                          os.path.join(dirname, "marlin_snark_vk"))
 
 """
 Create a sidechain transaction inside a mainchain node.
@@ -649,12 +678,12 @@ Parameters:
  Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
-def create_sidechain(sc_creation_info, block_timestamp_rewind):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5)
+    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
@@ -669,7 +698,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind):
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                           sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info)
+                           sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
+                           genesis_data["initialMcCumulativeCommTreeHash"], keys_paths)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.

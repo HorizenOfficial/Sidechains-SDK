@@ -50,7 +50,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public ForgerBox getBox() {
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customCreationData());
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(BytesUtils.reverseBytes(output.customCreationData()));
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 

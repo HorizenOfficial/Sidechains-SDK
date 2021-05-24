@@ -474,16 +474,26 @@ Output: an array of two information:
  - created sidechain id
 
 """
-def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length,
-                                          public_key, forward_transfer_amount, vrf_public_key, genSysConstant, verificationKey):
+def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
+                                          vrf_public_key, gen_sys_constant, cert_vk):
     number_of_blocks_to_enable_sc_logic = 219
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
         mainchain_node.generate(diff)
 
-    custom_data = vrf_public_key
-    sc_create_res = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
+    custom_creation_data = vrf_public_key
+    ceased_vk = ""
+    fe_certificate_field_configs = [253]  # TODO: make customizable, but empty by default
+    bitvector_certificate_field_configs = [[254*8, 254*8]]  # TODO: make customizable, but empty by default
+    ft_min_amount = 0
+    btr_fee = 0
+    btr_data_length = 0
+
+    sc_create_res = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount,
+                                             cert_vk, custom_creation_data, gen_sys_constant, ceased_vk,
+                                             fe_certificate_field_configs, bitvector_certificate_field_configs,
+                                             ft_min_amount, btr_fee, btr_data_length)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)

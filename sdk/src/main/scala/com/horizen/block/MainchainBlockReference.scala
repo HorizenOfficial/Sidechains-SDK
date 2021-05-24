@@ -53,10 +53,21 @@ case class MainchainBlockReference(
     if(!data.headerHash.sameElements(header.hash))
       throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
 
+    if (header.version != MainchainBlockReference.SC_CERT_BLOCK_VERSION) {
+      if (data.sidechainRelatedAggregatedTransaction.isDefined ||
+          data.topQualityCertificate.isDefined ||
+          data.lowerCertificateLeaves.nonEmpty ||
+          data.existenceProof.isDefined ||
+          data.absenceProof.isDefined)
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader. " +
+          s"MainchainBlock without SC support should have no SC related data.")
+    }
+
     val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
+    // TODO: uncomment later. at the moment MC and SC caclulates CommTree differently.
     // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
-    if (data.existenceProof.isDefined) {
+    /*if (data.existenceProof.isDefined) {
       // Check for defined transaction and/or certificate.
       if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
@@ -75,13 +86,13 @@ case class MainchainBlockReference(
       }
 
       // Add certificates in the original order
-      data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data,leaf))
+      data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data, leaf))
       data.topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
 
       if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
         throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
 
-      val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId);
+      val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId.data)
       if (scCommitmentOpt.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
 
@@ -98,7 +109,7 @@ case class MainchainBlockReference(
 
       if (!SidechainCommitmentTree.verifyAbsenceProof(sidechainId.data, data.absenceProof.get, header.hashScTxsCommitment))
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
-    }
+    }*/
   }
 }
 
@@ -113,6 +124,11 @@ object MainchainBlockReference extends ScorexLogging {
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
       case Success((header, mainchainTxs, certificates)) =>
+        if (header.version != SC_CERT_BLOCK_VERSION) {
+          val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)
+          return Success(MainchainBlockReference(header, data))
+        }
+
         // Calculate ScTxsCommitment
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
 
@@ -156,7 +172,7 @@ object MainchainBlockReference extends ScorexLogging {
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
-        val certLeaves = commitmentTree.getCertLeafs(sidechainId.data);
+        val certLeaves = commitmentTree.getCertLeafs(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =

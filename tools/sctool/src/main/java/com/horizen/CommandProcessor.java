@@ -244,12 +244,6 @@ public class CommandProcessor {
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        if(Files.exists(Paths.get(g1KeyPath))) {
-            printer.print("Loading dlog key...");
-        } else {
-            printer.print("Generating dlog key. It may take some time...");
-        }
-
         if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
             printer.print("Error occurred during dlog key generation.");
             return;
@@ -257,7 +251,6 @@ public class CommandProcessor {
 
         // Generate snark keys only if not present before.
         if(!Files.exists(Paths.get(provingKeyPath)) || !Files.exists(Paths.get(verificationKeyPath))) {
-            printer.print("Generating snark keys. It may take some time...");
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
@@ -339,10 +332,6 @@ public class CommandProcessor {
         }
 
         String secretHex = json.get("secret").asText();
-        if(secretHex.length() != 130) {// size of hex representation of Private25519Key
-            printGenesisInfoUsageMsg("'secret' value size is wrong.");
-            return;
-        }
 
         byte[] secretBytes;
         try {
@@ -352,13 +341,15 @@ public class CommandProcessor {
             return;
         }
 
-        PrivateKey25519 key = (PrivateKey25519) secretsCompanion.parseBytes(secretBytes);
-
-        String vrfSecretHex = json.get("vrfSecret").asText();
-        if(vrfSecretHex.length() != 588) {// size of hex representation of VrfSecretKey
-            printGenesisInfoUsageMsg("'vrfSecret' value size is wrong.");
+        PrivateKey25519 key;
+        try {
+            key = (PrivateKey25519) secretsCompanion.parseBytes(secretBytes);
+        } catch (Exception e) {
+            printGenesisInfoUsageMsg("'secret' value is broken. Can't deserialize the key.");
             return;
         }
+
+        String vrfSecretHex = json.get("vrfSecret").asText();
 
         byte[] vrfSecretBytes;
         try {
@@ -368,7 +359,13 @@ public class CommandProcessor {
             return;
         }
 
-        VrfSecretKey vrfSecretKey = (VrfSecretKey) secretsCompanion.parseBytes(vrfSecretBytes);
+        VrfSecretKey vrfSecretKey;
+        try {
+            vrfSecretKey = (VrfSecretKey) secretsCompanion.parseBytes(vrfSecretBytes);
+        } catch (Exception e) {
+            printGenesisInfoUsageMsg("'vrfSecret' value is broken. Can't deserialize the key.");
+            return;
+        }
 
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
         if(shouldUpdateConfig &&
@@ -401,10 +398,11 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            byte initialMcCumulativeCommTreeHashLength = infoBytes[offset];
-            offset += 1;
-            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + initialMcCumulativeCommTreeHashLength);
-            offset += initialMcCumulativeCommTreeHashLength;
+            VarInt initialMcCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
+            offset += initialMcCumulativeCommTreeHashLength.size();
+
+            byte[] initialMcCumulativeCommTreeHash = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + (int)initialMcCumulativeCommTreeHashLength.value()));
+            offset += initialMcCumulativeCommTreeHashLength.value();
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -422,6 +420,9 @@ public class CommandProcessor {
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
+            if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
+                throw new IllegalArgumentException("Sidechain related data is not found in genesisinfo mc block.");
+
             for (SidechainRelatedMainchainOutput output : mcRef.data().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs()) {
                 if (output instanceof SidechainCreation) {
                     sidechainCreation =  (SidechainCreation) output;
@@ -429,7 +430,7 @@ public class CommandProcessor {
             }
 
             if (sidechainCreation == null)
-                throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo.");
+                throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo mc block.");
 
             ForgerBox forgerBox = sidechainCreation.getBox();
             ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
@@ -493,7 +494,7 @@ public class CommandProcessor {
                         BytesUtils.toHexString(initialMcCumulativeCommTreeHash)
                 );
         } catch (Exception e) {
-            printer.print("Error: 'info' data is corrupted.");
+            printer.print(String.format("Error: 'info' data is corrupted: %s", e.getMessage()));
         }
     }
 

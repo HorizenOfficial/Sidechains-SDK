@@ -36,12 +36,10 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   def getMainchainBaseInfoFromReferences(references: Seq[MainchainBlockReference], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     var prevCumulativeHash = initialCumulativeHash
     references.map(ref => {
-      val header = byteArrayToMainchainHeaderHash(ref.data.headerHash)
-      val hashBytes: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()) // TODO Remove temporary buffer after switching to 256-bit Filed Element
-      Array.copy(ref.header.hashScTxsCommitment, 0, hashBytes, 0, ref.header.hashScTxsCommitment.length)
-      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, hashBytes)
+      val headerHash = byteArrayToMainchainHeaderHash(ref.data.headerHash)
+      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, ref.header.hashScTxsCommitment)
       prevCumulativeHash = cumulativeHash
-      MainchainHeaderBaseInfo(header, cumulativeHash)
+      MainchainHeaderBaseInfo(headerHash, cumulativeHash)
     })
   }
 
