@@ -244,13 +244,14 @@ public class CommandProcessor {
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
-            printer.print("Error occurred during dlog key generation.");
-            return;
-        }
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
 
-        // Generate snark keys only if not present before.
-        if(!Files.exists(Paths.get(provingKeyPath)) || !Files.exists(Paths.get(verificationKeyPath))) {
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;

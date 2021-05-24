@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 import json
+import os
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, \
@@ -9,7 +10,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
-    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool
+    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, proof_keys_paths
 
 """
 Demo flow of how to bootstrap SC network and start SC nodes.
@@ -76,7 +77,10 @@ class Demo(SidechainTestFramework):
         vrf_keys = generate_vrf_secrets("seed", 1)
         genesis_account = accounts[0]
         vrf_key = vrf_keys[0]
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5)
+        ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+        if not os.path.isdir(ps_keys_dir):
+            os.makedirs(ps_keys_dir)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, proof_keys_paths(ps_keys_dir))
 
         custom_data = vrf_key.publicKey
         print("Running sc_create RPC call on MC node:\n" +
@@ -152,7 +156,7 @@ class Demo(SidechainTestFramework):
 
         sc_node = self.sc_nodes[0]
 
-        initial_sc_balance = sc_node.wallet_balance()["result"]
+        initial_sc_balance = sc_node.wallet_coinsBalance()["result"]
         print("\nInitial SC wallet balance in satoshi: {}".format(json.dumps(initial_sc_balance, indent=4, sort_keys=True)))
 
         initial_boxes_balances = sc_node.wallet_allBoxes()["result"]
@@ -194,7 +198,7 @@ class Demo(SidechainTestFramework):
         self.pause()
 
         # Check balance changes
-        sc_balance = sc_node.wallet_balance()["result"]
+        sc_balance = sc_node.wallet_coinsBalance()["result"]
         print("\nSC wallet balance in satoshi: {}".format(
             json.dumps(sc_balance, indent=4, sort_keys=True)))
 
@@ -217,7 +221,7 @@ class Demo(SidechainTestFramework):
         self.pause()
 
         # Check balance changes
-        sc_balance = sc_node.wallet_balance()["result"]
+        sc_balance = sc_node.wallet_coinsBalance()["result"]
         print("\nSC wallet balance in satoshi: {}".format(
             json.dumps(sc_balance, indent=4, sort_keys=True)))
 
@@ -286,7 +290,7 @@ class Demo(SidechainTestFramework):
         self.pause()
 
         # Get SC balances changes
-        sc_balance = sc_node.wallet_balance()["result"]
+        sc_balance = sc_node.wallet_coinsBalance()["result"]
         print("\nSC wallet balance in satoshi: {}".format(
             json.dumps(sc_balance, indent=4, sort_keys=True)))
         boxes_balances = sc_node.wallet_allBoxes()["result"]
