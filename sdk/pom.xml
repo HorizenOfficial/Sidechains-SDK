@@ -296,6 +296,8 @@
           <include>mctx_v-4_sc_creation</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
+          <include>new_mc_blocks/mc_block_with_1_sc_creation</include>
+          <include>new_mc_blocks/mc_block_with_1_ft</include>
           <include>new_mc_blocks/mc_block_with_3_sidechains</include>
           <include>new_mc_blocks/mc_block_with_certificate</include>
           <include>new_mc_blocks/mc_block_with_2_certificates</include>

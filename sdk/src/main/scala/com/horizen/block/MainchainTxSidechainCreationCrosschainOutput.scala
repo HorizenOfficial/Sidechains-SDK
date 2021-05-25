@@ -1,6 +1,5 @@
 package com.horizen.block
 
-import com.google.common.primitives.Ints
 import com.horizen.commitmenttree.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
@@ -136,10 +135,7 @@ object MainchainTxSidechainCreationCrosschainOutput {
   def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
     // Note: sc-cryptolib returns the fe bytes in LE, but we keep it in BE as the data returned from MC RPC.
     BytesUtils.reverseBytes(
-      ScCryptoUtils.calculateSidechainId(
-        BytesUtils.reverseBytes(transactionHash),
-        BytesUtils.getReversedInt(Ints.toByteArray(index), 0) // LE integer
-      )
+      ScCryptoUtils.calculateSidechainId(BytesUtils.reverseBytes(transactionHash), index)
     )
   }
 }

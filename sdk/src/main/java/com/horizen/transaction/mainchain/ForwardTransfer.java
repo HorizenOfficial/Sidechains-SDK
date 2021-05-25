@@ -25,6 +25,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         this.containingTxHash = containingTxHash;
         this.index = index;
     }
+
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
@@ -93,5 +94,11 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     @Override
     public SidechainRelatedMainchainOutputSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ForwardTransfer {\ntxHash = %s\nindex = %d\nftoutput = %s\n}",
+                BytesUtils.toHexString(containingTxHash), index, output);
     }
 }

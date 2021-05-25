@@ -1,8 +1,7 @@
 package com.horizen.block
 
-import com.google.common.primitives.{Ints, Longs}
 import com.horizen.utils.BytesUtils
-import com.horizen.commitmenttree.{CommitmentTree, CustomBitvectorElementsConfig, ScAbsenceProof, ScExistenceProof}
+import com.horizen.commitmenttree.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.sigproofnative.BackwardTransfer
 
@@ -17,32 +16,24 @@ class SidechainCommitmentTree {
     commitmentTree.addCsw(csw.sidechainId, csw.amount, csw.nullifier, csw.mcPubKeyHash)
   }
 
+  // Note: we must be sure that all raw data types are passed to the CommitmentTree in LittleEndian.
+  // Otherwise, the result will be different to the one in the MC.
   private def toLE(bytes: Array[Byte]): Array[Byte] = BytesUtils.reverseBytes(bytes)
 
-  private def toLE(value: Int): Int = BytesUtils.getReversedInt(Ints.toByteArray(value), 0)
-
-  private def toLE(value: Long): Long = BytesUtils.getReversedLong(Longs.toByteArray(value), 0)
-
-  // TODO: fix endianness hear and below
   def addSidechainCreation(sc: SidechainCreation): Boolean = {
     val scOutput: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
     commitmentTree.addScCr(
       toLE(sc.sidechainId),
-      toLE(scOutput.amount),
+      scOutput.amount,
       toLE(scOutput.address),
       toLE(sc.transactionHash()),
-      toLE(sc.transactionIndex()),
-      toLE(sc.withdrawalEpochLength),
+      sc.transactionIndex(),
+      sc.withdrawalEpochLength,
       scOutput.mainchainBackwardTransferRequestDataLength,
       scOutput.fieldElementCertificateFieldConfigs.toArray,
-      scOutput.bitVectorCertificateFieldConfigs.map(cfg => {
-        new CustomBitvectorElementsConfig(
-          toLE(cfg.getBitVectorSizeBits),
-          toLE(cfg.getMaxCompressedByteSize)
-        )
-      }).toArray,
-      toLE(scOutput.btrFee),
-      toLE(scOutput.ftMinAmount),
+      scOutput.bitVectorCertificateFieldConfigs.toArray,
+      scOutput.btrFee,
+      scOutput.ftMinAmount,
       toLE(scOutput.customCreationData),
       scOutput.constantOpt.map(toLE).asJava,
       toLE(scOutput.certVk),
@@ -54,10 +45,10 @@ class SidechainCommitmentTree {
     val ftOutput: MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
     commitmentTree.addFwt(
       toLE(ft.sidechainId()),
-      toLE(ftOutput.amount),
+      ftOutput.amount,
       toLE(ftOutput.propositionBytes),
-      toLE(ft.hash),
-      toLE(ft.transactionIndex())
+      toLE(ft.transactionHash()),
+      ft.transactionIndex()
     )
   }
 
@@ -65,31 +56,28 @@ class SidechainCommitmentTree {
     val btrOutput: MainchainTxBwtRequestCrosschainOutput = btr.getBwtOutput
     commitmentTree.addBtr(
       toLE(btr.sidechainId()),
-      toLE(btrOutput.scFee),
+      btrOutput.scFee,
       toLE(btrOutput.mcDestinationAddress),
       btrOutput.scRequestData.map(toLE),
       toLE(btr.hash),
-      toLE(btr.transactionIndex())
+      btr.transactionIndex()
     )
   }
 
   def addCertificate(certificate: WithdrawalEpochCertificate): Boolean = {
     val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput =>
-      new BackwardTransfer(
-        toLE(btrOutput.pubKeyHash),
-        toLE(btrOutput.amount)
-      )
+      new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount)
     )
 
     commitmentTree.addCert(
       toLE(certificate.sidechainId),
-      toLE(certificate.epochNumber),
-      toLE(certificate.quality),
+      certificate.epochNumber,
+      certificate.quality,
       btrList.toArray,
       certificate.customFieldsOpt.map(_.map(toLE)).asJava,
       toLE(certificate.endCumulativeScTxCommitmentTreeRoot),
-      toLE(certificate.btrFee),
-      toLE(certificate.ftMinAmount)
+      certificate.btrFee,
+      certificate.ftMinAmount
     )
   }
 

@@ -71,26 +71,28 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
       commitmentTree.addForwardTransfer(ft)
     })
 
-    val commitment = commitmentTree.getCommitment
-    assertTrue("Tree commitment must exist", commitment.isDefined)
+    val commitmentOpt = commitmentTree.getCommitment
+    assertTrue("Tree commitment must exist", commitmentOpt.isDefined)
+
+    val commitmentBE = BytesUtils.reverseBytes(commitmentOpt.get)
 
     val absenceProof1 = commitmentTree.getAbsenceProof(beforeLeftmostSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof1.isDefined)
     assertTrue("Absence proof must be valid.",
-      SidechainCommitmentTree.verifyAbsenceProof(beforeLeftmostSidechainId.data, absenceProof1.get, commitment.get))
+      SidechainCommitmentTree.verifyAbsenceProof(beforeLeftmostSidechainId.data, absenceProof1.get, commitmentBE))
 
     val absenceProof2 = commitmentTree.getAbsenceProof(innerMissedSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof2.isDefined)
     assertTrue("Absence proof must be valid.",
-      SidechainCommitmentTree.verifyAbsenceProof(innerMissedSidechainId.data, absenceProof2.get, commitment.get))
+      SidechainCommitmentTree.verifyAbsenceProof(innerMissedSidechainId.data, absenceProof2.get, commitmentBE))
 
     val absenceProof3 = commitmentTree.getAbsenceProof(afterRightmostSidechainId.data)
 
     assertTrue("Absence proof must exist.", absenceProof3.isDefined)
     assertTrue("Absence proof must be valid.",
-      SidechainCommitmentTree.verifyAbsenceProof(afterRightmostSidechainId.data, absenceProof3.get, commitment.get))
+      SidechainCommitmentTree.verifyAbsenceProof(afterRightmostSidechainId.data, absenceProof3.get, commitmentBE))
   }
 
   @Test
@@ -108,17 +110,19 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
       commitmentTree.addForwardTransfer(ft)
     })
 
-    val commitment = commitmentTree.getCommitment
-    assertTrue("Tree commitment must exist", commitment.isDefined)
+    val commitmentOpt = commitmentTree.getCommitment
+    assertTrue("Tree commitment must exist", commitmentOpt.isDefined)
+
+    val commitmentBE = BytesUtils.reverseBytes(commitmentOpt.get)
 
     sidechainIdSeq.foreach(scId => {
-      val scCommitmentOpt = commitmentTree.getSidechainCommitment(scId)
+      val scCommitmentOpt = commitmentTree.getSidechainCommitment(scId.data)
       assertTrue("Sidechain commitment must exist.", scCommitmentOpt.isDefined)
       val existenceProof = commitmentTree.getExistenceProof(scId.data)
       assertTrue("Existence proof must exist.", existenceProof.isDefined)
 
       assertTrue("Absence proof must be valid.",
-        SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, existenceProof.get, commitment.get))
+        SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, existenceProof.get, commitmentBE))
     })
   }
 }

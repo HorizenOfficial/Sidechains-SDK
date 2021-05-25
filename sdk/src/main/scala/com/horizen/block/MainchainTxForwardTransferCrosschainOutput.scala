@@ -12,6 +12,11 @@ class MainchainTxForwardTransferCrosschainOutput(
                                       ) extends MainchainTxCrosschainOutput {
 
   override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(forwardTransferOutputBytes))
+
+  override def toString: String = s"FT Output in BigEndian: {\n" +
+    s"scid = ${BytesUtils.toHexString(sidechainId)}\n" +
+    s"amount = $amount\n" +
+    s"address = ${BytesUtils.toHexString(propositionBytes)}\n}"
 }
 
 

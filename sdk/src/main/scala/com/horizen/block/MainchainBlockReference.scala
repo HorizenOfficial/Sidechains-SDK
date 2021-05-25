@@ -58,16 +58,17 @@ case class MainchainBlockReference(
           data.topQualityCertificate.isDefined ||
           data.lowerCertificateLeaves.nonEmpty ||
           data.existenceProof.isDefined ||
-          data.absenceProof.isDefined)
+          data.absenceProof.isDefined) {
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader. " +
           s"MainchainBlock without SC support should have no SC related data.")
+      }
+      return Success(Unit) // No proof checks expected
     }
 
     val sidechainId = new ByteArrayWrapper(params.sidechainId)
 
-    // TODO: uncomment later. at the moment MC and SC caclulates CommTree differently.
     // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
-    /*if (data.existenceProof.isDefined) {
+    if (data.existenceProof.isDefined) {
       // Check for defined transaction and/or certificate.
       if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
@@ -109,7 +110,7 @@ case class MainchainBlockReference(
 
       if (!SidechainCommitmentTree.verifyAbsenceProof(sidechainId.data, data.absenceProof.get, header.hashScTxsCommitment))
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
-    }*/
+    }
   }
 }
 
