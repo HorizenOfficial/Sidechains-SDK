@@ -72,10 +72,6 @@ object WithdrawalEpochCertificate {
     val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
-    // TODO: Parse only. `endEpochBlockHash` fields will be removed soon.
-    val endEpochBlockHash: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
-    currentOffset += 32
-
     val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
     if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
