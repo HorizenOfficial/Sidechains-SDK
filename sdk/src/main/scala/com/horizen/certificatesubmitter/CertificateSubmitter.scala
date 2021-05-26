@@ -8,7 +8,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{BitVectorCertificateField, FieldElementCertificateField, MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeApi, SendCertificateRequest, SendCertificateResponse}
@@ -148,12 +148,14 @@ class CertificateSubmitter
           log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
           val proofWithQuality = generateProof(dataForProofGeneration)
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
+            params.sidechainId,
             dataForProofGeneration.referencedEpochNumber,
             dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
-            params)
+            dataForProofGeneration.ftMinAmount,
+            dataForProofGeneration.btrFee)
 
           log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
@@ -204,10 +206,8 @@ class CertificateSubmitter
     val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    // TODO: define proper values
-    val btrFee: Long = 0;
-    val ftMinAmount: Long = 0;
-
+    val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
+    val ftMinAmount: Long = 0 // Every positive value FT is allowed.
     val endEpochCumulativeScTxCommTreeRoot = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
 
     // NOTE: we should pass all the data in LE endianness, CumulativeScTxCommTreeRoot stored in BE endianness.
@@ -227,12 +227,14 @@ class CertificateSubmitter
 
     // The quality of data generated must be greater then current top certificate quality.
     // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
-    // Quality is equal to the number of valid schnorr signatures.
+    // Quality is equal to the number of valid schnorr signatures for the Threshold signature proof
     val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
-    if(newCertQuality > currentCertificateTopQuality)
-      Some(DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
-        endEpochCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, signersPublicKeyWithSignatures))
-    else {
+    if(newCertQuality > currentCertificateTopQuality) {
+      Some(
+        DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
+          endEpochCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
+      )
+    } else {
       log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
         s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
       None

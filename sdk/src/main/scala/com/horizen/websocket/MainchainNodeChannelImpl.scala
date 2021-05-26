@@ -15,8 +15,18 @@ case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) exten
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
 case class BackwardTransfer(pubkeyhash: String, amount: String)
-case class SendCertificateRequestPayload(scid: String, epochNumber: Int, quality: Long, endEpochBlockHash: String,
-                                        scProof: String, backwardTransfers: Seq[BackwardTransfer]) extends RequestPayload
+case class SendCertificateRequestPayload(scid: String,
+                                         epochNumber: Int,
+                                         quality: Long,
+                                         endEpochCumScTxCommTreeRoot: String,
+                                         scProof: String,
+                                         backwardTransfers: Seq[BackwardTransfer],
+                                         forwardTransferScFee: String, // Decimal string
+                                         mainchainBackwardTransferScFee: String, // Decimal string
+                                         fee: String, // Decimal string
+                                         vFieldElementCertificateField: Seq[String], // Seq of compressed FE hex strings
+                                         vBitVectorCertificateField: Seq[String] // Seq of compressed bitvectors hex strings
+                                        ) extends RequestPayload
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
@@ -111,11 +121,21 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   }
 
   override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
-    val backwardTransfer:Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt => BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
+    val backwardTransfers: Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt =>
+      BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
 
-    val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(BytesUtils.toHexString(certificateRequest.sidechainId),
-      certificateRequest.epochNumber, certificateRequest.quality, BytesUtils.toHexString(certificateRequest.endEpochBlockHash),
-      BytesUtils.toHexString(certificateRequest.proofBytes), backwardTransfer)
+    val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(
+      BytesUtils.toHexString(certificateRequest.sidechainId),
+      certificateRequest.epochNumber,
+      certificateRequest.quality,
+      BytesUtils.toHexString(certificateRequest.endEpochCumScTxCommTreeRoot),
+      BytesUtils.toHexString(certificateRequest.proofBytes),
+      backwardTransfers,
+      certificateRequest.ftrMinAmount,
+      certificateRequest.btrMinFee,
+      certificateRequest.fee,
+      certificateRequest.fieldElementCertificateFields,
+      certificateRequest.bitVectorCertificateFields)
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 

@@ -484,8 +484,8 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
 
     custom_creation_data = vrf_public_key
     ceased_vk = ""
-    fe_certificate_field_configs = [253]  # TODO: make customizable, but empty by default
-    bitvector_certificate_field_configs = [[254*8, 254*8]]  # TODO: make customizable, but empty by default
+    fe_certificate_field_configs = []  # [253]  # TODO: make customizable, but empty by default
+    bitvector_certificate_field_configs = []  # [[254*8, 254*8]]  # TODO: make customizable, but empty by default
     ft_min_amount = 0
     btr_fee = 0
     btr_data_length = 0

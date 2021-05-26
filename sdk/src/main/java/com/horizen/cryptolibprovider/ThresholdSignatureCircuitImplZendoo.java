@@ -126,12 +126,18 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return sysDataConstantBytes;
     }
 
-    // Note: segmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network.
-    private static final int segmentSize = (1 << 17);
+    // Note: supportedSegmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network (maxSegmentSize).
+    private static final int maxSegmentSize = (1 << 17);
+    private static final int supportedSegmentSize = (1 << 17);
 
     @Override
     public boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath) {
-        return ProvingSystem.generateDLogKeys(ProvingSystemType.COBOUNDARY_MARLIN, segmentSize, g1KeyPath, Optional.empty());
+        return ProvingSystem.generateDLogKeys(
+                ProvingSystemType.COBOUNDARY_MARLIN,
+                maxSegmentSize,
+                supportedSegmentSize,
+                g1KeyPath,
+                Optional.empty());
     }
 
     @Override
