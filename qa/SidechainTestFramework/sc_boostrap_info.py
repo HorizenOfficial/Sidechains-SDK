@@ -7,14 +7,16 @@ SCCreationInfo: {
     "sc_id":
     "forward_amout":
     "withdrawal_epoch_length":
+    "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
 }
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000, btr_data_length=0):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
+        self.btr_data_length = btr_data_length
 
 
 """

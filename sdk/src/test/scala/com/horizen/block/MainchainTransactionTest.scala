@@ -142,7 +142,6 @@ class MainchainTransactionTest extends JUnitSuite {
 
     val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
     val sidechainIdHex: String = "396cc1fcd5677b96e7aceb0c82fab7574920af4684e8d60e81dc8f7d6beac7ef"
-    val sidechainId: ByteArrayWrapper = new ByteArrayWrapper(BytesUtils.fromHexString(sidechainIdHex))
 
     val expectedTxHash: String = "a84a505a2f0aaf340caa489ca5830e1c3c1bf382be75fa6cc46d9e4956c3fb5e"
     val expectedTxSize: Int = 1814
@@ -166,6 +165,44 @@ class MainchainTransactionTest extends JUnitSuite {
       BytesUtils.toHexString(creation.address))
     assertEquals("Sidechain creation custom data is different.", "802b9fca06d7bba9ce270b05737450b4bb54143452e8eae8e7541b3d1f868d8324",
       BytesUtils.toHexString(creation.customCreationData))
+  }
+
+  @Test
+  def tx_vminus4_single_mbtr(): Unit = {
+    val hex : String = Source.fromResource("mctx_v-4_mbtr").getLines().next()
+    val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
+
+    val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
+    val sidechainIdHex: String = "1eb27ec23347fb36c9ddbf6db9a4d48d938dd9072c521f8c335f71788eccc066"
+
+    val expectedTxHash: String = "7d4147bc7acb92982a355c7d4dde375aec8b282da458a26777a1c4f42adb765f"
+    val expectedTxSize: Int = 504
+    val expectedScFee: Long = 1000000000L // 10 Zen
+
+    val expectedScRequestData = Seq(
+      "00565b986a6b3dced1b63cfc6f9c448337a2251a9caad9711dc58aefd5ecbabf",
+      "00c1c066ea400f754bce95adb4a454c12fc9608f796016b13de9a60faa4cc396"
+    )
+
+    assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
+    assertEquals("Tx Size is different.", expectedTxSize, tx.size)
+
+    val crosschainOutputs: Seq[MainchainTxCrosschainOutput] = tx.getCrosschainOutputs
+    assertEquals(s"Tx expected to have different number of crosschain outputs related to sidechainId '$sidechainIdHex'.", 1, crosschainOutputs.size)
+
+
+    assertTrue("Crosschain output type is different.", crosschainOutputs.head.isInstanceOf[MainchainTxBwtRequestCrosschainOutput])
+    val mbtr: MainchainTxBwtRequestCrosschainOutput = crosschainOutputs.head.asInstanceOf[MainchainTxBwtRequestCrosschainOutput]
+    assertEquals("MBTR output hash is different.","bb928d79edd7540721f630bb1572fe03e114de84ca031f93ad6cfbc63dee3850", BytesUtils.toHexString(mbtr.hash))
+    assertEquals("MBTR output sc id is different.", sidechainIdHex, BytesUtils.toHexString(mbtr.sidechainId))
+    assertEquals("MBTR output sc fee is different.", expectedScFee, mbtr.scFee)
+    assertEquals("MBTR output mcDestinationAddress is different.", "cde8ae26b34c0555d26d43e6fdba8953f36bb9fb",
+      BytesUtils.toHexString(mbtr.mcDestinationAddress))
+    assertEquals("BTR output scRequestData size is different.", expectedScRequestData.length, mbtr.scRequestData.length)
+    for(i <- expectedScRequestData.indices) {
+      assertEquals("Sidechain creation custom data is different.", expectedScRequestData(i),
+        BytesUtils.toHexString(mbtr.scRequestData(i)))
+    }
   }
 
   @Test

@@ -1,11 +1,13 @@
 #!/usr/bin/env python2
 import json
 import os
+from decimal import Decimal
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths, \
+    generate_random_field_element_hex
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
 
 """
@@ -52,7 +54,7 @@ class McTxsData(SidechainTestFramework):
 
 
         # Generate MC block with single sidechain mentioned - sidechain creation output
-        sc_creation_info = SCCreationInfo(mc_node, 100, 1000)
+        sc_creation_info = SCCreationInfo(mc_node, 100, 1000, btr_data_length=2)
         boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
         sidechain_id_1 = str(boot_info.sidechain_id)
 
@@ -97,6 +99,23 @@ class McTxsData(SidechainTestFramework):
         sorted_sidechain_ids = sorted(sidechain_ids, key = lambda x: x[-2:])
         print("MC Block with multiple SCs mentioned (3 FT for different sidechains): \nHash = {0}\nHex = {1}\nJson = {2}\nSidechains = {3}\n"
               .format(str(block_id), str(block_hex), str(block_json), sorted_sidechain_ids))
+
+
+        # Generate block with 1 MBTR
+        fe1 = generate_random_field_element_hex()
+        fe2 = generate_random_field_element_hex()
+        pkh1 = mc_node.getnewaddress("", True)
+        mbtrFee = 10
+        mbtrOuts = [
+            {'vScRequestData': [fe1, fe2], 'scFee': str(Decimal(mbtrFee)), 'scid': sidechain_id_1, 'pubkeyhash': pkh1}]
+        # Generate Tx with version -4 with single MBTR output
+        mc_node.request_transfer_from_sidechain(mbtrOuts, {})
+        # Generate block
+        block_id = mc_node.generate(1)[0]
+        block_hex = mc_node.getblock(block_id, False)
+        block_json = mc_node.getblock(block_id)
+        print("MC Block with Tx with single MBTR output: \nHash = {0}\nHex = {1}\nJson = {2}\nScId = {3}\n\n"
+              .format(str(block_id), str(block_hex), str(block_json), sidechain_id_1))
 
 
 if __name__ == "__main__":

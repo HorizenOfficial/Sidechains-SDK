@@ -1,3 +1,4 @@
+import binascii
 import os
 import sys
 
@@ -691,7 +692,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths):
                                     sc_creation_info.forward_amount,
                                     vrf_key.publicKey,
                                     certificate_proof_info.genSysConstant,
-                                    certificate_proof_info.verificationKey)
+                                    certificate_proof_info.verificationKey,
+                                    sc_creation_info.btr_data_length)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret, block_timestamp_rewind)
     sidechain_id = genesis_info[2]
@@ -756,3 +758,11 @@ def generate_next_blocks(node, node_name, blocks_count):
     for i in range(blocks_count):
         blocks_ids.append(generate_next_block(node, node_name))
     return blocks_ids
+
+
+SC_FIELD_SIZE = 32
+SC_FIELD_SAFE_SIZE = 31
+
+
+def generate_random_field_element_hex():
+    return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)

@@ -59,7 +59,7 @@ class SidechainCommitmentTree {
       btrOutput.scFee,
       toLE(btrOutput.mcDestinationAddress),
       btrOutput.scRequestData.map(toLE),
-      toLE(btr.hash),
+      toLE(btr.transactionHash()),
       btr.transactionIndex()
     )
   }

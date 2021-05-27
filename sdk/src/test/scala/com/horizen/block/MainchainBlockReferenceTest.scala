@@ -401,4 +401,29 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence.", mcblock1.data.absenceProof.isEmpty)
   }
+
+  @Test
+  def blockWithSingleMBTR(): Unit = {
+    // Test: parse MC block with tx version -4 with single MBTR output.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_1_mbtr").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+
+    // Check for the sidechain NOT mentioned in the block.
+    // NOTE: we don't allow MBTRs for the SDK based sidechains
+    // Use dummy valid FE sc id
+    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+
+    val params1 = RegTestParams(scId.data)
+
+    val blockHash = "0c93b7438ec27250bb4b6a8995366225a8437ea91c642db9c4990416561a258f"
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params1)
+
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
+
+    assertEquals("Block hash is different.", blockHash, mcblock.header.hashHex)
+    assertTrue("Block must contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
+
+  }
 }

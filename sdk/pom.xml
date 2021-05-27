@@ -286,18 +286,22 @@
           <include>mctx_v2</include>
           <!-- from https://explorer.horizen.global/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
           <include>mctx_v-3</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_without_sc_data</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_single_ft</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_multiple_ft</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_sc_creation</include>
+          <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_txs_data.py -->
+          <include>mctx_v-4_mbtr</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
           <include>new_mc_blocks/mc_block_with_1_sc_creation</include>
           <include>new_mc_blocks/mc_block_with_1_ft</include>
+          <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_blocks_data.py -->
+          <include>new_mc_blocks/mc_block_with_1_mbtr</include>
           <include>new_mc_blocks/mc_block_with_3_sidechains</include>
           <include>new_mc_blocks/mc_block_with_certificate</include>
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
