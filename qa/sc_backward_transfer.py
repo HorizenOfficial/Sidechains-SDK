@@ -96,12 +96,16 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
+        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
+        we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
+        print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_blocks(sc_node, "first node", 3)[2]
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
+
         # Generate first mc block of the next epoch
         we1_1_mcblock_hash = mc_node.generate(1)[0]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         scblock_id3 = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(we1_1_mcblock_hash, scblock_id3, sc_node)
 
@@ -118,9 +122,12 @@ class SCBackwardTransfer(SidechainTestFramework):
         we0_certHash = mc_node.getrawmempool()[0]
         print("Withdrawal epoch 0 certificate hash = " + we0_certHash)
         we0_cert = mc_node.getrawcertificate(we0_certHash, 1)
+        we0_cert_hex = mc_node.getrawcertificate(we0_certHash)
+        print("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
-        assert_equal(we0_end_mcblock_hash, we0_cert["cert"]["endEpochBlockHash"], "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_cert["cert"]["endEpochCumScTxCommTreeRoot"],
+                     "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
         assert_equal(0, we0_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
 
         # Generate MC block and verify that certificate is present
@@ -142,8 +149,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
-        assert_equal(we0_end_mcblock_hash, we0_sc_cert["endEpochBlockHash"],
-                     "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_sc_cert["endCumulativeScTxCommitmentTreeRoot"],
+                     "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
         assert_equal(0, len(we0_sc_cert["backwardTransferOutputs"]), "Backward transfer amount in certificate is wrong.")
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
@@ -197,12 +204,15 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
+        print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
+        we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
+        we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
+        print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         we1_end_scblock_id = generate_next_blocks(sc_node, "first node", 3)[2]
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
         # Generate first mc block of the next epoch
         we2_1_mcblock_hash = mc_node.generate(1)[0]
-        print("End mc block hash in withdrawal epoch 1 = " + we2_1_mcblock_hash)
         we2_1_scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(we2_1_mcblock_hash, we2_1_scblock_id, sc_node)
 
@@ -219,11 +229,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         we1_certHash = mc_node.getrawmempool()[0]
         print("Withdrawal epoch 1 certificate hash = " + we1_certHash)
         we1_cert = mc_node.getrawcertificate(we1_certHash, 1)
+        we1_cert_hex = mc_node.getrawcertificate(we1_certHash)
+        print("Withdrawal epoch 1 certificate hex = " + we1_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
-        assert_equal(we1_end_mcblock_hash, we1_cert["cert"]["endEpochBlockHash"],
-                     "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_cert["cert"]["endEpochCumScTxCommTreeRoot"],
+                     "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
         assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
 
 
@@ -235,6 +247,8 @@ class SCBackwardTransfer(SidechainTestFramework):
                      "MC block expected to contain 1 Certificate.")
         assert_equal(we1_certHash, mc_node.getblock(we2_2_mcblock_hash)["cert"][0],
                      "MC block expected to contain certificate.")
+        print("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
+            str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
         # Check certificate BT entries
         assert_equal(bt_amount1, we1_cert["vout"][1]["value"], "First BT amount is wrong.")
@@ -268,8 +282,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_sc_cert["sidechainId"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(1, we1_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
-        assert_equal(we1_end_mcblock_hash, we1_sc_cert["endEpochBlockHash"],
-                     "Sidechain endEpochBlockHash in certificate is wrong.")
+        assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_sc_cert["endCumulativeScTxCommitmentTreeRoot"],
+                     "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
         assert_equal(2, len(we1_sc_cert["backwardTransferOutputs"]),
                      "Backward transfer amount in certificate is wrong.")
 

@@ -70,7 +70,7 @@ object CertificateRequestCreator {
     SendCertificateRequest(
       sidechainId,
       epochNumber,
-      BytesUtils.reverseBytes(endEpochCumulativeScTxCommTreeRoot), // MC expects endEpochCumulativeScTxCommTreeRoot to be in LE
+      endEpochCumulativeScTxCommTreeRoot,
       proofBytes,
       quality,
       // Note: we should send BT entries public key hashes in reversed BE endianness.

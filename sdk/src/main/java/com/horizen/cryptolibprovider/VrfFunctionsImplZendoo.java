@@ -71,6 +71,16 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         VRFProof vrfProof = VRFProof.deserialize(proofBytes, true);
         FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
 
+        if(publicKey == null || vrfProof == null || messageAsFieldElement == null) {
+            if(publicKey != null)
+                publicKey.freePublicKey();
+            if(vrfProof != null)
+                vrfProof.freeProof();
+            if(messageAsFieldElement != null)
+                messageAsFieldElement.freeFieldElement();
+            return Optional.empty();
+        }
+
         FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
 
         Optional<byte[]> output;

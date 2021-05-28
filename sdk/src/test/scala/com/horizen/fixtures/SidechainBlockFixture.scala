@@ -10,7 +10,6 @@ import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
-import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
@@ -121,7 +120,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
                                vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
-                               initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElementBigEndian()
+                               initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElement()
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
     val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))

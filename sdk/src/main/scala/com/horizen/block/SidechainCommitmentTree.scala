@@ -74,8 +74,8 @@ class SidechainCommitmentTree {
       certificate.epochNumber,
       certificate.quality,
       btrList.toArray,
-      certificate.customFieldsOpt.map(_.map(toLE)).asJava,
-      toLE(certificate.endCumulativeScTxCommitmentTreeRoot),
+      certificate.customFieldsOpt.asJava,
+      certificate.endCumulativeScTxCommitmentTreeRoot,
       certificate.btrFee,
       certificate.ftMinAmount
     )

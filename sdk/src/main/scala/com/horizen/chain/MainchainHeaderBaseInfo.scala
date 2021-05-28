@@ -2,6 +2,7 @@ package com.horizen.chain
 
 import com.horizen.block.SidechainBlock
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
@@ -31,7 +32,7 @@ object MainchainHeaderBaseInfo {
     var prevCumulativeHash: Array[Byte] = initialCumulativeHash
 
     sidechainBlock.mainchainHeaders.foreach(header => {
-      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, header.hashScTxsCommitment)
+      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, BytesUtils.reverseBytes(header.hashScTxsCommitment))
       mcHeaderBaseInfoList.append(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(header.hash), cumulativeHash))
       prevCumulativeHash = cumulativeHash
     })

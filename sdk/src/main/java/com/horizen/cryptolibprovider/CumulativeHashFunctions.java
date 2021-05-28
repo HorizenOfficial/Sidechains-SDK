@@ -8,22 +8,21 @@ public class CumulativeHashFunctions {
         return PoseidonHash.HASH_LENGTH;
     }
 
+    // Note: both arguments should be a LE form of the FieldElements expected by sc-cryptolib.
+    // resulting hash is returned as is in LE.
     public static byte[] computeCumulativeHash(byte[] prevCumulativeHash, byte[] hashScTxsCommitment) {
         FieldElement fieldElementA = null;
         FieldElement fieldElementB = null;
         FieldElement fieldElementHash = null;
         PoseidonHash digest = null;
         try {
-            byte[] prevCumulativeHashLE = BytesUtils.reverseBytes(prevCumulativeHash);
-            byte[] hashScTxsCommitmentLE = BytesUtils.reverseBytes(hashScTxsCommitment);
-            fieldElementA = FieldElement.deserialize(prevCumulativeHashLE);
-            fieldElementB = FieldElement.deserialize(hashScTxsCommitmentLE);
+            fieldElementA = FieldElement.deserialize(prevCumulativeHash);
+            fieldElementB = FieldElement.deserialize(hashScTxsCommitment);
             digest = PoseidonHash.getInstanceConstantLength(2);
             digest.update(fieldElementA);
             digest.update(fieldElementB);
             fieldElementHash = digest.finalizeHash();
-            byte[] hashLE = fieldElementHash.serializeFieldElement();
-            return BytesUtils.reverseBytes(hashLE);
+            return fieldElementHash.serializeFieldElement();
         } catch (Exception ex) {
             throw new IllegalStateException("Error on computing Cumulative Commitment Tree Hash:" + ex.getMessage(), ex);
         } finally {

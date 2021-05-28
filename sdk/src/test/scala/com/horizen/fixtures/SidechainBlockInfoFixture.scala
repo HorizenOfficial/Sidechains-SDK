@@ -37,7 +37,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
     var prevCumulativeHash = initialCumulativeHash
     references.map(ref => {
       val headerHash = byteArrayToMainchainHeaderHash(ref.data.headerHash)
-      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, ref.header.hashScTxsCommitment)
+      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, BytesUtils.reverseBytes(ref.header.hashScTxsCommitment))
       prevCumulativeHash = cumulativeHash
       MainchainHeaderBaseInfo(headerHash, cumulativeHash)
     })
@@ -48,7 +48,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   private val initialSidechainBlockId = bytesToId(generateBytes())
   val mainchainReferences: Seq[MainchainBlockReference] = generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference))
   val mainchainHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.header.hash))
-  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, FieldElementFixture.generateFieldElementBigEndian())
+  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, FieldElementFixture.generateFieldElement())
   val mainchainReferencesDataHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.data.headerHash))
   private val initialSidechainBlockInfo =
     SidechainBlockInfo(
@@ -78,7 +78,7 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
 
 
   // TODO: add support of Data and Headers as inputs of method
-  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElementBigEndian())): (ModifierId, (SidechainBlockInfo, Option[MainchainHeaderHash])) = {
+  def generateEntry(parent: ModifierId, refs: Seq[MainchainBlockReference] = Seq(), params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())): (ModifierId, (SidechainBlockInfo, Option[MainchainHeaderHash])) = {
     val id = getRandomModifier()
     val parentData: (SidechainBlockInfo, Option[MainchainHeaderHash]) = generatedData.getOrElseUpdate(parent, generateEntry(initialSidechainBlockId, Seq(), params)._2)
     val parentSidechainBlockInfo = parentData._1

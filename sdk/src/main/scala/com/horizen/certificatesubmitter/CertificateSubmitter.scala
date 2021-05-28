@@ -214,7 +214,7 @@ class CertificateSubmitter
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
       withdrawalRequests.asJava,
       referencedWithdrawalEpochNumber,
-      BytesUtils.reverseBytes(endEpochCumulativeScTxCommTreeRoot),
+      endEpochCumulativeScTxCommTreeRoot,
       btrFee,
       ftMinAmount)
 
@@ -251,7 +251,7 @@ class CertificateSubmitter
     }
     log.info(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
 
-    val headerInfo = history.getMainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
 
     headerInfo.cumulativeCommTreeHash
   }
@@ -270,7 +270,7 @@ class CertificateSubmitter
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.referencedEpochNumber,
-      BytesUtils.reverseBytes(dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot), // Pass block hash in LE endianness
+      dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
       signaturesBytes.asJava,

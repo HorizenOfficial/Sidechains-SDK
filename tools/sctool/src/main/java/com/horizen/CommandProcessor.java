@@ -402,7 +402,8 @@ public class CommandProcessor {
             VarInt initialMcCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
             offset += initialMcCumulativeCommTreeHashLength.size();
 
-            byte[] initialMcCumulativeCommTreeHash = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + (int)initialMcCumulativeCommTreeHashLength.value()));
+            // Note: we keep this value in Little endian as expected by sc-cryptolib
+            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + (int)initialMcCumulativeCommTreeHashLength.value());
             offset += initialMcCumulativeCommTreeHashLength.value();
 
             String mcNetworkName = getNetworkName(network);

@@ -50,5 +50,5 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
-  val initialCumulativeCommTreeHash: Array[Byte]
+  val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
 }
