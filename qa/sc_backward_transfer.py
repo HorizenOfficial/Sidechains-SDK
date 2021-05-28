@@ -115,6 +115,7 @@ class SCBackwardTransfer(SidechainTestFramework):
             print("Wait for certificate in mc mempool...")
             time.sleep(10)
             attempts -= 1
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         # Get Certificate for Withdrawal epoch 0 and verify it
@@ -221,6 +222,7 @@ class SCBackwardTransfer(SidechainTestFramework):
             print("Wait for certificate in mc mempool...")
             time.sleep(10)
             attempts -= 1
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         # Get Certificate for Withdrawal epoch 1 and verify it
