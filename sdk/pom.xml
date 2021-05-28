@@ -311,6 +311,7 @@
           <include>new_mc_blocks/mc_block_with_certificate_with_bts</include>
           <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py -->
           <include>new_mc_blocks/mc_block_with_certificate_without_bts</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_multiple_certs.py -->
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>

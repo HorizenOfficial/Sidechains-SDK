@@ -450,10 +450,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_2_certificates").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
 
-    val scIdHex = "bce79abe3b617ab20ce3517314681bdeed4c16b741ec5d469c006d3230fe42a3"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
 
-    val params1 = RegTestParams(scId.data)
+    // Test 1: Check for existing sidechain
+    val scIdHex1 = "32dd9e31936a7f7b3bb860eea52c6dde8be948c77402f6996a116e68b4c8c85e"
+    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+
+    val params1 = RegTestParams(scId1.data)
 
     val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
 
@@ -467,6 +469,26 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertEquals("Block must contain 1 low quality certificate.", 1, mcblock1.data.lowerCertificateLeaves.size)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence.", mcblock1.data.absenceProof.isEmpty)
+
+
+    // Test 2: Check for non-existing sidechain
+    val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
+    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+
+    val params2 = RegTestParams(scId2.data)
+
+    val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2)
+
+    assertTrue("Block expected to be parsed", mcblockTry2.isSuccess)
+    val mcblock2 = mcblockTry2.get
+
+    assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must not contain top quality certificate.", mcblock2.data.topQualityCertificate.isEmpty)
+    assertEquals("Block must not contain lower quality certificates.", 0, mcblock2.data.lowerCertificateLeaves.size)
+    assertTrue("Block must not contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
+    assertTrue("Block must contain proof of absence.", mcblock2.data.absenceProof.isDefined)
   }
 
   @Test

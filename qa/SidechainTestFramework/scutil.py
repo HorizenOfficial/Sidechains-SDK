@@ -271,7 +271,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
-        'RECONNECTION_MAX_ATTEMPS': websocket_config.reconnectionMaxAttempts,
+        'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
         "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
@@ -297,12 +297,6 @@ Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
 def initialize_default_sc_datadir(dirname, n):
-
-    genesis_secrets = {
-        0: "6882a61d8a23a9582c7c7e659466524880953fa25d983f29a8e3aa745ee6de5c0c97174767fd137f1cf2e37f2e48198a11a3de60c4a060211040d7159b769266", \
-        1: "905e2e581615ba0eff2bcd9fb666b4f6f6ed99ddd05208ae7918a25dc6ea6179c958724e7f4c44fd196d27f3384d2992a9c42485888862a20dcec670f3c08a4e", \
-        2: "80b9a06608fa5dbd11fb72d28b9df49f6ac69f0e951ca1d9e67abd404559606be9b36fb5ae7e74cc50603b161a5c31d26035f6a59e602294d9900740d6c4007f"}
-
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -310,6 +304,11 @@ def initialize_default_sc_datadir(dirname, n):
     datadir = os.path.join(dirname, "sc_node" + str(n))
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
+
+    ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+    if not os.path.isdir(ps_keys_dir):
+        os.makedirs(ps_keys_dir)
+    keys_paths = proof_keys_paths(ps_keys_dir)
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
@@ -322,7 +321,9 @@ def initialize_default_sc_datadir(dirname, n):
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
-        'GENESIS_SECRETS': genesis_secrets[n]
+        "G1_KEY_PATH": keys_paths.g1_key_path,
+        "PROVING_KEY_PATH": keys_paths.proving_key_path,
+        "VERIFICATION_KEY_PATH": keys_paths.verification_key_path
     }
 
     configsData.append({

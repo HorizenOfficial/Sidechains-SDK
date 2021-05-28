@@ -94,8 +94,7 @@ class SCCeased(SidechainTestFramework):
         mc_node.generate(1)
         # Check sidechain status
         sc_info = mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)['items'][0]
-        # TODO: Current MC branch has a bug with "ceased" state definition. Uncomment when MBTR feature is merged.
-        # assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
+        assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
 
         # Try to generate 1 SC block. Node must fail on apply block, because of missed cert in the end of the window.
         # SC block should contain 1 MC block refs, so the block will reach the end of the submission window.
