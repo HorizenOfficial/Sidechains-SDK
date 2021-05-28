@@ -80,7 +80,9 @@ class Demo(SidechainTestFramework):
         ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, proof_keys_paths(ps_keys_dir))
+
+        keys_paths = proof_keys_paths(ps_keys_dir)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
 
         custom_data = vrf_key.publicKey
         print("Running sc_create RPC call on MC node:\n" +
@@ -125,7 +127,12 @@ class Demo(SidechainTestFramework):
 
         genesis_info = [mc_node.getscgenesisinfo(sidechain_id), mc_node.getblockcount(), sidechain_id]
 
-        jsonParameters = {"secret": genesis_account.secret, "vrfSecret": vrf_key.secret, "info": genesis_info[0]}
+        jsonParameters = {
+            "secret": genesis_account.secret,
+            "vrfSecret": vrf_key.secret,
+            "info": genesis_info[0],
+            "regtestBlockTimestampRewind": 720*120*5
+        }
         jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
         print("\nCalculating Sidechain network genesis data using ScBootstrappingTool command:\n" +
               "genesisinfo {}\n".format(json.dumps(jsonParameters, indent=4, sort_keys=True)) +
@@ -142,7 +149,8 @@ class Demo(SidechainTestFramework):
 
         sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                                genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
-                               sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info)
+                               sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
+                               genesis_data["initialMcCumulativeCommTreeHash"], keys_paths)
 
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)
@@ -261,6 +269,7 @@ class Demo(SidechainTestFramework):
                 print("Wait for withdrawal certificate in MC memory pool...")
             time.sleep(10)
             attempts -= 1
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         certHash = mc_node.getrawmempool()[0]
