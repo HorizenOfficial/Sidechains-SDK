@@ -40,7 +40,7 @@ object MainchainTxCswCrosschainInput {
     if(nullifierSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
       throw new IllegalArgumentException(s"Input data corrupted: nullifier size ${nullifierSize.value()} " +
         s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
-    val nullifier: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue()))
+    val nullifier: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue())
     currentOffset += nullifierSize.value().intValue()
 
     val mcPubKeyHash: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 20))
@@ -64,8 +64,7 @@ object MainchainTxCswCrosschainInput {
         throw new IllegalArgumentException(s"Input data corrupted: actCertDataHash size ${actCertDataHashSize.value()} " +
           s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
 
-      val actCertDataHash: Array[Byte] = BytesUtils.reverseBytes(
-        cswInputBytes.slice(currentOffset, currentOffset + actCertDataHashSize.value().intValue()))
+      val actCertDataHash: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + actCertDataHashSize.value().intValue())
       currentOffset += actCertDataHashSize.value().intValue()
 
       Some(actCertDataHash)
@@ -77,8 +76,7 @@ object MainchainTxCswCrosschainInput {
     if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
       throw new IllegalArgumentException(s"Input data corrupted: ceasingCumulativeScTxCommitmentTreeRoot size ${ceasingCumulativeScTxCommitmentTreeRootSize.value()} " +
         s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
-    val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = BytesUtils.reverseBytes(
-      cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()))
+    val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue())
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()
 
     val scriptLength: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)

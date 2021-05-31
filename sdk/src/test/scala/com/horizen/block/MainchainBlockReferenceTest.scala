@@ -560,7 +560,31 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val mcblock = mcblockTry.get
 
     assertEquals("Block hash is different.", blockHash, mcblock.header.hashHex)
-    assertTrue("Block must contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
 
+  }
+
+  @Test
+  def blockWithCSWs(): Unit = {
+    // Test: parse MC block with tx version -4 with CSW inputs.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_csws").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+
+    // Check for the sidechain NOT mentioned in the block.
+    // NOTE: we don't allow CSWs for the SDK based sidechains
+    // Use dummy valid FE sc id
+    val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000"
+    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+
+    val params1 = RegTestParams(scId.data)
+
+    val blockHash = "07e10cc67304769b37b02d35536410294deaf559a42e4d5fae33c3b84e6433b4"
+    val mcblockTry = MainchainBlockReference.create(mcBlockBytes, params1)
+
+    assertTrue("Block expected to be parsed", mcblockTry.isSuccess)
+    val mcblock = mcblockTry.get
+
+    assertEquals("Block hash is different.", blockHash, mcblock.header.hashHex)
+    assertTrue("Block must not contain transaction.", mcblock.data.sidechainRelatedAggregatedTransaction.isEmpty)
   }
 }

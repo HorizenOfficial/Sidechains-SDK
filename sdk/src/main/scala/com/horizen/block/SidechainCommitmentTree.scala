@@ -13,7 +13,11 @@ class SidechainCommitmentTree {
   val commitmentTree: CommitmentTree = CommitmentTree.init()
 
   def addCswInput(csw: MainchainTxCswCrosschainInput): Boolean = {
-    commitmentTree.addCsw(csw.sidechainId, csw.amount, csw.nullifier, csw.mcPubKeyHash)
+    commitmentTree.addCsw(
+      toLE(csw.sidechainId),
+      csw.amount,
+      csw.nullifier,
+      toLE(csw.mcPubKeyHash))
   }
 
   // Note: we must be sure that all raw data types are passed to the CommitmentTree in LittleEndian.

@@ -206,6 +206,21 @@ class MainchainTransactionTest extends JUnitSuite {
   }
 
   @Test
+  def tx_vminus4_csws(): Unit = {
+    // Transaction with 4 CSWs
+    val hex : String = Source.fromResource("mctx_v-4_csw").getLines().next()
+    val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
+
+    val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
+
+    val expectedTxHash: String = "fd1ec5ac2835b9e8862f33e4f09a18e60d9a568a73bb84d63652d58156b3c6fb"
+    val expectedTxSize: Int = 11722
+
+    assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
+    assertEquals("Tx Size is different.", expectedTxSize, tx.size)
+  }
+
+  @Test
   def calculateSidechainIdRegression(): Unit = {
     val tmpHash = new Array[Byte](32)
     val tmpPos = 0
