@@ -1,20 +1,22 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.google.common.primitives.Bytes
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
 
 case class FieldElementCertificateField(rawData: Array[Byte]) {
   lazy val fieldElementBytes: Array[Byte] = {
-    new Array[Byte](32) // TODO: do the same as in MC code. Note: consider endianness.
+    Bytes.concat(new Array[Byte](FieldElement.FIELD_ELEMENT_LENGTH - rawData.length), rawData)
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {
   lazy val merkleRootBytes: Array[Byte] = {
-    new Array[Byte](32) // TODO: call proper sc-crytolib function to calculate merkle root of compressed bitvector.
+    ScCryptoUtils.compressedBitvectorMerkleRoot(rawData)
   }
 }
 
@@ -94,7 +96,7 @@ object WithdrawalEpochCertificate {
       (1 to fieldElementCertificateFieldsLength.value().intValue()).map ( _ => {
         val certFieldSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
         currentOffset += certFieldSize.size()
-        val rawData: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + certFieldSize.value().intValue()))
+        val rawData: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + certFieldSize.value().intValue())
         currentOffset += certFieldSize.value().intValue()
 
         FieldElementCertificateField(rawData)
@@ -107,7 +109,7 @@ object WithdrawalEpochCertificate {
       (1 to bitVectorCertificateFieldsLength.value().intValue()).map ( _ => {
         val certBitVectorSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
         currentOffset += certBitVectorSize.size()
-        val rawData: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + certBitVectorSize.value().intValue()))
+        val rawData: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + certBitVectorSize.value().intValue())
         currentOffset += certBitVectorSize.value().intValue()
         BitVectorCertificateField(rawData)
       })

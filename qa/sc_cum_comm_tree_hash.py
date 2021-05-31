@@ -2,13 +2,11 @@
 import json
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
+    SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+from test_framework.util import assert_equal, start_nodes, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, generate_next_block
+    start_sc_nodes, generate_next_blocks, generate_next_block
 
 """
 Check that both MC and SC calculates ScTxCumCommTreeHash in the same way.
@@ -24,7 +22,7 @@ Test:
     - Generate 2 SC blocks without MC blocks. Then 1 MC block and 1 SC block with 3 MCBlockHeaders. Do the check.
     - Generate 10 MC blocks and 1 SC block with 10 MCBlockHeaders. Do the check.
 """
-class SCForwardTransfer(SidechainTestFramework):
+class SCCumCommTreeHash(SidechainTestFramework):
 
     sc_nodes_bootstrap_info=None
 
@@ -109,4 +107,4 @@ class SCForwardTransfer(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCForwardTransfer().main()
+    SCCumCommTreeHash().main()

@@ -3,6 +3,7 @@ import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
+from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
 from test_framework.util import assert_equal
@@ -61,6 +62,9 @@ def run_tests(log_file):
 
     result = run_test(SCForwardTransfer())
     assert_equal(0, result, "sc_forward_transfer test failed!")
+
+    result = run_test(SCCumCommTreeHash())
+    assert_equal(0, result, "sc_cum_comm_tree_hash test failed!")
 
     result = run_test(SCBackwardTransfer())
     assert_equal(0, result, "sc_backward_transfer test failed!")

@@ -492,6 +492,54 @@ class MainchainBlockReferenceTest extends JUnitSuite {
   }
 
   @Test
+  def blockWithCertificateWithCustomFieldAndBitvector(): Unit = {
+    // Test: parse MC block with tx version -4 with a single certificate with 3 custom fields and 1 bitvector field.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_custom_fields").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+
+    // Test 1: Check for existing sidechain
+    val scIdHex1 = "1e03b76d9d979440c02375243b312976a4865cc3b426884b14c309158eb465c2"
+    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+
+    val params1 = RegTestParams(scId1.data)
+
+    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
+
+    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
+    val mcblock1 = mcblockTry1.get
+
+    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertEquals("Block must contain certificate with 3 cert field elements.", 3, mcblock1.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock1.data.topQualityCertificate.get.bitVectorCertificateFields.length)
+    assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
+
+
+    // Test 2: Check for non-existing sidechain
+    val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
+    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+
+    val params2 = RegTestParams(scId2.data)
+
+    val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2)
+
+    assertTrue("Block expected to be parsed", mcblockTry2.isSuccess)
+    val mcblock2 = mcblockTry2.get
+
+    assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isEmpty)
+    assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
+    assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
+  }
+
+  @Test
   def blockWithSingleMBTR(): Unit = {
     // Test: parse MC block with tx version -4 with single MBTR output.
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_1_mbtr").getLines().next()

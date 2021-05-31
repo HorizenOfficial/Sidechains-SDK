@@ -150,7 +150,7 @@ class CertificateSubmitter
           val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
             params.sidechainId,
             dataForProofGeneration.referencedEpochNumber,
-            dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot,
+            dataForProofGeneration.endEpochCumCommTreeHash,
             proofWithQuality.getKey,
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
@@ -179,7 +179,7 @@ class CertificateSubmitter
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endEpochCumulativeScTxCommTreeRoot: Array[Byte],
+                                    endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
@@ -208,13 +208,13 @@ class CertificateSubmitter
 
     val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
     val ftMinAmount: Long = 0 // Every positive value FT is allowed.
-    val endEpochCumulativeScTxCommTreeRoot = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
 
     // NOTE: we should pass all the data in LE endianness, CumulativeScTxCommTreeRoot stored in BE endianness.
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
       withdrawalRequests.asJava,
       referencedWithdrawalEpochNumber,
-      endEpochCumulativeScTxCommTreeRoot,
+      endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount)
 
@@ -232,7 +232,7 @@ class CertificateSubmitter
     if(newCertQuality > currentCertificateTopQuality) {
       Some(
         DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
-          endEpochCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
+          endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
       )
     } else {
       log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
@@ -262,7 +262,7 @@ class CertificateSubmitter
 
     log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
       s"with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
-      s"endEpochCumulativeScTxCommTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot)}, " +
+      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
 
@@ -270,7 +270,7 @@ class CertificateSubmitter
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumulativeScTxCommTreeRoot,
+      dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
       signaturesBytes.asJava,

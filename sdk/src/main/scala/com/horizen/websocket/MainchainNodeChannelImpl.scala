@@ -18,7 +18,7 @@ case class BackwardTransfer(pubkeyhash: String, amount: String)
 case class SendCertificateRequestPayload(scid: String,
                                          epochNumber: Int,
                                          quality: Long,
-                                         endEpochCumScTxCommTreeRoot: String,
+                                         endEpochCumCommTreeHash: String,
                                          scProof: String,
                                          backwardTransfers: Seq[BackwardTransfer],
                                          forwardTransferScFee: String, // Decimal string
@@ -128,7 +128,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
       BytesUtils.toHexString(certificateRequest.sidechainId),
       certificateRequest.epochNumber,
       certificateRequest.quality,
-      BytesUtils.toHexString(certificateRequest.endEpochCumScTxCommTreeRoot),
+      BytesUtils.toHexString(certificateRequest.endEpochCumCommTreeHash),
       BytesUtils.toHexString(certificateRequest.proofBytes),
       backwardTransfers,
       certificateRequest.ftrMinAmount,

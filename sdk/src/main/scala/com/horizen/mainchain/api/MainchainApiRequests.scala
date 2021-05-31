@@ -31,7 +31,7 @@ case class BackwardTransferEntry
 case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
-   endEpochCumScTxCommTreeRoot: Array[Byte],
+   endEpochCumCommTreeHash: Array[Byte],
    proofBytes: Array[Byte],
    quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
@@ -42,7 +42,7 @@ case class SendCertificateRequest
    fee: String = "0.00001")
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
-  require(endEpochCumScTxCommTreeRoot != null, "End cumulative Sc Tx CommTree root hash MUST be NOT NULL.")
+  require(endEpochCumCommTreeHash != null, "End epoch cumulative Sc Tx CommTree root hash MUST be NOT NULL.")
 }
 
 case class SendCertificateResponse
@@ -61,7 +61,7 @@ object CertificateRequestCreator {
 
   def create(sidechainId: Array[Byte],
              epochNumber: Int,
-             endEpochCumulativeScTxCommTreeRoot: Array[Byte],
+             endEpochCumCommTreeHash: Array[Byte],
              proofBytes: Array[Byte],
              quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
@@ -70,7 +70,7 @@ object CertificateRequestCreator {
     SendCertificateRequest(
       sidechainId,
       epochNumber,
-      endEpochCumulativeScTxCommTreeRoot,
+      endEpochCumCommTreeHash,
       proofBytes,
       quality,
       // Note: we should send BT entries public key hashes in reversed BE endianness.

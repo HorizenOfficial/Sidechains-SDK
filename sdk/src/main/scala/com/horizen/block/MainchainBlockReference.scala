@@ -41,7 +41,6 @@ case class MainchainBlockReference(
 
   override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
-  // TODO: check "is mutated" of merkle tree used inside
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // Check that header is valid.
     header.semanticValidity(params) match {
