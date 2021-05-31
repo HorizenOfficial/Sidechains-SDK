@@ -221,6 +221,21 @@ class MainchainTransactionTest extends JUnitSuite {
   }
 
   @Test
+  def tx_vminus4_csw_without_certdatahash(): Unit = {
+    // Transaction with CSW without ActiveCertDataHash defined
+    val hex : String = Source.fromResource("mctx_v-4_csw_without_actcertdata").getLines().next()
+    val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
+
+    val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
+
+    val expectedTxHash: String = "1de08bc398b1513bd8770c14ca12ec25e68ab833aebd1da4901fa6a80c3300a1"
+    val expectedTxSize: Int = 3124
+
+    assertEquals("Tx Hash is different.", expectedTxHash, tx.hashHex)
+    assertEquals("Tx Size is different.", expectedTxSize, tx.size)
+  }
+
+  @Test
   def calculateSidechainIdRegression(): Unit = {
     val tmpHash = new Array[Byte](32)
     val tmpPos = 0
