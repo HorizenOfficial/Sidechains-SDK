@@ -162,15 +162,10 @@ class SidechainApp @Inject()
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
-  // Load or generate Coboundary Marlin Proving System dlog keys
-  if(Files.exists(Paths.get(sidechainSettings.withdrawalEpochCertificateSettings.dlogG1KeyFilePath))) {
-    log.info(s"Loading Coboundary Marlin Proving System dlog keys...")
-  } else {
-    log.info(s"Generating Coboundary Marlin Proving System dlog keys. It will take some minutes.")
-  }
-  if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys(
-      sidechainSettings.withdrawalEpochCertificateSettings.dlogG1KeyFilePath)) {
-    throw new IllegalArgumentException("Can't load of generate Coboundary Marlin ProvingSystem dlog keys.")
+  // Generate Coboundary Marlin Proving System dlog keys
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It will take some time.")
+  if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
   // Generate snark keys only if were not present before.

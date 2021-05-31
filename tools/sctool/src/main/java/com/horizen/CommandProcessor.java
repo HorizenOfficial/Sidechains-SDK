@@ -186,8 +186,9 @@ public class CommandProcessor {
     private void printGenerateProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, \"g1KeyPath\": \"/tmp/sidechain/g1_dlog_key\", " +
-                "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", \"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\" }" +
+                      "\tgenerateProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
+                      "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
+                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\" }" +
                       "\tthreshold parameter should be less or equal to keyCount.");
     }
 
@@ -224,12 +225,6 @@ public class CommandProcessor {
             return;
         }
 
-        if (!json.has("g1KeyPath") || !json.get("g1KeyPath").isTextual()) {
-            printGenerateProofInfoUsageMsg("wrong g1KeyPath value. Textual value expected.");
-            return;
-        }
-        String g1KeyPath = json.get("g1KeyPath").asText();
-
         if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
             printGenerateProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
             return;
@@ -247,7 +242,7 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
+            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }

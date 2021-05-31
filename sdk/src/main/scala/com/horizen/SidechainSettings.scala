@@ -27,8 +27,7 @@ case class withdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               signersSecrets: Seq[String],
                                               maxPks: Long,
                                               provingKeyFilePath: String,
-                                              verificationKeyFilePath: String,
-                                              dlogG1KeyFilePath: String)
+                                              verificationKeyFilePath: String)
 
 case class ForgerSettings(automaticForging: Boolean = false)
 

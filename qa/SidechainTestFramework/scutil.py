@@ -194,7 +194,6 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
         "seed": seed,
         "maxPks": number_of_schnorr_keys,
         "threshold": threshold,
-        "g1KeyPath": keys_paths.g1_key_path,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path
     }
@@ -278,7 +277,6 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
                                          .schnorr_secrets[:sc_node_config.submitter_private_keys_number]),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "G1_KEY_PATH": bootstrap_info.keys_paths.g1_key_path,
         "PROVING_KEY_PATH": bootstrap_info.keys_paths.proving_key_path,
         "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path
     }
@@ -321,7 +319,6 @@ def initialize_default_sc_datadir(dirname, n):
         'BIND_PORT': str(bindPort),
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
-        "G1_KEY_PATH": keys_paths.g1_key_path,
         "PROVING_KEY_PATH": keys_paths.proving_key_path,
         "VERIFICATION_KEY_PATH": keys_paths.verification_key_path
     }
@@ -667,8 +664,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
 
 
 def proof_keys_paths(dirname):
-    return ProofKeysPaths(os.path.join(dirname, "marlin_g1_key"),
-                          os.path.join(dirname, "marlin_snark_pk"),
+    return ProofKeysPaths(os.path.join(dirname, "marlin_snark_pk"),
                           os.path.join(dirname, "marlin_snark_vk"))
 
 """

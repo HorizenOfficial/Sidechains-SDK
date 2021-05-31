@@ -41,7 +41,7 @@ public interface ThresholdSignatureCircuit {
 
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
 
-    boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath);
+    boolean generateCoboundaryMarlinDLogKeys();
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath);
 

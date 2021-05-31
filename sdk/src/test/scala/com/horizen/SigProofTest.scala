@@ -26,13 +26,11 @@ class SigProofTest {
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
 
   private val tmpDir: File = Files.createTempDir
-  private val g1KeyPath: String = tmpDir.getAbsolutePath + "/g1key"
   private val provingKeyPath: String = tmpDir.getAbsolutePath + "/snark_pk"
   private val verificationKeyPath: String = tmpDir.getAbsolutePath + "/snark_vk"
 
   @After
   def cleanup(): Unit = {
-    new File(g1KeyPath).delete()
     new File(provingKeyPath).delete()
     new File(verificationKeyPath).delete()
     tmpDir.delete()
@@ -94,8 +92,8 @@ class SigProofTest {
       .asJava
 
     // Setup proving system keys
-    println(s"Generating Marlin dlog key. Path: $g1KeyPath")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys(g1KeyPath)) {
+    println(s"Generating Marlin dlog key.")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
       fail("Error occurred during dlog key generation.")
     }
 

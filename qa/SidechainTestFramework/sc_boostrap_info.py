@@ -172,7 +172,6 @@ class SCBootstrapInfo(object):
 
 class ProofKeysPaths(object):
 
-    def __init__(self, g1_key_path, proving_key_path, verification_key_path):
-        self.g1_key_path = g1_key_path
+    def __init__(self, proving_key_path, verification_key_path):
         self.proving_key_path = proving_key_path
         self.verification_key_path = verification_key_path

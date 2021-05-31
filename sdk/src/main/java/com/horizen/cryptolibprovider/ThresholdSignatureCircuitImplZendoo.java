@@ -131,13 +131,11 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     private static final int supportedSegmentSize = (1 << 17);
 
     @Override
-    public boolean generateCoboundaryMarlinDLogKeys(String g1KeyPath) {
+    public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
                 ProvingSystemType.COBOUNDARY_MARLIN,
                 maxSegmentSize,
-                supportedSegmentSize,
-                g1KeyPath,
-                Optional.empty());
+                supportedSegmentSize);
     }
 
     @Override
