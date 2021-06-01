@@ -163,14 +163,14 @@ class SidechainApp @Inject()
   }
 
   // Generate Coboundary Marlin Proving System dlog keys
-  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It will take some time.")
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
   if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.verificationKeyFilePath)) || !Files.exists(Paths.get(params.provingKeyFilePath))) {
-    log.info("Generating snark keys. It may take some time...")
+    log.info("Generating snark keys. It may take some time.")
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
         sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.verificationKeyFilePath, params.provingKeyFilePath)) {
       throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem snark keys.")

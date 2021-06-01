@@ -45,6 +45,8 @@ class SCBootstrap(SidechainTestFramework):
     def run_test(self):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
+        mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
+        print("SC genesis mc block hex = " + mc_block_hex)
         sc_best_block = sc_node.block_best()["result"]
 
         assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")

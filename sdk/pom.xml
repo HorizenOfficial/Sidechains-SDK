@@ -268,8 +268,6 @@
           <include>schnorr_sk08_hex</include>
           <include>schnorr_sk09_hex</include>
           <include>schnorr_sk00_hex</include>
-          <include>sample_proving_key_7_keys_with_threshold_5</include>
-          <include>sample_vk_7_keys_with_threshold_5</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
           <include>mcblock501173</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->

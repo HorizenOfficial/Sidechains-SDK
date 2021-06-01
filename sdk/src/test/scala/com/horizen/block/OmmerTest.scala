@@ -33,6 +33,12 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   val vrfGenerationSeed = 143
   val vrfGenerationPrefix = "OmmerTest"
 
+  //set to true if you want to update vrf related data
+  if (false) {
+    VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
+    VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
+  }
+
   @Test
   def semanticValidity(): Unit = {
     // Test 1: ommer with valid SidechainBlockHeader and no headers&ommers at all must be valid
@@ -321,12 +327,6 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     val seed: Long = 11L
     val parentId: ModifierId = getRandomBlockId(seed)
 
-    //set to true if you want to update vrf related data
-    if (false) {
-      VrfGeneratedDataProvider.updateVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
-      VrfGeneratedDataProvider.updateVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
-    }
-
     val vrfKeyPairOpt: Option[(VrfSecretKey, VrfPublicKey)] = {
       val secret: VrfSecretKey = VrfGeneratedDataProvider.getVrfSecretKey(vrfGenerationPrefix, vrfGenerationSeed)
       val publicKey: VrfPublicKey = secret.publicImage();
@@ -401,7 +401,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     }
     val vrfProof = VrfGeneratedDataProvider.getVrfProof(vrfGenerationPrefix, vrfGenerationSeed)
 
-    val (forgerBox, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPairOpt)
+    val (_, forgerMetadata) = ForgerBoxFixture.generateForgerBox(seed, vrfKeyPairOpt)
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     val block = SidechainBlock.create(
       parentId,
