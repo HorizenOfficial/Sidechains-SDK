@@ -127,7 +127,7 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "mcBlockHeight": xxx,
     "mcNetwork": regtest|testnet|mainnet
     "withdrawalEpochLength": xxx
-    "initialMcCumulativeCommTreeHash": xxx
+    "initialCumulativeCommTreeHash": xxx
 }
 """
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
@@ -266,7 +266,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'BLOCK_HEIGHT': bootstrap_info.mainchain_block_height,
         'NETWORK': bootstrap_info.network,
         'WITHDRAWAL_EPOCH_LENGTH': bootstrap_info.withdrawal_epoch_length,
-        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_mc_cumulative_comm_tree_hash,
+        'INITIAL_COMM_TREE_CUMULATIVE_HASH': bootstrap_info.initial_cumulative_comm_tree_hash,
         'WEBSOCKET_ADDRESS': websocket_config.address,
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
@@ -651,7 +651,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
                                                             sc_nodes_bootstrap_info.withdrawal_epoch_length,
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
-                                                            sc_nodes_bootstrap_info.initial_mc_cumulative_comm_tree_hash,
+                                                            sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
                                                             keys_paths)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
@@ -698,7 +698,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths):
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialMcCumulativeCommTreeHash"], keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], keys_paths)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.

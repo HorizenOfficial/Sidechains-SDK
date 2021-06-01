@@ -394,12 +394,12 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            VarInt initialMcCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
-            offset += initialMcCumulativeCommTreeHashLength.size();
+            VarInt initialCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
+            offset += initialCumulativeCommTreeHashLength.size();
 
             // Note: we keep this value in Little endian as expected by sc-cryptolib
-            byte[] initialMcCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + (int)initialMcCumulativeCommTreeHashLength.value());
-            offset += initialMcCumulativeCommTreeHashLength.value();
+            byte[] initialCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + (int)initialCumulativeCommTreeHashLength.value());
+            offset += initialCumulativeCommTreeHashLength.value();
 
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
@@ -474,7 +474,7 @@ public class CommandProcessor {
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
             resJson.put("withdrawalEpochLength", withdrawalEpochLength);
-            resJson.put("initialMcCumulativeCommTreeHash", BytesUtils.toHexString(initialMcCumulativeCommTreeHash));
+            resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
 
@@ -488,7 +488,7 @@ public class CommandProcessor {
                         sidechainBlockHex,
                         mcNetworkName,
                         withdrawalEpochLength,
-                        BytesUtils.toHexString(initialMcCumulativeCommTreeHash)
+                        BytesUtils.toHexString(initialCumulativeCommTreeHash)
                 );
         } catch (Exception e) {
             printer.print(String.format("Error: 'info' data is corrupted: %s", e.getMessage()));
@@ -544,7 +544,7 @@ public class CommandProcessor {
                           "\t\tmcBlockHeight = " + mcBlockHeight + "\n" +
                           "\t\tmcNetwork = " + mcNetworkName + "\n" +
                           "\t\twithdrawalEpochLength = " + withdrawalEpochLength + "\n" +
-                          "\t\tinitialMcCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
+                          "\t\tinitialCumulativeCommTreeHash = \"" + initialCumulativeCommTreeHashHex + "\"\n" +
                           "\t}\n" +
                           "}\n";
 

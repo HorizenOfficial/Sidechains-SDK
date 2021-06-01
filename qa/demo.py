@@ -150,7 +150,7 @@ class Demo(SidechainTestFramework):
         sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                                genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                                sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                               genesis_data["initialMcCumulativeCommTreeHash"], keys_paths)
+                               genesis_data["initialCumulativeCommTreeHash"], keys_paths)
 
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)
