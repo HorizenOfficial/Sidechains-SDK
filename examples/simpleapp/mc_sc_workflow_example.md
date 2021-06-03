@@ -287,7 +287,12 @@ Run SimpleApp with the `my_settings.conf`:
  ```
     java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
-* For Linux:
+* For Linux (Glibc):
 ```
     java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
 ```
+* For Linux (Jemalloc):
+```
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/simpleapp/src/main/resources/my_settings.conf
+```
+- In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
