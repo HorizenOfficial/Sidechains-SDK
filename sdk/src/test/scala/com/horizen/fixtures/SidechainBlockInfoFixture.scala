@@ -46,9 +46,10 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   ///////
   private val initialMainchainReference = byteArrayToMainchainHeaderHash(generateBytes())
   private val initialSidechainBlockId = bytesToId(generateBytes())
+  val initialCumScTxCommTreeHash = FieldElementFixture.generateFieldElement()
   val mainchainReferences: Seq[MainchainBlockReference] = generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference))
   val mainchainHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.header.hash))
-  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, FieldElementFixture.generateFieldElement())
+  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, initialCumScTxCommTreeHash)
   val mainchainReferencesDataHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.data.headerHash))
   private val initialSidechainBlockInfo =
     SidechainBlockInfo(

@@ -5,8 +5,9 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, O
 
 import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
-import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.transaction.TransactionSerializer
@@ -67,6 +68,24 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
       assertArrayEquals("Storage must return correct mainchain header by mainchain header hash",
         mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(mainchainHeader.hash).get.mainchainHeaderBytes)
+
+      val mcHeaderInfoOpt:Option[MainchainHeaderInfo] = historyStorage.getMainchainHeaderInfoByHash(mainchainHeader.hash)
+            assertEquals("MainchainHeaderInfo expected to be present", false, mcHeaderInfoOpt.isEmpty)
+
+            val parentHash = mcHeaderInfoOpt.get.parentHash
+
+            assertArrayEquals("MainchainHeaderInfo hash is differ", mainchainHeader.hash, mcHeaderInfoOpt.get.hash)
+            assertEquals("MainchainHeaderInfo sidechain block id is differ", blocks(blockIndex).id, mcHeaderInfoOpt.get.sidechainBlockId)
+
+            historyStorage.getMainchainHeaderInfoByHash(parentHash) match  {
+              case Some(parentHeaderInfo) => {
+                val parentCumulativeHash = parentHeaderInfo.cumulativeCommTreeHash
+                val mcHeaderOpt = historyStorage.getMainchainHeaderByHash(mainchainHeader.hash)
+                assertArrayEquals("CumulativeHash is differ", CumulativeHashFunctions.computeCumulativeHash(parentCumulativeHash, BytesUtils.reverseBytes(mcHeaderOpt.get.hashScTxsCommitment)), mcHeaderInfoOpt.get.cumulativeCommTreeHash)
+              }
+              case None =>
+                assertArrayEquals("CumulativeHash is differ", activeChainBlockInfoList.head.mainchainHeaderBaseInfo.head.cumulativeCommTreeHash, mcHeaderInfoOpt.get.cumulativeCommTreeHash)
+            }
     }
 
     // Check MainchainBlockReferenceData
@@ -335,7 +354,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id).isEmpty)
 
 
-    // Test 8: get semanticValidity
+    // Test 12: get semanticValidity
     // active chain genesis block id
     assertEquals("Storage returned wrong semanticValidity", ModifierSemanticValidity.Unknown, historyStorage.semanticValidity(activeChainBlockList.head.id))
     // active chain last block id
@@ -344,6 +363,10 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     assertEquals("Storage returned wrong semanticValidity", ModifierSemanticValidity.Unknown, historyStorage.semanticValidity(forkChainBlockList.last.id))
     // unknown block id
     assertEquals("Storage expected not to find chain score for unknown id", ModifierSemanticValidity.Absent, historyStorage.semanticValidity(getRandomModifier()))
+
+    // Test 13: get last Mainchain HeaderBaseInfo inclusion
+    assertEquals("Storage returned wrong Last Mainchain HeaderBaseInfo inclusion", activeChainBlockInfoList.last.mainchainHeaderBaseInfo.last, historyStorage.getLastMainchainHeaderBaseInfoInclusion(activeChainBlockList.last.id))
+    assertEquals("Storage returned wrong Last Mainchain HeaderBaseInfo inclusion", activeChainBlockInfoList.head.mainchainHeaderBaseInfo.last, historyStorage.getLastMainchainHeaderBaseInfoInclusion(activeChainBlockList.head.id))
   }
 
   @Test
