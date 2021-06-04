@@ -10,6 +10,10 @@ public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposi
 {
     byte[] hash();
 
+    byte[] transactionHash();
+
+    int transactionIndex();
+
     byte[] sidechainId();
 
     B getBox();

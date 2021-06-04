@@ -22,7 +22,7 @@ case class TestNetParams(
                           override val signersThreshold: Int = 0,
                           override val provingKeyFilePath: String = "",
                           override val verificationKeyFilePath: String = "",
-                          override val calculatedSysDataConstant: Array[Byte] = Array(),
+                          override val calculatedSysDataConstant: Option[Array[Byte]] = None,
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength())
                         ) extends NetworkParams {
   override val EquihashN: Int = 200

@@ -1,6 +1,7 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
@@ -36,12 +37,12 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
+
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.Source
 import com.horizen.network.SidechainNodeViewSynchronizer
-
 
 import scala.util.Try
 
@@ -103,8 +104,8 @@ class SidechainApp @Inject()
   val signersPublicKeys: Seq[SchnorrProposition] = sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys
     .map(bytes => SchnorrPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(bytes)))
 
-  val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
-  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
+  val calculatedSysDataConstant: Option[Array[Byte]] = Some(CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold))
+  log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant.getOrElse(Array[Byte]()))}")
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -159,6 +160,21 @@ class SidechainApp @Inject()
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
+  }
+
+  // Generate Coboundary Marlin Proving System dlog keys
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
+  if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
+  }
+
+  // Generate snark keys only if were not present before.
+  if (!Files.exists(Paths.get(params.verificationKeyFilePath)) || !Files.exists(Paths.get(params.provingKeyFilePath))) {
+    log.info("Generating snark keys. It may take some time.")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.verificationKeyFilePath, params.provingKeyFilePath)) {
+      throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem snark keys.")
+    }
   }
 
   // Init all storages

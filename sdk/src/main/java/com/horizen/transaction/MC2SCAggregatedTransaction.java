@@ -10,9 +10,7 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
-import com.horizen.transaction.mainchain.ForwardTransferSerializer;
-import com.horizen.transaction.mainchain.SidechainCreationSerializer;
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
+import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.encode.Base16;
@@ -36,8 +34,9 @@ public final class MC2SCAggregatedTransaction
     private static ListSerializer<SidechainRelatedMainchainOutput> mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
                 new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
-                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
+                    put((byte)1, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
+                    put((byte)2, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)3, (ScorexSerializer)BwtRequestSerializer.getSerializer());
                 }}, new HashMap<>()
             ));
 
@@ -72,7 +71,8 @@ public final class MC2SCAggregatedTransaction
         if (newBoxes == null) {
             newBoxes = new ArrayList<>();
             for(SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs) {
-                newBoxes.add((Box<Proposition>) t.getBox());
+                if(!(t instanceof BwtRequest)) // there is no BwtRequest support at the moment
+                    newBoxes.add((Box<Proposition>) t.getBox());
             }
         }
         return Collections.unmodifiableList(newBoxes);

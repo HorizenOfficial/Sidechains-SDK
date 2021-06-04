@@ -10,9 +10,11 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
+import scala.compat.java8.OptionConverters;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
 
@@ -35,6 +37,11 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
     public byte[] sidechainId() {
         return output.sidechainId();
     }
@@ -43,7 +50,7 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     public ForgerBox getBox() {
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(BytesUtils.reverseBytes(output.customCreationData()));
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 
@@ -56,29 +63,30 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     @Override
     public byte[] bytes() {
         return Bytes.concat(
-                Ints.toByteArray(output.size()),
                 output.sidechainCreationOutputBytes(),
                 containingTxHash,
                 Ints.toByteArray(index)
         );
     }
 
-    public byte[] getGenSysConstant() {
-        return output.constant();
+    @Override
+    public int transactionIndex() {
+        return index;
+    }
+
+    public MainchainTxSidechainCreationCrosschainOutput getScCrOutput() {
+        return output;
+    }
+
+    public Optional<byte[]> getGenSysConstantOpt() {
+        return OptionConverters.toJava(output.constantOpt());
     }
 
     public static SidechainCreation parseBytes(byte[] bytes) {
-
         int offset = 0;
 
-        int sidechainCreationSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        if(bytes.length < 40 + sidechainCreationSize)
-            throw new IllegalArgumentException("Input data corrupted.");
-
         MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
-        offset += sidechainCreationSize;
+        offset += output.size();
 
         byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
         offset += 32;

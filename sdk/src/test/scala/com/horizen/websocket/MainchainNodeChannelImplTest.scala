@@ -264,8 +264,10 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
     val epochNumber = 0
     val quality = 7
-    val endEpochBlockHash = "00491da3a761bc100ea8e15cc8f8e072df8eeb24073c87aa5579be4a4ead1f45"
+    val endEpochCumCommTreeHash = "00491da3a761bc100ea8e15cc8f8e072df8eeb24073c87aa5579be4a4ead1f45"
     val scProof = "f596814b17a5d9bae82b7c377d8cbf44b4d07e6430b26346dde4fef807b1138d877817226dbf9648a87ba278d6de63a0f5a4702e6e16b8e4b6794889de709f80f04b331af7c7b49a41518c73cf4a7d869f933b9241e1dfc584997963f7d40000405fb19b84afd7704bf9823d42cbb6ef8c14fd703f84866e0f6a9177d5060052bb51d1fc4696f505642251ac6041f2762d9386635e7f222b7106f73341f2f7e907e99034955648df11a1f0aeffece9e1ae3add7436d43c6444cefa4b286a0100007547473dec029e91dc774e40b91377ae63591dd3347f15ced6df93956a1b3a587df464f9c0900ba6870e87cdc262318b8f1d5f8823cdd4347697bc1237c2c2a085515623d0814486f69e5b04c9426834855dd8515f16f1fbe66252096ae600002f2a6b043302f126ca7fe6fb6c50b1ea882d5f7023a7de427b68108a7e9f53e0b630f771f5d7d3dec0e978e2cad364350bd6ac15bd7f27d7a2de92e9d87a5fc71e7e14427b2f49e1e01e21ef2f79533e70ac0cba5ae2a0bb1a2c12ca9223010071e2aca4f2ed6b5d393c6ac783e3c60a2a885906d299cf32ddb733e5a21886e2db0157af9ba53fe2158c4d165a64f80741eaa49fd9c6441730b5543b738f49b980f6c4fd80000ac4dc82950ca08d8b2c67c31b1073531569c0f5ae1603920000290260cf79ce7b036e0bffcea983f6b9f7aac23743fd0d3af2ff8c16c3778c7aaedddeb0b3ab6c976364c7e50227133c47a2dc53e8fc92efe380a416e24961a283e84513882d61707d7f498c94242c921521cfa99e697ed64edc49d2b5ad00000043cb9976c1a1b16bdf5e360f536f553c9f7da716881d80dcec703bd919c14498059595358644de34ccc976dc56467b3d7e61c2f9b4d352158de64f6f708c869943d9363bd196e8ec486529e197a319815d0f6a46f1a902558074c3b16d8e0100cd3daed0c59fafb2008797eb0261cabea67fc0d6b2cb087d2ca902a30e0e76bf87987d24e650cc0178c5ecb8ef986b490c6ba8985dc1e18fbf2892fa2a0d89c716fb3452f4fde026623ea38e558099092d55439c1aca427e0386e712ac9f010000"
+    val ftrMinAmount = "0.00002"
+    val btrMinFee = "0.00003"
 
     val certHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
     val expectedReqType = SEND_CERTIFICATE_REQUEST_TYPE
@@ -280,8 +282,11 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       assertEquals("Send certificate request data (scid) is wrong.", scid, req.scid)
       assertEquals("Send certificate request data (epochNumber) is wrong.", epochNumber, req.epochNumber)
       assertEquals("Send certificate request data (quality) is wrong.", quality, req.quality)
-      assertEquals("Send certificate request data (endEpochBlockHash) is wrong.", endEpochBlockHash, req.endEpochBlockHash)
+      assertEquals("Send certificate request data (endEpochCumCommTreeHash) is wrong.",
+        endEpochCumCommTreeHash, req.endEpochCumCommTreeHash)
       assertEquals("Send certificate request data (scProof) is wrong.", scProof, req.scProof)
+      assertEquals("Send certificate request data (ftrMinAmount) is wrong.", ftrMinAmount, req.forwardTransferScFee)
+      assertEquals("Send certificate request data (btrMinFee) is wrong.", btrMinFee, req.mainchainBackwardTransferScFee)
 
       assertTrue("Send certificate response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
 
@@ -299,9 +304,17 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
-    val certificate = SendCertificateRequest(BytesUtils.fromHexString(scid), epochNumber,
-      BytesUtils.fromHexString(endEpochBlockHash), BytesUtils.fromHexString(scProof),
-      quality, Seq())
+    val certificate = SendCertificateRequest(
+      BytesUtils.fromHexString(scid),
+      epochNumber,
+      BytesUtils.fromHexString(endEpochCumCommTreeHash),
+      BytesUtils.fromHexString(scProof),
+      quality,
+      Seq(),
+      Seq(),
+      Seq(),
+      ftrMinAmount,
+      btrMinFee)
 
     val mcRefTry = mcnode.sendCertificate(certificate)
 
@@ -317,9 +330,10 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
     val epochNumber = 0
     val quality = 7
-    val endEpochBlockHash = "00491da3a761bc100ea8e15cc8f8e072df8eeb24073c87aa5579be4a4ead1f45"
+    val endEpochCumCommTreeHash = "00491da3a761bc100ea8e15cc8f8e072df8eeb24073c87aa5579be4a4ead1f45"
     val scProof = "f596814b17a5d9bae82b7c377d8cbf44b4d07e6430b26346dde4fef807b1138d877817226dbf9648a87ba278d6de63a0f5a4702e6e16b8e4b6794889de709f80f04b331af7c7b49a41518c73cf4a7d869f933b9241e1dfc584997963f7d40000405fb19b84afd7704bf9823d42cbb6ef8c14fd703f84866e0f6a9177d5060052bb51d1fc4696f505642251ac6041f2762d9386635e7f222b7106f73341f2f7e907e99034955648df11a1f0aeffece9e1ae3add7436d43c6444cefa4b286a0100007547473dec029e91dc774e40b91377ae63591dd3347f15ced6df93956a1b3a587df464f9c0900ba6870e87cdc262318b8f1d5f8823cdd4347697bc1237c2c2a085515623d0814486f69e5b04c9426834855dd8515f16f1fbe66252096ae600002f2a6b043302f126ca7fe6fb6c50b1ea882d5f7023a7de427b68108a7e9f53e0b630f771f5d7d3dec0e978e2cad364350bd6ac15bd7f27d7a2de92e9d87a5fc71e7e14427b2f49e1e01e21ef2f79533e70ac0cba5ae2a0bb1a2c12ca9223010071e2aca4f2ed6b5d393c6ac783e3c60a2a885906d299cf32ddb733e5a21886e2db0157af9ba53fe2158c4d165a64f80741eaa49fd9c6441730b5543b738f49b980f6c4fd80000ac4dc82950ca08d8b2c67c31b1073531569c0f5ae1603920000290260cf79ce7b036e0bffcea983f6b9f7aac23743fd0d3af2ff8c16c3778c7aaedddeb0b3ab6c976364c7e50227133c47a2dc53e8fc92efe380a416e24961a283e84513882d61707d7f498c94242c921521cfa99e697ed64edc49d2b5ad00000043cb9976c1a1b16bdf5e360f536f553c9f7da716881d80dcec703bd919c14498059595358644de34ccc976dc56467b3d7e61c2f9b4d352158de64f6f708c869943d9363bd196e8ec486529e197a319815d0f6a46f1a902558074c3b16d8e0100cd3daed0c59fafb2008797eb0261cabea67fc0d6b2cb087d2ca902a30e0e76bf87987d24e650cc0178c5ecb8ef986b490c6ba8985dc1e18fbf2892fa2a0d89c716fb3452f4fde026623ea38e558099092d55439c1aca427e0386e712ac9f010000"
-
+    val ftrMinAmount = "0.00002"
+    val btrMinFee = "0.00003"
     val backwardTransfer:Seq[BackwardTransfer] = Seq(BackwardTransfer("350a277a722333536ad3c044176b80aae8993c25","7"),
                                                      BackwardTransfer("19227fd1a33c2e0817925de63070136244925058","3"))
 
@@ -338,9 +352,11 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       assertEquals("Send certificate request data (scid) is wrong.", scid, req.scid)
       assertEquals("Send certificate request data (epochNumber) is wrong.", epochNumber, req.epochNumber)
       assertEquals("Send certificate request data (quality) is wrong.", quality, req.quality)
-      assertEquals("Send certificate request data (endEpochBlockHash) is wrong.", endEpochBlockHash, req.endEpochBlockHash)
+      assertEquals("Send certificate request data (endEpochCumCommTreeHash) is wrong.", endEpochCumCommTreeHash, req.endEpochCumCommTreeHash)
       assertEquals("Send certificate request data (scProof) is wrong.", scProof, req.scProof)
       assertEquals("Send certificate request data (backward transfers) is wrong.", backwardTransfer, req.backwardTransfers)
+      assertEquals("Send certificate request data (ftrMinAmount) is wrong.", ftrMinAmount, req.forwardTransferScFee)
+      assertEquals("Send certificate request data (btrMinFee) is wrong.", btrMinFee, req.mainchainBackwardTransferScFee)
 
       assertTrue("Send certificate response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
 
@@ -358,9 +374,17 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val params = MainNetParams()
     val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
-    val certificate = SendCertificateRequest(BytesUtils.fromHexString(scid), epochNumber,
-      BytesUtils.fromHexString(endEpochBlockHash), BytesUtils.fromHexString(scProof),
-      quality, backwardTransferInput)
+    val certificate = SendCertificateRequest(
+      BytesUtils.fromHexString(scid),
+      epochNumber,
+      BytesUtils.fromHexString(endEpochCumCommTreeHash),
+      BytesUtils.fromHexString(scProof),
+      quality,
+      backwardTransferInput,
+      Seq(),
+      Seq(),
+      ftrMinAmount,
+      btrMinFee)
 
     val mcRefTry = mcnode.sendCertificate(certificate)
 
@@ -375,7 +399,13 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
     val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
-    val expectedCertHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedMempoolCertHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedMempoolCertQuality = 20
+    val expectedMempoolCertRawCert = "fbffffff9ea21362e472c7c60becaf131209e247f211f3f351248fa231cb0eaf19cfe41f000000001400000000000000d0a064c71b6b54d5de6c2e233aa604bc5d2011ab3b48f41732e56adec4f8b80d0256b289505ef240df5fb278d8479a4f59ddb2a01ea2b71712bcfd345e6fb12026f0aa8ceec75208df838d0506d0f3c49d166f17f1f7f038d87edd32c3f301dd1c297020e6f24a9b528b09eba2db6a96eafe146ee1e8d4634a50134af43f010049d8b466f9c08a2bca3b418b63ce01f64852a4c585adb88fd9a36e803c228f4af1e0d53f0ebb2ea172715e9826008f370420409c73faf98ff199f628702320c490aeb04dab0e464403288c6b2c2f4283bf406c2242da99fe656416ea982600000058d7b03e5d11b1ab9db1b0aabd0c6e21193e5810887267e5e006adc8a507dfe4820a3016c34f606d5b63b09bcf2004a8b896c593a7e9f488a42e1351f496420e3c9771f775534a124a2fb119f795394cb66cc9e07be5bee4ebc71619167f000022dc545f369a5e2ec885539d820c76867d1edecd7a2b92ac91045f7de3d81c6b13cde936a4edc7ebc6fb1d20c3fd5a87af1bccac2a77f0ee0ec4b06d2edbb4b9093d9a48bc7d6e31f8abc246e73e80e876444447dd6913b0a8e1da56c9c90000475dec97c8d427d3406e1f584023969025de0b5c3d45d6da568c4c4ae399e043b3611816a91cffd269c48733745ac0e9912d48f1c007b90d331bbc7808b7d6d5329ca732ee8b40c86f01e580faa4e17eee2d3aff41510897fd82814c35e30000ecb1aa8437b07b205073b249663b1432980f15fb2feb1d4972f873ec55dec259785ae624e6f7a8ac92e448c969adc6a2a381874023b6119ceda76dc0b030482b6072dbc85fc4e1dd4b68ac7d5191f1"
+    val expectedMempoolCertFee = 0.00015
+    val expectedChainCertHash = "bc53d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedChainCertQuality = 30
+    val expectedChainCertRawCert = "00f6a3f3603d19384435c9d54feb9dea1f4ea340bf4b60869889fcbf60843f82"
 
     Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
     Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
@@ -393,14 +423,14 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
           Thread.sleep(timeoutDuration.div(2L).toMillis)
 
           p.complete(Success(TopQualityCertificateResponsePayload(mapper.createObjectNode()
-            .put("quality", 20)
-            .put("certHash", "5df6a3f3603d19384435c9d54feb9dea1f4ea340bf4b60869889fcbf60843f82")
-            .put("rawCertificateHex", "fbffffff9ea21362e472c7c60becaf131209e247f211f3f351248fa231cb0eaf19cfe41f000000001400000000000000d0a064c71b6b54d5de6c2e233aa604bc5d2011ab3b48f41732e56adec4f8b80d0256b289505ef240df5fb278d8479a4f59ddb2a01ea2b71712bcfd345e6fb12026f0aa8ceec75208df838d0506d0f3c49d166f17f1f7f038d87edd32c3f301dd1c297020e6f24a9b528b09eba2db6a96eafe146ee1e8d4634a50134af43f010049d8b466f9c08a2bca3b418b63ce01f64852a4c585adb88fd9a36e803c228f4af1e0d53f0ebb2ea172715e9826008f370420409c73faf98ff199f628702320c490aeb04dab0e464403288c6b2c2f4283bf406c2242da99fe656416ea982600000058d7b03e5d11b1ab9db1b0aabd0c6e21193e5810887267e5e006adc8a507dfe4820a3016c34f606d5b63b09bcf2004a8b896c593a7e9f488a42e1351f496420e3c9771f775534a124a2fb119f795394cb66cc9e07be5bee4ebc71619167f000022dc545f369a5e2ec885539d820c76867d1edecd7a2b92ac91045f7de3d81c6b13cde936a4edc7ebc6fb1d20c3fd5a87af1bccac2a77f0ee0ec4b06d2edbb4b9093d9a48bc7d6e31f8abc246e73e80e876444447dd6913b0a8e1da56c9c90000475dec97c8d427d3406e1f584023969025de0b5c3d45d6da568c4c4ae399e043b3611816a91cffd269c48733745ac0e9912d48f1c007b90d331bbc7808b7d6d5329ca732ee8b40c86f01e580faa4e17eee2d3aff41510897fd82814c35e30000ecb1aa8437b07b205073b249663b1432980f15fb2feb1d4972f873ec55dec259785ae624e6f7a8ac92e448c969adc6a2a381874023b6119ceda76dc0b030482b6072dbc85fc4e1dd4b68ac7d5191f1")
-            .put("fee", 0.0),
-           mapper.createObjectNode()
-            .put("quality", 30)
-            .put("certHash", "00f6a3f3603d19384435c9d54feb9dea1f4ea340bf4b60869889fcbf60843f82")
-            .put("rawCertificateHex", "fbfffff"))))
+            .put("quality", expectedMempoolCertQuality)
+            .put("certHash", expectedMempoolCertHash)
+            .put("rawCertificateHex", expectedMempoolCertRawCert)
+            .put("fee", expectedMempoolCertFee),
+            mapper.createObjectNode()
+              .put("quality", expectedChainCertQuality)
+              .put("certHash", expectedChainCertHash)
+              .put("rawCertificateHex", expectedChainCertRawCert))))
         }
       }
       thread.start()
@@ -414,6 +444,12 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val mcRefTry = mcnode.getTopQualityCertificates(scid)
 
     assertTrue("Top certificates information is expected to be received.", mcRefTry.isSuccess)
-    assertEquals("Top certificates information is different.", expectedCertHash, BytesUtils.toHexString(mcRefTry.get.mempoolCertHash.getOrElse(Array[Byte]())))
+    assertEquals("Top certificates information is different.", expectedMempoolCertHash, BytesUtils.toHexString(mcRefTry.get.mempoolCertHash.getOrElse(Array[Byte]())))
+    assertEquals("Top certificates information is different.", expectedMempoolCertQuality, mcRefTry.get.mempoolCertQuality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedMempoolCertRawCert, BytesUtils.toHexString(mcRefTry.get.mempoolRawCertificate.getOrElse(Array[Byte]())))
+    assertEquals("Top certificates information is different.", expectedMempoolCertFee, mcRefTry.get.mempoolCertFee.getOrElse(0.0), 0.000001)
+    assertEquals("Top certificates information is different.", expectedChainCertHash, BytesUtils.toHexString(mcRefTry.get.chainCertHash.getOrElse(Array[Byte]())))
+    assertEquals("Top certificates information is different.", expectedChainCertQuality, mcRefTry.get.chainCertQuality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedChainCertRawCert, BytesUtils.toHexString(mcRefTry.get.chainRawCertificate.getOrElse(Array[Byte]())))
   }
 }

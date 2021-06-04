@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    connect_sc_nodes, check_wallet_balance, check_box_balance, generate_next_block
+    connect_sc_nodes, check_wallet_coins_balance, check_box_balance, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
 
 import math
@@ -109,7 +109,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         self.sc_sync_all()
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node2, ft_amount)
+        check_wallet_coins_balance(sc_node2, ft_amount)
         check_box_balance(sc_node2, sc_node2_account, 1, 1, ft_amount)
 
         # Create forger stake with 499 Zen for SC node 2
@@ -177,8 +177,8 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         mc_node.generate(3)
 
         # Collect SC node balances before fees redistribution
-        sc_node1_balance_before_payments = int(sc_node1.wallet_balance()["result"]["balance"])
-        sc_node2_balance_before_payments = int(sc_node2.wallet_balance()["result"]["balance"])
+        sc_node1_balance_before_payments = int(sc_node1.wallet_coinsBalance()["result"]["balance"])
+        sc_node2_balance_before_payments = int(sc_node2.wallet_coinsBalance()["result"]["balance"])
 
         # Generate one more block with no fee by SC node 2 to reach the end of the withdrawal epoch
         generate_next_block(sc_node2, "second node")
@@ -205,8 +205,8 @@ class MCSCForgingFeePayments(SidechainTestFramework):
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1
 
-        sc_node1_balance_after_payments = int(sc_node1.wallet_balance()["result"]["balance"])
-        sc_node2_balance_after_payments = int(sc_node2.wallet_balance()["result"]["balance"])
+        sc_node1_balance_after_payments = int(sc_node1.wallet_coinsBalance()["result"]["balance"])
+        sc_node2_balance_after_payments = int(sc_node2.wallet_coinsBalance()["result"]["balance"])
 
         node_1_fees = forger_fees[1]
         node_2_fees = forger_fees[2]

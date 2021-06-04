@@ -268,8 +268,6 @@
           <include>schnorr_sk08_hex</include>
           <include>schnorr_sk09_hex</include>
           <include>schnorr_sk00_hex</include>
-          <include>sample_proving_key_7_keys_with_threshold_5</include>
-          <include>sample_vk_7_keys_with_threshold_5</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb660 -->
           <include>mcblock501173</include>
           <!-- from https://explorer.horizen.global/api/rawblock/0000000011aec26c29306d608645a644a592e44add2988a9d156721423e714e0 -->
@@ -286,19 +284,40 @@
           <include>mctx_v2</include>
           <!-- from https://explorer.horizen.global/api/rawtx/dee5a3758cee29648a6a50edf26c56db60c1186e434302299fd0f3e8339bf45a -->
           <include>mctx_v-3</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_without_sc_data</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_single_ft</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_multiple_ft</include>
-          <!-- generated on regtest on 28.09.2020 -->
+          <!-- generated on regtest on 25.05.2021 using test_data_generators/mc_txs_data.py -->
           <include>mctx_v-4_sc_creation</include>
+          <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_txs_data.py -->
+          <include>mctx_v-4_mbtr</include>
+          <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->
+          <include>mctx_v-4_csw</include>
+          <include>mctx_v-4_csw_without_actcertdata</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py.py -->
+          <include>cert_no_bts</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py.py -->
+          <include>cert_with_bts</include>
           <include>sc_node_holder_fixter_settings.conf</include>
           <include>new_mc_blocks/mc_block_empty_sidechains</include>
+          <include>new_mc_blocks/mc_block_with_1_sc_creation</include>
+          <include>new_mc_blocks/mc_block_with_1_ft</include>
+          <!-- generated on regtest on 26.05.2021 using test_data_generators/mc_blocks_data.py -->
+          <include>new_mc_blocks/mc_block_with_1_mbtr</include>
+          <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->
+          <include>new_mc_blocks/mc_block_with_csws</include>
           <include>new_mc_blocks/mc_block_with_3_sidechains</include>
-          <include>new_mc_blocks/mc_block_with_certificate</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py -->
+          <include>new_mc_blocks/mc_block_with_certificate_with_bts</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py -->
+          <include>new_mc_blocks/mc_block_with_certificate_without_bts</include>
+          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_multiple_certs.py -->
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
+          <!-- generated on regtest on 31.05.2021 using MC qa/sc_cert_customfields.py -->
+          <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>
         </includes>

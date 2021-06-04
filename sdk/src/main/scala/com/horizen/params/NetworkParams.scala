@@ -34,7 +34,7 @@ trait NetworkParams {
   val signersThreshold: Int
   val provingKeyFilePath: String
   val verificationKeyFilePath: String
-  val calculatedSysDataConstant: Array[Byte]
+  val calculatedSysDataConstant: Option[Array[Byte]]
 
   val maxHistoryRewritingLength: Int = 100
 
@@ -50,5 +50,5 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
-  val initialCumulativeCommTreeHash: Array[Byte]
+  val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
 }

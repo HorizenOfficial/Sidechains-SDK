@@ -3,7 +3,7 @@ package com.horizen
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -466,11 +466,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 
+  override def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainHeaderInfo] = {
+      mainchainHeaderInfoByHash(mainchainHeaderHash).asJava
+  }
+
   def getBestMainchainHeaderInfo: Option[MainchainHeaderInfo] = storage.getBestMainchainHeaderInfo
 
   def getMainchainHeaderInfoByHeight(height: Int): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHeight(height)
 
-  def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHash(mainchainHeaderHash)
+  def mainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHash(mainchainHeaderHash)
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = storage.getBestMainchainBlockReferenceDataInfo
 
@@ -560,7 +564,8 @@ object SidechainHistory
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, params.initialCumulativeCommTreeHash),
+      // First MC header Cumulative CommTree hash is provided by genesis info
+      Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
       None,

@@ -1,10 +1,13 @@
 #!/usr/bin/env python2
 import json
+import os
+from decimal import Decimal
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths, \
+    generate_random_field_element_hex
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
 
 """
@@ -21,6 +24,7 @@ Test:
 
 
 class McTxsData(SidechainTestFramework):
+
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
 
@@ -51,9 +55,13 @@ class McTxsData(SidechainTestFramework):
         # Use the same amount and withdrawal epoch length as for unit test
         creation_amount = 50
         withdrawal_epoch_length = 1000
+        btr_data_length = 2
 
-        sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length)
-        boot_info = create_sidechain(sc_creation_info, 0)
+        sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length, btr_data_length)
+        ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
+        if not os.path.isdir(ps_keys_dir):
+            os.makedirs(ps_keys_dir)
+        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
 
         sidechain_id = boot_info.sidechain_id
         sc_creation_tx_id = mc_node.getblock(mc_node.getbestblockhash())["tx"][-1]
@@ -99,6 +107,20 @@ class McTxsData(SidechainTestFramework):
               "Hex = {2}\nForward Transfers: = {3}\n"
               .format(str(multiple_ft_tx_id), len(multiple_ft_tx_hex) / 2, str(multiple_ft_tx_hex),
                       json.dumps(send_many_params, indent=4)))
+
+
+        # Generate Tx with version -4 with single MBTR output
+        fe1 = generate_random_field_element_hex()
+        fe2 = generate_random_field_element_hex()
+        pkh1 = mc_node.getnewaddress("", True)
+        mbtrFee = 10
+        mbtrOuts = [{'vScRequestData': [fe1, fe2], 'scFee': str(Decimal(mbtrFee)), 'scid': sidechain_id, 'pubkeyhash': pkh1}]
+
+        mbtr_tx_id = mc_node.request_transfer_from_sidechain(mbtrOuts, {})
+        mbtr_tx_hex = mc_node.getrawtransaction(mbtr_tx_id)
+        print("MC Transaction with version -4 with single MBTR output: \nHash = {0}\nSize = {1}\n"
+              "Hex = {2}\nMBTR: = {3}\n"
+              .format(str(mbtr_tx_id), len(mbtr_tx_hex) / 2, str(mbtr_tx_hex), json.dumps(mbtrOuts, indent=4)))
 
 
 if __name__ == "__main__":

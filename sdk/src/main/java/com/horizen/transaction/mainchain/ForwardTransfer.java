@@ -25,6 +25,7 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         this.containingTxHash = containingTxHash;
         this.index = index;
     }
+
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
@@ -32,6 +33,16 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
                 BytesUtils.reverseBytes(containingTxHash),
                 BytesUtils.reverseBytes(Ints.toByteArray(index))
         )));
+    }
+
+    @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
+    public int transactionIndex() {
+        return index;
     }
 
     @Override
@@ -59,6 +70,10 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
         );
     }
 
+    public MainchainTxForwardTransferCrosschainOutput getFtOutput() {
+        return output;
+    }
+
     public static ForwardTransfer parseBytes(byte[] bytes) {
         if(bytes.length < 36 + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
             throw new IllegalArgumentException("Input data corrupted.");
@@ -79,5 +94,11 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     @Override
     public SidechainRelatedMainchainOutputSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ForwardTransfer {\ntxHash = %s\nindex = %d\nftoutput = %s\n}",
+                BytesUtils.toHexString(containingTxHash), index, output);
     }
 }
