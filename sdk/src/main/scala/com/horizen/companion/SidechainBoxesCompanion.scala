@@ -13,8 +13,8 @@ import com.horizen.utils.DynamicTypedSerializer
 case class SidechainBoxesCompanion(customSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]])
   extends DynamicTypedSerializer[SidechainTypes#SCB, BoxSerializer[SidechainTypes#SCB]](
     new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]() {{
-        put(RegularBoxId.id(), RegularBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
-        put(CertifierRightBoxId.id(), CertifierRightBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
+        put(ZenBoxId.id(), ZenBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
+        put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
         put(ForgerBoxId.id(), ForgerBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
       }},
     customSerializers)

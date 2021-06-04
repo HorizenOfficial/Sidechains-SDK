@@ -4,24 +4,21 @@ import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 
 import com.horizen.SidechainTypes
-import com.horizen.companion.{SidechainBoxesDataCompanion, SidechainProofsCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.{SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
-import com.horizen.transaction.TransactionSerializer
+import com.horizen.transaction.{RegularTransactionSerializer, TransactionSerializer}
 
 trait CompanionsFixture
 {
   def getDefaultTransactionsCompanion: SidechainTransactionsCompanion = {
-    val sidechainBoxesDataCompanion = SidechainBoxesDataCompanion(new JHashMap())
-    val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
 
-    SidechainTransactionsCompanion(new JHashMap(), sidechainBoxesDataCompanion, sidechainProofsCompanion)
+    SidechainTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]](){{
+      put(111.byteValue(), RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
+    }})
   }
 
   def getTransactionsCompanionWithCustomTransactions(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]): SidechainTransactionsCompanion = {
-    val sidechainBoxesDataCompanion = SidechainBoxesDataCompanion(new JHashMap())
-    val sidechainProofsCompanion = SidechainProofsCompanion(new JHashMap())
-
-    SidechainTransactionsCompanion(customSerializers, sidechainBoxesDataCompanion, sidechainProofsCompanion)
+    SidechainTransactionsCompanion(customSerializers)
   }
 
   def getDefaultSecretCompanion: SidechainSecretsCompanion = {

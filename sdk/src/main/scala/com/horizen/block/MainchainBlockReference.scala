@@ -2,6 +2,7 @@ package com.horizen.block
 
 import java.util
 import java.util.Arrays
+
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.box.Box
 import com.horizen.params.NetworkParams
@@ -10,6 +11,7 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, Si
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerkleTree, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
@@ -100,8 +102,15 @@ case class MainchainBlockReference(
         if (!util.Arrays.equals(header.hashScTxsCommitment, data.mProof.get.apply(sidechainCommitmentHash)))
           throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
 
-        if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
-          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
+        if (data.sidechainRelatedAggregatedTransaction.isDefined) {
+          try {
+            data.sidechainRelatedAggregatedTransaction.get.semanticValidity()
+          }
+          catch {
+            case e: TransactionSemanticValidityException =>
+              throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx check error: ${e.getMessage}.")
+          }
+        }
       } else { // Current sidechain was not mentioned in MainchainBlockReference.
         // Check for empty transaction and certificates.
         if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
@@ -192,7 +201,7 @@ object MainchainBlockReference extends ScorexLogging {
 
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
-          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, header.time))
+          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))

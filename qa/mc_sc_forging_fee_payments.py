@@ -6,7 +6,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    connect_sc_nodes, check_wallet_balance, check_box_balance, generate_next_block
+    connect_sc_nodes, check_wallet_coins_balance, check_box_balance, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
 
 import math
@@ -109,7 +109,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         self.sc_sync_all()
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node2, ft_amount)
+        check_wallet_coins_balance(sc_node2, ft_amount)
         check_box_balance(sc_node2, sc_node2_account, 1, 1, ft_amount)
 
         # Create forger stake with 499 Zen for SC node 2

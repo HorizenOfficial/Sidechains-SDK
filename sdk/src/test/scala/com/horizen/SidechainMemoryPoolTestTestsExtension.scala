@@ -8,11 +8,11 @@ import com.horizen.fixtures._
 import scorex.util.ModifierId
 import scala.collection.JavaConverters._
 
-class SidechainMemoryPoolTest
+class SidechainMemoryPoolTestTestsExtension
   extends JUnitSuite
   with SidechainMemoryPoolFixture
   with TransactionFixture
-  with SidechainTypes
+  with SidechainTypesTestsExtension
 {
 
   @Test

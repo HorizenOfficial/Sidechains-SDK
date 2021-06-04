@@ -12,13 +12,10 @@ import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.NoncedBox;
-import com.horizen.companion.SidechainBoxesDataCompanion;
-import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-import com.horizen.cryptolibprovider.FieldElementUtils;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -376,10 +373,7 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
-
-            SidechainBoxesDataCompanion sidechainBoxesDataCompanion = new SidechainBoxesDataCompanion(new HashMap<>());
-            SidechainProofsCompanion sidechainProofsCompanion = new SidechainProofsCompanion(new HashMap<>());
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>(), sidechainBoxesDataCompanion, sidechainProofsCompanion);
+            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;

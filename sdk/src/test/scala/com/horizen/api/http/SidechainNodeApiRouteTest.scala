@@ -8,6 +8,7 @@ import com.horizen.serialization.SerializationUtil
 import org.junit.Assert.{assertEquals, assertTrue}
 
 import scala.collection.JavaConverters._
+import scala.language.postfixOps
 
 class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
 
@@ -38,33 +39,33 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "allPeers") ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("peers").isArray)
-            assertEquals(3, result.get("peers").elements().asScala.length)
-            val elems: Array[SidechainPeerNode] = peers.map(p => SidechainPeerNode(p._1.toString, p._2.lastSeen, p._2.peerSpec.nodeName, p._2.connectionType.map(_.toString))).toArray
-            val nodes = result.get("peers").elements().asScala.toArray
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
 
-            val first: JsonNode = nodes(0)
-            assertEquals(first.get("address").textValue(), elems(0).address)
-            assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
-            assertEquals(first.get("name").textValue(), elems(0).name)
-            assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("peers").isArray)
+        assertEquals(3, result.get("peers").elements().asScala.length)
+        val elems: Array[SidechainPeerNode] = peers.map(p => SidechainPeerNode(p._1.toString, p._2.lastSeen, p._2.peerSpec.nodeName, p._2.connectionType.map(_.toString))).toArray
+        val nodes = result.get("peers").elements().asScala.toArray
 
-            val second: JsonNode = nodes(1)
-            assertEquals(second.get("address").textValue(), elems(1).address)
-            assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
-            assertEquals(second.get("name").textValue(), elems(1).name)
-            assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
+        val first: JsonNode = nodes(0)
+        assertEquals(first.get("address").textValue(), elems(0).address)
+        assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
+        assertEquals(first.get("name").textValue(), elems(0).name)
+        assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
 
-            val third: JsonNode = nodes(2)
-            assertEquals(third.get("address").textValue(), elems(2).address)
-            assertEquals(third.get("lastSeen").asLong(), elems(2).lastSeen)
-            assertEquals(third.get("name").textValue(), elems(2).name)
-            assertEquals(third.get("connectionType").textValue(), elems(2).connectionType.getOrElse(""))
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val second: JsonNode = nodes(1)
+        assertEquals(second.get("address").textValue(), elems(1).address)
+        assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
+        assertEquals(second.get("name").textValue(), elems(1).name)
+        assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
+
+        val third: JsonNode = nodes(2)
+        assertEquals(third.get("address").textValue(), elems(2).address)
+        assertEquals(third.get("lastSeen").asLong(), elems(2).lastSeen)
+        assertEquals(third.get("name").textValue(), elems(2).name)
+        assertEquals(third.get("connectionType").textValue(), elems(2).connectionType.getOrElse(""))
       }
       // api error
       sidechainApiMockConfiguration.setShould_peerManager_GetAllPeers_reply(false)
@@ -79,26 +80,26 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "connectedPeers") ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("peers").isArray)
-            assertEquals(2, result.get("peers").elements().asScala.length)
-            val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastSeen, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
-            val nodes = result.get("peers").elements().asScala.toArray
-            val first: JsonNode = nodes(0)
-            assertEquals(first.get("address").textValue(), elems(0).address)
-            assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
-            assertEquals(first.get("name").textValue(), elems(0).name)
-            assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
 
-            val second: JsonNode = nodes(1)
-            assertEquals(second.get("address").textValue(), elems(1).address)
-            assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
-            assertEquals(second.get("name").textValue(), elems(1).name)
-            assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("peers").isArray)
+        assertEquals(2, result.get("peers").elements().asScala.length)
+        val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastSeen, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
+        val nodes = result.get("peers").elements().asScala.toArray
+        val first: JsonNode = nodes(0)
+        assertEquals(first.get("address").textValue(), elems(0).address)
+        assertEquals(first.get("lastSeen").asLong(), elems(0).lastSeen)
+        assertEquals(first.get("name").textValue(), elems(0).name)
+        assertEquals(first.get("connectionType").textValue(), elems(0).connectionType.getOrElse(""))
+
+        val second: JsonNode = nodes(1)
+        assertEquals(second.get("address").textValue(), elems(1).address)
+        assertEquals(second.get("lastSeen").asLong(), elems(1).lastSeen)
+        assertEquals(second.get("name").textValue(), elems(1).name)
+        assertEquals(second.get("connectionType").textValue(), elems(1).connectionType.getOrElse(""))
       }
       // api error
       sidechainApiMockConfiguration.setShould_networkController_GetConnectedPeers_reply(false)
@@ -114,13 +115,13 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqConnect("92.92.92.92", 8080))) ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("connectedTo").isTextual)
-            assertEquals(result.get("connectedTo").textValue(), "/92.92.92.92:8080")
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("connectedTo").isTextual)
+        assertEquals(result.get("connectedTo").textValue(), "/92.92.92.92:8080")
       }
       // not valid host
       Post(basePath + "connect")
@@ -134,15 +135,15 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "blacklistedPeers") ~> sidechainNodeApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("addresses").isArray)
-            val nodes = result.get("addresses").elements().asScala.toArray
-            assertEquals(nodes(0).textValue(), inetAddrBlackListed_1.getAddress.toString)
-            assertEquals(nodes(1).textValue(), inetAddrBlackListed_2.getAddress.toString)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("addresses").isArray)
+        val nodes = result.get("addresses").elements().asScala.toArray
+        assertEquals(nodes(0).textValue(), inetAddrBlackListed_1.getAddress.toString)
+        assertEquals(nodes(1).textValue(), inetAddrBlackListed_2.getAddress.toString)
       }
       // api error
       sidechainApiMockConfiguration.setShould_peerManager_GetBlacklistedPeers_reply(false)

@@ -8,7 +8,7 @@ import com.horizen.api.http.SidechainNodeRestSchema._
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
-import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, ShutdownNetwork}
+import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import scorex.core.utils.NetworkTimeProvider
@@ -16,6 +16,7 @@ import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.serialization.Views
+import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
@@ -69,7 +70,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
         maybeAddress match {
           case None =>
-            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", None))
+            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", JOptional.empty()))
           case Some(addressAndPort) =>
             val host = InetAddress.getByName(addressAndPort.group(1))
             val port = addressAndPort.group(2).toInt
@@ -97,7 +98,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
         maybeAddress match {
           case None =>
-            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", None))
+            ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", JOptional.empty()))
           case Some(addressAndPort) =>
             val host = InetAddress.getByName(addressAndPort.group(1))
             val port = addressAndPort.group(2).toInt
@@ -143,7 +144,7 @@ object SidechainNodeRestSchema {
 
 object SidechainNodeErrorResponse {
 
-  case class ErrorInvalidHost(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorInvalidHost(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0401"
   }
 

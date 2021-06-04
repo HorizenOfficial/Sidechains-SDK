@@ -10,6 +10,7 @@ import com.horizen.proposition.*;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
@@ -19,31 +20,29 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
-import static com.horizen.box.CoreBoxesIdsEnum.RegularBoxId;
+import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
-import static com.horizen.transaction.CoreTransactionsIdsEnum.RegularTransactionId;
 
 public final class RegularTransaction
     extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
 {
-    private List<RegularBox> inputs;
+    private List<ZenBox> inputs;
     private List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs;
     private List<Signature25519> signatures;
 
     private long fee;
-    private long timestamp;
 
     private List<Proposition> newBoxesPropositions;
     private List<NoncedBox<Proposition>> newBoxes;
     private List<BoxUnlocker<Proposition>> unlockers;
 
     // Serializers definition
-    private static ListSerializer<RegularBox> boxListSerializer =
-            new ListSerializer<>(RegularBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
+    private static ListSerializer<ZenBox> boxListSerializer =
+            new ListSerializer<>(ZenBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
     private static ListSerializer<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
                     new HashMap<Byte, NoncedBoxDataSerializer>() {{
-                        put(RegularBoxId.id(), RegularBoxDataSerializer.getSerializer());
+                        put(ZenBoxId.id(), ZenBoxDataSerializer.getSerializer());
                         put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
                         put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
                     }}, new HashMap<>()
@@ -51,18 +50,16 @@ public final class RegularTransaction
     private static ListSerializer<Signature25519> signaturesSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
-    private RegularTransaction(List<RegularBox> inputs,
+    private RegularTransaction(List<ZenBox> inputs,
                                List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
-                               long fee,
-                               long timestamp) {
+                               long fee) {
         if(inputs.size() != signatures.size())
             throw new IllegalArgumentException("Inputs list size is different to signatures list size!");
         this.inputs = inputs;
         this.outputs = outputs;
         this.signatures = signatures;
         this.fee = fee;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -109,8 +106,8 @@ public final class RegularTransaction
             for (int i = 0; i < outputs.size(); i++) {
                 long nonce = getNewBoxNonce(outputs.get(i).proposition(), i);
                 NoncedBoxData boxData = outputs.get(i);
-                if(boxData instanceof RegularBoxData) {
-                    newBoxes.add((NoncedBox)new RegularBox((RegularBoxData) boxData, nonce));
+                if(boxData instanceof ZenBoxData) {
+                    newBoxes.add((NoncedBox)new ZenBox((ZenBoxData) boxData, nonce));
                 } else if(boxData instanceof WithdrawalRequestBoxData) {
                     newBoxes.add((NoncedBox)new WithdrawalRequestBox((WithdrawalRequestBoxData) boxData, nonce));
                 } else if(boxData instanceof ForgerBoxData) {
@@ -129,46 +126,38 @@ public final class RegularTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
-    public boolean transactionSemanticValidity() {
-        if(fee < 0 || timestamp < 0)
-            return false;
-
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         // check that we have enough proofs and try to open each box only once.
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs number is not consistent to proofs number.", id()));
 
         // check supported new boxes data
         if(!checkSupportedBoxDataTypes(outputs))
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "contains box data output of invalid type.", id()));
 
-        Long outputsAmount = 0L;
+        long outputsAmount = 0L;
         for(NoncedBoxData output: outputs) {
-            if (output.value() <= 0)
-                return false;
             outputsAmount += output.value();
         }
 
-        Long inputsAmount = 0L;
+        long inputsAmount = 0L;
         for(int i = 0; i < inputs.size(); i++) {
             if (!signatures.get(i).isValid(inputs.get(i).proposition(), messageToSign()))
-                return false;
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "inputs input [%d] signature.", id(), i));
             inputsAmount += inputs.get(i).value();
         }
 
         if(inputsAmount != outputsAmount + fee)
-            return false;
-
-        return true;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inconsistent inputs, outputs and fee amount.", id()));
     }
 
     @Override
     public byte transactionTypeId() {
-        return RegularTransactionId.id();
+        return 111;
     }
 
     @Override
@@ -178,9 +167,8 @@ public final class RegularTransaction
 
         byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
 
-        return Bytes.concat(                                            // minimum RegularTransaction length is 40 bytes
-                Longs.toByteArray(fee()),                       // 8 bytes
-                Longs.toByteArray(timestamp()),                         // 8 bytes
+        return Bytes.concat(                                            // minimum RegularTransaction length is 32 bytes
+                Longs.toByteArray(fee()),                               // 8 bytes
                 Ints.toByteArray(inputBoxesBytes.length),               // 4 bytes
                 inputBoxesBytes,                                        // depends on previous value (>=4 bytes)
                 Ints.toByteArray(outputBoxDataBytes.length),            // 4 bytes
@@ -191,7 +179,7 @@ public final class RegularTransaction
     }
 
     public static RegularTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 40)
+        if(bytes.length < 32)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if(bytes.length > MAX_TRANSACTION_SIZE)
@@ -202,13 +190,10 @@ public final class RegularTransaction
         long fee = BytesUtils.getLong(bytes, offset);
         offset += 8;
 
-        long timestamp = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<RegularBox> inputs = boxListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<ZenBox> inputs = boxListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
@@ -224,12 +209,12 @@ public final class RegularTransaction
 
         List<Signature25519> signatures = signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
+        return new RegularTransaction(inputs, outputs, signatures, fee);
     }
 
     private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
         for(NoncedBoxData boxData: boxDataList) {
-            if (!(boxData instanceof RegularBoxData)
+            if (!(boxData instanceof ZenBoxData)
                     && !(boxData instanceof WithdrawalRequestBoxData)
                     && !(boxData instanceof ForgerBoxData)
                     )
@@ -238,10 +223,9 @@ public final class RegularTransaction
         return true;
     }
 
-    public static RegularTransaction create(List<Pair<RegularBox, PrivateKey25519>> from,
+    public static RegularTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
                                             List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
-                                            long fee,
-                                            long timestamp) {
+                                            long fee) {
         if(from == null || outputs == null)
             throw new IllegalArgumentException("Parameters can't be null.");
         if(from.size() > MAX_TRANSACTION_UNLOCKERS)
@@ -251,22 +235,22 @@ public final class RegularTransaction
         if(!checkSupportedBoxDataTypes(outputs))
             throw new IllegalArgumentException("Unsupported output box data type found.");
 
-        List<RegularBox> inputs = new ArrayList<>();
+        List<ZenBox> inputs = new ArrayList<>();
         List<Signature25519> fakeSignatures = new ArrayList<>();
-        for(Pair<RegularBox, PrivateKey25519> item : from) {
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
             inputs.add(item.getKey());
             fakeSignatures.add(null);
         }
 
-        RegularTransaction unsignedTransaction = new RegularTransaction(inputs, outputs, fakeSignatures, fee, timestamp);
+        RegularTransaction unsignedTransaction = new RegularTransaction(inputs, outputs, fakeSignatures, fee);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         List<Signature25519> signatures = new ArrayList<>();
-        for(Pair<RegularBox, PrivateKey25519> item : from) {
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
             signatures.add(item.getValue().sign(messageToSign));
         }
 
-        RegularTransaction transaction = new RegularTransaction(inputs, outputs, signatures, fee, timestamp);
+        RegularTransaction transaction = new RegularTransaction(inputs, outputs, signatures, fee);
         // We don't need to check semantic validity here.
         //if(!transaction.semanticValidity())
         //    throw new IllegalArgumentException("Created transaction is semantically invalid.");
@@ -280,8 +264,7 @@ public final class RegularTransaction
                 ", outputs=" + outputs +
                 ", signatures=" + signatures +
                 ", fee=" + fee +
-                ", timestamp=" + timestamp +
-                ", newBoxes=" + newBoxes +
+                  ", newBoxes=" + newBoxes +
                 ", unlockers=" + unlockers +
                 '}';
     }

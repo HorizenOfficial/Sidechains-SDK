@@ -10,7 +10,6 @@ import com.horizen.box.{ForgerBox, NoncedBox}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
-import com.horizen.fixtures.FieldElementFixture
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.{Proposition, VrfPublicKey}
@@ -221,7 +220,7 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + 10,
       sidechainTransactions = Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]](
-        new SemanticallyInvalidTransaction(sidechainBlock.timestamp - 100).asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
+        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
       companion = companion,
       params = params,
       basicSeed = basicSeed)

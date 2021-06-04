@@ -45,8 +45,7 @@ class SidechainStateStorageTest
   @Before
   def setUp(): Unit = {
 
-    boxList ++= getRegularBoxList(5).asScala.toList
-    boxList ++= getCertifierRightBoxList(5).asScala.toList
+    boxList ++= getZenBoxList(5).asScala.toList
     boxList ++= getCustomBoxList(5).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
 
 
@@ -124,7 +123,7 @@ class SidechainStateStorageTest
 
 
     // Test 2: test failed update, when Storage throws an exception
-    val box = getRegularBox
+    val box = getZenBox
     tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)

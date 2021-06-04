@@ -11,6 +11,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
 
@@ -32,7 +33,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
       json.put("msgType", 1)
       json.put("requestType", requestType.code)
       json.put("requestId", requestId)
-      json.put("requestPayload", mapper.valueToTree[JsonNode](request))
+      json.set("requestPayload", mapper.valueToTree[JsonNode](request))
 
       val message = json.toString
       val promise = Promise[Resp]
@@ -62,6 +63,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
         case Some(handlers) =>
           val updatedHandlers = handlers.filter(h => !h._1.equals(handler))
           eventHandlersPool += (eventType -> updatedHandlers)
+        case None =>
       }
     }
   }
@@ -149,6 +151,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
     requestsPool.remove(requestId) match {
       case Some((promise, _)) =>
         promise.failure(cause)
+      case _ => {}
     }
   }
 

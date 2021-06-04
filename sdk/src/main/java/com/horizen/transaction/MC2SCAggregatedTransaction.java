@@ -10,6 +10,7 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -28,7 +29,6 @@ public final class MC2SCAggregatedTransaction
 
     private byte[] mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs;
-    private long timestamp;
 
     private List<Box<Proposition>> newBoxes;
 
@@ -41,13 +41,10 @@ public final class MC2SCAggregatedTransaction
                 }}, new HashMap<>()
             ));
 
-    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
+    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs) {
         if(mc2scTransactionsOutputs.isEmpty())
             throw new IllegalArgumentException("Empty sidechain related mainchain outputs passed.");
-        if(timestamp < 0)
-            throw new IllegalArgumentException("Negative timestamp passed.");
         this.mc2scTransactionsOutputs = mc2scTransactionsOutputs;
-        this.timestamp = timestamp;
     }
 
     @Override
@@ -84,11 +81,6 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
     public byte transactionTypeId() {
         return MC2SCAggregatedTransactionId.id();
     }
@@ -118,8 +110,8 @@ public final class MC2SCAggregatedTransaction
         return Collections.unmodifiableList(mc2scTransactionsOutputs);
     }
 
-    public boolean semanticValidity() {
-        return true;
+    public void semanticValidity() throws TransactionSemanticValidityException {
+        // no specific checks
     }
 
 
@@ -127,7 +119,6 @@ public final class MC2SCAggregatedTransaction
     public byte[] bytes() {
         byte[] transactions = mc2scTransactionsSerializer.toBytes(mc2scTransactionsOutputs);
         return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 12 bytes
-                Longs.toByteArray(timestamp()),                     // 8 bytes
                 Ints.toByteArray(transactions.length),              // 4 bytes
                 transactions                                        // depends on previous value (>=4 bytes)
         );
@@ -142,13 +133,10 @@ public final class MC2SCAggregatedTransaction
 
         int offset = 0;
 
-        long timestamp = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
         List<SidechainRelatedMainchainOutput> mc2scTransactions = mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new MC2SCAggregatedTransaction(mc2scTransactions, timestamp);
+        return new MC2SCAggregatedTransaction(mc2scTransactions);
     }
 }

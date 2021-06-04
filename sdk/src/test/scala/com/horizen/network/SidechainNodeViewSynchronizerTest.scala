@@ -22,6 +22,7 @@ import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, R
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Promise}
+import scala.language.postfixOps
 
 class SidechainNodeViewSynchronizerTest extends JUnitSuite
   with MockitoSugar
@@ -45,7 +46,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       val receivedId: ModifierId = answer.getArgument(0)
       assertEquals("Different block id expected.", block.id, receivedId)
       setUnknownExecuted = true
-      promise.success()
+      promise.success(Unit)
     })
 
     nodeViewSynchronizerRef ! SyntacticallyFailedModification(block, blockInFutureException)

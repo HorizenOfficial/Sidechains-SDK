@@ -803,7 +803,7 @@ class SidechainBlockTest
         val h: Array[Byte] = nextParent // Just a hack for lazy vals
         override lazy val hash: Array[Byte] = h
 
-        override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+        override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
       }
     })
   }
