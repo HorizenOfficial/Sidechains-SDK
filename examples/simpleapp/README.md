@@ -32,13 +32,13 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - Check your version of Glibc. To check your version of Glibc on Ubuntu, run the command `ldd --version`
  - Install Jemalloc library. Please remember that only version 3.x of the Jemalloc library is tested and will solve the issue. Jemalloc is available as apt package, just execute the command line:
            - `sudo apt-get install libjemalloc1` (Ubuntu)
-            - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
-             - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
+	    - Locate the installation folder of the Jemalloc library. On Ubuntu 18.04 (64bit) the library should be located in this path: `/usr/lib/x86_64-linux-gnu/libjemalloc.so.1`
+	     - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
-             ```
-             LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
-             ```
-              - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
+	     ```
+	     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+	     ```
+	      - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
 
 **Running Simple App isolated from Mainchain**
 
