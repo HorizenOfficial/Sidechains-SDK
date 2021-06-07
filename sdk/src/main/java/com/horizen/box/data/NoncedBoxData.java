@@ -19,6 +19,4 @@ public interface NoncedBoxData<P extends Proposition, B extends NoncedBox<P>> ex
 
     @Override
     NoncedBoxDataSerializer serializer();
-
-    byte boxDataTypeId();
 }

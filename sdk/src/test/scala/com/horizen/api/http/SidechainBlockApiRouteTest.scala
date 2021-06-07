@@ -12,6 +12,7 @@ import scorex.util.bytesToId
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
+import java.util.{Optional => JOptional}
 
 class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
 
@@ -68,14 +69,14 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById("valid_block_id_0000000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(2, result.elements().asScala.length)
-            assertTrue(result.get("blockHex").isTextual)
-            assertTrue(result.get("block").isObject)
-            jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(2, result.elements().asScala.length)
+        assertTrue(result.get("blockHex").isTextual)
+        assertTrue(result.get("block").isObject)
+        jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
       }
       Post(basePath + "findById")
         .withEntity(invalid_block_id_lenght_json) ~> sidechainBlockApiRoute ~> check {
@@ -91,7 +92,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindById("invalid_block_id_00000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockId("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockId("", JOptional.empty()).code)
       }
     }
 
@@ -122,19 +123,18 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqLastIds(1))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("lastBlockIds").isArray)
-            assertEquals(3, result.get("lastBlockIds").elements().asScala.length)
-            val elems: Array[String] = result.get("lastBlockIds").elements().asScala.map(node => {
-              assertTrue(node.isTextual)
-              node.asText()
-            }).toArray
-            val expected: Array[String] = Array("block_id_1", "block_id_2", "block_id_3")
-            elems shouldEqual expected
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertTrue(result.get("lastBlockIds").isArray)
+        assertEquals(3, result.get("lastBlockIds").elements().asScala.length)
+        val elems: Array[String] = result.get("lastBlockIds").elements().asScala.map(node => {
+          assertTrue(node.isTextual)
+          node.asText()
+        }).toArray
+        val expected: Array[String] = Array("block_id_1", "block_id_2", "block_id_3")
+        elems shouldEqual expected
       }
     }
 
@@ -165,19 +165,19 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         .withEntity(SerializationUtil.serialize(ReqFindIdByHeight(1))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("blockId").isTextual)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("blockId").isTextual)
       }
       sidechainApiMockConfiguration.setShould_history_getBlockIdByHeight_return_value(false)
       Post(basePath + "findIdByHeight")
         .withEntity(SerializationUtil.serialize(ReqFindIdByHeight(20))) ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", JOptional.empty()).code)
       }
     }
 
@@ -185,21 +185,21 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(2, result.elements().asScala.length)
-            assertTrue(result.get("height").isInt)
-            assertEquals(230, result.get("height").asInt())
-            assertTrue(result.get("block").isObject)
-            jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(2, result.elements().asScala.length)
+        assertTrue(result.get("height").isInt)
+        assertEquals(230, result.get("height").asInt())
+        assertTrue(result.get("block").isObject)
+        jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
       }
       sidechainApiMockConfiguration.setShould_history_getCurrentHeight_return_value(false)
       Post(basePath + "best") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", JOptional.empty()).code)
       }
     }
 
@@ -218,7 +218,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "stopForging") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStopForging("", JOptional.empty()).code)
       }
     }
 
@@ -237,7 +237,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "startForging") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorStartForging("", JOptional.empty()).code)
       }
     }
 
@@ -249,14 +249,14 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 1}") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result => {
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("blockId").isTextual)
-            val blockId = result.get("blockId").asText()
-            assertEquals(blockId, successBlockId)
-          }
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("blockId").isTextual)
+        val blockId = result.get("blockId").asText()
+        assertEquals(blockId, successBlockId)
       }
     }
 
@@ -267,7 +267,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "generate").withEntity("{\"epochNumber\": 2, \"slotNumber\": 2}") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorBlockNotCreated("", JOptional.empty()).code)
       }
     }
 
@@ -290,15 +290,15 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result => {
-            assertEquals(4, result.elements().asScala.length)
-            assertEquals(expectedConsensusSecondsInSlot, result.get("consensusSecondsInSlot").asInt())
-            assertEquals(expectedConsensusSlotsInEpoch, result.get("consensusSlotsInEpoch").asInt())
-            assertEquals(expectedEpochNumber, result.get("bestEpochNumber").asInt())
-            assertEquals(expectedSlotNumber, result.get("bestSlotNumber").asInt())
-          }
-        }
+        val result =  mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(4, result.elements().asScala.length)
+        assertEquals(expectedConsensusSecondsInSlot, result.get("consensusSecondsInSlot").asInt())
+        assertEquals(expectedConsensusSlotsInEpoch, result.get("consensusSlotsInEpoch").asInt())
+        assertEquals(expectedEpochNumber, result.get("bestEpochNumber").asInt())
+        assertEquals(expectedSlotNumber, result.get("bestSlotNumber").asInt())
       }
     }
 
@@ -308,7 +308,7 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "forgingInfo") ~> sidechainBlockApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", None).code)
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorGetForgingInfo("", JOptional.empty()).code)
       }
     }
   }

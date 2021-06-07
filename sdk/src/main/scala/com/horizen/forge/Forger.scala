@@ -9,9 +9,10 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber, TimeToEpochSlotConverter}
+import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
+import com.horizen.utils.TimeToEpochUtils
 import scorex.core.NodeViewHolder.ReceivableMessages
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.util.ScorexLogging
@@ -25,7 +26,7 @@ class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
-             val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
+             val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
@@ -82,7 +83,7 @@ class Forger(settings: SidechainSettings,
     case StartForging => {
       log.info("Receive StartForging message")
       startTimer()
-      sender() ! Success()
+      sender() ! Success(Unit)
     }
   }
 
@@ -90,7 +91,7 @@ class Forger(settings: SidechainSettings,
     case StopForging => {
       log.info("Receive StopForging message")
       stopTimer()
-      sender() ! Success()
+      sender() ! Success(Unit)
     }
   }
 
@@ -100,7 +101,7 @@ class Forger(settings: SidechainSettings,
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = Instant.now.getEpochSecond
-    val epochAndSlot = timestampToEpochAndSlot(currentTime)
+    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None)
   }
@@ -157,7 +158,7 @@ class Forger(settings: SidechainSettings,
 
   def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
     val history = view.history
-    history.timestampToEpochAndSlot(history.bestBlockInfo.timestamp)
+    TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
   }
 }
 

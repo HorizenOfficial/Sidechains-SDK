@@ -484,7 +484,7 @@ paths:
                     properties:
                       boxId:
                         type: string
-                        description: id of RegularBox
+                        description: id of ZenBox
                 regularOutputs:
                   type: array
                   items:

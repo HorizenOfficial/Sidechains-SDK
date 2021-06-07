@@ -1,13 +1,12 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
+
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.RegularBoxData
-import com.horizen.box.{Box, CoinsBox, ForgerBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
@@ -15,13 +14,15 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
-
 import java.math.{BigDecimal, MathContext}
+
+import com.horizen.box.data.ZenBoxData
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -38,7 +39,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with SidechainTypes
     with NodeState
     with ScorexLogging
-    with TimeToEpochSlotConverter
 {
 
   checkVersion()
@@ -82,8 +82,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: emit tx.semanticValidity for each tx
   def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
-    if (!tx.semanticValidity())
-      throw new Exception("Transaction is semantically invalid.")
+    tx.semanticValidity()
   }
 
   // get closed box from storages
@@ -192,11 +191,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // 2) check if for each B, that is instance of CoinBox interface, that total sum is equal to new CoinBox'es sum minus tx.fee
   // 3) if it's a Sidechain custom Transaction (not known) -> emit applicationState.validate(tx)
   // TO DO: put validateAgainstModifier logic inside validate(mod)
-
-  // TO DO: in SidechainState(BoxMinimalState) in validate(TX) method we need to introduce special processing for MC2SCAggregatedTransaction
-  // TO DO check logic in Hybrid.BoxMinimalState.validate
-  // TO DO TBD
   override def validate(tx: SidechainTypes#SCBT): Try[Unit] = Try {
+    semanticValidity(tx).get
+
     var closedCoinsBoxesAmount : Long = 0L
     var newCoinsBoxesAmount : Long = 0L
 
@@ -225,7 +222,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     }
 
-    semanticValidity(tx).get
     applicationState.validate(this, tx)
   }
 
@@ -236,7 +232,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           cs,
           idToVersion(mod.id),
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
-          timeStampToEpochNumber(mod.timestamp),
+          TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
           mod.topQualityCertificateOpt,
           mod.feeInfo
         )
@@ -324,7 +320,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = timeStampToEpochNumber(mod.timestamp)
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
     val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
@@ -414,10 +410,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Remove boxes with zero values, that may occur, for example, if all the blocks were without fees.
     res.zipWithIndex.map {
       case (forgerRewardInfo: (PublicKey25519Proposition, Long), index: Int) =>
-        val data = new RegularBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
+        val data = new ZenBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
         // Note: must be replaced with the Poseidon hash later.
         val nonce = SidechainState.calculateFeePaymentBoxNonce(lastBlockIdBytes, index)
-        new RegularBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
+        new ZenBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
     }.filter(box => box.value() > 0)
   }
 }

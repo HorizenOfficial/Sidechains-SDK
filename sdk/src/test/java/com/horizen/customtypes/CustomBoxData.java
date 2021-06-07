@@ -11,8 +11,6 @@ public class CustomBoxData extends AbstractNoncedBoxData<CustomPublicKeyProposit
         super(proposition, value);
     }
 
-    public static final byte DATA_TYPE_ID = 0;
-
     @Override
     public CustomBox getBox(long nonce) {
         return new CustomBox(this, nonce);
@@ -29,11 +27,6 @@ public class CustomBoxData extends AbstractNoncedBoxData<CustomPublicKeyProposit
     @Override
     public NoncedBoxDataSerializer serializer() {
         return CustomBoxDataSerializer.getSerializer();
-    }
-
-    @Override
-    public byte boxDataTypeId() {
-        return DATA_TYPE_ID;
     }
 
     public static CustomBoxData parseBytes(byte[] bytes) {

@@ -3,18 +3,16 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
-import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import com.horizen.box.RegularBox;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.ZenBox;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
-import java.util.Optional;
 
-public final class ForwardTransfer implements SidechainRelatedMainchainOutput<RegularBox> {
+public final class ForwardTransfer implements SidechainRelatedMainchainOutput<ZenBox> {
 
     private MainchainTxForwardTransferCrosschainOutput output;
     private byte[] containingTxHash;
@@ -51,11 +49,11 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Re
     }
 
     @Override
-    public RegularBox getBox() {
+    public ZenBox getBox() {
         byte[] hash = Blake2b256.hash(Bytes.concat(containingTxHash, Ints.toByteArray(index)));
         long nonce = BytesUtils.getLong(hash, 0);
-        return new RegularBox(
-                new RegularBoxData(
+        return new ZenBox(
+                new ZenBoxData(
                         new PublicKey25519Proposition(output.propositionBytes()),
                         output.amount()),
                 nonce);

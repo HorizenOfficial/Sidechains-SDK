@@ -1,10 +1,10 @@
 package com.horizen.transaction;
 
 import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.box.data.NoncedBoxData;
 import com.horizen.box.data.ForgerBoxData;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
@@ -15,7 +15,6 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -41,17 +40,16 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         }
 
         long fee = 10;
-        long timestamp = 1547798549470L;
 
         PrivateKey25519Creator creator = PrivateKey25519Creator.getInstance();
         PrivateKey25519 pk1 = creator.generateSecret("test_seed1".getBytes());
         PrivateKey25519 pk2 = creator.generateSecret("test_seed2".getBytes());
         PrivateKey25519 pk3 = creator.generateSecret("test_seed3".getBytes());
 
-        ArrayList<Pair<RegularBox, PrivateKey25519>> from = new ArrayList<>();
-        from.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 60), pk1));
-        from.add(new Pair<>(getRegularBox(pk2.publicImage(), 2, 50), pk2));
-        from.add(new Pair<>(getRegularBox(pk3.publicImage(), 3, 90), pk3));
+        ArrayList<Pair<ZenBox, PrivateKey25519>> from = new ArrayList<>();
+        from.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 60), pk1));
+        from.add(new Pair<>(getZenBox(pk2.publicImage(), 2, 50), pk2));
+        from.add(new Pair<>(getZenBox(pk3.publicImage(), 3, 90), pk3));
 
         PrivateKey25519 pk4 = creator.generateSecret("test_seed4".getBytes());
         PrivateKey25519 pk5 = creator.generateSecret("test_seed5".getBytes());
@@ -59,9 +57,9 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
 
         List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
-        to.add(new RegularBoxData(pk5.publicImage(), 20L));
-        to.add(new RegularBoxData(pk6.publicImage(), 30L));
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
+        to.add(new ZenBoxData(pk5.publicImage(), 20L));
+        to.add(new ZenBoxData(pk6.publicImage(), 30L));
 
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
         to.add(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("088f87e1600d5b08eccc240ddd9bd59717d617f1")), 20L));
@@ -70,7 +68,7 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         to.add(new ForgerBoxData(pk7.publicImage(), 50L, pk6.publicImage(), VrfGeneratedDataProvider.getVrfPublicKey(vrfGenerationPrefix, vrfGenerationSeed2)));
 
         // Note: current transaction bytes are also stored in "src/test/resources/regulartransaction_hex"
-        transaction = RegularTransaction.create(from, to, fee, timestamp);
+        transaction = RegularTransaction.create(from, to, fee);
 
         // Set to true and run if you want to update regression data.
         if (false) {
@@ -124,6 +122,5 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         //assertEquals("Transaction is different to origin.", transaction.id(), parsedTransaction.id());
         assertArrayEquals("Transaction message to sign is different to origin.", transaction.messageToSign(), parsedTransaction.messageToSign());
         assertEquals("Transaction fee is different to origin.", transaction.fee(), parsedTransaction.fee());
-        assertEquals("Transaction timestamp is different to origin.", transaction.timestamp(), parsedTransaction.timestamp());
     }
 }

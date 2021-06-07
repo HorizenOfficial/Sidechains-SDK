@@ -101,13 +101,13 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         scnodeadresses = self.sc_nodes[1].wallet_allPublicKeys()
         scnode1address = self.sc_nodes[1].wallet_allPublicKeys()["result"]["propositions"][0]["publicKey"]
 
-        boxes_request_on_regular_boxes = json.dumps({"boxType": "com.horizen.box.RegularBox"})
-        sc_node_0_regular_box_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        sc_node_1_regular_box_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        sc_node_2_regular_box_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        print("-->SC Node 0 regular boxes balance: {0}".format(sc_node_0_regular_box_balance))
-        print("-->SC Node 1 regular boxes balance: {0}".format(sc_node_1_regular_box_balance))
-        print("-->SC Node 2 regular boxes balance: {0}".format(sc_node_2_regular_box_balance))
+        boxes_request_on_zen_boxes = json.dumps({"boxType": "com.horizen.box.ZenBox"})
+        sc_node_0_zen_box_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        sc_node_1_zen_box_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        sc_node_2_zen_box_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        print("-->SC Node 0 zen boxes balance: {0}".format(sc_node_0_zen_box_balance))
+        print("-->SC Node 1 zen boxes balance: {0}".format(sc_node_1_zen_box_balance))
+        print("-->SC Node 2 zen boxes balance: {0}".format(sc_node_2_zen_box_balance))
 
         balance_request_on_forger_boxes = json.dumps({"boxType": "com.horizen.box.ForgerBox"})
         sc_node_0_forger_box_balance = int(self.sc_nodes[0].wallet_coinsBalance(balance_request_on_forger_boxes)["result"]["balance"])
@@ -179,15 +179,15 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->Node 2 new forger boxes balance: {0}".format(node_2_new_forger_balance))
         print("OK\n")
 
-        node_0_new_regular_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        node_1_new_regular_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        node_2_new_regular_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_regular_boxes)["result"]["balance"])
-        assert_equal(sc_node_0_regular_box_balance, node_0_new_regular_balance, "Coins sent/total sc_amount mismatch for Node0")
-        assert_equal(sc_node_1_regular_box_balance + sc_amount, node_1_new_regular_balance, "Coins received/total sc_amount mismatch for Node1")
-        assert_equal(sc_node_2_regular_box_balance, node_2_new_regular_balance, "Coins received/total sc_amount mismatch for Node2")
-        print("-->Node 0 new regular boxes balance: {0}".format(node_0_new_regular_balance))
-        print("-->Node 1 new regular boxes balance: {0}".format(node_1_new_regular_balance))
-        print("-->Node 2 new regular boxes balance: {0}".format(node_2_new_regular_balance))
+        node_0_new_zen_balance = int(self.sc_nodes[0].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        node_1_new_zen_balance = int(self.sc_nodes[1].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        node_2_new_zen_balance = int(self.sc_nodes[2].wallet_coinsBalance(boxes_request_on_zen_boxes)["result"]["balance"])
+        assert_equal(sc_node_0_zen_box_balance, node_0_new_zen_balance, "Coins sent/total sc_amount mismatch for Node0")
+        assert_equal(sc_node_1_zen_box_balance + sc_amount, node_1_new_zen_balance, "Coins received/total sc_amount mismatch for Node1")
+        assert_equal(sc_node_2_zen_box_balance, node_2_new_zen_balance, "Coins received/total sc_amount mismatch for Node2")
+        print("-->Node 0 new zen boxes balance: {0}".format(node_0_new_zen_balance))
+        print("-->Node 1 new zen boxes balance: {0}".format(node_1_new_zen_balance))
+        print("-->Node 2 new zen boxes balance: {0}".format(node_2_new_zen_balance))
         
         
 if __name__ == "__main__":

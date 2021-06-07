@@ -1,19 +1,22 @@
 package com.horizen.transaction;
 
-
-import com.horizen.companion.SidechainBoxesDataCompanion;
-import com.horizen.companion.SidechainProofsCompanion;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 public final class SidechainCoreTransactionSerializer implements TransactionSerializer<SidechainCoreTransaction>
 {
-    private SidechainBoxesDataCompanion boxesDataCompanion;
-    private SidechainProofsCompanion proofsCompanion;
+    private static SidechainCoreTransactionSerializer serializer;
 
-    public SidechainCoreTransactionSerializer(SidechainBoxesDataCompanion boxesDataCompanion, SidechainProofsCompanion proofsCompanion) {
-        this.boxesDataCompanion = boxesDataCompanion;
-        this.proofsCompanion = proofsCompanion;
+    static {
+        serializer = new SidechainCoreTransactionSerializer();
+    }
+
+    private SidechainCoreTransactionSerializer() {
+        super();
+    }
+
+    public static SidechainCoreTransactionSerializer getSerializer() {
+        return serializer;
     }
 
     @Override
@@ -23,6 +26,6 @@ public final class SidechainCoreTransactionSerializer implements TransactionSeri
 
     @Override
     public SidechainCoreTransaction parse(Reader reader) {
-        return SidechainCoreTransaction.parseBytes(reader.getBytes(reader.remaining()), boxesDataCompanion, proofsCompanion);
+        return SidechainCoreTransaction.parseBytes(reader.getBytes(reader.remaining()));
     }
 }

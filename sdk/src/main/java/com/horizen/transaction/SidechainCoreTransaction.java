@@ -3,15 +3,15 @@ package com.horizen.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.google.inject.Inject;
-import com.google.inject.assistedinject.Assisted;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
-import com.horizen.companion.SidechainBoxesDataCompanion;
-import com.horizen.companion.SidechainProofsCompanion;
 import com.horizen.proof.Proof;
+import com.horizen.proof.ProofSerializer;
+import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
+import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import scorex.core.NodeViewModifier$;
 
@@ -24,47 +24,46 @@ import java.util.*;
 public class SidechainCoreTransaction
         extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>>
 {
-    private List<byte[]> inputsIds;
-    private List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
-    private List<Proof<Proposition>> proofs;
+    private final List<byte[]> inputsIds;
+    private final List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
+    private final List<Proof<Proposition>> proofs;
 
-    private SidechainBoxesDataCompanion boxesDataCompanion;
-    private SidechainProofsCompanion proofsCompanion;
+    // Serializers definition
+    private final static ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(
+            new DynamicTypedSerializer<>(new HashMap<Byte, NoncedBoxDataSerializer>() {{
+                put((byte)1, ZenBoxDataSerializer.getSerializer());
+                put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
+                put((byte)3, ForgerBoxDataSerializer.getSerializer());
+            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
 
-    private long fee;
-    private long timestamp;
+    private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(
+            new DynamicTypedSerializer<>(new HashMap<Byte, ProofSerializer>() {{
+                put((byte)1, Signature25519Serializer.getSerializer());
+            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
 
-    private List<NoncedBox<Proposition>> newBoxes;
+    private final long fee;
+
     private List<BoxUnlocker<Proposition>> unlockers;
 
 
-    @Inject
-    SidechainCoreTransaction(@Assisted("inputIds") List<byte[]> inputsIds,
-                             @Assisted("outputsData") List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
-                             @Assisted("proofs") List<Proof<Proposition>> proofs,
-                             @Assisted("fee") long fee,
-                             @Assisted("timestamp") long timestamp,
-                             SidechainBoxesDataCompanion boxesDataCompanion,
-                             SidechainProofsCompanion proofsCompanion) {
+    public SidechainCoreTransaction(List<byte[]> inputsIds,
+                             List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
+                             List<Proof<Proposition>> proofs,
+                             long fee) {
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
-        Objects.requireNonNull(boxesDataCompanion, "BoxesDataCompanion can't be null.");
-        Objects.requireNonNull(proofsCompanion, "ProofsCompanion can't be null.");
         // Do we need to care about inputs ids length here or state/serialization check is enough?
 
         this.inputsIds = inputsIds;
         this.outputsData = outputsData;
         this.proofs = proofs;
         this.fee = fee;
-        this.timestamp = timestamp;
-        this.boxesDataCompanion = boxesDataCompanion;
-        this.proofsCompanion = proofsCompanion;
     }
 
     @Override
     public TransactionSerializer serializer() {
-        return new SidechainCoreTransactionSerializer(boxesDataCompanion, proofsCompanion);
+        return SidechainCoreTransactionSerializer.getSerializer();
     }
 
     @Override
@@ -102,23 +101,15 @@ public class SidechainCoreTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
-    public boolean transactionSemanticValidity() {
-        if(fee < 0 || timestamp < 0)
-            return false;
-
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         if(inputsIds.isEmpty() || outputsData.isEmpty())
-            return false;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no input and output data present.", id()));
 
         // check that we have enough proofs and try to open each box only once.
         if(inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
-            return false;
-
-        return true;
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "inputs number is not consistent to proofs number.", id()));
     }
 
     @Override
@@ -134,15 +125,12 @@ public class SidechainCoreTransaction
 
         byte[] inputIdsBytes = inputsIdsStream.toByteArray();
 
-        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
         byte[] outputBoxDataBytes = boxesDataSerializer.toBytes(outputsData);
 
-        ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(proofsCompanion, MAX_TRANSACTION_UNLOCKERS);
         byte[] proofsBytes = proofsSerializer.toBytes(proofs);
 
-        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 36 bytes
+        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 28 bytes
                 Longs.toByteArray(fee()),                           // 8 bytes
-                Longs.toByteArray(timestamp()),                     // 8 bytes
                 Ints.toByteArray(inputIdsBytes.length),             // 4 bytes
                 inputIdsBytes,                                      // depends in previous value(>=0 bytes)
                 Ints.toByteArray(outputBoxDataBytes.length),        // 4 bytes
@@ -152,11 +140,8 @@ public class SidechainCoreTransaction
         );
     }
 
-    public static SidechainCoreTransaction parseBytes(
-            byte[] bytes,
-            SidechainBoxesDataCompanion boxesDataCompanion,
-            SidechainProofsCompanion proofsCompanion) {
-        if(bytes.length < 36)
+    public static SidechainCoreTransaction parseBytes(byte[] bytes) {
+        if(bytes.length < 28)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if(bytes.length > MAX_TRANSACTION_SIZE)
@@ -165,9 +150,6 @@ public class SidechainCoreTransaction
         int offset = 0;
 
         long fee = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
-        long timestamp = BytesUtils.getLong(bytes, offset);
         offset += 8;
 
         int batchSize = BytesUtils.getInt(bytes, offset);
@@ -184,7 +166,6 @@ public class SidechainCoreTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        ListSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>> boxesDataSerializer = new ListSerializer<>(boxesDataCompanion, MAX_TRANSACTION_NEW_BOXES);
         List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
@@ -193,9 +174,8 @@ public class SidechainCoreTransaction
         if(bytes.length != offset + batchSize)
             throw new IllegalArgumentException("Input data corrupted.");
 
-        ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(proofsCompanion, MAX_TRANSACTION_UNLOCKERS);
         List<Proof<Proposition>> proofs = proofsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, timestamp, boxesDataCompanion, proofsCompanion);
+        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
     }
 }

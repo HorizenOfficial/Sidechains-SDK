@@ -73,7 +73,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
           headerWithNoSerialization.solution) {
             val h = hashData
             override lazy val hash: Array[Byte] = h
-            override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+            override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
         }
       case None => new MainchainHeader(
         mainchainHeaderToBytes(headerWithNoSerialization),
@@ -85,13 +85,12 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
         headerWithNoSerialization.bits,
         headerWithNoSerialization.nonce,
         headerWithNoSerialization.solution) {
-          override def semanticValidity(params: NetworkParams):  Try[Unit] = Success()
+          override def semanticValidity(params: NetworkParams):  Try[Unit] = Success(Unit)
       }
     }
 
-
     val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)) {
-      override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+      override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
 
     addNewReference(newReference)

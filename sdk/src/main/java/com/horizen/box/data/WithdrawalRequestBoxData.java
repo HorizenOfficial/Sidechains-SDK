@@ -8,8 +8,6 @@ import com.horizen.proposition.MCPublicKeyHashPropositionSerializer;
 
 import java.util.Arrays;
 
-import static com.horizen.box.data.CoreBoxesDataIdsEnum.WithdrawalRequestBoxDataId;
-
 public final class WithdrawalRequestBoxData extends AbstractNoncedBoxData<MCPublicKeyHashProposition, WithdrawalRequestBox, WithdrawalRequestBoxData> {
     public WithdrawalRequestBoxData(MCPublicKeyHashProposition proposition, long value) {
         super(proposition, value);
@@ -31,11 +29,6 @@ public final class WithdrawalRequestBoxData extends AbstractNoncedBoxData<MCPubl
     @Override
     public NoncedBoxDataSerializer serializer() {
         return WithdrawalRequestBoxDataSerializer.getSerializer();
-    }
-
-    @Override
-    public byte boxDataTypeId() {
-        return WithdrawalRequestBoxDataId.id();
     }
 
     public static WithdrawalRequestBoxData parseBytes(byte[] bytes) {

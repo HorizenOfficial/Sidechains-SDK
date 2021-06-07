@@ -19,6 +19,7 @@ import scorex.core.settings.RESTApiSettings
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -88,7 +89,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", Some(e)))
+          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
       }
     }
   }
@@ -105,7 +106,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", Some(e)))
+          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
       }
     }
   }
@@ -173,7 +174,7 @@ object SidechainWalletRestScheme {
 
 object SidechainWalletErrorResponse {
 
-  case class ErrorSecretNotAdded(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorSecretNotAdded(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0301"
   }
 

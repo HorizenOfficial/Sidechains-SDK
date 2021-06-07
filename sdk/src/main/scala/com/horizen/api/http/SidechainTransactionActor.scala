@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Promise}
 class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
+  private val transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SuccessfulTransaction[T]])

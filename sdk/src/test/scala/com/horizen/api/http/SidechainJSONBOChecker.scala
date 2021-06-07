@@ -10,6 +10,7 @@ import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.existentials
 
 // TODO: This checker is not sustainable
 class SidechainJSONBOChecker {
@@ -18,7 +19,6 @@ class SidechainJSONBOChecker {
     assertTrue(tNode.isObject)
     assertTrue(tNode.elements().asScala.length >= 6)
     assertTrue(tNode.get("fee").isNumber)
-    assertTrue(tNode.get("timestamp").isNumber)
     assertTrue(tNode.get("id").isTextual)
     assertTrue(tNode.get("modifierTypeId").isNumber)
     assertTrue(tNode.get("unlockers").isArray)
@@ -28,9 +28,9 @@ class SidechainJSONBOChecker {
     unlockersJsonNode.foreach(node => {
       assertTrue(node.get("closedBoxId").isTextual)
       assertTrue(node.get("boxKey").isObject)
-      assertEquals(2, node.get("boxKey").elements().asScala.length)
+      assertEquals(1, node.get("boxKey").elements().asScala.length)
       val sign = node.get("boxKey")
-      assertEquals(2, sign.elements().asScala.length)
+      assertEquals(1, sign.elements().asScala.length)
       assertTrue(sign.get("signature").isTextual)
     })
     newBoxesJsonNode.foreach(node => {
@@ -53,8 +53,6 @@ class SidechainJSONBOChecker {
     assertTrue(json.elements().asScala.length >= 6)
     assertTrue(json.get("fee").isNumber)
     assertEquals(transaction.fee(), json.get("fee").asLong())
-    assertTrue(json.get("timestamp").isNumber)
-    assertEquals(transaction.timestamp(), json.get("timestamp").asLong())
     assertTrue(json.get("id").isTextual)
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
     assertTrue(json.get("modifierTypeId").isNumber)
@@ -80,9 +78,9 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("closedBoxId").isTextual)
     assertEquals(BytesUtils.toHexString(boxUnlocker.closedBoxId()), json.get("closedBoxId").asText())
     assertTrue(json.get("boxKey").isObject)
-    assertEquals(2, json.get("boxKey").elements().asScala.length)
+    assertEquals(1, json.get("boxKey").elements().asScala.length)
     val sign = json.get("boxKey")
-    assertEquals(2, sign.elements().asScala.length)
+    assertEquals(1, sign.elements().asScala.length)
     assertTrue(sign.get("signature").isTextual)
   }
 

@@ -32,7 +32,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       SidechainSyncInfo,
       SidechainHistory]
   with NetworkParamsUtils
-  with TimeToEpochSlotConverter
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
   with NodeHistory
@@ -252,7 +251,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
     else
-      Success()
+      Success(Unit)
   }
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
@@ -399,6 +398,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   override def getCurrentHeight: Int = {
     height
+  }
+
+  override def getBlockHeight(blockId: String): JOptional[Integer] = {
+    storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
 
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {

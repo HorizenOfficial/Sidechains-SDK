@@ -8,7 +8,7 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import com.horizen.proof.VrfProof
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
 import com.horizen.utils
-import com.horizen.utils.{BytesUtils, Utils}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import org.junit.Test
@@ -24,7 +24,6 @@ import scala.collection.mutable.ListBuffer
 class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                   val params: NetworkParams)
   extends ConsensusDataProvider
-  with TimeToEpochSlotConverter
   with NetworkParamsUtils
   with ScorexLogging {
 
@@ -63,7 +62,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
     vrfData.zipWithIndex.foldLeft(accumulator) { case (acc, (processed, index)) =>
       val previousId: ModifierId = acc.last.last._1
-      val nextTimeStamp = getTimeStampForEpochAndSlot(intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
+      val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
       val newData =
         generateBlockIdsAndInfosIter(previousId, params.consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)

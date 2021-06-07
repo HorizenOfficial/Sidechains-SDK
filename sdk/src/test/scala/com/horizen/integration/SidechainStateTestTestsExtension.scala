@@ -1,16 +1,16 @@
 package com.horizen.integration
 
 import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
+
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
-import com.horizen.box.{ForgerBox, NoncedBox, RegularBox, WithdrawalRequestBox}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
+import com.horizen.box.{ForgerBox, NoncedBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
-import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{SidechainTypesTestsExtension, SecretFixture, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
@@ -30,13 +30,13 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class SidechainStateTest
+class SidechainStateTestTestsExtension
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
     with StoreFixture
     with MockitoSugar
-    with SidechainTypes
+    with SidechainTypesTestsExtension
 {
   val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
@@ -55,17 +55,17 @@ class SidechainStateTest
 
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
 
-  def getRegularTransaction(regularOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
-    val outputsCount = regularOutputsCount + forgerOutputsCount
+  def getRegularTransaction(zenOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
+    val outputsCount = zenOutputsCount + forgerOutputsCount
 
-    val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
+    val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 
     for (b <- boxList) {
-      if(b.isInstanceOf[RegularBox]) {
-        from.add(new JPair(b.asInstanceOf[RegularBox],
+      if(b.isInstanceOf[ZenBox]) {
+        from.add(new JPair(b.asInstanceOf[ZenBox],
           secretList.find(_.publicImage().equals(b.proposition())).get))
         totalFrom += b.value()
       }
@@ -75,9 +75,9 @@ class SidechainStateTest
     val maxTo = totalFrom - minimumFee
     var totalTo = 0L
 
-    for(s <- getPrivateKey25519List(regularOutputsCount).asScala) {
+    for(s <- getPrivateKey25519List(zenOutputsCount).asScala) {
       val value = maxTo / outputsCount
-      to.add(new RegularBoxData(s.publicImage(), value))
+      to.add(new ZenBoxData(s.publicImage(), value))
       totalTo += value
     }
 
@@ -89,7 +89,7 @@ class SidechainStateTest
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 
   @Before
@@ -98,7 +98,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(10).asScala
 
     boxList.clear()
-    boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
 
     // Initialize forger boxes: first two must be aggregated to the ForgingStakeInfo
     val vrfPubKey1 = getVRFPublicKey(112233L)
@@ -202,7 +202,7 @@ class SidechainStateTest
       1, feePayments.size)
 
     val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(versionToBytes(sidechainState.version), 0)
-    val expectedFeePaymentBox: RegularBox = new RegularBox(new RegularBoxData(initialBlockFeeInfo.forgerRewardKey, initialBlockFeeInfo.fee), nonce)
+    val expectedFeePaymentBox: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, initialBlockFeeInfo.fee), nonce)
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
       Seq(expectedFeePaymentBox), feePayments)
   }
@@ -211,7 +211,7 @@ class SidechainStateTest
   def applyModifier(): Unit = {
     var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
 
-    // Test applyModifier with a single RegularTransaction with regular and forger outputs
+    // Test applyModifier with a single RegularTransaction with zen and forger outputs
     val mockedBlock = mock[SidechainBlock]
 
     val transactionList = new ListBuffer[RegularTransaction]()
@@ -291,12 +291,12 @@ class SidechainStateTest
     val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 0)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment1: Long = (initialBlockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2 + poolPayments % 2
-    val expectedFeePaymentBox1: RegularBox = new RegularBox(new RegularBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
+    val expectedFeePaymentBox1: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
 
     val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 1)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment2: Long = (blockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2
-    val expectedFeePaymentBox2: RegularBox = new RegularBox(new RegularBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)
+    val expectedFeePaymentBox2: ZenBox = new ZenBox(new ZenBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
       Seq(expectedFeePaymentBox1, expectedFeePaymentBox2), feePayments)
