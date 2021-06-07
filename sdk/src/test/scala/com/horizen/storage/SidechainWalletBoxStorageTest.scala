@@ -5,7 +5,6 @@ import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.proposition._
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
 import java.util.{HashMap => JHashMap, List => JList}
@@ -48,8 +47,7 @@ class SidechainWalletBoxStorageTest
     boxList = new ListBuffer[WalletBox]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-    boxList ++= getWalletBoxList(classOf[RegularBox], 5).asScala ++ getWalletBoxList(classOf[CertifierRightBox], 5).asScala ++
-      getWalletBoxList(classOf[CustomBox], 5).asScala
+    boxList ++= getWalletBoxList(classOf[ZenBox], 5).asScala ++ getWalletBoxList(classOf[CustomBox], 5).asScala
 
     for (b <- boxList) {
       storedList.append({
@@ -101,8 +99,8 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 6: get by type for existing type
-    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.isInstanceOf[RegularBox]),
-      walletBoxStorage.getByType(classOf[RegularBox]))
+    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.isInstanceOf[ZenBox]),
+      walletBoxStorage.getByType(classOf[ZenBox]))
 
 
     // Test 7: get by type for non-existing type
@@ -145,7 +143,7 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 2: test failed update, when Storage throws an exception
-    val walletBox = getWalletBox(classOf[RegularBox])
+    val walletBox = getWalletBox(classOf[ZenBox])
     tryRes = walletBoxStorage.update(version, List(walletBox), List(boxList(3).box.id()))
     assertTrue("WalletBoxStorage failure expected during update.", tryRes.isFailure)
     assertEquals("WalletBoxStorage different exception expected during update.", expectedException, tryRes.failed.get)

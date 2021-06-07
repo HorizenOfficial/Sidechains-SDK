@@ -7,8 +7,6 @@ import com.horizen.proposition.Proposition;
 
 public final class CustomProof implements Proof<Proposition> {
 
-    public static byte PROOF_TYPE_ID = 10;
-
     private int number;
 
     public CustomProof(int number) {
@@ -32,10 +30,5 @@ public final class CustomProof implements Proof<Proposition> {
     @Override
     public ProofSerializer serializer() {
         return CustomProofSerializer.getSerializer();
-    }
-
-    @Override
-    public byte proofTypeId() {
-        return 10;
     }
 }

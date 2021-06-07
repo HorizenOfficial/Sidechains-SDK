@@ -23,8 +23,5 @@ public interface Proof<P extends Proposition>
 
     @Override
     ProofSerializer serializer();
-
-    @JsonProperty("typeId")
-    byte proofTypeId();
 }
 

@@ -10,7 +10,7 @@ import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
-class RegularBoxScalaTest
+class ZenBoxScalaTest
   extends JUnitSuite with BoxFixture
 {
 
@@ -24,7 +24,7 @@ class RegularBoxScalaTest
     val proposition = new PublicKey25519Proposition(publicKey)
     val nonce = 12345
     val value = 10
-    val box = getRegularBox(proposition, nonce, value)
+    val box = getZenBox(proposition, nonce, value)
 
     val serializer = ApplicationJsonSerializer.getInstance()
     serializer.setDefaultConfiguration()

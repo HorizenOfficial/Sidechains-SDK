@@ -29,17 +29,17 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "getAllSecretByEmptyHttpBody") ~> applicationApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("secrets").isArray)
-            assertEquals(2, result.get("secrets").elements().asScala.length)
-            result.get("secrets").elements().asScala.toList.foreach(node => {
-              assertTrue(node.isObject)
-              assertEquals(0, node.elements().asScala.length)
-            })
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("secrets").isArray)
+        assertEquals(2, result.get("secrets").elements().asScala.length)
+        result.get("secrets").elements().asScala.toList.foreach(node => {
+          assertTrue(node.isObject)
+          assertEquals(0, node.elements().asScala.length)
+        })
       }
     }
 
@@ -50,17 +50,17 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "getNSecretOtherImplementation").withEntity(ContentTypes.`application/json`, SerializationUtil.serialize(jsonBody)) ~> applicationApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        mapper.readTree(entityAs[String]).get("result") match {
-          case result =>
-            assertEquals(1, result.elements().asScala.length)
-            assertTrue(result.get("secrets").isArray)
-            assertEquals(2, result.get("secrets").elements().asScala.length)
-            result.get("secrets").elements().asScala.toList.foreach(node => {
-              assertTrue(node.isObject)
-              assertEquals(0, node.elements().asScala.length)
-            })
-          case _ => fail("Serialization failed for object SidechainApiResponseBody")
-        }
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("secrets").isArray)
+        assertEquals(2, result.get("secrets").elements().asScala.length)
+        result.get("secrets").elements().asScala.toList.foreach(node => {
+          assertTrue(node.isObject)
+          assertEquals(0, node.elements().asScala.length)
+        })
       }
     }
   }

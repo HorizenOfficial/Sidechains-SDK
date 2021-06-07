@@ -26,22 +26,22 @@ class SidechainBoxesCompanionTest
 
   @Test
   def testCore(): Unit = {
-    // Test 1: RegularBox serialization/deserialization
-    val regularBox = getRegularBox
+    // Test 1: ZenBox serialization/deserialization
+    val zenBox = getZenBox
 
-    val regularBoxBytes = sidechainBoxesCompanion.toBytes(regularBox)
+    val zenBoxBytes = sidechainBoxesCompanion.toBytes(zenBox)
 
-    assertEquals("Type of serialized box must be RegularBox.", regularBox.boxTypeId(), regularBoxBytes(0))
-    assertEquals("Deserialization must restore same box.", regularBox, sidechainBoxesCompanion.parseBytesTry(regularBoxBytes).get)
+    assertEquals("Type of serialized box must be ZenBox.", zenBox.boxTypeId(), zenBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", zenBox, sidechainBoxesCompanion.parseBytesTry(zenBoxBytes).get)
 
 
-    // Test 2: CertifierRightBox serialization/deserialization
-    val certifiedRightBox = getCertifierRightBox
+    // Test 2: WithdrawalRequestBox serialization/deserialization
+    val withdrawalRequestBox = getWithdrawalRequestBox
 
-    val certifiedRightBoxBytes = sidechainBoxesCompanion.toBytes(certifiedRightBox)
+    val withdrawalRequestBoxBytes = sidechainBoxesCompanion.toBytes(withdrawalRequestBox)
 
-    assertEquals("Type of serialized box must be CertifierRightBox.", certifiedRightBox.boxTypeId(), certifiedRightBoxBytes(0))
-    assertEquals("Deserialization must restore same box.", certifiedRightBox, sidechainBoxesCompanion.parseBytesTry(certifiedRightBoxBytes).get)
+    assertEquals("Type of serialized box must be WithdrawalRequestBox.", withdrawalRequestBox.boxTypeId(), withdrawalRequestBoxBytes(0))
+    assertEquals("Deserialization must restore same box.", withdrawalRequestBox, sidechainBoxesCompanion.parseBytesTry(withdrawalRequestBoxBytes).get)
 
 
     // Test 3: ForgerBox serialization/deserialization

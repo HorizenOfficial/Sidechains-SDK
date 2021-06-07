@@ -70,22 +70,22 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
         mainchainHeader.mainchainHeaderBytes, historyStorage.getMainchainHeaderByHash(mainchainHeader.hash).get.mainchainHeaderBytes)
 
       val mcHeaderInfoOpt:Option[MainchainHeaderInfo] = historyStorage.getMainchainHeaderInfoByHash(mainchainHeader.hash)
-            assertEquals("MainchainHeaderInfo expected to be present", false, mcHeaderInfoOpt.isEmpty)
+      assertEquals("MainchainHeaderInfo expected to be present", false, mcHeaderInfoOpt.isEmpty)
 
-            val parentHash = mcHeaderInfoOpt.get.parentHash
+      val parentHash = mcHeaderInfoOpt.get.parentHash
 
-            assertArrayEquals("MainchainHeaderInfo hash is differ", mainchainHeader.hash, mcHeaderInfoOpt.get.hash)
-            assertEquals("MainchainHeaderInfo sidechain block id is differ", blocks(blockIndex).id, mcHeaderInfoOpt.get.sidechainBlockId)
+      assertArrayEquals("MainchainHeaderInfo hash is differ", mainchainHeader.hash, mcHeaderInfoOpt.get.hash)
+      assertEquals("MainchainHeaderInfo sidechain block id is differ", blocks(blockIndex).id, mcHeaderInfoOpt.get.sidechainBlockId)
 
-            historyStorage.getMainchainHeaderInfoByHash(parentHash) match  {
-              case Some(parentHeaderInfo) => {
-                val parentCumulativeHash = parentHeaderInfo.cumulativeCommTreeHash
-                val mcHeaderOpt = historyStorage.getMainchainHeaderByHash(mainchainHeader.hash)
-                assertArrayEquals("CumulativeHash is differ", CumulativeHashFunctions.computeCumulativeHash(parentCumulativeHash, BytesUtils.reverseBytes(mcHeaderOpt.get.hashScTxsCommitment)), mcHeaderInfoOpt.get.cumulativeCommTreeHash)
-              }
-              case None =>
-                assertArrayEquals("CumulativeHash is differ", activeChainBlockInfoList.head.mainchainHeaderBaseInfo.head.cumulativeCommTreeHash, mcHeaderInfoOpt.get.cumulativeCommTreeHash)
-            }
+      historyStorage.getMainchainHeaderInfoByHash(parentHash) match  {
+        case Some(parentHeaderInfo) => {
+          val parentCumulativeHash = parentHeaderInfo.cumulativeCommTreeHash
+          val mcHeaderOpt = historyStorage.getMainchainHeaderByHash(mainchainHeader.hash)
+          assertArrayEquals("CumulativeHash is differ", CumulativeHashFunctions.computeCumulativeHash(parentCumulativeHash, BytesUtils.reverseBytes(mcHeaderOpt.get.hashScTxsCommitment)), mcHeaderInfoOpt.get.cumulativeCommTreeHash)
+        }
+        case None =>
+          assertArrayEquals("CumulativeHash is differ", activeChainBlockInfoList.head.mainchainHeaderBaseInfo.head.cumulativeCommTreeHash, mcHeaderInfoOpt.get.cumulativeCommTreeHash)
+      }
     }
 
     // Check MainchainBlockReferenceData

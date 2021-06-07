@@ -86,11 +86,11 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         None
     }
 
-    val mproofSize: Int = r.getInt()
+    val existenceProofSize: Int = r.getInt()
 
-    val mproof: Option[Array[Byte]] = {
-      if (mproofSize > 0)
-        Some(r.getBytes(mproofSize))
+    val existenceProof: Option[Array[Byte]] = {
+      if (existenceProofSize > 0)
+        Some(r.getBytes(existenceProofSize))
       else
         None
     }
@@ -115,6 +115,6 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
         None
     }
 
-    MainchainBlockReferenceData(headerHash, mc2scTx, mproof, absenceProof, lowerCertificateLeaves, topQualityCertificate)
+    MainchainBlockReferenceData(headerHash, mc2scTx, existenceProof, absenceProof, lowerCertificateLeaves, topQualityCertificate)
   }
 }

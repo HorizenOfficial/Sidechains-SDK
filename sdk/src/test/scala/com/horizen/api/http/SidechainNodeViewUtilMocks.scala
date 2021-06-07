@@ -5,8 +5,8 @@ import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
-import com.horizen.box.{Box, ForgerBox, NoncedBox, RegularBox}
+import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
+import com.horizen.box.{Box, ForgerBox, NoncedBox, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -41,9 +41,9 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
   val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
   val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
-  val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
-  val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
+  val box_1 = getZenBox(secret1.publicImage(), 1, 10)
+  val box_2 = getZenBox(secret2.publicImage(), 1, 20)
+  val box_3 = getZenBox(secret3.publicImage(), 1, 30)
   val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
@@ -190,15 +190,15 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   }
 
   private def getTransaction(fee: Long): RegularTransaction = {
-    val from: util.List[Pair[RegularBox, PrivateKey25519]] = new util.ArrayList[Pair[RegularBox, PrivateKey25519]]()
+    val from: util.List[Pair[ZenBox, PrivateKey25519]] = new util.ArrayList[Pair[ZenBox, PrivateKey25519]]()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))
 
-    to.add(new RegularBoxData(secret3.publicImage(), box_1.value() + box_2.value() - fee))
+    to.add(new ZenBoxData(secret3.publicImage(), box_1.value() + box_2.value() - fee))
 
-    RegularTransaction.create(from, to, fee, 1547798549470L)
+    RegularTransaction.create(from, to, fee)
   }
 
   private def getTransactionList: util.List[RegularTransaction] = {

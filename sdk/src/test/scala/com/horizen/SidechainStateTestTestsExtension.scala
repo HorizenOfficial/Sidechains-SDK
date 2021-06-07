@@ -1,16 +1,18 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
+
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, RegularBoxData}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
@@ -27,13 +29,13 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success}
 
 
-class SidechainStateTest
+class SidechainStateTestTestsExtension
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
     with StoreFixture
     with MockitoSugar
-    with SidechainTypes
+    with SidechainTypesTestsExtension
 {
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
@@ -52,18 +54,18 @@ class SidechainStateTest
   
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
-                            boxesWithSecretToOpen: Seq[(RegularBox,PrivateKey25519)],
+                            boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
                             maxInputs: Int): RegularTransaction = {
     val outputsCount = regularOutputsCount + forgerOutputsCount
 
-    val from: JList[JPair[RegularBox,PrivateKey25519]] = new JArrayList[JPair[RegularBox,PrivateKey25519]]()
-    from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[RegularBox,PrivateKey25519](box, secret)}.asJava)
+    val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
+    from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[ZenBox,PrivateKey25519](box, secret)}.asJava)
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
     var totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
 
     for (b <- boxList) {
-      if(b.isInstanceOf[RegularBox] && maxInputs > from.size()) {
-        from.add(new JPair(b.asInstanceOf[RegularBox],
+      if(b.isInstanceOf[ZenBox] && maxInputs > from.size()) {
+        from.add(new JPair(b.asInstanceOf[ZenBox],
           secretList.find(_.publicImage().equals(b.proposition())).get))
         totalFrom += b.value()
       }
@@ -75,7 +77,7 @@ class SidechainStateTest
 
     for(s <- getPrivateKey25519List(regularOutputsCount).asScala) {
       val value = maxTo / outputsCount
-      to.add(new RegularBoxData(s.publicImage(), value))
+      to.add(new ZenBoxData(s.publicImage(), value))
       totalTo += value
     }
 
@@ -87,7 +89,7 @@ class SidechainStateTest
 
     val fee = totalFrom - totalTo
 
-    RegularTransaction.create(from, to, fee, System.currentTimeMillis - Random.nextInt(10000))
+    RegularTransaction.create(from, to, fee)
   }
 
   @Test
@@ -97,7 +99,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(5).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
@@ -131,12 +133,11 @@ class SidechainStateTest
     //Test semanticValidity
     val mockedTransaction = mock[SidechainTypes#SCBT]
 
-    Mockito.when(mockedTransaction.semanticValidity())
-      .thenReturn(true)
-      .thenReturn(false)
-
     assertTrue("Call of semanticValidity must be successful.",
       sidechainState.semanticValidity(mockedTransaction).isSuccess)
+
+    Mockito.when(mockedTransaction.semanticValidity())
+      .thenThrow(new TransactionSemanticValidityException("test case exception."))
     assertTrue("Call of semanticValidity must be unsuccessful.",
       sidechainState.semanticValidity(mockedTransaction).isFailure)
 
@@ -197,7 +198,7 @@ class SidechainStateTest
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
 
     val secret = getPrivateKey25519List(1).get(0)
-    val boxAndSecret = Seq((getRegularBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
+    val boxAndSecret = Seq((getZenBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
     Mockito.when(mutualityMockedBlock.transactions)
       .thenReturn(transactionList.toList ++ transactionList)
       .thenReturn(List(getRegularTransaction(1, 0, boxAndSecret, 1), getRegularTransaction(1, 0, boxAndSecret, 1)))
@@ -217,14 +218,14 @@ class SidechainStateTest
     Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
 
-    val boxAndSecret2: Seq[(RegularBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[RegularBox], secretList.last))
+    val boxAndSecret2: Seq[(ZenBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[ZenBox], secretList.last))
 
     Mockito.when(doubleSpendTransactionMockedBlock.transactions)
       .thenReturn(List(getRegularTransaction(0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
 
     val doubleSpendInTransaction = sidechainState.validate(doubleSpendTransactionMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $doubleSpendInTransaction",
-      "Transaction is semantically invalid." == doubleSpendInTransaction.failed.get.getMessage)
+      doubleSpendInTransaction.failed.get.getMessage.contains("inputs double spend found."))
 
     for(b <- changes.get.toRemove) {
       assertFalse("Box to remove is not found in storage.",
@@ -242,7 +243,7 @@ class SidechainStateTest
     secretList ++= getPrivateKey25519List(5).asScala
     // Set base Box data
     boxList.clear()
-    boxList ++= getRegularBoxList(secretList.asJava).asScala.toList
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()

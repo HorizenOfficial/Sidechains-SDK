@@ -1,4 +1,5 @@
 package com.horizen
+import scala.language.implicitConversions
 
 package object utils {
   private [horizen] implicit def byteArrayToWrapper(byte: Array[Byte]): ByteArrayWrapper = new ByteArrayWrapper(byte)

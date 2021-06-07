@@ -12,8 +12,6 @@ import scorex.crypto.hash.Blake2b256;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static com.horizen.box.data.CoreBoxesDataIdsEnum.ForgerBoxDataId;
-
 public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition blockSignProposition;
     private final VrfPublicKey vrfPublicKey;
@@ -55,11 +53,6 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
     @Override
     public NoncedBoxDataSerializer serializer() {
         return ForgerBoxDataSerializer.getSerializer();
-    }
-
-    @Override
-    public byte boxDataTypeId() {
-        return ForgerBoxDataId.id();
     }
 
     public static ForgerBoxData parseBytes(byte[] bytes) {

@@ -15,7 +15,7 @@ object ApiResponseUtil {
     response match {
       case _: SuccessResponse => SidechainApiResponse(SerializationUtil.serializeWithResult(response))
       case e: ErrorResponse =>
-        e.exception match {
+        e.exception.asScala match {
           case Some(thr) =>
             val msg = thr.getMessage
             if (msg != null && !msg.isEmpty)
@@ -30,7 +30,7 @@ object ApiResponseUtil {
     response match {
       case _: SuccessResponse => Directives.complete(StatusCodes.OK, HttpEntities.create(ContentTypes.APPLICATION_JSON, SerializationUtil.serializeWithResult(response)))
       case e: ErrorResponse => {
-        val exceptionMessage: String = e.exception.map(Throwables.getStackTraceAsString).getOrElse("")
+        val exceptionMessage: String = e.exception.asScala.map(Throwables.getStackTraceAsString).getOrElse("")
         Directives.complete(StatusCodes.OK, HttpEntities.create(ContentTypes.APPLICATION_JSON, SerializationUtil.serializeErrorWithResult(e.code, e.description, exceptionMessage)))
       }
     }

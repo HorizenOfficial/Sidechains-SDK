@@ -10,6 +10,7 @@ import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, Sidechain
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
@@ -89,8 +90,15 @@ case class MainchainBlockReference(
       data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data, leaf))
       data.topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
 
-      if (data.sidechainRelatedAggregatedTransaction.isDefined && !data.sidechainRelatedAggregatedTransaction.get.semanticValidity())
-        throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx is semantically invalid.")
+      if (data.sidechainRelatedAggregatedTransaction.isDefined) {
+        try {
+          data.sidechainRelatedAggregatedTransaction.get.semanticValidity()
+        }
+        catch {
+          case e: TransactionSemanticValidityException =>
+            throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} AggTx check error: ${e.getMessage}.")
+        }
+      }
 
       val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId.data)
       if (scCommitmentOpt.isEmpty)
@@ -167,7 +175,7 @@ object MainchainBlockReference extends ScorexLogging {
         certificates.foreach(cert => commitmentTree.addCertificate(cert))
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
-          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, header.time))
+          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))

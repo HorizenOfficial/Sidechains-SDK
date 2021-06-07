@@ -48,7 +48,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
                                         nextBlockStakeEpochId: ConsensusEpochId,
                                         allEligibleVrfOutputs: List[Array[Byte]],
                                         previousEpochId: ConsensusEpochId,
-                                        rnd: Random) extends TimeToEpochSlotConverter {
+                                        rnd: Random) {
   import SidechainBlocksGenerator._
 
   def getNotSpentBoxes: Set[SidechainForgingData] = forgersSet.getNotSpentSidechainForgingData.map(_.copy())
@@ -151,7 +151,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
   private def generateBlock(possibleForger: PossibleForger, vrfProof: VrfProof, vrfOutput: VrfOutput, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
     val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
     val timestamp = generationRules.forcedTimestamp.getOrElse{
-      getTimeStampForEpochAndSlot(nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot}
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot}
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {
       //generate at least one MC block reference
