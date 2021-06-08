@@ -35,7 +35,7 @@ trait NetworkParams {
   val signersThreshold: Int
   val provingKeyFilePath: String
   val verificationKeyFilePath: String
-  val calculatedSysDataConstant: Option[Array[Byte]]
+  val calculatedSysDataConstant: Array[Byte]
   val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
 
   val maxHistoryRewritingLength: Int = 100

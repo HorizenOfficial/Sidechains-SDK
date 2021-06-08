@@ -23,7 +23,7 @@ case class RegTestParams(
                           override val signersThreshold: Int = 0,
                           override val provingKeyFilePath: String = "",
                           override val verificationKeyFilePath: String = "",
-                          override val calculatedSysDataConstant: Option[Array[Byte]] = None,
+                          override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
                           override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
 ) extends NetworkParams {

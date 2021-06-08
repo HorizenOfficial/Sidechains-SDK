@@ -88,17 +88,15 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Try[Unit] = Try {
     val signersPublicKeys = params.signersPublicKeys
 
-    val actualSysDataConstantOpt = params.calculatedSysDataConstant
-    val actualSysDataConstant = actualSysDataConstantOpt.getOrElse(Array[Byte]())
+    val actualSysDataConstant = params.calculatedSysDataConstant
     val expectedSysDataConstantOpt = getSidechainCreationTransaction(sidechainNodeView.history).getGenSysConstantOpt.asScala
-    val expectedSysDataConstant = expectedSysDataConstantOpt.getOrElse(Array[Byte]())
 
-    if(actualSysDataConstantOpt.isDefined != expectedSysDataConstantOpt.isDefined ||
-      actualSysDataConstant.deep != expectedSysDataConstant.deep) {
+    if(expectedSysDataConstantOpt.isEmpty ||
+      actualSysDataConstant.deep != expectedSysDataConstantOpt.get.deep) {
       throw new IllegalStateException("Incorrect configuration for backward transfer, expected SysDataConstant " +
-        s"'${BytesUtils.toHexString(expectedSysDataConstant)}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
+        s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.get)}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     } else {
-      log.info(s"sysDataConstant in Certificate submitter is: '${BytesUtils.toHexString(expectedSysDataConstant)}'")
+      log.info(s"sysDataConstant in Certificate submitter is: '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
     val wallet = sidechainNodeView.vault
