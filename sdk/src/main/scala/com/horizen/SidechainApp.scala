@@ -105,7 +105,7 @@ class SidechainApp @Inject()
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -122,7 +122,7 @@ class SidechainApp @Inject()
   )
 
     case "testnet" => TestNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -139,7 +139,7 @@ class SidechainApp @Inject()
     )
 
     case "mainnet" => MainNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,

@@ -48,9 +48,10 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
     @Override
     public ForgerBox getBox() {
-        PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
+        // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(BytesUtils.reverseBytes(output.customCreationData()));
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customCreationData());
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 

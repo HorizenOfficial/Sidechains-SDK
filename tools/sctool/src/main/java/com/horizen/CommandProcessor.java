@@ -379,7 +379,8 @@ public class CommandProcessor {
             byte network = infoBytes[offset];
             offset += 1;
 
-            byte[] scId = BytesUtils.reverseBytes(Arrays.copyOfRange(infoBytes, offset, offset + 32));
+            // Keep scId in original LE
+            byte[] scId = Arrays.copyOfRange(infoBytes, offset, offset + 32);
             offset += 32;
 
             VarInt powDataLength = BytesUtils.getVarInt(infoBytes, offset);
@@ -404,6 +405,7 @@ public class CommandProcessor {
             /* try (PrintStream out = new PrintStream(new FileOutputStream("c:/mchex.txt"))) {
                 out.print(BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, infoBytes.length)));
             }*/
+
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
 
@@ -462,7 +464,7 @@ public class CommandProcessor {
 
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
-            resJson.put("scId", BytesUtils.toHexString(scId));
+            resJson.put("scId", BytesUtils.toHexString(BytesUtils.reverseBytes(scId))); // scId output expected to be in BE
             resJson.put("scGenesisBlockHex", sidechainBlockHex);
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);

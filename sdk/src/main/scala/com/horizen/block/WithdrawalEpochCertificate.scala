@@ -1,9 +1,10 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.serialization.Views
+import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -31,7 +32,7 @@ case class BitVectorCertificateField(rawData: Array[Byte]) {
 case class WithdrawalEpochCertificate
   (certificateBytes: Array[Byte],
    version: Int,
-   sidechainId: Array[Byte],
+   @JsonSerialize(using = classOf[ReverseBytesSerializer]) sidechainId: Array[Byte],
    epochNumber: Int,
    quality: Long,
    proof: Array[Byte],
@@ -71,7 +72,7 @@ object WithdrawalEpochCertificate {
     val version: Int = BytesUtils.getReversedInt(certificateBytes, currentOffset)
     currentOffset += 4
 
-    val sidechainId: Array[Byte] = BytesUtils.reverseBytes(certificateBytes.slice(currentOffset, currentOffset + 32))
+    val sidechainId: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
     val epochNumber: Int = BytesUtils.getReversedInt(certificateBytes, currentOffset)

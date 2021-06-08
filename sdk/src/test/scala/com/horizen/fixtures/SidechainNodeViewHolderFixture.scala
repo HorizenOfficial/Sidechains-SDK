@@ -56,7 +56,7 @@ trait SidechainNodeViewHolderFixture
 
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -67,7 +67,7 @@ trait SidechainNodeViewHolderFixture
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "testnet" => TestNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -78,7 +78,7 @@ trait SidechainNodeViewHolderFixture
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "mainnet" => MainNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,

@@ -124,7 +124,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 4: valid genesis block with 1 MainchainBlockReferenceData with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
     val scIdHex = "10eaeed096570c6d97c1b3bfb5edda550dcfc070fce0c0563afe78431e5971c0"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
@@ -346,7 +346,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 11: invalid block - with 1 MainchainBlockReferenceData with sc creation tx with declared sidechain creation output
     val scIdHex = "10eaeed096570c6d97c1b3bfb5edda550dcfc070fce0c0563afe78431e5971c0"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
     val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get

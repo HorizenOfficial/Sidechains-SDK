@@ -17,7 +17,7 @@ object MainchainTransactionOutput {
     val scriptLength: VarInt = BytesUtils.getVarInt(outputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
-    val script: Array[Byte] = BytesUtils.reverseBytes(outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue()))
+    val script: Array[Byte] = outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())
     currentOffset += scriptLength.value().intValue()
 
     new MainchainTransactionOutput(outputBytes.slice(offset, currentOffset), value, script)

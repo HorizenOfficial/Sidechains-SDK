@@ -28,7 +28,7 @@ trait NetworkParams {
 
   // Sidechain params:
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
-  val sidechainId: Array[Byte]
+  val sidechainId: Array[Byte] // Note: we expect to have sidechain id in LittleEndian as in the MC
   val sidechainGenesisBlockId: ModifierId
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]

@@ -1,15 +1,17 @@
 package com.horizen.block
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
+import com.horizen.serialization.ReverseBytesSerializer
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
 import scala.util.Try
 
 case class MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes: Array[Byte],
-                                                 override val sidechainId: Array[Byte], // uint256
+                                                 @JsonSerialize(using = classOf[ReverseBytesSerializer]) override val sidechainId: Array[Byte], // uint256
                                                  scRequestData: Array[Array[Byte]],     // vector<ScFieldElement>
-                                                 mcDestinationAddress: Array[Byte],     // uint160
+                                                 @JsonSerialize(using = classOf[ReverseBytesSerializer]) mcDestinationAddress: Array[Byte],     // uint160
                                                  scFee: Long                            // CAmount (int64_t)
                                                 ) extends MainchainTxCrosschainOutput {
 
@@ -25,7 +27,7 @@ object MainchainTxBwtRequestCrosschainOutput {
 
     var currentOffset: Int = offset
 
-    val sidechainId: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32))
+    val sidechainId: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
     val scRequestDataSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
@@ -39,13 +41,13 @@ object MainchainTxBwtRequestCrosschainOutput {
         throw new IllegalArgumentException(s"Input data corrupted: scRequestData[$idx] size ${dataSize.value()} " +
           s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
 
-      val scRequestData: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + dataSize.value().intValue()))
+      val scRequestData: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + dataSize.value().intValue())
       currentOffset += dataSize.value().intValue()
 
       scRequestData
     })
 
-    val mcDestinationAddress: Array[Byte] = BytesUtils.reverseBytes(bwtRequestOutputBytes.slice(currentOffset, currentOffset + 20))
+    val mcDestinationAddress: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + 20)
     currentOffset += 20
 
     val scFee: Long = BytesUtils.getReversedLong(bwtRequestOutputBytes, currentOffset)

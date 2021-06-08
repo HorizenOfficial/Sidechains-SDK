@@ -152,7 +152,7 @@ object MainchainBlockReference extends ScorexLogging {
         var scIds: Set[ByteArrayWrapper] = Set[ByteArrayWrapper]()
 
         val sidechainId = new ByteArrayWrapper(params.sidechainId)
-        val commitmentTree = new SidechainCommitmentTree();
+        val commitmentTree = new SidechainCommitmentTree()
 
         // Collect all CSW inputs
         val cswInputs: ListBuffer[MainchainTxCswCrosschainInput] = ListBuffer()
@@ -165,7 +165,7 @@ object MainchainBlockReference extends ScorexLogging {
         scIds = scIds ++ sidechainRelatedCswInputs.keys
 
         // cctp CommitmentTree
-        cswInputs.foreach(input => commitmentTree.addCswInput(input));
+        cswInputs.foreach(input => commitmentTree.addCswInput(input))
 
         // Collect all sidechain related outputs
         val crosschainOutputs: ListBuffer[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = ListBuffer()
