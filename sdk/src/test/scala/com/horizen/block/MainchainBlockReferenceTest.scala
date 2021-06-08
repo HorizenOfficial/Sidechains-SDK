@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.Ints
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.{Ignore, Test}
@@ -501,7 +502,12 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex1 = "1e03b76d9d979440c02375243b312976a4865cc3b426884b14c309158eb465c2"
     val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
 
-    val params1 = RegTestParams(scId1.data)
+    val params1 = RegTestParams(
+      scId1.data,
+      scCreationBitVectorCertificateFieldConfigs = Seq(
+        new CustomBitvectorElementsConfig(127, 255)
+      )
+    )
 
     val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
 

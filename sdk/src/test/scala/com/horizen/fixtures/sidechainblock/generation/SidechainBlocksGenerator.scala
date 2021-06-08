@@ -9,6 +9,7 @@ import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures._
@@ -526,6 +527,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val verificationKeyFilePath: String = params.verificationKeyFilePath
       override val calculatedSysDataConstant: Option[Array[Byte]] = None //calculate if we need for some reason that data
       override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
+      override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
     }
   }
 

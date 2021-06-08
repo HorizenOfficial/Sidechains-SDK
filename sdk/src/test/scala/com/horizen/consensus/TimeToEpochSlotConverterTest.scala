@@ -2,6 +2,7 @@ package com.horizen.consensus
 
 import java.math.BigInteger
 
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
@@ -39,6 +40,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val verificationKeyFilePath: String = ""
     override val calculatedSysDataConstant: Option[Array[Byte]] = None
     override val initialCumulativeCommTreeHash: Array[Byte] = Array()
+    override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

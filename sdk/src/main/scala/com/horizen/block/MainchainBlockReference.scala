@@ -88,7 +88,18 @@ case class MainchainBlockReference(
 
       // Add certificates in the original order
       data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data, leaf))
-      data.topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
+      data.topQualityCertificate.foreach(cert => {
+        if(params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
+          throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
+            s"bitvectors number is inconsistent to Sc Creation info.")
+        }
+        for (i <- cert.bitVectorCertificateFields.indices) {
+          if(cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits).isFailure)
+            throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
+              s"bitvectors data length is invalid.")
+        }
+        commitmentTree.addCertificate(cert)
+      })
 
       if (data.sidechainRelatedAggregatedTransaction.isDefined) {
         try {

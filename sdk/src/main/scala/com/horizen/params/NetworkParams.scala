@@ -2,6 +2,7 @@ package com.horizen.params
 
 import java.math.BigInteger
 
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -35,6 +36,7 @@ trait NetworkParams {
   val provingKeyFilePath: String
   val verificationKeyFilePath: String
   val calculatedSysDataConstant: Option[Array[Byte]]
+  val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
 
   val maxHistoryRewritingLength: Int = 100
 

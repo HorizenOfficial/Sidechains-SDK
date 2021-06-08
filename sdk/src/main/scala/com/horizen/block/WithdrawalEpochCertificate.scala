@@ -7,7 +7,9 @@ import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
+
+import scala.util.Try
 
 case class FieldElementCertificateField(rawData: Array[Byte]) {
   lazy val fieldElementBytes: Array[Byte] = {
@@ -17,6 +19,10 @@ case class FieldElementCertificateField(rawData: Array[Byte]) {
 case class BitVectorCertificateField(rawData: Array[Byte]) {
   lazy val merkleRootBytes: Array[Byte] = {
     ScCryptoUtils.compressedBitvectorMerkleRoot(rawData)
+  }
+
+  def tryMerkleRootBytesWithCheck(uncompressedSize: Int): Try[Array[Byte]] = Try {
+    ScCryptoUtils.compressedBitvectorMerkleRoot(rawData, uncompressedSize)
   }
 }
 

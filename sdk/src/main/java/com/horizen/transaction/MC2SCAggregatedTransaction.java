@@ -67,8 +67,7 @@ public final class MC2SCAggregatedTransaction
         if (newBoxes == null) {
             newBoxes = new ArrayList<>();
             for(SidechainRelatedMainchainOutput t : mc2scTransactionsOutputs) {
-                if(!(t instanceof BwtRequest)) // there is no BwtRequest support at the moment
-                    newBoxes.add((Box<Proposition>) t.getBox());
+                newBoxes.add((Box<Proposition>) t.getBox());
             }
         }
         return Collections.unmodifiableList(newBoxes);
