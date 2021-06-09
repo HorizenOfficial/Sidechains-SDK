@@ -664,8 +664,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
 
 
 def proof_keys_paths(dirname):
-    return ProofKeysPaths(os.path.join(dirname, "marlin_snark_pk"),
-                          os.path.join(dirname, "marlin_snark_vk"))
+    # use replace for Windows OS to be able to parse the path to the keys in the config file
+    return ProofKeysPaths(os.path.join(dirname, "marlin_snark_pk").replace("\\", "/"),
+                          os.path.join(dirname, "marlin_snark_vk").replace("\\", "/"))
 
 """
 Create a sidechain transaction inside a mainchain node.

@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.Ints
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.{Ignore, Test}
@@ -142,8 +143,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for the sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex = "2c446b6d305ca7aef113a2655a4e9b0ab6ce1cfb13533d0e7c2c7aac5cf85dcb"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scIdHex = "2c446b6d305ca7aef113a2655a4e9b0ab6ce1cfb13533d0e7c2c7aac5cf85dcb" // BE
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex))) // LE
 
     val params1 = RegTestParams(scId.data)
 
@@ -179,8 +180,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for the sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex = "258a96b03471f6d347fe92b1ece69e4afcd1f91e78f903ca6a6687c25620e17b"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scIdHex = "258a96b03471f6d347fe92b1ece69e4afcd1f91e78f903ca6a6687c25620e17b" // BE
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex))) // LE
 
     val params1 = RegTestParams(scId.data)
 
@@ -217,7 +218,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 1: Check for the leftmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
     val scIdHex1 = "31f2d19e179d51a20f7cf8e0c6b20e19c60b7aa581536810195932e8b51eb401"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
     val params1 = RegTestParams(scId1.data)
 
@@ -237,7 +238,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 2: Check for the sidechain in the middle, that is mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
     val scIdHex2 = "065587208a9c723bc772b24e793f9d1647437d0683f4570caaf7937b9612f51b"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
 
@@ -257,7 +258,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 3:  Check for the rightmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
     val scIdHex3 = "258a96b03471f6d347fe92b1ece69e4afcd1f91e78f903ca6a6687c25620e17b"
-    val scId3 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex3))
+    val scId3 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex3))) // LE
 
     val params3 = RegTestParams(scId3.data)
 
@@ -277,7 +278,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 4: Check for the sidechain that is not mentioned in the block and has a leftmost neighbour.
     // We expect to get a MainchainBlockReference with only right neighbour proof of no data.
     val scIdHex4 = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId4 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex4))
+    val scId4 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex4))) // LE
     val params4 = RegTestParams(scId4.data)
 
     val mcblockTry4 = MainchainBlockReference.create(mcBlockBytes, params4)
@@ -296,7 +297,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // Test 5: Check for the sidechain that is not mentioned in the block and has a rightmost neighbour.
     // We expect to get a MainchainBlockReference with only left neighbour proof of no data.
     val scIdHex5 = "3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    val scId5 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex5))
+    val scId5 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex5))) // LE
     val params5 = RegTestParams(scId5.data)
 
     val mcblockTry5 = MainchainBlockReference.create(mcBlockBytes, params5)
@@ -316,7 +317,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // We expect to get a MainchainBlockReference with left and right neighbour proofs of no data.
     // Take the value near to scIdHex2. Quite enough condition to have id, where, scIdHex1 < id < scIdHex2
     val scIdHex6 = "0000" + scIdHex2.substring(4)
-    val scId6 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex6))
+    val scId6 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex6))) // LE
     val params6 = RegTestParams(scId6.data)
 
     val mcblockTry6 = MainchainBlockReference.create(mcBlockBytes, params6)
@@ -336,7 +337,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // We expect to get a MainchainBlockReference with left and right neighbour proofs of no data.
     // Take the value near to scIdHex1. Quite enough condition to have id, where, scIdHex1 < id < scIdHex2
     val scIdHex7 = "3fff" + scIdHex1.substring(4)
-    val scId7 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex7))
+    val scId7 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex7))) // LE
     val params7 = RegTestParams(scId7.data)
 
     val mcblockTry7 = MainchainBlockReference.create(mcBlockBytes, params7)
@@ -360,7 +361,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for existing sidechain
     val scIdHex1 = "367fd1fb8f092fb78c80f059c34e0fafa64522fd297dfd5b8ffd990e003f5412"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
     val params1 = RegTestParams(scId1.data)
 
@@ -380,7 +381,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for non-existing sidechain
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
 
@@ -406,7 +407,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for existing sidechain
     val scIdHex1 = "367fd1fb8f092fb78c80f059c34e0fafa64522fd297dfd5b8ffd990e003f5412"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
     val params1 = RegTestParams(scId1.data)
 
@@ -426,7 +427,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for non-existing sidechain
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
 
@@ -453,7 +454,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for existing sidechain
     val scIdHex1 = "32dd9e31936a7f7b3bb860eea52c6dde8be948c77402f6996a116e68b4c8c85e"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
     val params1 = RegTestParams(scId1.data)
 
@@ -473,7 +474,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for non-existing sidechain
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
 
@@ -499,9 +500,14 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for existing sidechain
     val scIdHex1 = "1e03b76d9d979440c02375243b312976a4865cc3b426884b14c309158eb465c2"
-    val scId1 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex1))
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
-    val params1 = RegTestParams(scId1.data)
+    val params1 = RegTestParams(
+      scId1.data,
+      scCreationBitVectorCertificateFieldConfigs = Seq(
+        new CustomBitvectorElementsConfig(127, 255)
+      )
+    )
 
     val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1)
 
@@ -521,7 +527,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for non-existing sidechain
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId2 = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex2))
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
 
@@ -549,7 +555,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // NOTE: we don't allow MBTRs for the SDK based sidechains
     // Use dummy valid FE sc id
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex))) // LE
 
     val params1 = RegTestParams(scId.data)
 
@@ -574,7 +580,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     // NOTE: we don't allow CSWs for the SDK based sidechains
     // Use dummy valid FE sc id
     val scIdHex = "0000000000000000000000000000000000000000000000000000000000000000"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex))) // LE
 
     val params1 = RegTestParams(scId.data)
 

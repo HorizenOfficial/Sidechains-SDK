@@ -177,6 +177,17 @@ class SidechainBlock(override val header: SidechainBlockHeader,
         throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
+    // Check that SidechainTransactions are valid.
+    for(tx <- sidechainTransactions) {
+      Try {
+        tx.semanticValidity()
+      } match {
+        case Success(_) =>
+        case Failure(e) => throw new InvalidSidechainBlockDataException(
+          s"SidechainBlock $id Transaction ${tx.id()} is semantically invalid: ${e.getMessage}.")
+      }
+    }
+
     // Check that MainchainHeaders are valid.
     for(mainchainHeader <- mainchainHeaders) {
       mainchainHeader.semanticValidity(params) match {

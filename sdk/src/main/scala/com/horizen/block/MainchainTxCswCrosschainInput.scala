@@ -1,19 +1,21 @@
 package com.horizen.block
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.librustsidechains.FieldElement
+import com.horizen.serialization.ReverseBytesSerializer
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
 import scala.util.Try
 
 case class MainchainTxCswCrosschainInput(cswInputBytes: Array[Byte],
                                          amount: Long,                                        // CAmount (int64_t)
-                                         sidechainId: Array[Byte],                            // uint256
+                                         @JsonSerialize(using = classOf[ReverseBytesSerializer]) sidechainId: Array[Byte], // uint256
                                          nullifier: Array[Byte],                              // CFieldElement
-                                         mcPubKeyHash: Array[Byte],                           // uint160
+                                         @JsonSerialize(using = classOf[ReverseBytesSerializer]) mcPubKeyHash: Array[Byte], // uint160
                                          scProof: Array[Byte],                                // ScProof
                                          actCertDataHashOpt: Option[Array[Byte]],             // CFieldElement
                                          ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte],// CFieldElement
-                                         redeemScript: Array[Byte]                            // CScript
+                                         @JsonSerialize(using = classOf[ReverseBytesSerializer]) redeemScript: Array[Byte] // CScript
                                         ) {
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(cswInputBytes))
@@ -32,7 +34,7 @@ object MainchainTxCswCrosschainInput {
     val amount: Long = BytesUtils.getReversedLong(cswInputBytes, currentOffset)
     currentOffset += 8
 
-    val sidechainId: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 32))
+    val sidechainId: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
     val nullifierSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
@@ -43,7 +45,7 @@ object MainchainTxCswCrosschainInput {
     val nullifier: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue())
     currentOffset += nullifierSize.value().intValue()
 
-    val mcPubKeyHash: Array[Byte] = BytesUtils.reverseBytes(cswInputBytes.slice(currentOffset, currentOffset + 20))
+    val mcPubKeyHash: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + 20)
     currentOffset += 20
 
     val scProofSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)

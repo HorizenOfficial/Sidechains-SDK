@@ -19,7 +19,7 @@ class CertificateTest extends JUnitSuite {
     val cert: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(bytes, 0)
 
     assertEquals("Certificate epoch number is different.", 0, cert.epochNumber)
-    assertEquals("Certificate sidechain id is wrong", sidechainIdHex, BytesUtils.toHexString(cert.sidechainId))
+    assertEquals("Certificate sidechain id is wrong", sidechainIdHex, BytesUtils.toHexString(BytesUtils.reverseBytes(cert.sidechainId)))
     assertEquals("Version is wrong", -5, cert.version)
     assertEquals("Quality is wrong", 7, cert.quality)
     assertEquals("btrFee is wrong", 0, cert.btrFee)
@@ -40,7 +40,7 @@ class CertificateTest extends JUnitSuite {
     val cert: WithdrawalEpochCertificate = WithdrawalEpochCertificate.parse(bytes, 0)
 
     assertEquals("Certificate epoch number is different.", 1, cert.epochNumber)
-    assertEquals("Certificate sidechain id is wrong", sidechainIdHex, BytesUtils.toHexString(cert.sidechainId))
+    assertEquals("Certificate sidechain id is wrong", sidechainIdHex, BytesUtils.toHexString(BytesUtils.reverseBytes(cert.sidechainId)))
     assertEquals("Quality is wrong", 7, cert.quality)
     assertEquals("Version is wrong", -5, cert.version)
     assertEquals("btrFee is wrong", 0, cert.btrFee)

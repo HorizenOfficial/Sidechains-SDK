@@ -90,18 +90,15 @@ class CertificateSubmitter
   private def checkSubmitterMessage(sidechainNodeView: View): Try[Unit] = Try {
     val signersPublicKeys = params.signersPublicKeys
 
-    val actualSysDataConstantOpt = params.calculatedSysDataConstant
-    val actualSysDataConstant = actualSysDataConstantOpt.getOrElse(Array[Byte]())
+    val actualSysDataConstant = params.calculatedSysDataConstant
     val expectedSysDataConstantOpt = getSidechainCreationTransaction(sidechainNodeView.history).getGenSysConstantOpt.asScala
-    // Note: constant in Tx is kept in BE
-    val expectedSysDataConstant = BytesUtils.reverseBytes(expectedSysDataConstantOpt.getOrElse(Array[Byte]()))
 
-    if(actualSysDataConstantOpt.isDefined != expectedSysDataConstantOpt.isDefined ||
-      actualSysDataConstant.deep != expectedSysDataConstant.deep) {
+    if(expectedSysDataConstantOpt.isEmpty ||
+      actualSysDataConstant.deep != expectedSysDataConstantOpt.get.deep) {
       throw new IllegalStateException("Incorrect configuration for backward transfer, expected SysDataConstant " +
-        s"'${BytesUtils.toHexString(expectedSysDataConstant)}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
+        s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.get)}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     } else {
-      log.info(s"sysDataConstant in Certificate submitter is: '${BytesUtils.toHexString(expectedSysDataConstant)}'")
+      log.info(s"sysDataConstant in Certificate submitter is: '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
     val wallet = sidechainNodeView.vault
@@ -220,7 +217,6 @@ class CertificateSubmitter
     val ftMinAmount: Long = 0 // Every positive value FT is allowed.
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
 
-    // NOTE: we should pass all the data in LE endianness, CumulativeScTxCommTreeRoot stored in BE endianness.
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
       withdrawalRequests.asJava,
       referencedWithdrawalEpochNumber,

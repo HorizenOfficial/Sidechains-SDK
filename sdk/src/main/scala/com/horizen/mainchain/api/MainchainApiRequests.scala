@@ -68,7 +68,8 @@ object CertificateRequestCreator {
              ftMinAmount: Long,
              btrFee: Long) : SendCertificateRequest = {
     SendCertificateRequest(
-      sidechainId,
+      // Note: we should send uint256 types in BE.
+      BytesUtils.reverseBytes(sidechainId),
       epochNumber,
       endEpochCumCommTreeHash,
       proofBytes,
