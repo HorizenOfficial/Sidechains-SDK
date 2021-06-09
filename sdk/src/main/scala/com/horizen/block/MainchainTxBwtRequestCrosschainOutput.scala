@@ -15,7 +15,7 @@ case class MainchainTxBwtRequestCrosschainOutput(bwtRequestOutputBytes: Array[By
                                                  scFee: Long                            // CAmount (int64_t)
                                                 ) extends MainchainTxCrosschainOutput {
 
-  override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bwtRequestOutputBytes))
+  override lazy val hash: Array[Byte] = Utils.doubleSHA256Hash(bwtRequestOutputBytes)
 
   def size: Int = bwtRequestOutputBytes.length
 }

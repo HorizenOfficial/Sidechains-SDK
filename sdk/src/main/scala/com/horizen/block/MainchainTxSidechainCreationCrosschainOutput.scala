@@ -129,13 +129,13 @@ class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Arr
                                                       data.mainchainBackwardTransferRequestDataLength
                                                     ) with MainchainTxCrosschainOutput {
 
-  override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(sidechainCreationOutputBytes))
+  override lazy val hash: Array[Byte] = Utils.doubleSHA256Hash(sidechainCreationOutputBytes)
 }
 
 
 object MainchainTxSidechainCreationCrosschainOutput {
   def calculateSidechainId(transactionHash: Array[Byte], index: Int): Array[Byte] = {
-    ScCryptoUtils.calculateSidechainId(BytesUtils.reverseBytes(transactionHash), index)
+    ScCryptoUtils.calculateSidechainId(transactionHash, index)
   }
 }
 

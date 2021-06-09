@@ -27,8 +27,8 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
-                BytesUtils.reverseBytes(output.hash()),
-                BytesUtils.reverseBytes(containingTxHash),
+                output.hash(),
+                containingTxHash,
                 BytesUtils.reverseBytes(Ints.toByteArray(index))
         )));
     }

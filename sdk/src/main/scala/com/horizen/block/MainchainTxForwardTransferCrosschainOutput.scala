@@ -13,7 +13,7 @@ class MainchainTxForwardTransferCrosschainOutput(
                                         @JsonSerialize(using = classOf[ReverseBytesSerializer]) val propositionBytes: Array[Byte]
                                       ) extends MainchainTxCrosschainOutput {
 
-  override lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(forwardTransferOutputBytes))
+  override lazy val hash: Array[Byte] = Utils.doubleSHA256Hash(forwardTransferOutputBytes)
 
   override def toString: String = s"FT Output in BigEndian: {\n" +
     s"scid = ${BytesUtils.toHexString(BytesUtils.reverseBytes(sidechainId))}\n" +

@@ -20,17 +20,13 @@ class SidechainCommitmentTree {
       csw.mcPubKeyHash)
   }
 
-  // Note: we must be sure that all raw data types are passed to the CommitmentTree in LittleEndian.
-  // Otherwise, the result will be different to the one in the MC.
-  private def toLE(bytes: Array[Byte]): Array[Byte] = BytesUtils.reverseBytes(bytes)
-
   def addSidechainCreation(sc: SidechainCreation): Boolean = {
     val scOutput: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
     commitmentTree.addScCr(
       sc.sidechainId,
       scOutput.amount,
       scOutput.address,
-      toLE(sc.transactionHash()),
+      sc.transactionHash(),
       sc.transactionIndex(),
       sc.withdrawalEpochLength,
       scOutput.mainchainBackwardTransferRequestDataLength,
@@ -51,7 +47,7 @@ class SidechainCommitmentTree {
       ft.sidechainId(),
       ftOutput.amount,
       ftOutput.propositionBytes,
-      toLE(ft.transactionHash()),
+      ft.transactionHash(),
       ft.transactionIndex()
     )
   }
@@ -63,7 +59,7 @@ class SidechainCommitmentTree {
       btrOutput.scFee,
       btrOutput.mcDestinationAddress,
       btrOutput.scRequestData,
-      toLE(btr.transactionHash()),
+      btr.transactionHash(),
       btr.transactionIndex()
     )
   }

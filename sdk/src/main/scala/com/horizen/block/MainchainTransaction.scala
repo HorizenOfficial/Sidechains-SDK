@@ -13,7 +13,9 @@ class MainchainTransaction(
                             forwardTransferOutputs: Seq[MainchainTxForwardTransferCrosschainOutput],
                             bwtRequestOutputs: Seq[MainchainTxBwtRequestCrosschainOutput]
                           ) {
-  val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(transactionsBytes))
+
+  // In Little Endian as in MC
+  val hash: Array[Byte] = Utils.doubleSHA256Hash(transactionsBytes)
 
   private val sidechainCreationOutputs = sidechainCreationOutputsData
     .zipWithIndex
@@ -23,7 +25,7 @@ class MainchainTransaction(
 
   lazy val bytes: Array[Byte] = transactionsBytes.clone()
 
-  lazy val hashHex: String = BytesUtils.toHexString(hash)
+  lazy val hashBigEndianHex: String = BytesUtils.toHexString(BytesUtils.reverseBytes(hash))
 
   def size: Int = transactionsBytes.length
 
