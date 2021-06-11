@@ -28,6 +28,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     @Override
     public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+                                            byte[] sidechainId,
                                             int epochNumber,
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
@@ -36,12 +37,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
 
-        FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, epochNumber,
-                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount);
+        FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, sidechainIdFe,
+                epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount);
         byte[] messageAsBytes = messageToSign.serializeFieldElement();
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
+        sidechainIdFe.freeFieldElement();
         messageToSign.freeFieldElement();
 
         return messageAsBytes;
@@ -49,6 +52,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     @Override
     public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+                                          byte[] sidechainId,
                                           int epochNumber,
                                           byte[] endCumulativeScTxCommTreeRoot,
                                           long btrFee,
@@ -71,12 +75,15 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 schnorrPublicKeysBytesList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
+
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
-                backwardTransfers, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, signatures,
-                publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
+                backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
+                signatures, publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
 
         // TODO: actually it will be more efficient to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
+        sidechainIdFe.freeFieldElement();
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
 
@@ -85,6 +92,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     @Override
     public Boolean verifyProof(List<WithdrawalRequestBox> bt,
+                               byte[] sidechainId,
                                int epochNumber,
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
@@ -100,12 +108,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
+        FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
 
-        boolean verificationResult =
-                NaiveThresholdSigProof.verifyProof(backwardTransfers, epochNumber, endCumulativeScTxCommTreeRootFe,
-                        btrFee, ftMinAmount, constantFe, quality, proof, checkProof, verificationKeyPath, checkVerificationKey);
+        boolean verificationResult = NaiveThresholdSigProof.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
+                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, proof, checkProof,
+                verificationKeyPath, checkVerificationKey);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
+        sidechainIdFe.freeFieldElement();
         constantFe.freeFieldElement();
 
         return verificationResult;

@@ -63,7 +63,7 @@ class SigProofTest {
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit
-  @Ignore
+  //@Ignore
   @Test
   def simpleCheck(): Unit = {
     val keyPairsLen = 7
@@ -78,10 +78,11 @@ class SigProofTest {
     val btrFee: Long = 100;
     val ftMinAmount: Long = 100;
     val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
+    val sidechainId = FieldElementFixture.generateFieldElement()
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
-    val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount)
+    val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount)
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
     val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
@@ -103,10 +104,10 @@ class SigProofTest {
     }
 
     println("Generating snark proof...")
-    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, epochNumber, endCumulativeScTxCommTreeRoot,
+    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot,
       btrFee, ftMinAmount, signatures, publicKeysBytes, threshold, provingKeyPath, true, true)
 
-    val result = sigCircuit.verifyProof(wb, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, sysConstant,
+    val result = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, sysConstant,
       proofAndQuality.getValue, proofAndQuality.getKey, true, verificationKeyPath, true)
 
     assertTrue("Proof verification expected to be successfully", result)
