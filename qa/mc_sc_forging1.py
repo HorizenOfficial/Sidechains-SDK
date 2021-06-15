@@ -218,7 +218,7 @@ class MCSCForging1(SidechainTestFramework):
             fail("Was not able to start auto forging.")
         # Check the new status
         is_forging_enabled = sc_node1.block_forgingInfo()["result"]["forgingEnabled"]
-        assert_equal(True, is_forging_enabled, "Automatic forging expected to be disabled.")
+        assert_equal(True, is_forging_enabled, "Automatic forging expected to be enabled.")
 
 
 if __name__ == "__main__":
