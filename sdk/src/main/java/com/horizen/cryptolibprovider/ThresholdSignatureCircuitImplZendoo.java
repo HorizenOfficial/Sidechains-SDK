@@ -64,11 +64,11 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
                                                 .stream()
-                                                .map(signatureBytesOpt -> signatureBytesOpt.map(bytes -> SchnorrSignature.deserialize(bytes, true)).orElse(signaturePlaceHolder))
+                                                .map(signatureBytesOpt -> signatureBytesOpt.map(bytes -> SchnorrSignature.deserialize(bytes)).orElse(signaturePlaceHolder))
                                                 .collect(Collectors.toList());
 
         List<SchnorrPublicKey> publicKeys =
-                schnorrPublicKeysBytesList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
+                schnorrPublicKeysBytesList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes)).collect(Collectors.toList());
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
@@ -114,7 +114,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     @Override
     public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
-        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes, true)).collect(Collectors.toList());
+        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(bytes -> SchnorrPublicKey.deserialize(bytes)).collect(Collectors.toList());
 
         // Note: sc-cryptolib return constant in LittleEndian
         FieldElement sysDataConstant = NaiveThresholdSigProof.getConstant(schnorrPublicKeys, threshold);
