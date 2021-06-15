@@ -11,7 +11,7 @@ import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.certificatesubmitter.{CertificateSubmitterObserverRef, CertificateSubmitterRef}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -262,8 +262,9 @@ class SidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
-    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel, mainchainNodeChannel)
+    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   }
+  val certificateSubmitterObserver: ActorRef = CertificateSubmitterObserverRef()
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
@@ -279,7 +280,8 @@ class SidechainApp @Inject()
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainDebugApiRoute(settings.restApi,certificateSubmitterObserver, nodeViewHolderRef)
   )
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)

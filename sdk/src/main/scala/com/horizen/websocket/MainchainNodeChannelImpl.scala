@@ -1,5 +1,4 @@
 package com.horizen.websocket
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
@@ -37,7 +36,14 @@ case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends Respo
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
-case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: ObjectNode, chainTopQualityCert: ObjectNode) extends ResponsePayload
+case class MempoolTopQualityCertificateInfo(certHash: Option[String],
+                                            rawCertificateHex: Option[String],
+                                            quality: Option[Int],
+                                            fee: Option[Double]) extends ResponsePayload
+case class ChainTopQualityCertificateInfo(certHash: Option[String],
+                                          rawCertificateHex: Option[String],
+                                          quality: Option[Int]) extends ResponsePayload
+case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: MempoolTopQualityCertificateInfo, chainTopQualityCert: ChainTopQualityCertificateInfo) extends ResponsePayload
 
 
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
@@ -162,15 +168,6 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   private def processTopQualityCertificatesPayload(future: Future[TopQualityCertificateResponsePayload]): Try[TopQualityCertificates] = Try {
     val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration());
 
-    val mempoolQuality: Option[Int] = Some(response.mempoolTopQualityCert.get("quality").asInt())
-    val mempoolCertHash: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.mempoolTopQualityCert.get("certHash").asText()))
-    val mempoolRawCertHex: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.mempoolTopQualityCert.get("rawCertificateHex").asText()))
-    val mempoolFee: Option[Double] = Some(response.mempoolTopQualityCert.get("fee").asDouble())
-
-    val chainQuality: Option[Int] = Some(response.chainTopQualityCert.get("quality").asInt())
-    val chainCertHash: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.chainTopQualityCert.get("certHash").asText()))
-    val chainRawCertHex: Option[Array[Byte]] = Some(BytesUtils.fromHexString(response.chainTopQualityCert.get("rawCertificateHex").asText()))
-
-    new TopQualityCertificates(mempoolCertHash, mempoolRawCertHex, mempoolQuality, mempoolFee, chainCertHash, chainRawCertHex, chainQuality)
+    new TopQualityCertificates(response.mempoolTopQualityCert, response.chainTopQualityCert)
   }
 }

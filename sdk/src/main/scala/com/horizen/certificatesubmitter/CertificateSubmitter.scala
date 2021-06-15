@@ -36,8 +36,7 @@ class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
    params: NetworkParams,
-   mainchainApi: MainchainNodeApi,
-   client: MainchainNodeChannel)
+   mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext)
   extends Actor
   with ScorexLogging
@@ -158,7 +157,7 @@ class CertificateSubmitter
 
           log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-          mainchainApi.sendCertificate(certificateRequest) match {
+          mainchainChannel.sendCertificate(certificateRequest) match {
             case Success(certificate) =>
               log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
@@ -198,10 +197,10 @@ class CertificateSubmitter
     }
   }
 
-  private def getTopQuality(): Int = {
-    client.getTopQualityCertificates(BytesUtils.toHexString(params.sidechainId)) match {
+  private def getCertificateTopQuality(): Int = {
+    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
       case Success(topQualityCertificates)=>
-        topQualityCertificates.mempoolCertQuality.getOrElse(0).max(topQualityCertificates.chainCertQuality.getOrElse(0))
+        topQualityCertificates.mempoolCertInfo.quality.getOrElse(topQualityCertificates.chainCertInfo.quality.getOrElse(0))
       case Failure(_) => 0
     }
   }
@@ -210,7 +209,7 @@ class CertificateSubmitter
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val currentCertificateTopQuality: Long = getTopQuality()
+    val currentCertificateTopQuality: Long = getCertificateTopQuality()
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
     val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
@@ -271,9 +270,10 @@ class CertificateSubmitter
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
+    context.system.eventStream.publish(CertificateSubmitter.StartProofGeneration)
 
     //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
+    val proof = CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.referencedEpochNumber,
       dataForProofGeneration.endEpochCumCommTreeHash,
@@ -285,23 +285,31 @@ class CertificateSubmitter
       provingFileAbsolutePath,
       true,
       true)
+
+    context.system.eventStream.publish(CertificateSubmitter.StopProofGeneration)
+    proof
   }
+}
+
+object CertificateSubmitter {
+  case object StartProofGeneration
+  case object StopProofGeneration
 }
 
 object CertificateSubmitterRef {
 
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
+            mainchainApi: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi, client))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
+            mainchainApi: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi, client))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi, client: MainchainNodeChannel)
+            mainchainApi: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi, client), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
 }
