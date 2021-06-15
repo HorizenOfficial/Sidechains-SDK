@@ -141,8 +141,11 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
 
         # Wait for Certificates appearance
-        attempts = 30
-        while mc_node.getmempoolinfo()["size"] < 2 and attempts > 0:
+        time.sleep(10)
+        while (mc_node.getmempoolinfo()["size"] < 2  and
+               (sc_node1.debug_isCertGenerationActive()["result"]["state"]
+                or sc_node2.debug_isCertGenerationActive()["result"]["state"])):
+
             print("Wait for certificates in the MC mempool...")
             if (sc_node1.debug_isCertGenerationActive()["result"]["state"]):
                 print("sc_node1 generating certificate now.")
@@ -150,7 +153,6 @@ class SCMultipleCerts(SidechainTestFramework):
                 print("sc_node2 generating certificate now.")
 
             time.sleep(10)
-            attempts -= 1
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             sc_node2.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(2, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
