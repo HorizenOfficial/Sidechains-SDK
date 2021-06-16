@@ -267,6 +267,7 @@ class Demo(SidechainTestFramework):
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.debug_isCertGenerationActive()["result"]["state"]:
             print("Wait for withdrawal certificate in MC memory pool...")
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+            time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         certHash = mc_node.getrawmempool()[0]

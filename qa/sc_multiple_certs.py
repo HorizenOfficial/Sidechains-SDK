@@ -152,19 +152,17 @@ class SCMultipleCerts(SidechainTestFramework):
             if (sc_node2.debug_isCertGenerationActive()["result"]["state"]):
                 print("sc_node2 generating certificate now.")
 
-            time.sleep(10)
+            time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             sc_node2.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(2, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
 
-        # Try to generate one more certificate with same quality
+        # Try to generate one more certificate with same quality in order to check that submission attempt will be skipped
+        # because sc_node1 cannot produce certificate with better quality
         generate_next_block(sc_node1, "first node")
-        time.sleep(10)
+        time.sleep(2)
 
         assert_false(sc_node1.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
-
-        sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
-        sc_node2.block_best()
 
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]
