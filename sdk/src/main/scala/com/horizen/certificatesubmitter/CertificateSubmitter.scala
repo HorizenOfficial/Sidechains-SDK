@@ -131,6 +131,8 @@ class CertificateSubmitter
 
   protected def trySubmitCertificate: Receive = {
     case SemanticallySuccessfulModifier(_: SidechainBlock) => {
+      context.system.eventStream.publish(CertificateSubmitter.StartCertificateSubmission)
+
       val checkGenerationData =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[DataForProofGeneration]](getDataForProofGeneration)
 
@@ -172,6 +174,7 @@ class CertificateSubmitter
         case Failure(ex) =>
           log.error("Error in creation of backward transfer certificate:" + ex)
       }
+      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
     }
   }
 
@@ -270,10 +273,9 @@ class CertificateSubmitter
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
-    context.system.eventStream.publish(CertificateSubmitter.StartProofGeneration)
 
     //create and return proof with quality
-    val proof = CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.referencedEpochNumber,
       dataForProofGeneration.endEpochCumCommTreeHash,
@@ -285,15 +287,12 @@ class CertificateSubmitter
       provingFileAbsolutePath,
       true,
       true)
-
-    context.system.eventStream.publish(CertificateSubmitter.StopProofGeneration)
-    proof
   }
 }
 
 object CertificateSubmitter {
-  case object StartProofGeneration
-  case object StopProofGeneration
+  case object StartCertificateSubmission
+  case object StopCertificateSubmission
 }
 
 object CertificateSubmitterRef {

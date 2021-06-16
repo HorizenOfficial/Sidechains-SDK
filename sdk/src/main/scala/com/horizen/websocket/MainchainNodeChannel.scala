@@ -35,6 +35,7 @@ trait MainchainNodeChannel extends MainchainNodeApi {
   def getBlockHeaders(hashes: Seq[String]): Try[Seq[MainchainHeader]]
 
   // Get information about best certificates in mempool and chain
+  // scId must be send in BE format
   def getTopQualityCertificates(scId: String): Try[TopQualityCertificates]
 
   // Subscribe to receive block info of a new tip in MC node.

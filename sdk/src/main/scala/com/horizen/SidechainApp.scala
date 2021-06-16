@@ -275,14 +275,17 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  val coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
+  var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainDebugApiRoute(settings.restApi,certificateSubmitterObserver, nodeViewHolderRef)
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
   )
+
+  if (sidechainSettings.genesisData.mcNetwork.compareTo("regtest") == 0) {
+      coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, certificateSubmitterObserver, nodeViewHolderRef)
+  }
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)

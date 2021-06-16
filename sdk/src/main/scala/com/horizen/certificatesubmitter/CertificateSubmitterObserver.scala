@@ -1,9 +1,6 @@
 package com.horizen.certificatesubmitter
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.SidechainSettings
-import com.horizen.params.NetworkParams
-import com.horizen.websocket.MainchainNodeChannel
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -21,23 +18,23 @@ class CertificateSubmitterObserver() extends Actor with ScorexLogging {
   }
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, CertificateSubmitter.StartProofGeneration.getClass)
-    context.system.eventStream.subscribe(self, CertificateSubmitter.StopProofGeneration.getClass)
+    context.system.eventStream.subscribe(self, CertificateSubmitter.StartCertificateSubmission.getClass)
+    context.system.eventStream.subscribe(self, CertificateSubmitter.StopCertificateSubmission.getClass)
   }
 
   protected def processStartProofGeneration: Receive = {
-    case CertificateSubmitter.StartProofGeneration => {
+    case CertificateSubmitter.StartCertificateSubmission => {
       certGenerationActiveState = true
       log.debug(s"Certificate proof generation is started.")
-      sender() ! Success(Unit)
+      Success(Unit)
     }
   }
 
   protected def processStopProofGeneration: Receive = {
-    case CertificateSubmitter.StopProofGeneration => {
+    case CertificateSubmitter.StopCertificateSubmission => {
       certGenerationActiveState = false
       log.debug(s"Certificate proof generation is finished.")
-      sender() ! Success(Unit)
+      Success(Unit)
     }
   }
 
@@ -59,8 +56,7 @@ object CertificateSubmitterObserverRef {
   def apply()(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props())
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeChannel)
+  def apply(name: String)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(), name)
 }

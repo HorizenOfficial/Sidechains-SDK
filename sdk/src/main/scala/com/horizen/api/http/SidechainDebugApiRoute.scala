@@ -21,7 +21,7 @@ case class SidechainDebugApiRoute(override val settings: RESTApiSettings, certSu
     isCertGenerationActive
   }
 
-  def isCertGenerationActive: Route = {
+  def isCertGenerationActive: Route = (post & path("isCertGenerationActive")) {
     val future = certSubmitterObserverRef ? GetProofGenerationState
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[Boolean]]
     result match {
