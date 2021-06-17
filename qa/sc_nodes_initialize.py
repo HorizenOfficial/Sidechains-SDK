@@ -6,7 +6,7 @@ import time
 import json
 
 """
-    Setup 3 SC Nodes and connect them togheter. Check that each node is connected to the other and that their initial keys/boxes/balances are
+    Setup 3 SC Nodes and connect them together. Check that each node is connected to the other and that their initial keys/boxes/balances are
     coherent with the default initialization
 """
 

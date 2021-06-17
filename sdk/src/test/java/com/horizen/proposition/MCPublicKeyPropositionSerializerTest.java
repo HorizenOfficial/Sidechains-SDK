@@ -1,16 +1,14 @@
 package com.horizen.proposition;
 
-import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
 import scala.util.Try;
-import scorex.crypto.signatures.Curve25519;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.util.Arrays;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 
 import static org.junit.Assert.*;
 

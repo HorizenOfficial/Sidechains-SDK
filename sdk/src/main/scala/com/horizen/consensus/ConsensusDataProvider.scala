@@ -95,7 +95,12 @@ trait ConsensusDataProvider {
     val currentEpochNumberBytes = Ints.toByteArray(TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp))
     nonceMessageDigest.update(currentEpochNumberBytes)
 
-    NonceConsensusEpochInfo(byteArrayToConsensusNonce(nonceMessageDigest.digest()))
+    // Calculate hash and return the first 8 bytes of it.
+    // Note: first epoch nonce is a timestamp of genesis block - 8 bytes.
+    // And moreover `buildVrfMessage` expect for the concatenated value with the value that fits FieldElement.
+    // TODO: think about the usage of VRF inside the circuit.
+    val resultHash = nonceMessageDigest.digest();
+    NonceConsensusEpochInfo(byteArrayToConsensusNonce(resultHash.slice(0, 8)))
   }
 
   //Message digest for nonce calculation is done in reverse order, i.e. from last eligible slot to first eligible slot

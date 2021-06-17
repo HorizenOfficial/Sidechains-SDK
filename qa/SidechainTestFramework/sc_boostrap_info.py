@@ -7,14 +7,16 @@ SCCreationInfo: {
     "sc_id":
     "forward_amout":
     "withdrawal_epoch_length":
+    "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
 }
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000, btr_data_length=0):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
+        self.btr_data_length = btr_data_length
 
 
 """
@@ -145,12 +147,15 @@ SCBootstrapInfo: {
     "withdrawal_epoch_length":
     "genesis_vrf_account": an instance of VrfAccount
     "certificate_proof_info": an instance of CertificateProofInfo
+    "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
+    "keys_paths": an instance of ProofKeysPaths
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, certificate_proof_info):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
+                 certificate_proof_info, initial_cumulative_comm_tree_hash, keys_paths):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -161,3 +166,12 @@ class SCBootstrapInfo(object):
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.genesis_vrf_account = genesis_vrf_account
         self.certificate_proof_info = certificate_proof_info
+        self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
+        self.keys_paths = keys_paths
+
+
+class ProofKeysPaths(object):
+
+    def __init__(self, proving_key_path, verification_key_path):
+        self.proving_key_path = proving_key_path
+        self.verification_key_path = verification_key_path

@@ -177,8 +177,8 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         mc_node.generate(3)
 
         # Collect SC node balances before fees redistribution
-        sc_node1_balance_before_payments = int(sc_node1.wallet_balance()["result"]["balance"])
-        sc_node2_balance_before_payments = int(sc_node2.wallet_balance()["result"]["balance"])
+        sc_node1_balance_before_payments = int(sc_node1.wallet_coinsBalance()["result"]["balance"])
+        sc_node2_balance_before_payments = int(sc_node2.wallet_coinsBalance()["result"]["balance"])
 
         # Generate one more block with no fee by SC node 2 to reach the end of the withdrawal epoch
         generate_next_block(sc_node2, "second node")
@@ -205,8 +205,8 @@ class MCSCForgingFeePayments(SidechainTestFramework):
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1
 
-        sc_node1_balance_after_payments = int(sc_node1.wallet_balance()["result"]["balance"])
-        sc_node2_balance_after_payments = int(sc_node2.wallet_balance()["result"]["balance"])
+        sc_node1_balance_after_payments = int(sc_node1.wallet_coinsBalance()["result"]["balance"])
+        sc_node2_balance_after_payments = int(sc_node2.wallet_coinsBalance()["result"]["balance"])
 
         node_1_fees = forger_fees[1]
         node_2_fees = forger_fees[2]

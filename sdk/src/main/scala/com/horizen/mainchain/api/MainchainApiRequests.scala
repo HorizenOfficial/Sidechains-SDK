@@ -6,6 +6,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import java.math.BigDecimal
 
+import com.horizen.block.{BitVectorCertificateField, FieldElementCertificateField}
 import com.horizen.utils.BytesUtils
 
 @JsonView(Array(classOf[Views.Default]))
@@ -30,14 +31,18 @@ case class BackwardTransferEntry
 case class SendCertificateRequest
   (sidechainId: Array[Byte],
    epochNumber: Int,
-   endEpochBlockHash: Array[Byte],
+   endEpochCumCommTreeHash: Array[Byte],
    proofBytes: Array[Byte],
    quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
+   fieldElementCertificateFields: Seq[String],
+   bitVectorCertificateFields: Seq[String],
+   ftrMinAmount: String,
+   btrMinFee: String,
    fee: String = "0.00001")
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
-  require(endEpochBlockHash != null, "End epoch block hash MUST be NOT NULL.")
+  require(endEpochCumCommTreeHash != null, "End epoch cumulative Sc Tx CommTree root hash MUST be NOT NULL.")
 }
 
 case class SendCertificateResponse
@@ -54,19 +59,27 @@ object CertificateRequestCreator {
 
   val ZEN_COINS_DIVISOR: BigDecimal = new BigDecimal(100000000)
 
-  def create(epochNumber: Int,
-             endEpochBlockHash: Array[Byte],
+  def create(sidechainId: Array[Byte],
+             epochNumber: Int,
+             endEpochCumCommTreeHash: Array[Byte],
              proofBytes: Array[Byte],
              quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
-             params: NetworkParams) : SendCertificateRequest = {
+             ftMinAmount: Long,
+             btrFee: Long) : SendCertificateRequest = {
     SendCertificateRequest(
-      params.sidechainId,
+      // Note: we should send uint256 types in BE.
+      BytesUtils.reverseBytes(sidechainId),
       epochNumber,
-      endEpochBlockHash,
+      endEpochCumCommTreeHash,
       proofBytes,
       quality,
       // Note: we should send BT entries public key hashes in reversed BE endianness.
-      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)))
+      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)),
+      Seq(), // No custom field elements support for Threshold signature proof
+      Seq(), // No bitvectors support for Threshold signature proofs
+      new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,
+      new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString
+    )
   }
 }

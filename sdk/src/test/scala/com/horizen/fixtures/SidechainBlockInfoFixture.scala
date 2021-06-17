@@ -36,21 +36,20 @@ trait SidechainBlockInfoFixture extends MainchainBlockReferenceFixture {
   def getMainchainBaseInfoFromReferences(references: Seq[MainchainBlockReference], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     var prevCumulativeHash = initialCumulativeHash
     references.map(ref => {
-      val header = byteArrayToMainchainHeaderHash(ref.data.headerHash)
-      val hashBytes: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()) // TODO Remove temporary buffer after switching to 256-bit Filed Element
-      Array.copy(ref.header.hashScTxsCommitment, 0, hashBytes, 0, ref.header.hashScTxsCommitment.length)
-      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, hashBytes)
+      val headerHash = byteArrayToMainchainHeaderHash(ref.data.headerHash)
+      val cumulativeHash = CumulativeHashFunctions.computeCumulativeHash(prevCumulativeHash, BytesUtils.reverseBytes(ref.header.hashScTxsCommitment))
       prevCumulativeHash = cumulativeHash
-      MainchainHeaderBaseInfo(header, cumulativeHash)
+      MainchainHeaderBaseInfo(headerHash, cumulativeHash)
     })
   }
 
   ///////
   private val initialMainchainReference = byteArrayToMainchainHeaderHash(generateBytes())
   private val initialSidechainBlockId = bytesToId(generateBytes())
+  val initialCumScTxCommTreeHash = FieldElementFixture.generateFieldElement()
   val mainchainReferences: Seq[MainchainBlockReference] = generateMainchainReferences(Seq(generateMainchainBlockReference()), parentOpt = Some(initialMainchainReference))
   val mainchainHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.header.hash))
-  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, FieldElementFixture.generateFieldElement())
+  val mainchainHeaderBaseInfo = getMainchainBaseInfoFromReferences(mainchainReferences, initialCumScTxCommTreeHash)
   val mainchainReferencesDataHeadersHashes = mainchainReferences.map(ref => byteArrayToMainchainHeaderHash(ref.data.headerHash))
   private val initialSidechainBlockInfo =
     SidechainBlockInfo(

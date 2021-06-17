@@ -23,13 +23,24 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
         this.containingTxHash = containingTxHash;
         this.index = index;
     }
+
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
-                BytesUtils.reverseBytes(output.hash()),
-                BytesUtils.reverseBytes(containingTxHash),
+                output.hash(),
+                containingTxHash,
                 BytesUtils.reverseBytes(Ints.toByteArray(index))
         )));
+    }
+
+    @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
+    public int transactionIndex() {
+        return index;
     }
 
     @Override
@@ -43,7 +54,8 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
         long nonce = BytesUtils.getLong(hash, 0);
         return new ZenBox(
                 new ZenBoxData(
-                        new PublicKey25519Proposition(output.propositionBytes()),
+                        // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
+                        new PublicKey25519Proposition(BytesUtils.reverseBytes(output.propositionBytes())),
                         output.amount()),
                 nonce);
     }
@@ -55,6 +67,10 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
                 containingTxHash,
                 Ints.toByteArray(index)
         );
+    }
+
+    public MainchainTxForwardTransferCrosschainOutput getFtOutput() {
+        return output;
     }
 
     public static ForwardTransfer parseBytes(byte[] bytes) {
@@ -77,5 +93,11 @@ public final class ForwardTransfer implements SidechainRelatedMainchainOutput<Ze
     @Override
     public SidechainRelatedMainchainOutputSerializer serializer() {
         return ForwardTransferSerializer.getSerializer();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ForwardTransfer {\ntxHash = %s\nindex = %d\nftoutput = %s\n}",
+                BytesUtils.toHexString(containingTxHash), index, output);
     }
 }

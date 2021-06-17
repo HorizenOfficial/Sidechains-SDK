@@ -10,6 +10,7 @@ Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zend
 * Basic zk-SNARK threshold signature verification circuit to authenticate withdrawal certificates See [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
 * Full implementation of the [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)
 * Built-in transactions enabling transfers of coins within the sidechain
+* Forging right delegation mechanism
 * HTTP API for basic node operations
 * Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
 * Extensible node API interface

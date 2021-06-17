@@ -2,6 +2,7 @@ package com.horizen.params
 
 import java.math.BigInteger
 
+import com.horizen.commitmenttree.CustomBitvectorElementsConfig
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -27,7 +28,7 @@ trait NetworkParams {
 
   // Sidechain params:
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
-  val sidechainId: Array[Byte]
+  val sidechainId: Array[Byte] // Note: we expect to have sidechain id in LittleEndian as in the MC
   val sidechainGenesisBlockId: ModifierId
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
@@ -35,6 +36,7 @@ trait NetworkParams {
   val provingKeyFilePath: String
   val verificationKeyFilePath: String
   val calculatedSysDataConstant: Array[Byte]
+  val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
 
   val maxHistoryRewritingLength: Int = 100
 
@@ -50,5 +52,5 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
-  val initialCumulativeCommTreeHash: Array[Byte]
+  val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
 }

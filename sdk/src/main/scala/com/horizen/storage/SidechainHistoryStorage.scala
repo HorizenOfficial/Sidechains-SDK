@@ -199,7 +199,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
       blockInfo <- activeChain.blockInfoById(sidechainBlockId)
-      mainchainBaseInfo = getLastMainchainHeaderBaseInfoInclusion(blockInfo.parentId)
+      mainchainBaseInfo <- blockInfo.mainchainHeaderBaseInfo.find(info => info.hash.equals(mcHash))
     } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, mainchainBaseInfo.cumulativeCommTreeHash)
   }
 

@@ -4,6 +4,7 @@ import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
@@ -39,4 +40,6 @@ public interface NodeHistory {
     Optional<MainchainBlockReference> getMainchainBlockReferenceByHash(byte[] mainchainBlockReferenceHash);
 
     Optional<MainchainHeader> getMainchainHeaderByHash(byte[] mainchainHeaderHash);
+
+    Optional<MainchainHeaderInfo> getMainchainHeaderInfoByHash(byte[] mainchainHeaderHash);
 }

@@ -5,15 +5,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.transaction.mainchain.ForwardTransferSerializer;
-import com.horizen.transaction.mainchain.SidechainCreationSerializer;
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
+import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.encode.Base16;
@@ -36,8 +33,9 @@ public final class MC2SCAggregatedTransaction
     private static ListSerializer<SidechainRelatedMainchainOutput> mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
                 new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
-                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
+                    put((byte)1, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
+                    put((byte)2, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
+                    put((byte)3, (ScorexSerializer)BwtRequestSerializer.getSerializer());
                 }}, new HashMap<>()
             ));
 

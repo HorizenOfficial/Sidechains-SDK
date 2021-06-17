@@ -7,6 +7,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.MainchainErrorResponse._
 import com.horizen.api.http.MainchainRestSchema._
 import com.horizen.block.MainchainBlockReference
+import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -22,11 +23,12 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
   extends SidechainApiRoute
     with ScorexEncoding {
 
-  override val route: Route = (pathPrefix("mainchain")) {
-    bestBlockReferenceInfo ~
+  override val route: Route = pathPrefix("mainchain") {
+      bestBlockReferenceInfo ~
       genesisBlockReferenceInfo ~
       blockReferenceInfoBy ~
-      blockReferenceByHash
+      blockReferenceByHash ~
+      mainchainHeaderInfoByHash
   }
 
   /**
@@ -107,6 +109,17 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
       }
     }
   }
+
+  def mainchainHeaderInfoByHash: Route = (post & path("mainchainHeaderInfoByHash")) {
+    entity(as[ReqMainchainHeaderInfoBy]) { body =>
+      withNodeView { sidechainNodeView =>
+        sidechainNodeView.getNodeHistory.getMainchainHeaderInfoByHash(BytesUtils.fromHexString(body.hash)).asScala match {
+          case Some(mcHeaderInfo) => ApiResponseUtil.toResponse(MainchainHeaderInfoResponse(mcHeaderInfo))
+          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockHeaderNotFound("No Mainchain Header had been found for given hash", JOptional.empty()))
+        }
+      }
+    }
+  }
 }
 
 object MainchainRestSchema {
@@ -118,6 +131,9 @@ object MainchainRestSchema {
   private[api] case class MainchainBlockReferenceInfoResponse(blockReferenceInfo: MainchainBlockReferenceInfo) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class MainchainHeaderInfoResponse(mainchainHeaderInfo: MainchainHeaderInfo) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class MainchainBlockHexResponse(blockHex: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -125,6 +141,9 @@ object MainchainRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqBlockBy(hash: String, format: Boolean = false)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqMainchainHeaderInfoBy(hash: String)
 
 }
 
@@ -140,6 +159,10 @@ object MainchainErrorResponse {
 
   case class ErrorMainchainInvalidParameter(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0503"
+  }
+
+  case class ErrorMainchainBlockHeaderNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0504"
   }
 
 }

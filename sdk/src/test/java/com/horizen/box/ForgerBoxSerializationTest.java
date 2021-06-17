@@ -87,7 +87,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         assertTrue("Box serialization failed.", t.isSuccess());
 
         ForgerBox parsedBox = t.get();
-        assertTrue("Box is different to origin.", Arrays.equals(box.id(), parsedBox.id()));
-        assertTrue("Box is different to origin.", Arrays.equals(box.bytes(), parsedBox.bytes()));
+        assertEquals("Box id is different to origin.", BytesUtils.toHexString(box.id()), BytesUtils.toHexString(parsedBox.id()));
+        assertEquals("Box is different to origin.", BytesUtils.toHexString(box.bytes()), BytesUtils.toHexString(parsedBox.bytes()));
     }
 }

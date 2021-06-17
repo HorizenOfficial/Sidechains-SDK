@@ -13,7 +13,7 @@ import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{IODBStoreAdapter, InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
-import com.horizen.validation.SidechainBlockSemanticValidator
+import com.horizen.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
@@ -248,8 +248,21 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Expected to have different best block, best block was changed.", forkBlockb4.id , history.bestBlockId)
 
 
-    // Test 8: try to add block B4, that contains invalid transactions
-    val blockB4: SidechainBlock = generateNextSidechainBlockWithInvalidTransaction(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
+    // Test 8: try to add block B4TxSemInvalid, that contains invalid transactions
+    val blockB4TxSemInvalid: SidechainBlock = generateNextSidechainBlockWithInvalidTransaction(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
+    history.append(blockB4TxSemInvalid) match {
+      case Success((_, _)) =>
+        assertFalse("Exception expected during appending a block with semantically invalid transaction.", true)
+      case Failure(e) =>
+        e match {
+          case _: InvalidSidechainBlockDataException =>
+          case _ => assertFalse("InvalidSidechainBlockDataException expected during appending a block with semantically invalid transaction: %s".format(e.getMessage), true)
+        }
+    }
+
+
+    // Test 9: try to add block B4, that contains semantically valid transaction, but invalid from the State view.
+    val blockB4: SidechainBlock = generateNextSidechainBlock(blockB3, sidechainTransactionsCompanion, params, basicSeed = 888L)
     history.append(blockB4) match {
       case Success((hist, prog)) =>
         history = hist
@@ -288,7 +301,7 @@ class SidechainHistoryTest extends JUnitSuite
     */
 
 
-    // Test 9: try to add block B5, to switch back from "b"-chain to "B"-chain
+    // Test 10: try to add block B5, to switch back from "b"-chain to "B"-chain
     // Because of B4 is invalid, no switch expected.
     val blockB5: SidechainBlock = generateNextSidechainBlock(blockB4, sidechainTransactionsCompanion, params)
     history.append(blockB5) match {

@@ -1,6 +1,7 @@
 package com.horizen
 
 import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
 
 import akka.actor.ActorRef
@@ -104,7 +105,7 @@ class SidechainApp @Inject()
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -121,7 +122,7 @@ class SidechainApp @Inject()
   )
 
     case "testnet" => TestNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -138,7 +139,7 @@ class SidechainApp @Inject()
     )
 
     case "mainnet" => MainNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
@@ -154,6 +155,21 @@ class SidechainApp @Inject()
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
+  }
+
+  // Generate Coboundary Marlin Proving System dlog keys
+  log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
+  if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
+  }
+
+  // Generate snark keys only if were not present before.
+  if (!Files.exists(Paths.get(params.verificationKeyFilePath)) || !Files.exists(Paths.get(params.provingKeyFilePath))) {
+    log.info("Generating snark keys. It may take some time.")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.verificationKeyFilePath, params.provingKeyFilePath)) {
+      throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem snark keys.")
+    }
   }
 
   // Init all storages

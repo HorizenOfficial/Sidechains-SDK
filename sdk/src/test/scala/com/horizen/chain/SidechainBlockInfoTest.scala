@@ -26,19 +26,21 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   val semanticValidity: ModifierSemanticValidity = ModifierSemanticValidity.Valid
   val mainchainHeadersBaseInfo: Seq[MainchainHeaderBaseInfo] = Seq(
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")),
-      BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f32110000")),
+      BytesUtils.fromHexString("d6847c3b30727116b109caa0dae303842cbd26f9041be6cf05072e9f3211a457")),
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("E78283E4B2A92784F252327374D6D587D0A4067373AABB537485812671645B70")),
-      BytesUtils.fromHexString("04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff10000")),
+      BytesUtils.fromHexString("04c9d52cd10e1798ecce5752bf9dc1675ee827dd1568eee78fe4a5aa7ff1e6bd")),
     MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(BytesUtils.fromHexString("77B57DC4C97CD30AABAA00722B0354BE59AB74397177EA1E2A537991B39C7508")),
-      BytesUtils.fromHexString("8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c65530000"))
+      BytesUtils.fromHexString("8e1a02ff813f5023ab656e4ec55d8683fbb63f6c9e4339741de0696c6553a4ca"))
   )
   val mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = Seq("CEE50DFEC92130269861FB647BA5730425C79AC164F8A0E4003CF30990628D52", "0269861FB647BA5730425C79AC164F8A0E4003CF30990628D52CEE50DFEC9213")
     .map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex)))
   val withdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(10, 100)
+
   //set to true if you want to update vrf related data
   if (false) {
     VrfGeneratedDataProvider.updateVrfOutput(vrfGenerationPrefix, vrfGenerationSeed);
   }
+
   val vrfOutput: VrfOutput = VrfGeneratedDataProvider.getVrfOutput(vrfGenerationPrefix, vrfGenerationSeed);
   val lastBlockIdInPreviousConsensusEpoch: ModifierId = parentId
 

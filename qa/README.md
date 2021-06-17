@@ -18,7 +18,7 @@ Example for Linux environment:
 ```
 BITCOINCLI="/home/user/zen/zen-cli"
 BITCOIND="/home/user/zen/zend"
-SIDECHAIN_SDK="/home/user/Sidechain-SDK"
+SIDECHAIN_SDK="/home/user/Sidechains-SDK"
 ```
 
 **Execution**
@@ -37,11 +37,11 @@ python <test.py>
 
 **Template configuration files**
 
-Template configuration files are located in directory resources. 
+Template configuration files located in resources directory. 
 
-File template.conf is template for tests of SC node(s) is connected to MC node(s).
+File template.conf is the template for testing SC node(s) connected to MC node(s).
 
-File template_predefined_genesis.conf is template for test of SC node(s) in standalone mode(without connection to MC node).
+File template_predefined_genesis.conf is the template for testing SC node(s) standalone mode (without any connections to MC node(s)).
 
 
 

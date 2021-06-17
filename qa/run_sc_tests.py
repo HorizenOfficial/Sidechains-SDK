@@ -3,9 +3,10 @@ import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
+from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
+from sc_nodes_initialize import SidechainNodesInitializationTest
 from test_framework.util import assert_equal
-from mc_node_alive import MCNodeAlive
 from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
 from mc_sc_forging2 import MCSCForging2
@@ -28,8 +29,15 @@ def run_test(test):
 
 def run_tests(log_file):
     sys.stdout = log_file
-    result = run_test(MCNodeAlive())
-    assert_equal(0, result, "mc_node_alive test failed!")
+
+    result = run_test(MCSCNodesAlive())
+    assert_equal(0, result, "mc_sc_nodes_alive test failed!")
+
+    result = run_test(SCBootstrap())
+    assert_equal(0, result, "sc_bootstrap test failed!")
+
+    result = run_test(SidechainNodesInitializationTest())
+    assert_equal(0, result, "sc_nodes_initialize test failed!")
 
     result = run_test(MCSCConnectedNodes())
     assert_equal(0, result, "mc_node_alive test failed!")
@@ -46,29 +54,26 @@ def run_tests(log_file):
     result = run_test(MCSCForging4())
     assert_equal(0, result, "mc_sc_forging4 test failed!")
 
-    result = run_test(MCSCNodesAlive())
-    assert_equal(0, result, "mc_sc_nodes_alive test failed!")
-
-    result = run_test(SCBackwardTransfer())
-    assert_equal(0, result, "sc_backward_transfer test failed!")
-
-    result = run_test(SCBootstrap())
-    assert_equal(0, result, "sc_bootstrap test failed!")
-
-    result = run_test(SCForwardTransfer())
-    assert_equal(0, result, "sc_forward_transfer test failed!")
-
     result = run_test(MCSCForgingDelegation())
     assert_equal(0, result, "mc_sc_forging_delegation test failed!")
 
     result = run_test(MCSCForgingFeePayments())
     assert_equal(0, result, "mc_sc_forging_delegation test failed!")
 
-    result = run_test(SCCeased())
-    assert_equal(0, result, "sc_ceased test failed!")
+    result = run_test(SCForwardTransfer())
+    assert_equal(0, result, "sc_forward_transfer test failed!")
+
+    result = run_test(SCCumCommTreeHash())
+    assert_equal(0, result, "sc_cum_comm_tree_hash test failed!")
+
+    result = run_test(SCBackwardTransfer())
+    assert_equal(0, result, "sc_backward_transfer test failed!")
 
     result = run_test(SCMultipleCerts())
     assert_equal(0, result, "sc_multiple_certs test failed!")
+
+    result = run_test(SCCeased())
+    assert_equal(0, result, "sc_ceased test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")

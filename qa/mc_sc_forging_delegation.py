@@ -107,7 +107,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forget stake created: " + json.dumps(makeForgerStakeJsonRes))
+            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
 
         # Generate SC block
         generate_next_block(sc_node1, "first node")
@@ -125,9 +125,11 @@ class MCSCForgingDelegation(SidechainTestFramework):
 
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
 
         # Generate SC block on SC node 2 for the next consensus epoch
         scnode2_block_id = generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
 
         # Check ForgingStake for SC block
         res = sc_node2.block_findById(blockId=scnode2_block_id)
@@ -162,7 +164,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in tx_hex:
             fail("spend forger stake failed: " + json.dumps(tx_hex))
         else:
-            print("Forget stake was spend: " + json.dumps(tx_hex))
+            print("Forger stake was spend: " + json.dumps(tx_hex))
 
         # Generate one more SC block on SC node 1 to include transaction
         generate_next_block(sc_node1, "first node")

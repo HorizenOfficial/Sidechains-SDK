@@ -8,7 +8,7 @@ import json
 import random
 
 """
-    Setup 3 SC Nodes and connect them togheter. Let Node0 transfer some coins to Node1 and Node2 mine the new block. Check that everything is consistent.
+    Setup 3 SC Nodes and connect them together. Let Node0 transfer some coins to Node1 and Node2 mine the new block. Check that everything is consistent.
 """
 class SidechainNodeBlockGenerationTest(SidechainTestFramework):
     
