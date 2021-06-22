@@ -131,7 +131,15 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     val future = forgerRef ? GetForgingInfo
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
     result match {
-      case Success(forgingInfo) => ApiResponseUtil.toResponse(RespForgingInfo(forgingInfo.consensusSecondsInSlot, forgingInfo.consensusSlotsInEpoch, forgingInfo.currentBestEpochAndSlot.epochNumber, forgingInfo.currentBestEpochAndSlot.slotNumber))
+      case Success(forgingInfo) => ApiResponseUtil.toResponse(
+        RespForgingInfo(
+          forgingInfo.consensusSecondsInSlot,
+          forgingInfo.consensusSlotsInEpoch,
+          forgingInfo.currentBestEpochAndSlot.epochNumber,
+          forgingInfo.currentBestEpochAndSlot.slotNumber,
+          forgingInfo.forgingEnabled
+        )
+      )
       case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", JOptional.empty()))
     }
   }
@@ -178,7 +186,11 @@ object SidechainBlockRestSchema {
   private[api] object RespStopForging extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int, consensusSlotsInEpoch: Int, bestEpochNumber: Int, bestSlotNumber: Int) extends SuccessResponse
+  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int,
+                                          consensusSlotsInEpoch: Int,
+                                          bestEpochNumber: Int,
+                                          bestSlotNumber: Int,
+                                          forgingEnabled: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSubmit(blockHex: String) {

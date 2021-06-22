@@ -34,6 +34,7 @@ Test:
     - Forge one more SC block, verify that there is no MC data, no ommers.
     - Mine 6 Mc block in MC node 3. Connect and synchronize MC node 1 and 3.
     - Forge SC block, verify that previously forged blocks were set as ommers, verify MC data inclusion.
+    - Check SC node forging status
     
     MC blocks on MC node 1 in the end:
     220     -   221
@@ -206,6 +207,18 @@ class MCSCForging1(SidechainTestFramework):
         for ommer_id in expected_ommers_ids:
             check_ommer(ommer_id, [], scblock_id6, sc_node1)
         check_subommer(scblock_id2, scblock_id1, [mcblock_hash1], scblock_id6, sc_node1)
+
+
+        # Check SC node forging status
+        # Auto forging is disabled.
+        is_forging_enabled = sc_node1.block_forgingInfo()["result"]["forgingEnabled"]
+        assert_equal(False, is_forging_enabled, "Automatic forging expected to be disabled.")
+        # Enable forging
+        if "result" not in sc_node1.block_startForging():
+            fail("Was not able to start auto forging.")
+        # Check the new status
+        is_forging_enabled = sc_node1.block_forgingInfo()["result"]["forgingEnabled"]
+        assert_equal(True, is_forging_enabled, "Automatic forging expected to be enabled.")
 
 
 if __name__ == "__main__":
