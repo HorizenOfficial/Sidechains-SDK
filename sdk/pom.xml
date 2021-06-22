@@ -310,11 +310,11 @@
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->
           <include>new_mc_blocks/mc_block_with_csws</include>
           <include>new_mc_blocks/mc_block_with_3_sidechains</include>
-          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py -->
+          <!-- generated on regtest on 28.05.2021 using qa/sc_backward_transfer.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_bts</include>
-          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py -->
+          <!-- generated on regtest on 28.05.2021 using qa/sc_backward_transfer.py -->
           <include>new_mc_blocks/mc_block_with_certificate_without_bts</include>
-          <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_multiple_certs.py -->
+          <!-- generated on regtest on 28.05.2021 using qa/sc_multiple_certs.py -->
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_cert_customfields.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
