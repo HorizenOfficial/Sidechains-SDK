@@ -28,17 +28,17 @@ Test:
     - Forge SC block, verify MC data inclusion and ommers/subommers inclusion.
     
     MC blocks on MC node 1 in the end:
-    220     -   221     -   222     -   223*
+    420     -   421     -   422     -   423*
         \
-            -   221'    -   222'
+            -   421'    -   422'
             
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
-    G[220h;220d;] - 0[;;] - 1[221h;221d;]
+    G[420h;420d;] - 0[;;] - 1[421h;421d;]
                           \
-                                - 2[221'h,222'h;;1[...]]
+                                - 2[421'h,422'h;;1[...]]
                             \
-                                    -   3[221h,222h,223h;;2[...;1]]
+                                    -   3[421h,422h,423h;;2[...;1]]
 """
 
 

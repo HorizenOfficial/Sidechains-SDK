@@ -33,7 +33,7 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
     @Override
     public byte[] sign(byte[] secretKeyBytes, byte[] publicKeyBytes, byte[] messageBytes) {
         SchnorrSecretKey secretKey = SchnorrSecretKey.deserialize(secretKeyBytes); // TODO: why there is no `checkPublicKey` flag for PrivateKey?
-        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes, true);
+        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
 
         SchnorrKeyPair keyPair = new SchnorrKeyPair(secretKey, publicKey);
         FieldElement fieldElement = messageToFieldElement(messageBytes);
@@ -50,9 +50,9 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
 
     @Override
     public boolean verify(byte[] messageBytes, byte[] publicKeyBytes, byte[] signatureBytes) {
-        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes, true);
+        SchnorrPublicKey publicKey = SchnorrPublicKey.deserialize(publicKeyBytes);
         FieldElement fieldElement = messageToFieldElement(messageBytes);
-        SchnorrSignature signature = SchnorrSignature.deserialize(signatureBytes, true);
+        SchnorrSignature signature = SchnorrSignature.deserialize(signatureBytes);
 
         boolean signatureIsValid = publicKey.verifySignature(signature, fieldElement);
 

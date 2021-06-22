@@ -54,7 +54,7 @@ class Demo(SidechainTestFramework):
         mc_node_miner = self.nodes[1]
         mc_node.generate(20)  # Generate first 20 block by main MC node to get some reward coins
         self.sync_all()
-        mc_node_miner.generate(200)  # Generate the rest by another node.
+        mc_node_miner.generate(400)  # Generate the rest by another node.
         self.sync_all()
         print("MC Node started.")
 

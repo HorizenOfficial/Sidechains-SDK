@@ -30,15 +30,15 @@ Test:
     - Make sure that second SC node correctly apply first SC node data
     
     MC blocks on MC node 1 in the end:
-    220     -   221     -   222
+    420     -   421     -   422
                     \
-                        -   222'    -   223'*
+                        -   422'    -   423'*
             
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
-    G[220h;220d;] - 0[;;] - 1[221h-222h;221d-222d;]
+    G[420h;420d;] - 0[;;] - 1[421h-422h;421d-422d;]
                           \
-                                -   2[221h,222'h,223'h;;1[...]]
+                                -   2[421h,422'h,423'h;;1[...]]
 """
 
 
