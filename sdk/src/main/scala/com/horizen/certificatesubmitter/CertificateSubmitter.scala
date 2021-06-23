@@ -200,11 +200,20 @@ class CertificateSubmitter
     }
   }
 
-  private def getCertificateTopQuality(): Int = {
+  private def getCertificateTopQuality(epoch: Int): Try[Long] = Try {
     mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
       case Success(topQualityCertificates)=>
-        topQualityCertificates.mempoolCertInfo.quality.getOrElse(topQualityCertificates.chainCertInfo.quality.getOrElse(0))
-      case Failure(_) => 0
+        if (!topQualityCertificates.mempoolCertInfo.quality.isEmpty) {
+          topQualityCertificates.mempoolCertInfo.quality.get
+        } else if (!topQualityCertificates.chainCertInfo.quality.isEmpty && topQualityCertificates.chainCertInfo.epoch.get == epoch) {
+          topQualityCertificates.chainCertInfo.quality.get
+        } else {
+          0
+        }
+      case Failure(ex) => {
+        ex.printStackTrace()
+        throw new Exception("Unable to retrieve topQualityCertificates", ex)
+      }
     }
   }
 
@@ -212,40 +221,48 @@ class CertificateSubmitter
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val currentCertificateTopQuality: Long = getCertificateTopQuality()
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+    getCertificateTopQuality(referencedWithdrawalEpochNumber) match {
+      case Success(currentCertificateTopQuality) => {
 
-    val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
-    val ftMinAmount: Long = 0 // Every positive value FT is allowed.
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-      withdrawalRequests.asJava,
-      referencedWithdrawalEpochNumber,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount)
+      val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
+      val ftMinAmount: Long = 0 // Every positive value FT is allowed.
+      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
 
-    val sidechainWallet = sidechainNodeView.vault
-    val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
-      params.signersPublicKeys.map{signerPublicKey =>
-        val signature = sidechainWallet.secret(signerPublicKey).map(schnorrSecret => schnorrSecret.asInstanceOf[SchnorrSecret].sign(message))
-        (signerPublicKey, signature)
+      val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
+        withdrawalRequests.asJava,
+        referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash,
+        btrFee,
+        ftMinAmount)
+
+      val sidechainWallet = sidechainNodeView.vault
+      val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
+        params.signersPublicKeys.map{signerPublicKey =>
+          val signature = sidechainWallet.secret(signerPublicKey).map(schnorrSecret => schnorrSecret.asInstanceOf[SchnorrSecret].sign(message))
+          (signerPublicKey, signature)
+        }
+
+      // The quality of data generated must be greater then current top certificate quality.
+      // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
+      // Quality is equal to the number of valid schnorr signatures for the Threshold signature proof
+      val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
+      if(newCertQuality > currentCertificateTopQuality) {
+        Some(
+          DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
+            endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
+        )
+      } else {
+        log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
+          s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
+        None
       }
-
-    // The quality of data generated must be greater then current top certificate quality.
-    // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
-    // Quality is equal to the number of valid schnorr signatures for the Threshold signature proof
-    val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
-    if(newCertQuality > currentCertificateTopQuality) {
-      Some(
-        DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
-      )
-    } else {
-      log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
-        s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
-      None
+    }
+      case Failure(ex) => {
+        log.info("Node was not able to generate certificate: unable to retrieve actual top quality certificates in Mainchain(" + ex.getCause + ")")
+        None
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 package com.horizen.websocket
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
@@ -37,12 +38,14 @@ case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends Re
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
 case class MempoolTopQualityCertificateInfo(certHash: Option[String],
+                                            epoch: Option[Int],
                                             rawCertificateHex: Option[String],
-                                            quality: Option[Int],
+                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long],
                                             fee: Option[Double]) extends ResponsePayload
 case class ChainTopQualityCertificateInfo(certHash: Option[String],
+                                          epoch: Option[Int],
                                           rawCertificateHex: Option[String],
-                                          quality: Option[Int]) extends ResponsePayload
+                                          @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long]) extends ResponsePayload
 case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: MempoolTopQualityCertificateInfo, chainTopQualityCert: ChainTopQualityCertificateInfo) extends ResponsePayload
 
 
