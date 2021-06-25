@@ -179,6 +179,7 @@ class CertificateSubmitter
   }
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
+                                    sidechainId: Array[Byte],
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
@@ -203,7 +204,7 @@ class CertificateSubmitter
   private def getCertificateTopQuality(epoch: Int): Try[Long] = Try {
     mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
       case Success(topQualityCertificates)=>
-        if (!topQualityCertificates.mempoolCertInfo.quality.isEmpty) {
+        if (!topQualityCertificates.mempoolCertInfo.quality.isEmpty && topQualityCertificates.mempoolCertInfo.epoch.get == epoch) {
           topQualityCertificates.mempoolCertInfo.quality.get
         } else if (!topQualityCertificates.chainCertInfo.quality.isEmpty && topQualityCertificates.chainCertInfo.epoch.get == epoch) {
           topQualityCertificates.chainCertInfo.quality.get
@@ -211,7 +212,6 @@ class CertificateSubmitter
           0
         }
       case Failure(ex) => {
-        ex.printStackTrace()
         throw new Exception("Unable to retrieve topQualityCertificates", ex)
       }
     }
@@ -229,9 +229,11 @@ class CertificateSubmitter
       val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
       val ftMinAmount: Long = 0 // Every positive value FT is allowed.
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val sidechainId = params.sidechainId
 
       val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
+        sidechainId,
         referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash,
         btrFee,
@@ -250,7 +252,7 @@ class CertificateSubmitter
       val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
       if(newCertQuality > currentCertificateTopQuality) {
         Some(
-          DataForProofGeneration(referencedWithdrawalEpochNumber, withdrawalRequests,
+          DataForProofGeneration(referencedWithdrawalEpochNumber, sidechainId, withdrawalRequests,
             endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
         )
       } else {
@@ -286,7 +288,8 @@ class CertificateSubmitter
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
     log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-      s"with parameters: withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
+      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
+      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
@@ -294,6 +297,7 @@ class CertificateSubmitter
     //create and return proof with quality
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
+      dataForProofGeneration.sidechainId,
       dataForProofGeneration.referencedEpochNumber,
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,

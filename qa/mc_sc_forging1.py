@@ -34,21 +34,22 @@ Test:
     - Forge one more SC block, verify that there is no MC data, no ommers.
     - Mine 6 Mc block in MC node 3. Connect and synchronize MC node 1 and 3.
     - Forge SC block, verify that previously forged blocks were set as ommers, verify MC data inclusion.
+    - Check SC node forging status
     
     MC blocks on MC node 1 in the end:
-    220     -   221
+    420     -   421
         \
-            -   221'    -   222'    -   223'    -   224'
+            -   421'    -   422'    -   423'    -   424'
           \
-            -   221''   -   222''   -   223''   -   224''   -   225''*
+            -   421''   -   422''   -   423''   -   424''   -   425''*
             
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
-    G[220h;220d;] - 0[;;] - 1[221h;221d;]
+    G[420h;420d;] - 0[;;] - 1[421h;421d;]
                           \
-                                - 2[221'h,222'h;;1[...]] - 3[223'h,224'h;221'd-223'd;] - 4[;224'd;] - 5[;;]
+                                - 2[421'h,422'h;;1[...]] - 3[423'h,424'h;421'd-423'd;] - 4[;424'd;] - 5[;;]
                             \
-                                    -   6[221''h-225''h;;2[...;1],3[...],4[...],5[;;]]
+                                    -   6[421''h-425''h;;2[...;1],3[...],4[...],5[;;]]
 """
 
 
@@ -206,6 +207,18 @@ class MCSCForging1(SidechainTestFramework):
         for ommer_id in expected_ommers_ids:
             check_ommer(ommer_id, [], scblock_id6, sc_node1)
         check_subommer(scblock_id2, scblock_id1, [mcblock_hash1], scblock_id6, sc_node1)
+
+
+        # Check SC node forging status
+        # Auto forging is disabled.
+        is_forging_enabled = sc_node1.block_forgingInfo()["result"]["forgingEnabled"]
+        assert_equal(False, is_forging_enabled, "Automatic forging expected to be disabled.")
+        # Enable forging
+        if "result" not in sc_node1.block_startForging():
+            fail("Was not able to start auto forging.")
+        # Check the new status
+        is_forging_enabled = sc_node1.block_forgingInfo()["result"]["forgingEnabled"]
+        assert_equal(True, is_forging_enabled, "Automatic forging expected to be enabled.")
 
 
 if __name__ == "__main__":

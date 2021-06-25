@@ -59,6 +59,10 @@ class Forger(settings: SidechainSettings,
     }
   }
 
+  private def isForgingEnabled: Boolean = {
+    timerOpt.isDefined
+  }
+
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
@@ -147,7 +151,7 @@ class Forger(settings: SidechainSettings,
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete{
         case Success(epochAndSlot: ConsensusEpochAndSlot) => {
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot))
+          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
         }
         case failure @ Failure(ex) => {
           forgerInfoRequester ! failure

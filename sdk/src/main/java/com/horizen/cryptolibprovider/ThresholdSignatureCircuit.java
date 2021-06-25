@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface ThresholdSignatureCircuit {
     byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+                                     byte[] sidechainId,
                                      int epochNumber,
                                      byte[] endCumulativeScTxCommTreeRoot,
                                      long btrFee,
@@ -17,6 +18,7 @@ public interface ThresholdSignatureCircuit {
     //None elements for schnorrSignatureBytesList if no secret key available, thus schnorrSignatureBytesList.size() == schnorrPublicKeysBytesList.size()
     //threshold is the same as in generateSysDataConstant
     Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+                                   byte[] sidechainId,
                                    int epochNumber,
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
@@ -29,6 +31,7 @@ public interface ThresholdSignatureCircuit {
                                    boolean zk); // todo check name
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
+                        byte[] sidechainId,
                         int epochNumber,
                         byte[] endCumulativeScTxCommTreeRoot,
                         long btrFee,
