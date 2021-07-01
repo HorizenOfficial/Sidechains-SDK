@@ -7,7 +7,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
-from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
+from test_framework.util import fail, assert_false, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_block, connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks
@@ -141,14 +141,28 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
 
         # Wait for Certificates appearance
-        attempts = 30
-        while mc_node.getmempoolinfo()["size"] < 2 and attempts > 0:
+        time.sleep(10)
+        while (mc_node.getmempoolinfo()["size"] < 2  and
+               (sc_node1.debug_isCertGenerationActive()["result"]["state"]
+                or sc_node2.debug_isCertGenerationActive()["result"]["state"])):
+
             print("Wait for certificates in the MC mempool...")
-            time.sleep(10)
-            attempts -= 1
+            if (sc_node1.debug_isCertGenerationActive()["result"]["state"]):
+                print("sc_node1 generating certificate now.")
+            if (sc_node2.debug_isCertGenerationActive()["result"]["state"]):
+                print("sc_node2 generating certificate now.")
+
+            time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
             sc_node2.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(2, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
+
+        # Try to generate one more certificate with same quality in order to check that submission attempt will be skipped
+        # because sc_node1 cannot produce certificate with better quality
+        generate_next_block(sc_node1, "first node")
+        time.sleep(2)
+
+        assert_false(sc_node1.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]

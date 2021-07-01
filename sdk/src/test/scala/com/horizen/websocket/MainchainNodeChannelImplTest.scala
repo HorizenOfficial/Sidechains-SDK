@@ -1,5 +1,7 @@
 package com.horizen.websocket
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.block.MainchainHeader
 import com.horizen.mainchain.api.{BackwardTransferEntry, SendCertificateRequest}
 import com.horizen.params.MainNetParams
@@ -17,6 +19,8 @@ import scala.io.Source
 import scala.util.Success
 
 class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
+
+  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
 
   @Test
   def getBlockByHeight(): Unit = {
@@ -386,5 +390,222 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
 
     assertTrue("Certificate is expected to be sent.", mcRefTry.isSuccess)
     assertEquals("Certificate hash is different.", certHash, BytesUtils.toHexString(mcRefTry.get.certificateId))
+  }
+
+  @Test
+  def getTopQualityCertificates(): Unit = {
+    val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
+    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+
+    val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
+    val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
+    val expectedMempoolCertHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedMempoolCertQuality = 20L
+    val expectedMempoolCertEpoch = 5
+    val expectedMempoolCertRawCert = "fbffffff9ea21362e472c7c60becaf131209e247f211f3f351248fa231cb0eaf19cfe41f000000001400000000000000d0a064c71b6b54d5de6c2e233aa604bc5d2011ab3b48f41732e56adec4f8b80d0256b289505ef240df5fb278d8479a4f59ddb2a01ea2b71712bcfd345e6fb12026f0aa8ceec75208df838d0506d0f3c49d166f17f1f7f038d87edd32c3f301dd1c297020e6f24a9b528b09eba2db6a96eafe146ee1e8d4634a50134af43f010049d8b466f9c08a2bca3b418b63ce01f64852a4c585adb88fd9a36e803c228f4af1e0d53f0ebb2ea172715e9826008f370420409c73faf98ff199f628702320c490aeb04dab0e464403288c6b2c2f4283bf406c2242da99fe656416ea982600000058d7b03e5d11b1ab9db1b0aabd0c6e21193e5810887267e5e006adc8a507dfe4820a3016c34f606d5b63b09bcf2004a8b896c593a7e9f488a42e1351f496420e3c9771f775534a124a2fb119f795394cb66cc9e07be5bee4ebc71619167f000022dc545f369a5e2ec885539d820c76867d1edecd7a2b92ac91045f7de3d81c6b13cde936a4edc7ebc6fb1d20c3fd5a87af1bccac2a77f0ee0ec4b06d2edbb4b9093d9a48bc7d6e31f8abc246e73e80e876444447dd6913b0a8e1da56c9c90000475dec97c8d427d3406e1f584023969025de0b5c3d45d6da568c4c4ae399e043b3611816a91cffd269c48733745ac0e9912d48f1c007b90d331bbc7808b7d6d5329ca732ee8b40c86f01e580faa4e17eee2d3aff41510897fd82814c35e30000ecb1aa8437b07b205073b249663b1432980f15fb2feb1d4972f873ec55dec259785ae624e6f7a8ac92e448c969adc6a2a381874023b6119ceda76dc0b030482b6072dbc85fc4e1dd4b68ac7d5191f1"
+    val expectedMempoolCertFee = 0.00015
+    val expectedChainCertHash = "bc53d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedChainCertQuality : Long = 30
+    val expectedChainCertEpoch = 4
+    val expectedChainCertRawCert = "00f6a3f3603d19384435c9d54feb9dea1f4ea340bf4b60869889fcbf60843f82"
+
+    Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
+    Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+    )).thenAnswer(answer => {
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
+      assertEquals("Get top quality certificates request type is wrong.", expectedReqType, reqType)
+      val req = answer.getArgument(1).asInstanceOf[TopQualityCertificatePayload]
+      assertEquals("Get top quality certificates request data (scid) is wrong.", scid, req.scid)
+      assertTrue("Get top quality certificates response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
+
+      val p = Promise[ResponsePayload]
+      val thread = new Thread {
+        override def run() {
+          Thread.sleep(timeoutDuration.div(2L).toMillis)
+
+          p.complete(Success(TopQualityCertificateResponsePayload(MempoolTopQualityCertificateInfo(Some(expectedMempoolCertHash),
+            Some(expectedMempoolCertEpoch), Some(expectedMempoolCertRawCert), Some(expectedMempoolCertQuality), Some(expectedMempoolCertFee)),
+            ChainTopQualityCertificateInfo(Some(expectedChainCertHash), Some(expectedChainCertEpoch), Some(expectedChainCertRawCert), Some(expectedChainCertQuality)))))
+        }
+      }
+      thread.start()
+      p.future
+    }
+    )
+
+    val params = MainNetParams()
+    val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
+
+    val mcRefTry = mcnode.getTopQualityCertificates(scid)
+
+    assertTrue("Top certificates information is expected to be received.", mcRefTry.isSuccess)
+    assertEquals("Top certificates information is different.", expectedMempoolCertHash, mcRefTry.get.mempoolCertInfo.certHash.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedMempoolCertQuality, mcRefTry.get.mempoolCertInfo.quality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedMempoolCertEpoch, mcRefTry.get.mempoolCertInfo.epoch.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedMempoolCertRawCert, mcRefTry.get.mempoolCertInfo.rawCertificateHex.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedMempoolCertFee, mcRefTry.get.mempoolCertInfo.fee.getOrElse(0.0), 0.000001)
+    assertEquals("Top certificates information is different.", expectedChainCertHash, mcRefTry.get.chainCertInfo.certHash.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedChainCertQuality, mcRefTry.get.chainCertInfo.quality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedChainCertEpoch, mcRefTry.get.chainCertInfo.epoch.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedChainCertRawCert, mcRefTry.get.chainCertInfo.rawCertificateHex.getOrElse(""))
+  }
+
+  @Test
+  def getMempoolTopQualityCertificates(): Unit = {
+    val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
+    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+
+    val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
+    val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
+    val expectedMempoolCertHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedMempoolCertQuality = 20L
+    val expectedMempoolCertEpoch = 5
+    val expectedMempoolCertRawCert = "fbffffff9ea21362e472c7c60becaf131209e247f211f3f351248fa231cb0eaf19cfe41f000000001400000000000000d0a064c71b6b54d5de6c2e233aa604bc5d2011ab3b48f41732e56adec4f8b80d0256b289505ef240df5fb278d8479a4f59ddb2a01ea2b71712bcfd345e6fb12026f0aa8ceec75208df838d0506d0f3c49d166f17f1f7f038d87edd32c3f301dd1c297020e6f24a9b528b09eba2db6a96eafe146ee1e8d4634a50134af43f010049d8b466f9c08a2bca3b418b63ce01f64852a4c585adb88fd9a36e803c228f4af1e0d53f0ebb2ea172715e9826008f370420409c73faf98ff199f628702320c490aeb04dab0e464403288c6b2c2f4283bf406c2242da99fe656416ea982600000058d7b03e5d11b1ab9db1b0aabd0c6e21193e5810887267e5e006adc8a507dfe4820a3016c34f606d5b63b09bcf2004a8b896c593a7e9f488a42e1351f496420e3c9771f775534a124a2fb119f795394cb66cc9e07be5bee4ebc71619167f000022dc545f369a5e2ec885539d820c76867d1edecd7a2b92ac91045f7de3d81c6b13cde936a4edc7ebc6fb1d20c3fd5a87af1bccac2a77f0ee0ec4b06d2edbb4b9093d9a48bc7d6e31f8abc246e73e80e876444447dd6913b0a8e1da56c9c90000475dec97c8d427d3406e1f584023969025de0b5c3d45d6da568c4c4ae399e043b3611816a91cffd269c48733745ac0e9912d48f1c007b90d331bbc7808b7d6d5329ca732ee8b40c86f01e580faa4e17eee2d3aff41510897fd82814c35e30000ecb1aa8437b07b205073b249663b1432980f15fb2feb1d4972f873ec55dec259785ae624e6f7a8ac92e448c969adc6a2a381874023b6119ceda76dc0b030482b6072dbc85fc4e1dd4b68ac7d5191f1"
+    val expectedMempoolCertFee = 0.00015
+
+    Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
+    Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+    )).thenAnswer(answer => {
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
+      assertEquals("Get top quality certificates request type is wrong.", expectedReqType, reqType)
+      val req = answer.getArgument(1).asInstanceOf[TopQualityCertificatePayload]
+      assertEquals("Get top quality certificates request data (scid) is wrong.", scid, req.scid)
+      assertTrue("Get top quality certificates response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
+
+      val p = Promise[ResponsePayload]
+      val thread = new Thread {
+        override def run() {
+          Thread.sleep(timeoutDuration.div(2L).toMillis)
+
+          p.complete(Success(TopQualityCertificateResponsePayload(MempoolTopQualityCertificateInfo(Some(expectedMempoolCertHash),
+            Some(expectedMempoolCertEpoch), Some(expectedMempoolCertRawCert), Some(expectedMempoolCertQuality),
+            Some(expectedMempoolCertFee)), ChainTopQualityCertificateInfo(None, None, None, None))))
+        }
+      }
+      thread.start()
+      p.future
+    }
+    )
+
+    val params = MainNetParams()
+    val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
+
+    val mcRefTry = mcnode.getTopQualityCertificates(scid)
+
+    assertTrue("Top certificates information is expected to be received.", mcRefTry.isSuccess)
+    assertEquals("Top certificates information is different.", expectedMempoolCertHash, mcRefTry.get.mempoolCertInfo.certHash.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedMempoolCertQuality, mcRefTry.get.mempoolCertInfo.quality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedMempoolCertEpoch, mcRefTry.get.mempoolCertInfo.epoch.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedMempoolCertRawCert, mcRefTry.get.mempoolCertInfo.rawCertificateHex.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedMempoolCertFee, mcRefTry.get.mempoolCertInfo.fee.getOrElse(0.0), 0.000001)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.certHash.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.quality.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.epoch.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.rawCertificateHex.isEmpty)
+  }
+
+  @Test
+  def getChainTopQualityCertificates(): Unit = {
+    val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
+    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+
+    val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
+    val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
+    val expectedChainCertHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
+    val expectedChainCertQuality = 20L
+    val expectedChainCertEpoch = 4
+    val expectedChainCertRawCert = "fbffffff9ea21362e472c7c60becaf131209e247f211f3f351248fa231cb0eaf19cfe41f000000001400000000000000d0a064c71b6b54d5de6c2e233aa604bc5d2011ab3b48f41732e56adec4f8b80d0256b289505ef240df5fb278d8479a4f59ddb2a01ea2b71712bcfd345e6fb12026f0aa8ceec75208df838d0506d0f3c49d166f17f1f7f038d87edd32c3f301dd1c297020e6f24a9b528b09eba2db6a96eafe146ee1e8d4634a50134af43f010049d8b466f9c08a2bca3b418b63ce01f64852a4c585adb88fd9a36e803c228f4af1e0d53f0ebb2ea172715e9826008f370420409c73faf98ff199f628702320c490aeb04dab0e464403288c6b2c2f4283bf406c2242da99fe656416ea982600000058d7b03e5d11b1ab9db1b0aabd0c6e21193e5810887267e5e006adc8a507dfe4820a3016c34f606d5b63b09bcf2004a8b896c593a7e9f488a42e1351f496420e3c9771f775534a124a2fb119f795394cb66cc9e07be5bee4ebc71619167f000022dc545f369a5e2ec885539d820c76867d1edecd7a2b92ac91045f7de3d81c6b13cde936a4edc7ebc6fb1d20c3fd5a87af1bccac2a77f0ee0ec4b06d2edbb4b9093d9a48bc7d6e31f8abc246e73e80e876444447dd6913b0a8e1da56c9c90000475dec97c8d427d3406e1f584023969025de0b5c3d45d6da568c4c4ae399e043b3611816a91cffd269c48733745ac0e9912d48f1c007b90d331bbc7808b7d6d5329ca732ee8b40c86f01e580faa4e17eee2d3aff41510897fd82814c35e30000ecb1aa8437b07b205073b249663b1432980f15fb2feb1d4972f873ec55dec259785ae624e6f7a8ac92e448c969adc6a2a381874023b6119ceda76dc0b030482b6072dbc85fc4e1dd4b68ac7d5191f1"
+
+    Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
+    Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+    )).thenAnswer(answer => {
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
+      assertEquals("Get top quality certificates request type is wrong.", expectedReqType, reqType)
+      val req = answer.getArgument(1).asInstanceOf[TopQualityCertificatePayload]
+      assertEquals("Get top quality certificates request data (scid) is wrong.", scid, req.scid)
+      assertTrue("Get top quality certificates response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
+
+      val p = Promise[ResponsePayload]
+      val thread = new Thread {
+        override def run() {
+          Thread.sleep(timeoutDuration.div(2L).toMillis)
+
+          p.complete(Success(TopQualityCertificateResponsePayload(MempoolTopQualityCertificateInfo(None, None, None, None, None),
+            ChainTopQualityCertificateInfo(Some(expectedChainCertHash), Some(expectedChainCertEpoch),
+            Some(expectedChainCertRawCert), Some(expectedChainCertQuality)))))
+        }
+      }
+      thread.start()
+      p.future
+    }
+    )
+
+    val params = MainNetParams()
+    val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
+
+    val mcRefTry = mcnode.getTopQualityCertificates(scid)
+
+    assertTrue("Top certificates information is expected to be received.", mcRefTry.isSuccess)
+    assertEquals("Top certificates information is different.", expectedChainCertHash, mcRefTry.get.chainCertInfo.certHash.getOrElse(""))
+    assertEquals("Top certificates information is different.", expectedChainCertQuality, mcRefTry.get.chainCertInfo.quality.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedChainCertEpoch, mcRefTry.get.chainCertInfo.epoch.getOrElse(0))
+    assertEquals("Top certificates information is different.", expectedChainCertRawCert, mcRefTry.get.chainCertInfo.rawCertificateHex.getOrElse(""))
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.certHash.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.quality.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.epoch.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.rawCertificateHex.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.fee.isEmpty)
+  }
+
+  @Test
+  def getEmptyTopQualityCertificates(): Unit = {
+    val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
+    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+
+    val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
+    val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
+
+    Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
+    Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+    )).thenAnswer(answer => {
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
+      assertEquals("Get top quality certificates request type is wrong.", expectedReqType, reqType)
+      val req = answer.getArgument(1).asInstanceOf[TopQualityCertificatePayload]
+      assertEquals("Get top quality certificates request data (scid) is wrong.", scid, req.scid)
+      assertTrue("Get top quality certificates response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
+
+      val p = Promise[ResponsePayload]
+      val thread = new Thread {
+        override def run() {
+          Thread.sleep(timeoutDuration.div(2L).toMillis)
+
+          p.complete(Success(TopQualityCertificateResponsePayload(MempoolTopQualityCertificateInfo(None, None, None, None, None),
+            ChainTopQualityCertificateInfo(None, None, None, None))))
+        }
+      }
+      thread.start()
+      p.future
+    }
+    )
+
+    val params = MainNetParams()
+    val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
+
+    val mcRefTry = mcnode.getTopQualityCertificates(scid)
+
+    assertTrue("Top certificates information is expected to be received.", mcRefTry.isSuccess)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.certHash.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.quality.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.epoch.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.rawCertificateHex.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.mempoolCertInfo.fee.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.certHash.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.quality.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.epoch.isEmpty)
+    assertTrue("Top certificates information is expected to be empty.", mcRefTry.get.chainCertInfo.rawCertificateHex.isEmpty)
   }
 }

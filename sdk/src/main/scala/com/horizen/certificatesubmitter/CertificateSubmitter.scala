@@ -18,6 +18,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.websocket.MainchainNodeChannel
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -35,7 +36,7 @@ class CertificateSubmitter
   (settings: SidechainSettings,
    sidechainNodeViewHolderRef: ActorRef,
    params: NetworkParams,
-   mainchainApi: MainchainNodeApi)
+   mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext)
   extends Actor
   with ScorexLogging
@@ -130,6 +131,8 @@ class CertificateSubmitter
 
   protected def trySubmitCertificate: Receive = {
     case SemanticallySuccessfulModifier(_: SidechainBlock) => {
+      context.system.eventStream.publish(CertificateSubmitter.StartCertificateSubmission)
+
       val checkGenerationData =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Option[DataForProofGeneration]](getDataForProofGeneration)
 
@@ -156,7 +159,7 @@ class CertificateSubmitter
 
           log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-          mainchainApi.sendCertificate(certificateRequest) match {
+          mainchainChannel.sendCertificate(certificateRequest) match {
             case Success(certificate) =>
               log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
@@ -171,6 +174,7 @@ class CertificateSubmitter
         case Failure(ex) =>
           log.error("Error in creation of backward transfer certificate:" + ex)
       }
+      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
     }
   }
 
@@ -197,46 +201,70 @@ class CertificateSubmitter
     }
   }
 
+  private def getCertificateTopQuality(epoch: Int): Try[Long] = Try {
+    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
+      case Success(topQualityCertificates)=>
+        if (!topQualityCertificates.mempoolCertInfo.quality.isEmpty && topQualityCertificates.mempoolCertInfo.epoch.get == epoch) {
+          topQualityCertificates.mempoolCertInfo.quality.get
+        } else if (!topQualityCertificates.chainCertInfo.quality.isEmpty && topQualityCertificates.chainCertInfo.epoch.get == epoch) {
+          topQualityCertificates.chainCertInfo.quality.get
+        } else {
+          0
+        }
+      case Failure(ex) => {
+        throw new Exception("Unable to retrieve topQualityCertificates", ex)
+      }
+    }
+  }
+
   private def buildDataForProofGeneration(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Option[DataForProofGeneration] = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val currentCertificateTopQuality: Long = state.certificateTopQuality(referencedWithdrawalEpochNumber)
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+    getCertificateTopQuality(referencedWithdrawalEpochNumber) match {
+      case Success(currentCertificateTopQuality) => {
 
-    val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
-    val ftMinAmount: Long = 0 // Every positive value FT is allowed.
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-    val sidechainId = params.sidechainId
+      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-      withdrawalRequests.asJava,
-      sidechainId,
-      referencedWithdrawalEpochNumber,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount)
+      val btrFee: Long = 0 // No MBTRs support, so no sense to specify btrFee different to zero.
+      val ftMinAmount: Long = 0 // Every positive value FT is allowed.
+      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val sidechainId = params.sidechainId
 
-    val sidechainWallet = sidechainNodeView.vault
-    val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
-      params.signersPublicKeys.map{signerPublicKey =>
-        val signature = sidechainWallet.secret(signerPublicKey).map(schnorrSecret => schnorrSecret.asInstanceOf[SchnorrSecret].sign(message))
-        (signerPublicKey, signature)
+      val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
+        withdrawalRequests.asJava,
+        sidechainId,
+        referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash,
+        btrFee,
+        ftMinAmount)
+
+      val sidechainWallet = sidechainNodeView.vault
+      val signersPublicKeyWithSignatures: Seq[(SchnorrProposition, Option[SchnorrProof])] =
+        params.signersPublicKeys.map{signerPublicKey =>
+          val signature = sidechainWallet.secret(signerPublicKey).map(schnorrSecret => schnorrSecret.asInstanceOf[SchnorrSecret].sign(message))
+          (signerPublicKey, signature)
+        }
+
+      // The quality of data generated must be greater then current top certificate quality.
+      // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
+      // Quality is equal to the number of valid schnorr signatures for the Threshold signature proof
+      val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
+      if(newCertQuality > currentCertificateTopQuality) {
+        Some(
+          DataForProofGeneration(referencedWithdrawalEpochNumber, sidechainId, withdrawalRequests,
+            endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
+        )
+      } else {
+        log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
+          s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
+        None
       }
-
-    // The quality of data generated must be greater then current top certificate quality.
-    // Note: Although quality returned as a result of Snark proof generation, we don't want to waste time for snark creation.
-    // Quality is equal to the number of valid schnorr signatures for the Threshold signature proof
-    val newCertQuality: Long = signersPublicKeyWithSignatures.flatMap(_._2).size
-    if(newCertQuality > currentCertificateTopQuality) {
-      Some(
-        DataForProofGeneration(referencedWithdrawalEpochNumber, sidechainId, withdrawalRequests,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, signersPublicKeyWithSignatures)
-      )
-    } else {
-      log.info("Node was not able to generate certificate with better quality than the one in the chain: " +
-        s"new cert quality is $newCertQuality, but top certificate quality is $currentCertificateTopQuality.")
-      None
+    }
+      case Failure(ex) => {
+        log.info("Node was not able to generate certificate: unable to retrieve actual top quality certificates in Mainchain(" + ex.getCause + ")")
+        None
+      }
     }
   }
 
@@ -283,20 +311,25 @@ class CertificateSubmitter
   }
 }
 
+object CertificateSubmitter {
+  case object StartCertificateSubmission
+  case object StopCertificateSubmission
+}
+
 object CertificateSubmitterRef {
 
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
     Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainApi: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
 }
