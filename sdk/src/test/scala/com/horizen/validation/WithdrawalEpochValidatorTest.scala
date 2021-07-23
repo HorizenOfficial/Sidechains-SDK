@@ -47,6 +47,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -74,6 +75,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -101,6 +103,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -133,6 +136,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(324)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -173,6 +177,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -198,6 +203,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -242,6 +248,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     var mcRefs: Seq[MainchainBlockReference] = Seq(generateMainchainBlockReference(), generateMainchainBlockReference()) // 2 MC block refs
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data), // 2 MainchainBlockReferenceData
       Seq(),
@@ -294,6 +301,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data), // 2 MainchainBlockReferenceData
       Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
@@ -354,6 +362,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val (forgerBox11, forgerMeta11) = ForgerBoxFixture.generateForgerBox(32114)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(mcBlockRef.data),
       Seq(),
@@ -380,6 +389,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -405,6 +415,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     mcRefs = Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.header.hash))))
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -430,6 +441,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     mcRefs = Seq(generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference()) // 4 MC block refs
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.take(2).map(_.data), // 2 MainchainBlockReferenceData
       Seq(),

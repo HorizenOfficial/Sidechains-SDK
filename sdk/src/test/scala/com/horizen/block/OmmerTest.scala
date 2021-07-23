@@ -78,6 +78,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
+      SidechainBlock.BLOCK_VERSION,
       123444L,
       Seq(mcBlockRef1.data),
       Seq(),  // No txs
@@ -338,6 +339,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     block = SidechainBlock.create(
       parentId,
+      SidechainBlock.BLOCK_VERSION,
       123444L,
       Seq(mcBlockRef1.data),
       Seq(),  // No txs
@@ -405,6 +407,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     // Create block with 1 MainchainBlockReferencesData and 2 MainchainHeader
     val block = SidechainBlock.create(
       parentId,
+      SidechainBlock.BLOCK_VERSION,
       123444L,
       Seq(mcBlockRef1.data),
       Seq(),  // No txs

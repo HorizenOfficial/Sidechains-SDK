@@ -115,6 +115,9 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
   override def parse(r: Reader): SidechainBlockHeader = {
     val version: Block.Version = r.getByte()
 
+    if(version != SidechainBlock.BLOCK_VERSION)
+      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock version $version is invalid.")
+
     val parentId: ModifierId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 
     val timestamp: Block.Timestamp = r.getLong()

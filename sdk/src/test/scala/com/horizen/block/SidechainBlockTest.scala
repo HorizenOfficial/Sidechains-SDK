@@ -126,6 +126,7 @@ class SidechainBlockTest
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
+    assertEquals("Deserialized Block version is different.", block.version, deserializedBlock.version)
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
@@ -162,6 +163,7 @@ class SidechainBlockTest
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
+    assertEquals("Deserialized Block version is different.", block.version, deserializedBlock.version)
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
@@ -352,6 +354,16 @@ class SidechainBlockTest
       case Failure(e) =>
         assertEquals("Different exception type expected during semanticValidity.",
           classOf[InvalidMainchainHeaderException], e.getClass)
+    }
+
+    // Test12: SidechainBlock has unsupported version
+    invalidBlock = createBlock(blockVersion = Byte.MaxValue)
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+        classOf[InvalidSidechainBlockDataException], e.getClass)
     }
   }
 
@@ -810,6 +822,7 @@ class SidechainBlockTest
 
 
   private def createBlock(parent: ModifierId = parentId,
+                          blockVersion:Byte = SidechainBlock.BLOCK_VERSION,
                           timestamp: Long = 122444L,
                           sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
@@ -819,6 +832,7 @@ class SidechainBlockTest
                          ): SidechainBlock = {
     SidechainBlock.create(
       parent,
+      blockVersion,
       timestamp,
       mainchainBlockReferencesData,
       sidechainTransactions,

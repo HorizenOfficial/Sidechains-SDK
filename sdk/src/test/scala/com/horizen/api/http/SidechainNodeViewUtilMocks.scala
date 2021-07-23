@@ -52,6 +52,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
+    SidechainBlock.BLOCK_VERSION,
     Instant.now.getEpochSecond - 10000,
     Seq(),
     Seq(),

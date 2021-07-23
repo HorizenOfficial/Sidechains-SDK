@@ -57,6 +57,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 
     SidechainBlock.create(
       firstOrSecond(parentId, initialBlock.parentId),
+      SidechainBlock.BLOCK_VERSION,
       Math.max(timestamp, initialBlock.timestamp),
       firstOrSecond(mainchainBlocksReferencesData, initialBlock.mainchainBlockReferencesData),
       firstOrSecond(sidechainTransactions, initialBlock.sidechainTransactions),
@@ -98,6 +99,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 
     SidechainBlock.create(
       parent,
+      SidechainBlock.BLOCK_VERSION,
       timestamp,
       references.map(_.data),
       Seq(),
