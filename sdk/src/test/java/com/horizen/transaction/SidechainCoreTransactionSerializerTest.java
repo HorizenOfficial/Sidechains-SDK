@@ -38,7 +38,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         long fee = 100L;
 
 
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION);
         TransactionSerializer serializer = transaction.serializer();
 
         // Serializer Core transaction that contains only Core types
@@ -64,7 +64,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
 
         long fee = 100L;
 
-        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
+        SidechainCoreTransaction transaction = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION);
         // Set `true` and run if you want to update regression data.
         if(false) {
             try {

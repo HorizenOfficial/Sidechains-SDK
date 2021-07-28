@@ -161,6 +161,11 @@ public final class RegularTransaction
     }
 
     @Override
+    public byte version() {
+        return 100;
+    }
+
+    @Override
     public byte[] bytes() {
         byte[] inputBoxesBytes = boxListSerializer.toBytes(inputs);
         byte[] outputBoxDataBytes = boxDataListSerializer.toBytes(outputs);

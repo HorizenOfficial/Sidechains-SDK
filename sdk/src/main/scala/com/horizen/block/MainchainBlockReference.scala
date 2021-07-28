@@ -9,7 +9,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
-import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
 import scorex.core.serialization.ScorexSerializer
@@ -186,7 +186,7 @@ object MainchainBlockReference extends ScorexLogging {
         certificates.foreach(cert => commitmentTree.addCertificate(cert))
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
-          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava))
+          sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))

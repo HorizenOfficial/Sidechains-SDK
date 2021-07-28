@@ -43,6 +43,9 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("typeId")
     public abstract byte transactionTypeId();
 
+    @JsonProperty("version")
+    public abstract byte version();
+
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
     // Transaction Id must depend on the whole transaction content including proof

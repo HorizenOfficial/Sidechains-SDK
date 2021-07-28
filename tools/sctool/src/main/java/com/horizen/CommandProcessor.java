@@ -10,7 +10,6 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
-import com.horizen.block.SidechainBlock.*;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainSecretsCompanion;

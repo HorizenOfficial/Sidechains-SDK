@@ -13,7 +13,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData, WithdrawalRequestBoxData}
+import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, NoncedBox, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
@@ -217,7 +217,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             // Create a list of fake proofs for further messageToSign calculation
             val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
 
-            val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee)
+            val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
 
             // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
             val messageToSign = unsignedTransaction.messageToSign()
@@ -225,7 +225,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
             })
 
-            val transaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee)
+            val transaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
             if (body.format.getOrElse(false))
               ApiResponseUtil.toResponse(TransactionDTO(transaction))
             else
@@ -379,7 +379,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             val boxIds = inputBoxes.map(_.id()).asJava
             // Create a list of fake proofs for further messageToSign calculation
             val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
-            val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee)
+            val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
 
             // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
             val messageToSign = unsignedTransaction.messageToSign()
@@ -387,7 +387,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
             })
 
-            val transaction: SidechainCoreTransaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee)
+            val transaction: SidechainCoreTransaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
             val txRepresentation: (SidechainTypes#SCBT => SuccessResponse) =
               if (body.format.getOrElse(false)) {
                 tx => TransactionDTO(tx)
@@ -520,7 +520,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     val timestamp = System.currentTimeMillis
     // Create a list of fake proofs for further messageToSign calculation
     val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
-    val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee)
+    val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
 
     // Create signed tx.
     val messageToSign = unsignedTransaction.messageToSign()
@@ -528,7 +528,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
     })
 
-    new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee)
+    new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
 }
 

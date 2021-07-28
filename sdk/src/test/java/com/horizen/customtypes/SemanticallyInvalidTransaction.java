@@ -1,13 +1,12 @@
 package com.horizen.customtypes;
 
-import com.google.common.primitives.Longs;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
+import com.horizen.transaction.Transaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.utils.BytesUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,4 +55,8 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
         return TRANSACTION_TYPE_ID;
     }
 
+    @Override
+    public byte version() {
+        return Byte.MAX_VALUE;
+    }
 }
