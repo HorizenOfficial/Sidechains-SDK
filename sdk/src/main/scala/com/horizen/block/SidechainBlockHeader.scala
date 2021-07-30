@@ -47,6 +47,7 @@ case class SidechainBlockHeader(
   lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
       idToBytes(parentId),
+      Array[Byte]{version},
       Longs.toByteArray(timestamp),
       forgingStakeInfo.hash,
       vrfProof.bytes, // TO DO: is it ok or define vrfProof.id() ?

@@ -41,9 +41,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public abstract long fee();
 
     @JsonProperty("typeId")
+    @Override
     public abstract byte transactionTypeId();
 
     @JsonProperty("version")
+    @Override
     public abstract byte version();
 
     public abstract void semanticValidity() throws TransactionSemanticValidityException;

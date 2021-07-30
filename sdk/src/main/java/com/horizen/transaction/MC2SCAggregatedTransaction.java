@@ -127,7 +127,7 @@ public final class MC2SCAggregatedTransaction
     @Override
     public byte[] bytes() {
         byte[] transactions = mc2scTransactionsSerializer.toBytes(mc2scTransactionsOutputs);
-        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 13 bytes
+        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 5 bytes
                 new byte[] {version},
                 Ints.toByteArray(transactions.length),              // 4 bytes
                 transactions                                        // depends on previous value (>=4 bytes)
@@ -135,7 +135,7 @@ public final class MC2SCAggregatedTransaction
     }
 
     public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
-        if (bytes.length < 13)
+        if (bytes.length < 5)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if (bytes.length > MAX_TRANSACTION_SIZE)
