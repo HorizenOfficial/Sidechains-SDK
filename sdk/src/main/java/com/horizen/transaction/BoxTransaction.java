@@ -94,6 +94,10 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
             newBoxesStream.write(boxBytes, 0, boxBytes.length);
         }
 
-        return Bytes.concat(unlockersStream.toByteArray(), newBoxesStream.toByteArray(), Longs.toByteArray(fee()));
+        return Bytes.concat(
+                new byte[]{version()},
+                unlockersStream.toByteArray(),
+                newBoxesStream.toByteArray(),
+                Longs.toByteArray(fee()));
     }
 }
