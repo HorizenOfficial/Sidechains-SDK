@@ -137,7 +137,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Note: supportedSegmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network (maxSegmentSize).
-    private static final int maxSegmentSize = (1 << 17);
+    private static final int maxSegmentSize = (1 << 18);
     private static final int supportedSegmentSize = (1 << 17);
 
     @Override
