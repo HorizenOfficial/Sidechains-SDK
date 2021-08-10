@@ -446,7 +446,6 @@ public class CommandProcessor {
                     vrfProof,
                     mp,
                     sidechainTransactionsCompanion,
-                    params,
                     scala.Option.empty()
             ).get();
 

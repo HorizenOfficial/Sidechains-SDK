@@ -162,8 +162,6 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
     if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
       throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
-    if(mainchainBlockReferencesData.size > SidechainBlock.MAX_MC_BLOCKS_NUMBER)
-      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainBlockReferenceData amount exceeds the limit.")
 
     // Check Block size
     val blockSize: Int = bytes.length
@@ -206,8 +204,9 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
 
 object SidechainBlock extends ScorexEncoding {
-  val MAX_BLOCK_SIZE: Int = 2048 * 1024 //2048K
-  val MAX_MC_BLOCKS_NUMBER: Int = 3
+  // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
+  // Also it is more than enough to process Ommers for very long MC forks (2000+)
+  val MAX_BLOCK_SIZE: Int = 5000000
   val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
   val BLOCK_VERSION: Block.Version = 1: Byte
@@ -223,7 +222,6 @@ object SidechainBlock extends ScorexEncoding {
              vrfProof: VrfProof,
              forgingStakeInfoMerklePath: MerklePath,
              companion: SidechainTransactionsCompanion,
-             params: NetworkParams, // In case of removing semanticValidity check -> can be removed as well
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[SidechainBlock] = Try {
     require(mainchainBlockReferencesData != null)
@@ -332,8 +330,7 @@ object SidechainBlock extends ScorexEncoding {
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
-    MainchainBlockReferenceDataSerializer,
-    SidechainBlock.MAX_MC_BLOCKS_NUMBER
+    MainchainBlockReferenceDataSerializer
   )
 
   private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](

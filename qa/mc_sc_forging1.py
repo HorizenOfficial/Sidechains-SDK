@@ -47,9 +47,9 @@ Test:
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
     G[420h;420d;] - 0[;;] - 1[421h;421d;]
                           \
-                                - 2[421'h,422'h;;1[...]] - 3[423'h,424'h;421'd-423'd;] - 4[;424'd;] - 5[;;]
+                                - 2[421'h,422'h;;1[...]] - 3[423'h,424'h;421'd-424'd;] - 4[;;]
                             \
-                                    -   6[421''h-425''h;;2[...;1],3[...],4[...],5[;;]]
+                                    -   5[421''h-425''h;;2[...;1],3[...],4[;;]] - 6[;421''-425'';]
 """
 
 
@@ -155,29 +155,21 @@ class MCSCForging1(SidechainTestFramework):
         check_scparent(scblock_id2, scblock_id3, sc_node1)
         # Verify that SC block MainchainHeaders and MainchainRefData
         check_mcheaders_amount(2, scblock_id3, sc_node1)
-        check_mcreferencedata_amount(3, scblock_id3, sc_node1)
+        check_mcreferencedata_amount(4, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash3, scblock_id3, sc_node1)
         check_mcheader_presence(mcblock_hash4, scblock_id3, sc_node1)
         check_mcreferencedata_presence(fork_mcblock_hash1, scblock_id3, sc_node1)
         check_mcreferencedata_presence(fork_mcblock_hash2, scblock_id3, sc_node1)
         check_mcreferencedata_presence(mcblock_hash3, scblock_id3, sc_node1)
+        check_mcreferencedata_presence(mcblock_hash4, scblock_id3, sc_node1)
         check_ommers_amount(0, scblock_id3, sc_node1)
 
-        # Generate SC block to synchronize the rest of MC blocks
+        # Generate SC block with no MC data. Needed for further test
         scblock_id4 = generate_next_blocks(sc_node1, "first node", 1)[0]
         check_scparent(scblock_id3, scblock_id4, sc_node1)
-        # Verify that SC block MainchainHeaders and MainchainRefData
         check_mcheaders_amount(0, scblock_id4, sc_node1)
-        check_mcreferencedata_amount(1, scblock_id4, sc_node1)
-        check_mcreferencedata_presence(mcblock_hash4, scblock_id4, sc_node1)
+        check_mcreferencedata_amount(0, scblock_id4, sc_node1)
         check_ommers_amount(0, scblock_id4, sc_node1)
-
-        # Generate SC block with no MC data. Needed for further test
-        scblock_id5 = generate_next_blocks(sc_node1, "first node", 1)[0]
-        check_scparent(scblock_id4, scblock_id5, sc_node1)
-        check_mcheaders_amount(0, scblock_id5, sc_node1)
-        check_mcreferencedata_amount(0, scblock_id5, sc_node1)
-        check_ommers_amount(0, scblock_id5, sc_node1)
 
 
         # Test 5: MC Node 3 generates MC blocks, that hust from sc creation tx containing block.
@@ -191,23 +183,32 @@ class MCSCForging1(SidechainTestFramework):
         assert_equal(another_fork_tip_hash, mc_node1.getbestblockhash())
 
         # Generate SC block
-        scblock_id6 = generate_next_blocks(sc_node1, "first node", 1)[0]
-        # print(json.dumps(sc_node1.block_findById(blockId=scblock_id6), indent=4))
-        check_scparent(scblock_id0, scblock_id6, sc_node1)
+        scblock_id5 = generate_next_blocks(sc_node1, "first node", 1)[0]
+        # print(json.dumps(sc_node1.block_findById(blockId=scblock_id5), indent=4))
+        check_scparent(scblock_id0, scblock_id5, sc_node1)
         # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
-        check_mcheaders_amount(5, scblock_id6, sc_node1)
-        check_mcreferencedata_amount(0, scblock_id6, sc_node1)
+        check_mcheaders_amount(5, scblock_id5, sc_node1)
+        check_mcreferencedata_amount(0, scblock_id5, sc_node1)
         for mchash in another_fork_mcblocks_hashes:
-            check_mcheader_presence(mchash, scblock_id6, sc_node1)
-        # Verify that SC block contains 4 Ommers
-        check_ommers_amount(4, scblock_id6, sc_node1)
+            check_mcheader_presence(mchash, scblock_id5, sc_node1)
+        # Verify that SC block contains 3 Ommers
+        check_ommers_amount(3, scblock_id5, sc_node1)
         # Verify Ommers cumulative score, that must also count 1 subommer
-        check_ommers_cumulative_score(5, scblock_id6, sc_node1)
-        expected_ommers_ids = [scblock_id2, scblock_id3, scblock_id4, scblock_id5]
+        check_ommers_cumulative_score(4, scblock_id5, sc_node1)
+        expected_ommers_ids = [scblock_id2, scblock_id3, scblock_id4]
         for ommer_id in expected_ommers_ids:
-            check_ommer(ommer_id, [], scblock_id6, sc_node1)
-        check_subommer(scblock_id2, scblock_id1, [mcblock_hash1], scblock_id6, sc_node1)
+            check_ommer(ommer_id, [], scblock_id5, sc_node1)
+        check_subommer(scblock_id2, scblock_id1, [mcblock_hash1], scblock_id5, sc_node1)
 
+        # Generate 1 more SC Block to sync MainchainRefData
+        scblock_id6 = generate_next_blocks(sc_node1, "first node", 1)[0]
+        check_scparent(scblock_id5, scblock_id6, sc_node1)
+        # Verify that SC block contains newly created MC blocks as a MainchainRefData and no MainchainHeaders
+        check_mcheaders_amount(0, scblock_id6, sc_node1)
+        check_mcreferencedata_amount(5, scblock_id6, sc_node1)
+        check_ommers_amount(0, scblock_id6, sc_node1)
+        for mchash in another_fork_mcblocks_hashes:
+            check_mcreferencedata_presence(mchash, scblock_id6, sc_node1)
 
         # Check SC node forging status
         # Auto forging is disabled.
