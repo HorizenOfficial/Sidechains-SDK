@@ -244,7 +244,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val mcHeadersSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
     blockSize += mcHeadersSerializer.toBytes(mainchainHeaders.asJava).length
 
-    // Get Ommers in case if branch point is not current best block
+    // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != branchPointInfo.branchPointId) {
@@ -257,13 +257,12 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val ommersSerializer = new ListSerializer[Ommer](OmmerSerializer)
     blockSize += ommersSerializer.toBytes(ommers.asJava).length
 
-    // Get all needed MainchainBlockReferences from MC Node
+    // Get all needed MainchainBlockReferences from the MC Node
+    // Extract MainchainReferenceData and collect as much as the block can fit
     val mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.referenceDataToInclude
 
-    // Extract MainchainReferenceData and collect as much as the block can fit
     if(mainchainBlockReferenceDataToRetrieve.nonEmpty)
       blockSize += 4 // placeholder for the MainchainReferenceData Seq size value
-
 
     val mainchainReferenceData: ArrayBuffer[MainchainBlockReferenceData] = ArrayBuffer()
     // Collect MainchainRefData considering the actor message processing timeout
@@ -287,7 +286,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     })
 
-    // Get transactions if possible
+    // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
       if (mainchainReferenceData.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
         Seq() // no SC Txs allowed
