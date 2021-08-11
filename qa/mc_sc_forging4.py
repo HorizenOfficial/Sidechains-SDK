@@ -70,22 +70,22 @@ class MCSCForging4(SidechainTestFramework):
         scblock_ids = generate_next_blocks(sc_node, "first node", 5)
 
         # Verify that SC block contains newly created MC blocks as MainchainHeaders and MainchainReferenceData
-        # First 4 SC blocks. Every block contains 49 MainchainHeaders
+        # First 4 SC blocks. Every block contains 49 MainchainHeaders and 49 MainchainReferenceData
         for i in range(4):
             check_mcheaders_amount(49, scblock_ids[i], sc_node)
             for mchash in mcblock_hashes[i * 49 : (i + 1) * 49]:
                 check_mcheader_presence(mchash, scblock_ids[i], sc_node)
-            #check_mcreferencedata_amount(3, scblock_ids[i], sc_node)
-            #for mchash in mcblock_hashes[i * 3 : (i + 1) * 3]:
-            #    check_mcreferencedata_presence(mchash, scblock_ids[i], sc_node)
+            check_mcreferencedata_amount(49, scblock_ids[i], sc_node)
+            for mchash in mcblock_hashes[i * 49 : (i + 1) * 49]:
+                check_mcreferencedata_presence(mchash, scblock_ids[i], sc_node)
 
-        # Fifth block. Contains 4 MainchainHeaders.
+        # Fifth block. Contains 4 MainchainHeaders and 4 MainchainReferenceData
         check_mcheaders_amount(4, scblock_ids[4], sc_node)
         for mchash in mcblock_hashes[196:200]:
             check_mcheader_presence(mchash, scblock_ids[4], sc_node)
-        #check_mcreferencedata_amount(3, scblock_ids[4], sc_node)
-        #for mchash in mcblock_hashes[12:15]:
-        #    check_mcreferencedata_presence(mchash, scblock_ids[4], sc_node)
+        check_mcreferencedata_amount(4, scblock_ids[4], sc_node)
+        for mchash in mcblock_hashes[196:200]:
+            check_mcreferencedata_presence(mchash, scblock_ids[4], sc_node)
 
 
 if __name__ == "__main__":
