@@ -215,6 +215,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     header.bytes.length
   }
+  
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
                          branchPointInfo: BranchPointInfo,
