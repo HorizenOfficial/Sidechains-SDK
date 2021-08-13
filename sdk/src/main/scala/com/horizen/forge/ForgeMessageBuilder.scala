@@ -230,6 +230,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
     var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
     // Get all needed MainchainBlockHeaders from MC Node
     val mainchainHeaderHashesToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.headersToInclude
@@ -262,9 +263,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // Extract MainchainReferenceData and collect as much as the block can fit
     val mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.referenceDataToInclude
 
-    if(mainchainBlockReferenceDataToRetrieve.nonEmpty)
-      blockSize += 4 // placeholder for the MainchainReferenceData Seq size value
-
     val mainchainReferenceData: ArrayBuffer[MainchainBlockReferenceData] = ArrayBuffer()
     // Collect MainchainRefData considering the actor message processing timeout
     // Note: We may do a lot of websocket `getMainchainBlockReference` operations that are a bit slow,
@@ -279,6 +277,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           else {
             mainchainReferenceData.append(ref.data)
             blockSize += refDataSize
+            // Note: temporary solution because of the delays on MC Websocket server part.
+            // Can be after MC Websocket performance optimization.
             val isTimeout: Boolean = System.currentTimeMillis() - startTime >= timeout.duration.toMillis / 2
             !isTimeout // continue data collection
           }
@@ -292,7 +292,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       if (mainchainReferenceData.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
-        blockSize += 4 // placeholder for the Transactions Seq size value
         var txsCounter: Int = 0
         nodeView.pool.take(nodeView.pool.size).filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
