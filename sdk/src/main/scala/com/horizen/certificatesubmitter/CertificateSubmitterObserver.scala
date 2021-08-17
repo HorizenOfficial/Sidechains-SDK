@@ -18,12 +18,12 @@ class CertificateSubmitterObserver() extends Actor with ScorexLogging {
   }
 
   override def preStart(): Unit = {
-    context.system.eventStream.subscribe(self, CertificateSubmitter.StartCertificateSubmission.getClass)
-    context.system.eventStream.subscribe(self, CertificateSubmitter.StopCertificateSubmission.getClass)
+    context.system.eventStream.subscribe(self, CertificateSubmitter.CertificateSubmissionStarted.getClass)
+    context.system.eventStream.subscribe(self, CertificateSubmitter.CertificateSubmissionStopped.getClass)
   }
 
   protected def processStartProofGeneration: Receive = {
-    case CertificateSubmitter.StartCertificateSubmission => {
+    case CertificateSubmitter.CertificateSubmissionStarted => {
       certGenerationActiveState = true
       log.debug(s"Certificate proof generation is started.")
       Success(Unit)
@@ -31,7 +31,7 @@ class CertificateSubmitterObserver() extends Actor with ScorexLogging {
   }
 
   protected def processStopProofGeneration: Receive = {
-    case CertificateSubmitter.StopCertificateSubmission => {
+    case CertificateSubmitter.CertificateSubmissionStopped => {
       certGenerationActiveState = false
       log.debug(s"Certificate proof generation is finished.")
       Success(Unit)

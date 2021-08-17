@@ -9,9 +9,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.ReceivableMessages.{LocallyGeneratedSignature, SignatureFromRemote, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidSignature, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -36,24 +34,15 @@ import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Random, Success, Try}
 
-case class SignaturesStatus(referencedEpoch: Int,
-                            messageToSign: Array[Byte],
-                            knownSigs: ArrayBuffer[CertificateSignatureInfo])
-
-case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
-
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
-  sealed trait SubmitResult
-
-  case object SubmitSuccess
-    extends SubmitResult {override def toString: String = "Backward transfer certificate was successfully created."}
-  case class SubmitFailed(ex: Throwable)
-    extends SubmitResult {override def toString: String = s"Backward transfer certificate creation was failed due to $ex"}
+  import CertificateSubmitter.InternalReceivableMessages._
+  import CertificateSubmitter.ReceivableMessages._
+  import CertificateSubmitter.Timers._
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
@@ -67,16 +56,21 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private var signaturesStatus: Option[SignaturesStatus] = None
 
+  private var certGenerationState: Boolean = false
+
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+
+    context.system.eventStream.subscribe(self, CertificateSubmissionStarted.getClass)
+    context.system.eventStream.subscribe(self, CertificateSubmissionStopped.getClass)
 
     context.become(initialization)
   }
 
   override def aroundPostStop(): Unit = {
     if(timers.isTimerActive(CertificateGenerationTimer)) {
-      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
+      context.system.eventStream.publish(CertificateSubmissionStopped)
     }
     super.aroundPostStop()
   }
@@ -93,20 +87,19 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private def workingCycle: Receive = {
+    onCertificateSubmissionEvent orElse
     newBlockArrived orElse
     locallyGeneratedSignature orElse
     signatureFromRemote orElse
     tryToScheduleCertificateGeneration orElse
     tryToGenerateCertificate orElse
+    getCertGenerationState orElse
     reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
     case SidechainAppEvents.SidechainApplicationStart =>
-      val submitterCheckingFunction =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Try[Unit]](checkSubmitterMessage)
-
-      val checkAsFuture = (sidechainNodeViewHolderRef ? submitterCheckingFunction).asInstanceOf[Future[Try[Unit]]]
+      val checkAsFuture = (sidechainNodeViewHolderRef ? GetDataFromCurrentView(checkSubmitterMessage)).asInstanceOf[Future[Try[Unit]]]
       checkAsFuture.onComplete{
         case Success(Success(_)) =>
           log.info(s"Backward transfer certificate submitter was successfully started.")
@@ -153,9 +146,24 @@ class CertificateSubmitter(settings: SidechainSettings,
     mainchainReference.data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
   }
 
+  private def onCertificateSubmissionEvent: Receive = {
+    case CertificateSubmissionStarted =>
+      certGenerationState = true
+      log.debug(s"Certificate generation is started.")
+
+    case CertificateSubmissionStopped =>
+      certGenerationState = false
+      log.debug(s"Certificate generation is finished.")
+  }
+
+  private def getCertGenerationState: Receive = {
+    case GetCertificateGenerationState =>
+      sender() ! certGenerationState
+  }
+
   private def newBlockArrived: Receive = {
     case SemanticallySuccessfulModifier(_: SidechainBlock) =>
-      val submissionWindowStatus = getSubmissionWindowStatus
+      val submissionWindowStatus: SubmissionWindowStatus = getSubmissionWindowStatus
       if(submissionWindowStatus.isInWindow) {
         signaturesStatus match {
           case Some(_) => // do nothing
@@ -165,24 +173,24 @@ class CertificateSubmitter(settings: SidechainSettings,
             signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
             // Try to calculate signatures if at least signing is enabled
+            // TODO: maybe we should consider only `certificateSigningEnabled` flag
             if(submitterEnabled || certificateSigningEnabled)
               calculateSignatures(messageToSign).foreach(sigInfo => self ! LocallyGeneratedSignature(sigInfo))
         }
       } else {
+        if(timers.isTimerActive(CertificateGenerationTimer))
+          timers.cancel(CertificateGenerationTimer)
         signaturesStatus = None
       }
   }
 
   private def getSubmissionWindowStatus: SubmissionWindowStatus = {
-    val getStatus =
-      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, SubmissionWindowStatus](
-        (sidechainNodeView: View) => {
-          val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
-          SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
-        }
-      )
+    def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
+      val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
+      SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+    }
 
-    Await.result(sidechainNodeViewHolderRef ? getStatus, settings.scorexSettings.restApi.timeout).asInstanceOf[SubmissionWindowStatus]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
@@ -192,45 +200,40 @@ class CertificateSubmitter(settings: SidechainSettings,
   private def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Array[Byte] = {
-    val getMessage =
-      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Array[Byte]](
-        (sidechainNodeView: View) => {
-          val history = sidechainNodeView.history
-          val state = sidechainNodeView.state
+    def getMessage(sidechainNodeView: View): Array[Byte] = {
+      val history = sidechainNodeView.history
+      val state = sidechainNodeView.state
 
-          val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests (referencedWithdrawalEpochNumber)
 
-          val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-          val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
+      val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
+      val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
 
-          val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-          val sidechainId = params.sidechainId
+      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber (history, referencedWithdrawalEpochNumber)
+      val sidechainId = params.sidechainId
 
-          CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-            withdrawalRequests.asJava,
-            sidechainId,
-            referencedWithdrawalEpochNumber,
-            endEpochCumCommTreeHash,
-            btrFee,
-            ftMinAmount)
-        }
-      )
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned (
+      withdrawalRequests.asJava,
+      sidechainId,
+      referencedWithdrawalEpochNumber,
+      endEpochCumCommTreeHash,
+      btrFee,
+      ftMinAmount)
+    }
 
-    Await.result(sidechainNodeViewHolderRef ? getMessage, settings.scorexSettings.restApi.timeout).asInstanceOf[Array[Byte]]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Array[Byte]]
   }
 
   private def calculateSignatures(messageToSign: Array[Byte]): Seq[CertificateSignatureInfo] = {
-    val getSignersPrivateKeys =
-      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Seq[(SchnorrSecret, Int)]](
-        (sidechainNodeView: View) => {
-          val wallet = sidechainNodeView.vault
-          params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
-            case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
-          }
-        }
-      )
+    def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
+      val wallet = sidechainNodeView.vault
+      params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
+        case (secretOpt, idx) => (secretOpt.get.asInstanceOf[SchnorrSecret], idx)
+      }
+    }
 
-    val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? getSignersPrivateKeys, settings.scorexSettings.restApi.timeout).asInstanceOf[Seq[(SchnorrSecret, Int)]]
+    val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
+      .asInstanceOf[Seq[(SchnorrSecret, Int)]]
 
     privateKeysWithIndexes.map{
       case(secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
@@ -246,6 +249,8 @@ class CertificateSubmitter(settings: SidechainSettings,
               log.error("Locally generated signature already presents")
           else {
             status.knownSigs.append(info)
+            val infoToRemote = CertificateSignatureFromRemoteInfo(info.pubKeyIndex, status.messageToSign, info.signature)
+            context.system.eventStream.publish(CertificateSubmitter.BroadcastLocallyGeneratedSignature(infoToRemote))
             self ! TryToScheduleCertificateGeneration
           }
 
@@ -304,18 +309,19 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private def tryToScheduleCertificateGeneration: Receive = {
-    case TryToScheduleCertificateGeneration if ! submitterEnabled => // do nothing
+    // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
+    case TryToScheduleCertificateGeneration if !submitterEnabled ||
+      certGenerationState || timers.isTimerActive(CertificateGenerationTimer) => // do nothing
 
+    // In other case check and schedule
     case TryToScheduleCertificateGeneration =>
       signaturesStatus match {
         case Some(status) =>
           if(checkQuality(status)) {
-            if (!timers.isTimerActive(CertificateGenerationTimer)) {
-              val delay = Random.nextInt(15) + 5 // random delay from 5 to 15 seconds
-              log.info(s"Scheduling Certificate generation in $delay seconds")
-              timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
-              context.system.eventStream.publish(CertificateSubmitter.StartCertificateSubmission)
-            }
+            val delay = Random.nextInt(15) + 5 // random delay from 5 to 15 seconds
+            log.info(s"Scheduling Certificate generation in $delay seconds")
+            timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
+            context.system.eventStream.publish(CertificateSubmissionStarted)
           }
         case None =>
           log.error("Trying to schedule certificate generation being outside Certificate submission window.")
@@ -328,40 +334,46 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            val getProofGenerationData =
-              GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, DataForProofGeneration]({
-                (sidechainNodeView: View) => buildDataForProofGeneration(sidechainNodeView, status)
-              })
+            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
 
-            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? getProofGenerationData, settings.scorexSettings.restApi.timeout)
+            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[DataForProofGeneration]
-
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
-            val proofWithQuality = generateProof(dataForProofGeneration)
-            val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
-              params.sidechainId,
-              dataForProofGeneration.referencedEpochNumber,
-              dataForProofGeneration.endEpochCumCommTreeHash,
-              proofWithQuality.getKey,
-              proofWithQuality.getValue,
-              dataForProofGeneration.withdrawalRequests,
-              dataForProofGeneration.ftMinAmount,
-              dataForProofGeneration.btrFee)
 
-            log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+            // Run the time consuming part of proof generation and certificate submission in a background
+            // to unlock the Actor message queue for another requests.
+            new Thread(new Runnable() {
+              override def run(): Unit = {
+                val proofWithQuality = generateProof(dataForProofGeneration)
+                val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
+                  params.sidechainId,
+                  dataForProofGeneration.referencedEpochNumber,
+                  dataForProofGeneration.endEpochCumCommTreeHash,
+                  proofWithQuality.getKey,
+                  proofWithQuality.getValue,
+                  dataForProofGeneration.withdrawalRequests,
+                  dataForProofGeneration.ftMinAmount,
+                  dataForProofGeneration.btrFee)
 
-            mainchainChannel.sendCertificate(certificateRequest) match {
-              case Success(certificate) =>
-                log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
+                log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-              case Failure(ex) =>
-                log.error("Creation of backward transfer certificate had been failed. " + ex)
-            }
+                mainchainChannel.sendCertificate(certificateRequest) match {
+                  case Success(certificate) =>
+                    log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
+
+                  case Failure(ex) =>
+                    log.error("Creation of backward transfer certificate had been failed. " + ex)
+                }
+                context.system.eventStream.publish(CertificateSubmissionStopped)
+              }
+            }).start()
+          } else {
+            context.system.eventStream.publish(CertificateSubmissionStopped)
           }
         case None => // Can occur while during the random delay the Node went out of the Window.
           log.debug("Can't generate Certificate because of being outside the Certificate submission window.")
+          context.system.eventStream.publish(CertificateSubmissionStopped)
       }
-      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
   }
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
@@ -442,11 +454,29 @@ class CertificateSubmitter(settings: SidechainSettings,
 }
 
 object CertificateSubmitter {
-  case object StartCertificateSubmission
-  case object StopCertificateSubmission
-}
+  // Events:
+  sealed trait SubmitterEvent
 
-object CertificateSubmitterRef {
+  // Certificate submission status events
+  sealed trait CertificateSubmissionEvent extends SubmitterEvent
+  case object CertificateSubmissionStarted extends CertificateSubmissionEvent
+  case object CertificateSubmissionStopped extends CertificateSubmissionEvent
+
+  // Certificate signature broadcasting events
+  case class BroadcastLocallyGeneratedSignature(info: CertificateSignatureFromRemoteInfo) extends SubmitterEvent
+
+
+  // Response for SignatureFromRemote message
+  sealed trait SignatureProcessingStatus
+  case object ValidSignature extends SignatureProcessingStatus
+  case object DifferentMessageToSign extends SignatureProcessingStatus
+  case object InvalidSignature extends SignatureProcessingStatus
+  case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
+
+  // Data
+  private case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
+
+  case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
 
   case class CertificateSignatureInfo(pubKeyIndex: Int, signature: SchnorrProof)
 
@@ -455,29 +485,26 @@ object CertificateSubmitterRef {
     require(messageToSign.length == FieldElement.FIELD_ELEMENT_LENGTH, "messageToSign has invalid length")
   }
 
-
-  sealed trait SignatureProcessingStatus
-  case object ValidSignature extends SignatureProcessingStatus
-  case object DifferentMessageToSign extends SignatureProcessingStatus
-  case object InvalidSignature extends SignatureProcessingStatus
-  case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
-
-  object ReceivableMessages {
-
-    case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
-
-    case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
-
-    case object TryToScheduleCertificateGeneration
-
-    case object TryToGenerateCertificate
-  }
-
-  object Timers {
+  // Internal interface
+  private object Timers {
     object CertificateGenerationTimer
   }
 
+  private object InternalReceivableMessages {
+    case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
+    case object TryToScheduleCertificateGeneration
+    case object TryToGenerateCertificate
 
+  }
+
+  // Public interface
+  object ReceivableMessages {
+    case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
+    case object GetCertificateGenerationState
+  }
+}
+
+object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =

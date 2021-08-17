@@ -33,7 +33,7 @@ class CertificateSubmitterObserverActorTest extends JUnitSuite with MockitoSugar
         fail("Certificate proof generation state expected to be received.")
     }
 
-    actorSystem.eventStream.publish(CertificateSubmitter.StartCertificateSubmission)
+    actorSystem.eventStream.publish(CertificateSubmitter.CertificateSubmissionStarted)
 
     val future2 = certSubmitterObserverRef ? GetProofGenerationState
     val result2 = Await.result(future2, timeout.duration).asInstanceOf[Try[Boolean]]
@@ -44,7 +44,7 @@ class CertificateSubmitterObserverActorTest extends JUnitSuite with MockitoSugar
         fail("Certificate proof generation state expected to be received.")
     }
 
-    actorSystem.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
+    actorSystem.eventStream.publish(CertificateSubmitter.CertificateSubmissionStopped)
 
     val future3 = certSubmitterObserverRef ? GetProofGenerationState
     val result3 = Await.result(future3, timeout.duration).asInstanceOf[Try[Boolean]]

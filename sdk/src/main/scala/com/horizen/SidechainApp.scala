@@ -261,9 +261,8 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
-  // Init Certificate Submitter and the Observer
+  // Init Certificate Submitter
   val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSubmitterObserver: ActorRef = CertificateSubmitterObserverRef()
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
@@ -283,7 +282,7 @@ class SidechainApp @Inject()
   )
 
   if (sidechainSettings.genesisData.mcNetwork.compareTo("regtest") == 0) {
-      coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, certificateSubmitterObserver, nodeViewHolderRef)
+      coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, certificateSubmitter, nodeViewHolderRef)
   }
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)

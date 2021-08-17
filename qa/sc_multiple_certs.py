@@ -142,7 +142,7 @@ class SCMultipleCerts(SidechainTestFramework):
 
         # Wait for Certificates appearance
         time.sleep(10)
-        while (mc_node.getmempoolinfo()["size"] < 2  and
+        while (mc_node.getmempoolinfo()["size"] < 2 and
                (sc_node1.debug_isCertGenerationActive()["result"]["state"]
                 or sc_node2.debug_isCertGenerationActive()["result"]["state"])):
 

@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.certificatesubmitter.CertificateSubmitterObserver.GetProofGenerationState
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.GetCertificateGenerationState
 import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
 
@@ -15,16 +15,16 @@ import akka.pattern.ask
 import com.horizen.api.http.SidechainDebugErrorResponse.ErrorRetrievingCertForgingState
 import com.horizen.api.http.SidechainDebugRestScheme.RespCertForgingState
 
-case class SidechainDebugApiRoute(override val settings: RESTApiSettings, certSubmitterObserverRef: ActorRef, sidechainNodeViewHolderRef: ActorRef)
+case class SidechainDebugApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef)
                             (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
-  override val route: Route = (pathPrefix("debug")) {
+  override val route: Route = pathPrefix("debug") {
     isCertGenerationActive
   }
 
   def isCertGenerationActive: Route = (post & path("isCertGenerationActive")) {
-    val future = certSubmitterObserverRef ? GetProofGenerationState
-    val result = Await.result(future, timeout.duration).asInstanceOf[Try[Boolean]]
-    result match {
+    Try {
+      Await.result(certSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
+    } match {
       case Success(res) =>
         ApiResponseUtil.toResponse(RespCertForgingState(res))
       case Failure(e) =>
