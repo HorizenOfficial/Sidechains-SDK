@@ -132,7 +132,7 @@ class SCMultipleCerts(SidechainTestFramework):
         # Generate 2 SC blocks on both SC nodes and start them automatic cert creation.
         generate_next_block(sc_node2, "second node")  # 1 MC block to reach the end of WE
         generate_next_block(sc_node2, "second node")  # 1 MC block to trigger Submitter logic
-        time.sleep(2)  # to be sure that SC node 2 will finish cert creation faster
+        time.sleep(16)  # to be sure that SC node 2 will finish cert creation faster considering cert submission delay
         # Note: such an order because of the MC wallet behaviour:
         # if lower quality cert will be generated after the higher,
         # wallet will choose another cert change for fee payment.
