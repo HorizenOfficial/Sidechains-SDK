@@ -14,13 +14,14 @@ import com.horizen.certificatesubmitter.CertificateSubmitterRef.Timers.Certifica
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidSignature, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.mainchain.api.{CertificateRequestCreator, MainchainNodeApi, SendCertificateRequest}
+import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.websocket.MainchainNodeChannel
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -44,7 +45,7 @@ case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isIn
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
-                           mainchainApi: MainchainNodeApi)
+                           mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
   sealed trait SubmitResult
@@ -52,7 +53,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   case object SubmitSuccess
     extends SubmitResult {override def toString: String = "Backward transfer certificate was successfully created."}
   case class SubmitFailed(ex: Throwable)
-    extends SubmitResult {override def toString: String = s"Backward transfer certificate creation was failed due to ${ex}"}
+    extends SubmitResult {override def toString: String = s"Backward transfer certificate creation was failed due to $ex"}
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
@@ -71,6 +72,13 @@ class CertificateSubmitter(settings: SidechainSettings,
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 
     context.become(initialization)
+  }
+
+  override def aroundPostStop(): Unit = {
+    if(timers.isTimerActive(CertificateGenerationTimer)) {
+      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
+    }
+    super.aroundPostStop()
   }
 
   override def receive: Receive = reportStrangeInput
@@ -94,7 +102,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   protected def checkSubmitter: Receive = {
-    case SidechainAppEvents.SidechainApplicationStart => {
+    case SidechainAppEvents.SidechainApplicationStart =>
       val submitterCheckingFunction =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Try[Unit]](checkSubmitterMessage)
 
@@ -112,7 +120,6 @@ class CertificateSubmitter(settings: SidechainSettings,
           log.error("Failed to check backward transfer certificate submitter due:" + EOL + ex)
           context.stop(self)
       }
-    }
   }
 
   private def checkSubmitterMessage(sidechainNodeView: View): Try[Unit] = Try {
@@ -134,7 +141,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     }
     else {
       provingFileAbsolutePath = provingFile.getAbsolutePath
-      log.debug(s"Found proving key file at location: ${provingFileAbsolutePath}")
+      log.debug(s"Found proving key file at location: $provingFileAbsolutePath")
     }
   }
 
@@ -145,7 +152,6 @@ class CertificateSubmitter(settings: SidechainSettings,
 
     mainchainReference.data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
   }
-
 
   private def newBlockArrived: Receive = {
     case SemanticallySuccessfulModifier(_: SidechainBlock) =>
@@ -269,13 +275,18 @@ class CertificateSubmitter(settings: SidechainSettings,
       }
   }
 
-  private def getCertificateTopQuality(referencedEpoch: Int): Try[Long] = Try {
-    val getQuality =
-      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, Long](
-        (sidechainNodeView: View) => sidechainNodeView.state.certificateTopQuality(referencedEpoch)
-      )
-
-    Await.result(sidechainNodeViewHolderRef ? getQuality, settings.scorexSettings.restApi.timeout).asInstanceOf[Long]
+  private def getCertificateTopQuality(epoch: Int): Try[Long] = Try {
+    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
+      case Success(topQualityCertificates) =>
+        if (topQualityCertificates.mempoolCertInfo.quality.isDefined && topQualityCertificates.mempoolCertInfo.epoch.get == epoch) {
+          topQualityCertificates.mempoolCertInfo.quality.get
+        } else if (topQualityCertificates.chainCertInfo.quality.isDefined && topQualityCertificates.chainCertInfo.epoch.get == epoch) {
+          topQualityCertificates.chainCertInfo.quality.get
+        } else {
+          0
+        }
+      case Failure(ex) => throw new Exception("Unable to retrieve topQualityCertificates", ex)
+    }
   }
 
   private def checkQuality(status: SignaturesStatus): Boolean = {
@@ -303,6 +314,7 @@ class CertificateSubmitter(settings: SidechainSettings,
               val delay = Random.nextInt(15) + 5 // random delay from 5 to 15 seconds
               log.info(s"Scheduling Certificate generation in $delay seconds")
               timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
+              context.system.eventStream.publish(CertificateSubmitter.StartCertificateSubmission)
             }
           }
         case None =>
@@ -338,7 +350,7 @@ class CertificateSubmitter(settings: SidechainSettings,
 
             log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 
-            mainchainApi.sendCertificate(certificateRequest) match {
+            mainchainChannel.sendCertificate(certificateRequest) match {
               case Success(certificate) =>
                 log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
@@ -349,6 +361,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         case None => // Can occur while during the random delay the Node went out of the Window.
           log.debug("Can't generate Certificate because of being outside the Certificate submission window.")
       }
+      context.system.eventStream.publish(CertificateSubmitter.StopCertificateSubmission)
   }
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
@@ -393,7 +406,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
       }
     }
-    log.debug(s"Last MC block hash for withdrawal epoch number ${withdrawalEpochNumber} is ${BytesUtils.toHexString(mcBlockHash)}")
+    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${BytesUtils.toHexString(mcBlockHash)}")
 
     val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
 
@@ -426,6 +439,11 @@ class CertificateSubmitter(settings: SidechainSettings,
       true,
       true)
   }
+}
+
+object CertificateSubmitter {
+  case object StartCertificateSubmission
+  case object StopCertificateSubmission
 }
 
 object CertificateSubmitterRef {
@@ -461,17 +479,17 @@ object CertificateSubmitterRef {
 
 
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainApi))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
-            mainchainApi: MainchainNodeApi)
+            mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainApi), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel), name)
 }
