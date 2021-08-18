@@ -21,7 +21,7 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                initialCumulativeCommTreeHash: String
                               )
 
-case class withdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
+case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               signersPublicKeys: Seq[String],
                                               signersThreshold: Int,
                                               signersSecrets: Seq[String],
@@ -38,7 +38,7 @@ case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
-                              withdrawalEpochCertificateSettings: withdrawalEpochCertificateSettings,
+                              withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
                               wallet: WalletSettings,
                               forger: ForgerSettings
                             )

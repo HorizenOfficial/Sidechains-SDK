@@ -54,7 +54,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   private val submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled // todo: make updatable via API
   private val certificateSigningEnabled: Boolean = true // todo: update conf file, update API to change the actual value
 
-  private var signaturesStatus: Option[SignaturesStatus] = None
+  private[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
 
   private var certGenerationState: Boolean = false
 
@@ -82,11 +82,11 @@ class CertificateSubmitter(settings: SidechainSettings,
       log.warn(s"Strange input for CertificateSubmitter: $nonsense")
   }
 
-  private def initialization: Receive = {
+  private[certificatesubmitter] def initialization: Receive = {
     checkSubmitter orElse reportStrangeInput
   }
 
-  private def workingCycle: Receive = {
+  private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
     newBlockArrived orElse
     locallyGeneratedSignature orElse
@@ -178,8 +178,11 @@ class CertificateSubmitter(settings: SidechainSettings,
               calculateSignatures(messageToSign).foreach(sigInfo => self ! LocallyGeneratedSignature(sigInfo))
         }
       } else {
-        if(timers.isTimerActive(CertificateGenerationTimer))
+        if(timers.isTimerActive(CertificateGenerationTimer)) {
           timers.cancel(CertificateGenerationTimer)
+          log.info("Cancel the scheduled Certificate generation due to the Submission Window end")
+          context.system.eventStream.publish(CertificateSubmissionStopped)
+        }
         signaturesStatus = None
       }
   }
@@ -204,7 +207,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
 
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests (referencedWithdrawalEpochNumber)
+      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
       val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
@@ -486,11 +489,11 @@ object CertificateSubmitter {
   }
 
   // Internal interface
-  private object Timers {
+  private[certificatesubmitter] object Timers {
     object CertificateGenerationTimer
   }
 
-  private object InternalReceivableMessages {
+  private[certificatesubmitter] object InternalReceivableMessages {
     case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
     case object TryToScheduleCertificateGeneration
     case object TryToGenerateCertificate
