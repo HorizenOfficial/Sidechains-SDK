@@ -94,6 +94,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     tryToScheduleCertificateGeneration orElse
     tryToGenerateCertificate orElse
     getCertGenerationState orElse
+    getSignaturesStatus orElse
     reportStrangeInput
   }
 
@@ -159,6 +160,11 @@ class CertificateSubmitter(settings: SidechainSettings,
   private def getCertGenerationState: Receive = {
     case GetCertificateGenerationState =>
       sender() ! certGenerationState
+  }
+
+  private def getSignaturesStatus: Receive = {
+    case GetSignaturesStatus =>
+      sender() ! signaturesStatus
   }
 
   private def newBlockArrived: Receive = {
@@ -507,6 +513,7 @@ object CertificateSubmitter {
   object ReceivableMessages {
     case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
     case object GetCertificateGenerationState
+    case object GetSignaturesStatus
   }
 }
 

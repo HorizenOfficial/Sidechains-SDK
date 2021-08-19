@@ -6,7 +6,7 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
 import com.horizen.box.Box
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetCertificateGenerationState, SignatureFromRemote}
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetCertificateGenerationState, GetSignaturesStatus, SignatureFromRemote}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -293,6 +293,48 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     actorSystem.eventStream.publish(CertificateSubmissionStopped)
     certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
     assertFalse("Certificate generation expected to be enabled", certState)
+  }
+
+  @Test
+  def getSignaturesStatus(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+
+    val mockedSidechainNodeViewHolder = TestProbe()
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel)))
+
+    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+
+    // Skip initialization
+    submitter.context.become(submitter.workingCycle)
+
+
+    // Test 1: get signatures status outside the Submission Window
+    var statusOpt = Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]]
+    assertTrue("Status expected to be None", statusOpt.isEmpty)
+
+
+    // Test 2: get signatures status inside the Submission Window
+    val referencedEpochNumber = 20
+    val messageToSign = FieldElementFixture.generateFieldElement()
+    val knownSigs = ArrayBuffer[CertificateSignatureInfo]()
+
+    val schnorrSecret = SchnorrKeyGenerator.getInstance().generateSecret("seeeeed".getBytes())
+    knownSigs.append(CertificateSignatureInfo(0, schnorrSecret.sign(messageToSign)))
+
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, knownSigs))
+
+    statusOpt = Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]]
+    assertTrue("Status expected to be defined", statusOpt.isDefined)
+
+    val status = statusOpt.get
+    assertEquals("Referenced epoch number is different.", referencedEpochNumber, status.referencedEpoch)
+    assertArrayEquals("Message to sign is different.", messageToSign, status.messageToSign)
+    assertEquals("Known sigs array is different.", knownSigs, status.knownSigs)
   }
 
   @Test
