@@ -11,7 +11,7 @@ import com.google.inject.{Inject, _}
 import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.certificatesubmitter.{CertificateSubmitterObserverRef, CertificateSubmitterRef}
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
