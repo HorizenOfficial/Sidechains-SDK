@@ -9,7 +9,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -172,9 +172,8 @@ class CertificateSubmitter(settings: SidechainSettings,
             val messageToSign = getMessageToSign(referencedWithdrawalEpochNumber)
             signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
-            // Try to calculate signatures if at least signing is enabled
-            // TODO: maybe we should consider only `certificateSigningEnabled` flag
-            if(submitterEnabled || certificateSigningEnabled)
+            // Try to calculate signatures if signing is enabled
+            if(certificateSigningEnabled)
               calculateSignatures(messageToSign).foreach(sigInfo => self ! LocallyGeneratedSignature(sigInfo))
         }
       } else {
@@ -268,15 +267,17 @@ class CertificateSubmitter(settings: SidechainSettings,
           log.debug(s"Certificate signature for pub key index ${remoteSigInfo.pubKeyIndex} retrieved from remote.")
           if(!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
             sender() ! DifferentMessageToSign
-          } else if(params.signersPublicKeys.size <= remoteSigInfo.pubKeyIndex ||
-              !remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
+          } else if(remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
+            sender() ! InvalidPublicKeyIndex
+          } else if(!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
             sender() ! InvalidSignature
-          } else {
-            if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
-              status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
-              self ! TryToScheduleCertificateGeneration
-            }
+          } else if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
+            status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
             sender() ! ValidSignature
+            self ! TryToScheduleCertificateGeneration
+          } else {
+            // Remote info has valid message to sign but the Signature record for the PubKey is known
+            sender() ! KnownSignature
           }
         case None =>
             sender() ! SubmitterIsOutsideSubmissionWindow
@@ -472,7 +473,9 @@ object CertificateSubmitter {
   // Response for SignatureFromRemote message
   sealed trait SignatureProcessingStatus
   case object ValidSignature extends SignatureProcessingStatus
+  case object KnownSignature extends SignatureProcessingStatus
   case object DifferentMessageToSign extends SignatureProcessingStatus
+  case object InvalidPublicKeyIndex extends SignatureProcessingStatus
   case object InvalidSignature extends SignatureProcessingStatus
   case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
 

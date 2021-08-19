@@ -6,16 +6,18 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
 import com.horizen.box.Box
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.GetCertificateGenerationState
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetCertificateGenerationState, SignatureFromRemote}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.websocket.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
 import com.horizen._
+import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSubmissionStarted, CertificateSubmissionStopped}
+import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.fixtures.FieldElementFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.WithdrawalEpochInfo
@@ -30,10 +32,10 @@ import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallyS
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, TimeoutException}
 import scala.language.postfixOps
 import scala.util.{Random, Try}
 
@@ -257,7 +259,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
       val certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
       assertFalse("Actor expected not submitting at the moment", certState)
     } catch {
-      case _ : Throwable => Assert.fail("Actor expected to be initialized and switched to working cycle")
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
     }
   }
 
@@ -336,6 +338,10 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val watch = TestProbe()
     watch.watch(certificateSubmitterRef)
 
+    val broadcastSignatureEventListener = TestProbe()
+
+    actorSystem.eventStream.subscribe(broadcastSignatureEventListener.ref, classOf[BroadcastLocallyGeneratedSignature])
+
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
 
@@ -391,6 +397,21 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val sigInfo = submitter.signaturesStatus.get.knownSigs.head
     assertTrue("Signature expected to be valid", sigInfo.signature.isValid(walletSecrets.head.publicImage(), submitter.signaturesStatus.get.messageToSign))
 
+    // Verify BroadcastLocallyGeneratedSignature event
+    broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
+      m match {
+        case BroadcastLocallyGeneratedSignature(info) =>
+          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+            submitter.signaturesStatus.get.messageToSign, info.messageToSign)
+          assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
+            submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex, info.pubKeyIndex)
+          assertEquals("Invalid Broadcast signature event data: signature.",
+            submitter.signaturesStatus.get.knownSigs.head.signature, info.signature)
+          true
+        case _ => false
+      }
+    }
+
 
     // Test 3: another block inside the window, check that no signatures were generated.
 
@@ -431,6 +452,35 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
 
 
+    // Verify BroadcastLocallyGeneratedSignature events
+    // First sig event
+    broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
+      m match {
+        case BroadcastLocallyGeneratedSignature(info) =>
+          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+            submitter.signaturesStatus.get.messageToSign, info.messageToSign)
+          assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
+            submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex, info.pubKeyIndex)
+          assertEquals("Invalid Broadcast signature event data: signature.",
+            submitter.signaturesStatus.get.knownSigs.head.signature, info.signature)
+          true
+        case _ => false
+      }
+    }
+    // Second sig event
+    broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
+      m match {
+        case BroadcastLocallyGeneratedSignature(info) =>
+          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+            submitter.signaturesStatus.get.messageToSign, info.messageToSign)
+          assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
+            submitter.signaturesStatus.get.knownSigs(1).pubKeyIndex, info.pubKeyIndex)
+          assertEquals("Invalid Broadcast signature event data: signature.",
+            submitter.signaturesStatus.get.knownSigs(1).signature, info.signature)
+          true
+        case _ => false
+      }
+    }
     var certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
     assertFalse("Actor expected not submitting at the moment", certState)
 
@@ -474,9 +524,225 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Actor expected not submitting at the moment.", certState)
   }
 
-  // TODO:
-  // Test schedule cert generation -> checkQuality = false case, check certState
-  // Test local sig broadcasting event
-  // test sig from remote
-  // test submitter and sigcreator params modification when available.
+  @Test
+  def signatureFromRemote(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+
+    // Set 3 keys for the Certificate signatures
+    val keyGenerator = SchnorrKeyGenerator.getInstance()
+    val schnorrSecrets: Seq[SchnorrSecret] = Seq(
+      keyGenerator.generateSecret("seed1".getBytes()),
+      keyGenerator.generateSecret("seed2".getBytes()),
+      keyGenerator.generateSecret("seed3".getBytes())
+    )
+
+    val signersThreshold = 2
+    val params: RegTestParams = RegTestParams(
+      signersPublicKeys = schnorrSecrets.map(_.publicImage()),
+      signersThreshold = signersThreshold
+    )
+
+    val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case GetDataFromCurrentView(f) =>
+          sender ! f(CurrentView(mock[SidechainHistory], mock[SidechainState], mock[SidechainWallet], mock[SidechainMemoryPool]))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel)))
+
+    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+
+    // Skip initialization
+    submitter.context.become(submitter.workingCycle)
+
+    assertTrue("Signatures Status object expected to be undefined.", submitter.signaturesStatus.isEmpty)
+
+
+    // Test 1: Retrieve signature from remote when not inside the Submission Window
+    val messageToSign = FieldElementFixture.generateFieldElement()
+    val signature = schnorrSecrets.head.sign(messageToSign)
+
+    val remoteSignInfo = CertificateSignatureFromRemoteInfo(0, messageToSign, signature)
+
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfo), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", SubmitterIsOutsideSubmissionWindow, res)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+
+
+    // Test 2: Retrieve signature from remote with different message to sign when inside the Submission Window
+    // Emulate in window status
+    val referencedEpochNumber = 10
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+
+    val anotherMessageToSign = FieldElementFixture.generateFieldElement()
+    val anotherSignature = schnorrSecrets.head.sign(anotherMessageToSign)
+    val remoteSignInfoWithDiffMessage = CertificateSignatureFromRemoteInfo(0, anotherMessageToSign, anotherSignature)
+
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfoWithDiffMessage), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", DifferentMessageToSign, res)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+
+
+    // Test 3: Retrieve signature from remote with invalid pub key index (out of range) when inside the Submission Window
+    val invalidPubKeyIndex = params.signersPublicKeys.size
+    val remoteSignInfoWithInvalidIndex = CertificateSignatureFromRemoteInfo(invalidPubKeyIndex, messageToSign, signature)
+
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfoWithInvalidIndex), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", InvalidPublicKeyIndex, res)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+
+
+    // Test 4: Retrieve signature from remote with invalid signature when inside the Submission Window
+    val remoteSignInfoWithInvalidSignature = CertificateSignatureFromRemoteInfo(0, messageToSign, anotherSignature)
+
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfoWithInvalidSignature), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", InvalidSignature, res)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+
+
+    // Test 5: Retrieve valid UNIQUE signature from remote when inside the Submission Window
+    assertEquals("Different signatures number expected.", 0, submitter.signaturesStatus.get.knownSigs.size)
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfo), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", ValidSignature, res)
+
+      assertEquals("Different signatures number expected.", 1, submitter.signaturesStatus.get.knownSigs.size)
+      assertEquals("Inconsistent remote signature info stored data: pubKeyIndex.",
+        remoteSignInfo.pubKeyIndex, submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex)
+      assertEquals("Inconsistent remote signature info stored data: signature.",
+        remoteSignInfo.signature, submitter.signaturesStatus.get.knownSigs.head.signature)
+      assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+
+
+    // Test 6: Retrieve valid ALREADY PRESENT signature from remote when inside the Submission Window
+    try {
+      val res = Await.result(certificateSubmitterRef ? SignatureFromRemote(remoteSignInfo), timeout.duration).asInstanceOf[SignatureProcessingStatus]
+      assertEquals("Different remote signature processing result expected.", KnownSignature, res)
+
+      assertEquals("Different signatures number expected.", 1, submitter.signaturesStatus.get.knownSigs.size)
+      assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    } catch {
+      case _ : TimeoutException => Assert.fail("Response expected for the signature from remote request.")
+    }
+  }
+
+  @Test
+  def tryToSubmitCertificate(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+
+    // Set 3 keys for the Certificate signatures
+    val keyGenerator = SchnorrKeyGenerator.getInstance()
+    val schnorrSecrets: Seq[SchnorrSecret] = Seq(
+      keyGenerator.generateSecret("seed1".getBytes()),
+      keyGenerator.generateSecret("seed2".getBytes()),
+      keyGenerator.generateSecret("seed3".getBytes())
+    )
+
+    val signersThreshold = 2
+    val params: RegTestParams = RegTestParams(
+      signersPublicKeys = schnorrSecrets.map(_.publicImage()),
+      signersThreshold = signersThreshold
+    )
+
+    val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+
+    val history: SidechainHistory = mock[SidechainHistory]
+    val state: SidechainState = mock[SidechainState]
+    val wallet: SidechainWallet = mock[SidechainWallet]
+
+    val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case GetDataFromCurrentView(f) =>
+          sender ! f(CurrentView(history, state, wallet, mock[SidechainMemoryPool]))
+      }
+      TestActor.KeepRunning
+    })
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel)))
+
+    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+
+
+    val certSubmissionEventListener = TestProbe()
+    actorSystem.eventStream.subscribe(certSubmissionEventListener.ref, CertificateSubmissionStopped.getClass)
+
+    // Skip initialization
+    submitter.context.become(submitter.workingCycle)
+
+
+    // Test 1: Try to generate Certificate when there is no Signatures Status defined - should skip
+    assertTrue("Signatures Status object expected to be undefined.", submitter.signaturesStatus.isEmpty)
+    certificateSubmitterRef ! TryToGenerateCertificate
+    certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }
+
+
+    // Test 2: Try to generate Certificate when there is not enough known sigs (< threshold) - should skip
+    val referencedEpochNumber = 100
+    val messageToSign = FieldElementFixture.generateFieldElement()
+    submitter.signaturesStatus = Some(SignaturesStatus(referencedEpochNumber, messageToSign, ArrayBuffer()))
+
+    certificateSubmitterRef ! TryToGenerateCertificate
+    certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }
+
+
+    // Test 3: Try to generate Certificate when there is enough known sigs (>= threshold),
+    // but less than in the top quality cert known by the MC - should skip
+    // Note: it may occur, if during the scheduled delay new topQualityCert appeared in the MC
+
+    // Add signatures up to the threshold
+    assertTrue(params.signersThreshold < schnorrSecrets.size)
+    schnorrSecrets.take(params.signersThreshold).zipWithIndex.foreach{
+      case (secret, index) =>
+        val signature = secret.sign(messageToSign)
+        submitter.signaturesStatus.get.knownSigs.append(CertificateSignatureInfo(index, signature))
+    }
+    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+      // In-chain Cert in the MC
+      new TopQualityCertificates(
+        MempoolTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, None, None),
+        ChainTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, Some(schnorrSecrets.size))
+      )
+    })
+
+    certificateSubmitterRef ! TryToGenerateCertificate
+    certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }
+  }
+  @Test
+  def switchSubmitterStatus(): Unit = {
+    Assert.fail("TODO: add proper actor and API endpoints")
+  }
+
+  @Test
+  def switchCertificateSigning(): Unit = {
+    Assert.fail("TODO: add proper actor and API endpoints")
+  }
 }
