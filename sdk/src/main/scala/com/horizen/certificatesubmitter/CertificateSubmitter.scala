@@ -34,6 +34,11 @@ import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Random, Success, Try}
 
+/**
+ * Certificate submitter listens to the State changes and takes care of of certificate signatures managing (generation and storing, broadcasting)
+ * If the `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
+ * Must be singleton.
+ */
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
@@ -168,8 +173,8 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private def newBlockArrived: Receive = {
-    case SemanticallySuccessfulModifier(_: SidechainBlock) =>
-      val submissionWindowStatus: SubmissionWindowStatus = getSubmissionWindowStatus
+    case SemanticallySuccessfulModifier(block: SidechainBlock) =>
+      val submissionWindowStatus: SubmissionWindowStatus = getSubmissionWindowStatus(block)
       if(submissionWindowStatus.isInWindow) {
         signaturesStatus match {
           case Some(_) => // do nothing
@@ -179,8 +184,11 @@ class CertificateSubmitter(settings: SidechainSettings,
             signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
             // Try to calculate signatures if signing is enabled
-            if(certificateSigningEnabled)
-              calculateSignatures(messageToSign).foreach(sigInfo => self ! LocallyGeneratedSignature(sigInfo))
+            if(certificateSigningEnabled) {
+              calculateSignatures(messageToSign).foreach(sigInfo => {
+                self ! LocallyGeneratedSignature(sigInfo)
+              })
+            }
         }
       } else {
         if(timers.isTimerActive(CertificateGenerationTimer)) {
@@ -192,9 +200,12 @@ class CertificateSubmitter(settings: SidechainSettings,
       }
   }
 
-  private def getSubmissionWindowStatus: SubmissionWindowStatus = {
+  // Take withdrawal epoch info for block from the History.
+  // Note: We can't rely on the State.getWithdrawalEpochInfo, because it shows the tip info,
+  // but the older block may being applied at the moment.
+  private def getSubmissionWindowStatus(block: SidechainBlock): SubmissionWindowStatus = {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
-      val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.state.getWithdrawalEpochInfo
+      val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
       SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
     }
 
@@ -217,7 +228,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
       val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
 
-      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber (history, referencedWithdrawalEpochNumber)
+      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned (

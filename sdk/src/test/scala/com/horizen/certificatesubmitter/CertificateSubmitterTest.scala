@@ -16,7 +16,7 @@ import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
-import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
@@ -30,6 +30,7 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.core.settings.{RESTApiSettings, ScorexSettings}
+import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -392,7 +393,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val epochNumber = 10
     val referencedEpochNumber = epochNumber - 1
     val epochInfoOutsideWindow = WithdrawalEpochInfo(epochNumber, lastEpochIndex = params.withdrawalEpochLength)
-    Mockito.when(state.getWithdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+      val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
+      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+      blockInfo
+    })
 
     actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
     watch.expectNoMessage(timeout.duration)
@@ -404,13 +409,17 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     // Test 2: block inside the epoch first time with 1 Sig out of 2
     val epochInfoInsideWindow = WithdrawalEpochInfo(epochNumber, lastEpochIndex = 0)
     Mockito.reset(state)
-    Mockito.when(state.getWithdrawalEpochInfo).thenAnswer(_ => epochInfoInsideWindow)
     Mockito.when(state.withdrawalRequests(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
       Seq()
     })
 
     Mockito.reset(history)
+    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+      val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
+      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoInsideWindow)
+      blockInfo
+    })
     Mockito.when(history.getMainchainBlockReferenceInfoByMainchainBlockHeight(ArgumentMatchers.any[Int])).thenAnswer(_ => {
       val randomArray: Array[Byte] = new Array[Byte](CommonParams.mainchainBlockHashLength)
       val info: MainchainBlockReferenceInfo = new MainchainBlockReferenceInfo(randomArray, randomArray, 0, randomArray, randomArray)
@@ -443,7 +452,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
       m match {
         case BroadcastLocallyGeneratedSignature(info) =>
-          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+          assertArrayEquals("Invalid Broadcast signature event data: messageToSign.",
             submitter.signaturesStatus.get.messageToSign, info.messageToSign)
           assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
             submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex, info.pubKeyIndex)
@@ -499,7 +508,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
       m match {
         case BroadcastLocallyGeneratedSignature(info) =>
-          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+          assertArrayEquals("Invalid Broadcast signature event data: messageToSign.",
             submitter.signaturesStatus.get.messageToSign, info.messageToSign)
           assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
             submitter.signaturesStatus.get.knownSigs.head.pubKeyIndex, info.pubKeyIndex)
@@ -513,7 +522,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     broadcastSignatureEventListener.fishForMessage(timeout.duration) { case m =>
       m match {
         case BroadcastLocallyGeneratedSignature(info) =>
-          assertEquals("Invalid Broadcast signature event data: messageToSign.",
+          assertArrayEquals("Invalid Broadcast signature event data: messageToSign.",
             submitter.signaturesStatus.get.messageToSign, info.messageToSign)
           assertEquals("Invalid Broadcast signature event data: pubKeyIndex.",
             submitter.signaturesStatus.get.knownSigs(1).pubKeyIndex, info.pubKeyIndex)
@@ -554,8 +563,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
 
     // Test 6: block outside the epoch when the cert submission is scheduled
-    Mockito.reset(state)
-    Mockito.when(state.getWithdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+    Mockito.reset(history)
+    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
+      val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
+      Mockito.when(blockInfo.withdrawalEpochInfo).thenAnswer(_ => epochInfoOutsideWindow)
+      blockInfo
+    })
 
     actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
     watch.expectNoMessage(timeout.duration)

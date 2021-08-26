@@ -63,11 +63,11 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, 7  # certificate submitter is enabled with 7 schnorr PKs
+            True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, 6  # certificate submitter is enabled with 6 schnorr PKs
+            True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
