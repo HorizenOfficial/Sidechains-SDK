@@ -25,10 +25,9 @@ import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks.{break, breakable}
 
 /**
- * Certificate signatures manager is a middle layer between `CertificateSubmitter` and P2P network.
+ * Certificate signatures manager is a mediator between `CertificateSubmitter` and P2P network.
  * It listens to the Certificate signatures related messages from the network and broadcasting events from Submitter.
  * Manager also takes care of signatures synchronization between the nodes and reacts on any misbehaving activities.
- * If the `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
 class CertificateSignaturesManager(networkControllerRef: ActorRef,
@@ -78,8 +77,8 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
       // Schedule a periodic known signatures synchronization
       context.system.scheduler.schedule(getCertificateSignaturesInterval, getCertificateSignaturesInterval)(self ! TryToSendGetCertificateSignatures)
-
   }
+
   private def tryToSendGetCertificateSignatures: Receive = {
     case TryToSendGetCertificateSignatures =>
       Try {
@@ -102,7 +101,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   private def getCertificateSignatures: Receive = {
     case DataFromPeer(spec, unknownSignatures: InvUnknownSignatures@unchecked, peer)
-      if spec.messageCode == GetCertificateSignaturesSpec.messageCode && unknownSignatures.cast[InvUnknownSignatures].isDefined =>
+        if spec.messageCode == GetCertificateSignaturesSpec.messageCode && unknownSignatures.cast[InvUnknownSignatures].isDefined =>
 
       Try {
         Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]] match {
@@ -122,7 +121,6 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
         case Success(_) =>
         case Failure(exception) => log.error("Unexpected behavior while processing get certificate signatures.", exception)
       }
-      // get data from Submitter and send response if has any data
   }
 
   private def certificateSignatures: Receive = {
@@ -131,6 +129,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
       val signaturesToBroadcast: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer()
       breakable {
+        // Try to apply the signatures one by one and break the loop on critical error.
         for (info <- knownSignatures.signaturesInfo) {
           val remoteSigInfo = CertificateSignatureFromRemoteInfo(info.pubKeyIndex, knownSignatures.messageToSign, info.signature)
           Try {
@@ -169,13 +168,13 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
       context.system.scheduler.scheduleOnce(locallyGeneratedSignatureBroadcastingDelay)(networkControllerRef ! SendToNetwork(msg, Broadcast))
   }
 
+  private def penalizeMisbehavingPeer(peer: ConnectedPeer): Unit = {
+    networkControllerRef ! PenalizePeer(peer.connectionId.remoteAddress, PenaltyType.MisbehaviorPenalty)
+  }
+
   // Tests only
   private[network] def setLocallyGeneratedSignatureBroadcastingDelay(delay: FiniteDuration): Unit = {
     locallyGeneratedSignatureBroadcastingDelay = delay
-  }
-
-  private def penalizeMisbehavingPeer(peer: ConnectedPeer): Unit = {
-    networkControllerRef ! PenalizePeer(peer.connectionId.remoteAddress, PenaltyType.MisbehaviorPenalty)
   }
 }
 

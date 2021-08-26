@@ -464,7 +464,7 @@ def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
     time.sleep(WAIT_CONST)
 
 def sc_connected_peers(node):
-    return len(node.node_connectedPeers()["result"]["peers"])
+    return node.node_connectedPeers()["result"]["peers"]
 
 def disconnect_sc_nodes_bi(nodes, a, b):
     disconnect_sc_nodes(nodes[a], b)

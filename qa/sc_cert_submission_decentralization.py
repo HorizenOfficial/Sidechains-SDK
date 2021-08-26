@@ -31,13 +31,13 @@ Test:
     For the SC node:
         - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
         - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
-        - check epoch 0 certificate with not backward transfers in the MC mempool
+        - check for the epoch 0 certificate in the MC mempool
         - validate certificate quality, all keys expected to be involved (quality = 7 of 7)
-        - exclude third SC node from the network.
+        - disconnect the third SC node from the network.
         - reach the end of the Withdrawal epoch 1
         - check that Certificate Submission was not started because of lack of singers.
         - Connect back the second and third SC nodes
-        - check epoch 1 certificate with not backward transfers in the MC mempool
+        - check for the epoch 1 certificate in the MC mempool
         - validate certificate quality, all keys expected to be involved (quality = 7 of 7)
 """
 class SCCertSubmissionDecentralization(SidechainTestFramework):
@@ -56,20 +56,20 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True,  # Submitter enabled
-            [0, 1],  # certificate submitter is enabled with 2 schnorr PKs
+            True,  # Certificate submission is enabled
+            [0, 1],  # owns 2 schnorr PKs for certificate signing
             1  # set max connections to prevent node 1 and node 3 connection
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            False,
-            [2, 3]  # certificate submitter is enabled with 6 schnorr PKs
+            False,  # Certificate submission is disabled
+            [2, 3]  # owns 2 schnorr PKs for certificate signing
         )
 
         sc_node_3_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            False,
-            [4, 5, 6],  # certificate submitter is enabled with 6 schnorr PKs
+            False,  # Certificate submission is disabled
+            [4, 5, 6],  # owns 3 schnorr PKs for certificate signing
             1  # set max connections to prevent node 1 and node 3 connection
         )
 
@@ -96,9 +96,9 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         self.sc_sync_all()  # Sync SC nodes
 
-        assert_equal(1, sc_connected_peers(sc_node1), "Sc Node 1 expect to have only 1 connection.")
-        assert_equal(2, sc_connected_peers(sc_node2), "Sc Node 2 expect to have 2 connections.")
-        assert_equal(1, sc_connected_peers(sc_node3), "Sc Node 3 expect to have only 1 connection.")
+        assert_equal(1, len(sc_connected_peers(sc_node1)), "Sc Node 1 expect to have only 1 connection.")
+        assert_equal(2, len(sc_connected_peers(sc_node2)), "Sc Node 2 expect to have 2 connections.")
+        assert_equal(1, len(sc_connected_peers(sc_node3)), "Sc Node 3 expect to have only 1 connection.")
 
         # Generate 9 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(9)[8]
@@ -145,11 +145,11 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         print("Disconnecting SC Node 3 from the network.")
         disconnect_sc_nodes_bi(self.sc_nodes, 1, 2)
         # Check network configuration
-        assert_equal(1, sc_connected_peers(sc_node1), "Sc Node 1 expect to have only 1 connection.")
-        assert_equal(1, sc_connected_peers(sc_node2), "Sc Node 2 expect to only 1 connection.")
-        assert_equal(0, sc_connected_peers(sc_node3), "Sc Node 3 expect to have no connections.")
+        assert_equal(1, len(sc_connected_peers(sc_node1)), "Sc Node 1 expect to have only 1 connection.")
+        assert_equal(1, len(sc_connected_peers(sc_node2)), "Sc Node 2 expect to only 1 connection.")
+        assert_equal(0, len(sc_connected_peers(sc_node3)), "Sc Node 3 expect to have no connections.")
 
-        # Generate 9 more MC block to finish the second withdrawal epoch, then generate 3 more SC block to sync with MC.
+        # Generate 8 more MC block to finish the second withdrawal epoch, then generate 3 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
         print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         # TODO: generate only 1 sc block as soon as SC block size PR will be merged
@@ -169,10 +169,12 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate was added to Mc node mempool.")
 
-        # Connect back the third SC node and sync the nodes then.
+        # Connect back the third SC node and sync the nodes.
         connect_sc_nodes(sc_node2, 2)  # Connect SC nodes 3 and 2
         self.sc_sync_all()
 
+        # The third node expects to create and broadcast the certificate signatures
+        # The first node should retrieve them and start Certificate generation.
         # Wait until Certificate will appear in MC node mempool
         time.sleep(20)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.debug_isCertGenerationActive()["result"]["state"]:
