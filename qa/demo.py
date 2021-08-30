@@ -263,13 +263,10 @@ class Demo(SidechainTestFramework):
         sc_block_ids = generate_next_blocks(sc_node, "first node", 4)
         print("\nGenerating Withdrawal Certificate...\n")
 
-        attempts = 20
-        while mc_node.getmempoolinfo()["size"] == 0 and attempts > 0:
-            if attempts % 4 == 0:
-                print("Wait for withdrawal certificate in MC memory pool...")
-            time.sleep(10)
-            attempts -= 1
-            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.debug_isCertGenerationActive()["result"]["state"]:
+            print("Wait for withdrawal certificate in MC memory pool...")
+            time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
         certHash = mc_node.getrawmempool()[0]

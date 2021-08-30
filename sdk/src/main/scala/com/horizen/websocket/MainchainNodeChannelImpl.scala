@@ -1,4 +1,5 @@
 package com.horizen.websocket
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
@@ -27,6 +28,8 @@ case class SendCertificateRequestPayload(scid: String,
                                          vFieldElementCertificateField: Seq[String], // Seq of compressed FE hex strings
                                          vBitVectorCertificateField: Seq[String] // Seq of compressed bitvectors hex strings
                                         ) extends RequestPayload
+case class TopQualityCertificatePayload(scid: String) extends RequestPayload
+
 
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
@@ -34,6 +37,16 @@ case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends Respo
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
+case class MempoolTopQualityCertificateInfo(certHash: Option[String],
+                                            epoch: Option[Int],
+                                            rawCertificateHex: Option[String],
+                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long],
+                                            fee: Option[Double]) extends ResponsePayload
+case class ChainTopQualityCertificateInfo(certHash: Option[String],
+                                          epoch: Option[Int],
+                                          rawCertificateHex: Option[String],
+                                          @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long]) extends ResponsePayload
+case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: MempoolTopQualityCertificateInfo, chainTopQualityCert: ChainTopQualityCertificateInfo) extends ResponsePayload
 
 
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
@@ -41,6 +54,7 @@ case object GET_MULTIPLE_BLOCK_HASHES_REQUEST_TYPE extends RequestType(1)
 case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
 case object SEND_CERTIFICATE_REQUEST_TYPE extends RequestType(3)
 case object GET_MULTIPLE_HEADERS_REQUEST_TYPE extends RequestType(4)
+case object GET_TOP_QUALITY_CERTIFICATES_TYPE extends RequestType(5)
 
 class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
 
@@ -145,5 +159,18 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   private def processCertificateResponsePayload(future: Future[CertificateResponsePayload]): SendCertificateResponse = {
     val response: CertificateResponsePayload = Await.result(future, client.requestTimeoutDuration())
     SendCertificateResponse(BytesUtils.fromHexString(response.certificateHash))
+  }
+
+  override def getTopQualityCertificates(scId: String): Try[TopQualityCertificates] = Try {
+    val future: Future[TopQualityCertificateResponsePayload] =
+      client.sendRequest(GET_TOP_QUALITY_CERTIFICATES_TYPE, TopQualityCertificatePayload(scId), classOf[TopQualityCertificateResponsePayload])
+
+    processTopQualityCertificatesPayload(future).get
+  }
+
+  private def processTopQualityCertificatesPayload(future: Future[TopQualityCertificateResponsePayload]): Try[TopQualityCertificates] = Try {
+    val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration());
+
+    new TopQualityCertificates(response.mempoolTopQualityCert, response.chainTopQualityCert)
   }
 }
