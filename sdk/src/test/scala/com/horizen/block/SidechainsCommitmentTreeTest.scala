@@ -64,7 +64,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
 
     sidechainIdSeq.foreach(scId => {
       val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), scId.data,
-        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes())
+        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes(), getMcReturnAddress)
       val forwardTransferHash = new Array[Byte](32)
       Random.nextBytes(forwardTransferHash)
       val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
@@ -103,7 +103,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
 
     sidechainIdSeq.foreach(scId => {
       val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), scId.data,
-        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes())
+        Random.nextInt(10000), getMCPublicKeyHashProposition.bytes(), getMcReturnAddress)
       val forwardTransferHash = new Array[Byte](32)
       Random.nextBytes(forwardTransferHash)
       val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))

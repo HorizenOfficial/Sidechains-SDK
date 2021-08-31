@@ -75,7 +75,8 @@ class McTxsData(SidechainTestFramework):
 
         # Generate MC block with 1 FT.
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"
-        mc_node.sc_send(sc_address, 10, sidechain_id_1)  # 10 Zen
+        mc_return_address = mc_node.getnewaddress("", True)
+        mc_node.sc_send(sc_address, 10, sidechain_id_1, mc_return_address)  # 10 Zen
         # Generate block
         block_id = mc_node.generate(1)[0]
         block_hex = mc_node.getblock(block_id, False)
@@ -87,9 +88,9 @@ class McTxsData(SidechainTestFramework):
         # Generate MC block with 3 sidechains mentioned.
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"
         # Send 3 FTs to different sidechains
-        mc_node.sc_send(sc_address, 1, sidechain_id_1) # 1 Zen
-        mc_node.sc_send(sc_address, 2, sidechain_id_2) # 2 Zen
-        mc_node.sc_send(sc_address, 3, sidechain_id_3) # 3 Zen
+        mc_node.sc_send(sc_address, 1, sidechain_id_1, mc_return_address)  # 1 Zen
+        mc_node.sc_send(sc_address, 2, sidechain_id_2, mc_return_address)  # 2 Zen
+        mc_node.sc_send(sc_address, 3, sidechain_id_3, mc_return_address)  # 3 Zen
         # Generate block
         block_id = mc_node.generate(1)[0]
         block_hex = mc_node.getblock(block_id, False)

@@ -180,7 +180,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for the sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex = "258a96b03471f6d347fe92b1ece69e4afcd1f91e78f903ca6a6687c25620e17b" // BE
+    val scIdHex = "2d62224e739318fe16ef3e57bdc03b00003892a99e019d1e2a242ca7176a4aed" // BE
     val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex))) // LE
 
     val params1 = RegTestParams(scId.data)
@@ -217,7 +217,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 1: Check for the leftmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex1 = "31f2d19e179d51a20f7cf8e0c6b20e19c60b7aa581536810195932e8b51eb401"
+    val scIdHex1 = "37bfaf6f433503c16ce6c70fb13fb97090cb474034e2230fda23cb86476f2a9f"
     val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
 
     val params1 = RegTestParams(scId1.data)
@@ -237,7 +237,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 2: Check for the sidechain in the middle, that is mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex2 = "065587208a9c723bc772b24e793f9d1647437d0683f4570caaf7937b9612f51b"
+    val scIdHex2 = "2473b3945442bb247e0c05793bf7f6fcbd2c35679cb96eae45afe5ce4aea8eb6"
     val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
     val params2 = RegTestParams(scId2.data)
@@ -257,7 +257,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     // Test 3:  Check for the rightmost sidechain mentioned in the block.
     // We expect to get a MainchainBlockReference with AggTx and proof of presence.
-    val scIdHex3 = "258a96b03471f6d347fe92b1ece69e4afcd1f91e78f903ca6a6687c25620e17b"
+    val scIdHex3 = "2d62224e739318fe16ef3e57bdc03b00003892a99e019d1e2a242ca7176a4aed"
     val scId3 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex3))) // LE
 
     val params3 = RegTestParams(scId3.data)

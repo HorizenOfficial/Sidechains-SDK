@@ -75,7 +75,8 @@ class McTxsData(SidechainTestFramework):
 
         # Generate Tx with version -4 with single ForwardTransfer output
         forward_transfer_amount = 10
-        ft_tx_id = mc_node.sc_send(boot_info.genesis_account.publicKey, forward_transfer_amount, sidechain_id)
+        mc_return_address = mc_node.getnewaddress("", True)
+        ft_tx_id = mc_node.sc_send(boot_info.genesis_account.publicKey, forward_transfer_amount, sidechain_id, mc_return_address)
         ft_tx_hex = mc_node.getrawtransaction(ft_tx_id)
         print("MC Transaction with version -4 with single ForwardTransfer output: \nHash = {0}\nSize = {1}\nHex = {2}"
               "\nsidechain_id = {3}\nforward_transfer_amount = {4}, public_key = {5}\n"
@@ -88,17 +89,20 @@ class McTxsData(SidechainTestFramework):
             {
                 "scid": sidechain_id,
                 "amount": 10,
-                "address": "000000000000000000000000000000000000000000000000000000000000add1"
+                "address": "000000000000000000000000000000000000000000000000000000000000add1",
+                "mcReturnAddress": mc_return_address
             },
             {
                 "scid": sidechain_id,
                 "amount": 11,
-                "address": "000000000000000000000000000000000000000000000000000000000000add2"
+                "address": "000000000000000000000000000000000000000000000000000000000000add2",
+                "mcReturnAddress": mc_return_address
             },
             {
                 "scid": sidechain_id,
                 "amount": 12,
-                "address": "000000000000000000000000000000000000000000000000000000000000add3"
+                "address": "000000000000000000000000000000000000000000000000000000000000add3",
+                "mcReturnAddress": mc_return_address
             }
         ]
         multiple_ft_tx_id = mc_node.sc_sendmany(send_many_params)

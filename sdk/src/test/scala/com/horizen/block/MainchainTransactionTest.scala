@@ -72,11 +72,11 @@ class MainchainTransactionTest extends JUnitSuite {
     val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
 
     val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
-    val sidechainIdHex: String = "1738af235d86a2fc3d359268de3f059650adbf6e52a840e5457f693f471a47b2"
+    val sidechainIdHex: String = "262f60319a17f61613b137c1e7ef0a98d5e378843f6766dceb1fc149acee68e8"
     val sidechainId: ByteArrayWrapper = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainIdHex))) // LE
 
-    val expectedTxHash: String = "4a9bce10b667c9d48d5092b0fd7c252e4d7fb3bbe7c2416aaa69954458cf6f22"
-    val expectedTxSize: Int = 450
+    val expectedTxHash: String = "8e404eb8072c703d0ea5a8ae883fbba9993a121bf554c6320e8af1ff7a6da14d"
+    val expectedTxSize: Int = 471
     val expectedAmount: Long = 1000000000L // 10 Zen
     val expectedPublicKey: String = "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac"
 
@@ -89,7 +89,7 @@ class MainchainTransactionTest extends JUnitSuite {
     assertEquals("Crosschain output sidechain is different.", sidechainId, new ByteArrayWrapper(crosschainOutputs.head.sidechainId))
 
     val ft: MainchainTxForwardTransferCrosschainOutput = crosschainOutputs.head.asInstanceOf[MainchainTxForwardTransferCrosschainOutput]
-    assertEquals("Forward Transfer hash is different.","bf4ac62356310a329e75771d41e955fd761cc25419650ffc6d5a12129856c635", BytesUtils.toHexString(ft.hash))
+    assertEquals("Forward Transfer hash is different.","f73fd87db6f5cfa8bed6036ffa455f46dbd718b48d67f542db041db2a1c41e16", BytesUtils.toHexString(ft.hash))
     assertEquals("Forward Transfer sc id is different.", sidechainIdHex, ft.sidechainIdBigEndianHex())
     assertEquals("Forward Transfer proposition is different.","acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a5", BytesUtils.toHexString(ft.propositionBytes))
     assertEquals("Forward Transfer amount is different.", expectedAmount, ft.amount)
@@ -101,10 +101,10 @@ class MainchainTransactionTest extends JUnitSuite {
     val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
 
     val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
-    val sidechainIdHex: String = "1738af235d86a2fc3d359268de3f059650adbf6e52a840e5457f693f471a47b2"
+    val sidechainIdHex: String = "262f60319a17f61613b137c1e7ef0a98d5e378843f6766dceb1fc149acee68e8"
 
-    val expectedTxHash: String = "7cbdc9068acc0768d588ea6693c926cba76cc810916bb4c2da41cff7d403ae8e"
-    val expectedTxSize: Int = 742
+    val expectedTxHash: String = "e2dd2069cb6fcae167fba421e353fe6ff7c4a4a24acae9a755d13be201373d27"
+    val expectedTxSize: Int = 802
 
     assertEquals("Tx Hash is different.", expectedTxHash, tx.hashBigEndianHex)
     assertEquals("Tx Size is different.", expectedTxSize, tx.size)
@@ -115,21 +115,21 @@ class MainchainTransactionTest extends JUnitSuite {
 
     assertTrue("Crosschain output type is different.", crosschainOutputs.head.isInstanceOf[MainchainTxForwardTransferCrosschainOutput])
     var ft: MainchainTxForwardTransferCrosschainOutput = crosschainOutputs.head.asInstanceOf[MainchainTxForwardTransferCrosschainOutput]
-    assertEquals("Forward Transfer hash is different.","56c36ba2494c73b0a5d6eadfa5f5947f8bf4ea486774356a5eb87f3f5736b220", BytesUtils.toHexString(ft.hash))
+    assertEquals("Forward Transfer hash is different.","a979b7baae9bab97cfbaa80f9aeefceee9f73c5d191d1f9feaf4f643c99a3d64", BytesUtils.toHexString(ft.hash))
     assertEquals("Forward Transfer sc id is different.", sidechainIdHex, ft.sidechainIdBigEndianHex())
     assertEquals("Forward Transfer proposition is different.","d1ad000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(ft.propositionBytes))
     assertEquals("Forward Transfer amount is different.", 1000000000L, ft.amount)
 
     assertTrue("Crosschain output type is different.", crosschainOutputs(1).isInstanceOf[MainchainTxForwardTransferCrosschainOutput])
     ft = crosschainOutputs(1).asInstanceOf[MainchainTxForwardTransferCrosschainOutput]
-    assertEquals("Forward Transfer hash is different.","ed288d6c370f3acfb6e2c03eacb8f5b5d26eb86e9f6af63e952fc5c0cf7767b8", BytesUtils.toHexString(ft.hash))
+    assertEquals("Forward Transfer hash is different.","36da42a80919eedbd08c9fa58edf2e54d70381fcb9b31c79af0ff097cbc951c8", BytesUtils.toHexString(ft.hash))
     assertEquals("Forward Transfer sc id is different.", sidechainIdHex, ft.sidechainIdBigEndianHex())
     assertEquals("Forward Transfer proposition is different.","d2ad000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(ft.propositionBytes))
     assertEquals("Forward Transfer amount is different.", 1100000000L, ft.amount)
 
     assertTrue("Crosschain output type is different.", crosschainOutputs(2).isInstanceOf[MainchainTxForwardTransferCrosschainOutput])
     ft = crosschainOutputs(2).asInstanceOf[MainchainTxForwardTransferCrosschainOutput]
-    assertEquals("Forward Transfer hash is different.","76f69855b64054d1ae04e73e5d5cbef02f5d80e768c009c159857ef50ce1df24", BytesUtils.toHexString(ft.hash))
+    assertEquals("Forward Transfer hash is different.","1624947682d79eb0c8810fe473dfda7970b84a1c57edf4d94d4e4aec68f7b5c4", BytesUtils.toHexString(ft.hash))
     assertEquals("Forward Transfer sc id is different.", sidechainIdHex, ft.sidechainIdBigEndianHex())
     assertEquals("Forward Transfer proposition is different.","d3ad000000000000000000000000000000000000000000000000000000000000", BytesUtils.toHexString(ft.propositionBytes))
     assertEquals("Forward Transfer amount is different.", 1200000000L, ft.amount)

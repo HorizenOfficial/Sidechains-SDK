@@ -82,7 +82,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_account = Account("", sc_address)
         ft_amount = 10
-        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id)
+        mc_return_address = mc_node.getnewaddress("", True)
+        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id, mc_return_address)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
