@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks
+    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -82,7 +82,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_account = Account("", sc_address)
         ft_amount = 10
-        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id)
+        mc_return_address = mc_node.getnewaddress("", True)
+        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id, mc_return_address)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
@@ -94,13 +95,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
         check_box_balance(sc_node, sc_account, 1, 1, ft_amount)
 
-        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
+        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
         print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
         print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
-        scblock_id2 = generate_next_blocks(sc_node, "first node", 3)[2]
+        scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
         # Generate first mc block of the next epoch
@@ -209,13 +210,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
+        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
         print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
         print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
-        we1_end_scblock_id = generate_next_blocks(sc_node, "first node", 3)[2]
+        we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
         # Generate first mc block of the next epoch

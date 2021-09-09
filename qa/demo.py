@@ -180,12 +180,13 @@ class Demo(SidechainTestFramework):
         # Do FT
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount = 5
+        mc_return_address = mc_node.getnewaddress("", True)
         print("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * coin, ft_amount) +
-              'sc_send "{}" {} "{}"'.format(sc_address, ft_amount, sc_bootstrap_info.sidechain_id))
+              'sc_send "{}" {} "{}" "{}"'.format(sc_address, ft_amount, sc_bootstrap_info.sidechain_id, mc_return_address))
 
         self.pause()
 
-        ft_tx_id = mc_node.sc_send(sc_address, ft_amount, sc_bootstrap_info.sidechain_id)
+        ft_tx_id = mc_node.sc_send(sc_address, ft_amount, sc_bootstrap_info.sidechain_id, mc_return_address)
         print("\nFT transaction id - {}".format(ft_tx_id))
 
 

@@ -87,8 +87,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
-      sidechainTransactionsCompanion,
-      params
+      sidechainTransactionsCompanion
     ).get
 
     ommer = Ommer.toOmmer(block)
@@ -347,8 +346,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
-      sidechainTransactionsCompanion,
-      params
+      sidechainTransactionsCompanion
     ).get
 
     ommer = Ommer.toOmmer(block)
@@ -414,8 +412,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
-      sidechainTransactionsCompanion,
-      params
+      sidechainTransactionsCompanion
     ).get
 
     val ommer = Ommer.toOmmer(block)

@@ -100,18 +100,18 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()))
+    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout)
   }
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = Instant.now.getEpochSecond
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None)
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef]): Unit = {
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot)
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
+    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {

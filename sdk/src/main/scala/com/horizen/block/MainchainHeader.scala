@@ -12,14 +12,7 @@ import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 
-//
 // Representation of MC header
-//
-// hashSCMerkleRootsMap is a merkle root hash of particular SC related crosschain outputs data merkle roots.
-//
-// SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
-// hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
-//
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("mainchainHeaderBytes", "hashHex"))
 class MainchainHeader(

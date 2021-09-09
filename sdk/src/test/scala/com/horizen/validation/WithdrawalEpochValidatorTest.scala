@@ -56,8 +56,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -83,8 +82,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -110,8 +108,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -142,8 +139,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -182,8 +178,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn(None)
@@ -207,8 +202,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -251,8 +245,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta5.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -303,8 +296,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta8.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -363,8 +355,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta11.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 1 MainchainBlockReferenceData with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -389,8 +380,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta12.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 2 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -414,8 +404,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta13.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 3 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -439,8 +428,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta14.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
