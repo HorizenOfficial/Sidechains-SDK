@@ -296,7 +296,7 @@ public class CommandProcessor {
         if(!Files.exists(Paths.get(pathToDir))) {
             File file = new File(pathToDir);
             if (!file.mkdirs()) {
-                printer.print("Directory does not exist and couldn't be created, check the path you supplied");
+                printer.print("Directory does not exist and couldn't be created, check the path you supplied!");
             }
         }
     }
