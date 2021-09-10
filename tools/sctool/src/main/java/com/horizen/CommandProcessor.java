@@ -33,6 +33,7 @@ import com.horizen.utils.VarInt;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -239,6 +240,9 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
+
+            createDirectoryIfNeeded(verificationKeyPath);
+
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
@@ -285,6 +289,22 @@ public class CommandProcessor {
 
         String res = resJson.toString();
         printer.print(res);
+    }
+
+    private void createDirectoryIfNeeded(String verificationKeyPath) {
+        String pathToDir= extractPathWithoutFilename(verificationKeyPath);
+        if(!Files.exists(Paths.get(pathToDir))) {
+            File file = new File(pathToDir);
+            if (!file.mkdirs()) {
+                printer.print("Directory does not exist and couldn't be created, check the path you supplied");
+            }
+        }
+    }
+
+    private String extractPathWithoutFilename(String verificationKeyPath) {
+            String[] parts = verificationKeyPath.split("/");
+            String pathToDir = verificationKeyPath.substring(0,verificationKeyPath.length()-(parts[parts.length -1].length())-1);
+            return pathToDir;
     }
 
     private void printGenesisInfoUsageMsg(String error) {
