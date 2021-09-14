@@ -59,12 +59,14 @@ class SCNodeConfiguration(object):
     def __init__(self,
                  mc_connection_info=MCConnectionInfo(),
                  cert_submitter_enabled=True,
+                 cert_signing_enabled=True,
                  submitter_private_keys_indexes=None,
                  max_connections=100):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
         self.cert_submitter_enabled = cert_submitter_enabled
+        self.cert_signing_enabled = cert_signing_enabled
         self.submitter_private_keys_indexes = submitter_private_keys_indexes
         self.max_connections = max_connections
 

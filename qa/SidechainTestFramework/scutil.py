@@ -277,6 +277,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
         "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
         "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
+        "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
@@ -323,6 +324,7 @@ def initialize_default_sc_datadir(dirname, n):
         'MAX_CONNECTIONS': 100,
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
+        "CERTIFICATE_SIGNING": "false",
         "PROVING_KEY_PATH": keys_paths.proving_key_path,
         "VERIFICATION_KEY_PATH": keys_paths.verification_key_path
     }

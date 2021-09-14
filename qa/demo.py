@@ -265,7 +265,7 @@ class Demo(SidechainTestFramework):
         print("\nGenerating Withdrawal Certificate...\n")
 
         time.sleep(10)
-        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.debug_isCertGenerationActive()["result"]["state"]:
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
             print("Wait for withdrawal certificate in MC memory pool...")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")

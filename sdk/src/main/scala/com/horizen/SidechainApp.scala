@@ -7,7 +7,7 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
-import com.horizen.api.http._
+import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
@@ -284,12 +284,9 @@ class SidechainApp @Inject()
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
   )
-
-  if (sidechainSettings.genesisData.mcNetwork.compareTo("regtest") == 0) {
-      coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
-  }
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)

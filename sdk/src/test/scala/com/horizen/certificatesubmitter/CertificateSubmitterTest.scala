@@ -6,7 +6,7 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
 import com.horizen.box.Box
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetCertificateGenerationState, GetSignaturesStatus, SignatureFromRemote}
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -46,7 +46,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   implicit val timeout: Timeout = 100 milliseconds
 
 
-  private def getMockedSettings(timeoutDuration: FiniteDuration, submitterIsEnabled: Boolean): SidechainSettings = {
+  private def getMockedSettings(timeoutDuration: FiniteDuration, submitterIsEnabled: Boolean, signerIsEnabled: Boolean): SidechainSettings = {
     val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
     Mockito.when(mockedRESTSettings.timeout).thenReturn(timeoutDuration)
 
@@ -59,6 +59,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     Mockito.when(mockedSidechainSettings.withdrawalEpochCertificateSettings).thenAnswer(_ => {
       val mockedWithdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings = mock[WithdrawalEpochCertificateSettings]
       Mockito.when(mockedWithdrawalEpochCertificateSettings.submitterIsEnabled).thenReturn(submitterIsEnabled)
+      Mockito.when(mockedWithdrawalEpochCertificateSettings.certificateSigningIsEnabled).thenReturn(signerIsEnabled)
       mockedWithdrawalEpochCertificateSettings
     })
     mockedSidechainSettings
@@ -79,7 +80,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def initializationFailure_MissingNodeViewHolder(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration, submitterIsEnabled = true, signerIsEnabled = true)
 
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
@@ -99,7 +100,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def initializationFailure_InvalidActualConstantData(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     // Initialization should fail because of invalid constant
     val calculatedSysDataConstant = new Array[Byte](32)
@@ -140,7 +141,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def initializationFailure_EmptyProvingKeyFilePath(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     val calculatedSysDataConstant = new Array[Byte](32)
     Random.nextBytes(calculatedSysDataConstant)
@@ -179,7 +180,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def initializationFailure_InvalidProvingKeyFilePath(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     val calculatedSysDataConstant = new Array[Byte](32)
     Random.nextBytes(calculatedSysDataConstant)
@@ -218,7 +219,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def initialization(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     val calculatedSysDataConstant = new Array[Byte](32)
     Random.nextBytes(calculatedSysDataConstant)
@@ -266,7 +267,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def certificateSubmissionEvents(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
@@ -298,7 +299,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def getSignaturesStatus(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
@@ -340,7 +341,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def newBlockArrived(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
@@ -480,7 +481,24 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
 
 
-    // Test 4: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Test 4: reset SignatureStatus and test block inside the window with a disabled certificate signer
+    submitter.signaturesStatus = None
+    submitter.certificateSigningEnabled = false
+
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
+    watch.expectNoMessage(timeout.duration)
+
+    // Data expected to be the same
+    assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
+    assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
+    assertEquals("Different signatures number expected.", 0, submitter.signaturesStatus.get.knownSigs.size)
+    assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
+    assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    submitter.certificateSigningEnabled = true
+
+
+    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
     // But in MC the better quality Cert exists -> no cert scheduling
     submitter.signaturesStatus = None
 
@@ -536,7 +554,26 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Actor expected not submitting at the moment", certState)
 
 
-    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Test 6: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Certificate submitter is disabled
+    submitter.signaturesStatus = None
+    submitter.submitterEnabled = false
+
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
+    watch.expectNoMessage(timeout.duration)
+
+    assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
+    assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
+    assertEquals("Different signatures number expected.", walletSecrets.size, submitter.signaturesStatus.get.knownSigs.size)
+    assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
+    assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
+    assertFalse("Actor expected being NOT submitting at the moment.", certState)
+
+    submitter.submitterEnabled = true
+
+    // Test 7: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
     // Nop better cert quality found
     submitter.signaturesStatus = None
 
@@ -557,12 +594,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
     assertTrue("Certificate generation schedule expected to be enabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
 
-
     certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
     assertTrue("Actor expected being submitting at the moment.", certState)
 
 
-    // Test 6: block outside the epoch when the cert submission is scheduled
+    // Test 8: block outside the epoch when the cert submission is scheduled
     Mockito.reset(history)
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
@@ -581,7 +617,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def signatureFromRemote(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
@@ -708,7 +744,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
   @Test
   def tryToSubmitCertificate(): Unit = {
-    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true)
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
 
     // Set 3 keys for the Certificate signatures
     val keyGenerator = SchnorrKeyGenerator.getInstance()
@@ -793,11 +829,85 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   }
   @Test
   def switchSubmitterStatus(): Unit = {
-    Assert.fail("TODO: add proper actor and API endpoints")
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
+    val params: RegTestParams = RegTestParams()
+    val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val mockedSidechainNodeViewHolder = TestProbe()
+
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel)))
+
+    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+
+    // Skip initialization
+    submitter.context.become(submitter.workingCycle)
+
+    // Check initial state
+    try {
+      val submitterEnabled: Boolean = Await.result(certificateSubmitterRef ? IsSubmitterEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertTrue("Submitter expected to be enabled", submitterEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
+
+    // Disable submitter and check
+    certificateSubmitterRef ! DisableSubmitter
+    try {
+      val submitterEnabled: Boolean = Await.result(certificateSubmitterRef ? IsSubmitterEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertFalse("Submitter expected to be disabled", submitterEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
+
+    // Enable submitter and check
+    certificateSubmitterRef ! EnableSubmitter
+    try {
+      val submitterEnabled: Boolean = Await.result(certificateSubmitterRef ? IsSubmitterEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertTrue("Submitter expected to be enabled", submitterEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
   }
 
   @Test
   def switchCertificateSigning(): Unit = {
-    Assert.fail("TODO: add proper actor and API endpoints")
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
+    val params: RegTestParams = RegTestParams()
+    val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val mockedSidechainNodeViewHolder = TestProbe()
+
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel)))
+
+    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+
+    // Skip initialization
+    submitter.context.become(submitter.workingCycle)
+
+    // Check initial state
+    try {
+      val signingEnabled: Boolean = Await.result(certificateSubmitterRef ? IsCertificateSigningEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertTrue("Certificate signing expected to be enabled", signingEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
+
+    // Disable singing and check
+    certificateSubmitterRef ! DisableCertificateSigner
+    try {
+      val signingEnabled: Boolean = Await.result(certificateSubmitterRef ? IsCertificateSigningEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertFalse("Certificate signing expected to be disabled", signingEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
+
+    // Enable singing and check
+    certificateSubmitterRef ! EnableCertificateSigner
+    try {
+      val signingEnabled: Boolean = Await.result(certificateSubmitterRef ? IsCertificateSigningEnabled, timeout.duration).asInstanceOf[Boolean]
+      assertTrue("Certificate signing expected to be enabled", signingEnabled)
+    } catch {
+      case _ : TimeoutException => Assert.fail("Actor expected to be initialized and switched to working cycle")
+    }
   }
 }

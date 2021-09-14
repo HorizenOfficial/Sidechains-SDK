@@ -56,8 +56,8 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private var provingFileAbsolutePath: String = _
 
-  private val submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled // todo: make updatable via API
-  private val certificateSigningEnabled: Boolean = true // todo: update conf file, update API to change the actual value
+  private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
+  private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
 
   private[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
 
@@ -100,6 +100,8 @@ class CertificateSubmitter(settings: SidechainSettings,
     tryToGenerateCertificate orElse
     getCertGenerationState orElse
     getSignaturesStatus orElse
+    submitterStatus orElse
+    signerStatus orElse
     reportStrangeInput
   }
 
@@ -472,6 +474,25 @@ class CertificateSubmitter(settings: SidechainSettings,
       true,
       true)
   }
+
+  def submitterStatus: Receive = {
+    case EnableSubmitter =>
+      submitterEnabled = true
+    case DisableSubmitter =>
+      submitterEnabled = false
+    case IsSubmitterEnabled =>
+      sender() ! submitterEnabled
+  }
+
+  def signerStatus: Receive = {
+    case EnableCertificateSigner =>
+      // Next signing attempt will be at the beginning of the next submission window.
+      certificateSigningEnabled = true
+    case DisableCertificateSigner =>
+      certificateSigningEnabled = false
+    case IsCertificateSigningEnabled =>
+      sender() ! certificateSigningEnabled
+  }
 }
 
 object CertificateSubmitter {
@@ -525,6 +546,14 @@ object CertificateSubmitter {
     case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
     case object GetCertificateGenerationState
     case object GetSignaturesStatus
+    // messages to set/check submitter
+    case object EnableSubmitter
+    case object DisableSubmitter
+    case object IsSubmitterEnabled
+    // messages to set/check certificate signer
+    case object EnableCertificateSigner
+    case object DisableCertificateSigner
+    case object IsCertificateSigningEnabled
   }
 }
 

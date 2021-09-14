@@ -63,11 +63,11 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
+            True, True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
+            True, True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
@@ -144,13 +144,13 @@ class SCMultipleCerts(SidechainTestFramework):
         # Wait for Certificates appearance
         time.sleep(10)
         while (mc_node.getmempoolinfo()["size"] < 2 and
-               (sc_node1.debug_isCertGenerationActive()["result"]["state"]
-                or sc_node2.debug_isCertGenerationActive()["result"]["state"])):
+               (sc_node1.submitter_isCertGenerationActive()["result"]["state"]
+                or sc_node2.submitter_isCertGenerationActive()["result"]["state"])):
 
             print("Wait for certificates in the MC mempool...")
-            if (sc_node1.debug_isCertGenerationActive()["result"]["state"]):
+            if (sc_node1.submitter_isCertGenerationActive()["result"]["state"]):
                 print("sc_node1 generating certificate now.")
-            if (sc_node2.debug_isCertGenerationActive()["result"]["state"]):
+            if (sc_node2.submitter_isCertGenerationActive()["result"]["state"]):
                 print("sc_node2 generating certificate now.")
 
             time.sleep(2)
@@ -163,7 +163,7 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
         time.sleep(2)
 
-        assert_false(sc_node1.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node1.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]
