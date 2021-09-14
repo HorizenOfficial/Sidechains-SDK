@@ -491,6 +491,8 @@ public class CommandProcessor {
             resJson.put("withdrawalEpochLength", withdrawalEpochLength);
             resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
+            // just some separator
+            printer.print("\n\n****************************************** GENESIS ******************************************\n");
             printer.print(res);
 
             if(shouldUpdateConfig)
