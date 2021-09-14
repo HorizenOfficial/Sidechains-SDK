@@ -493,6 +493,10 @@ public class CommandProcessor {
             String res = resJson.toString();
             printer.print(res);
 
+            // just some separator
+            printer.print("\n\n****************************************** GENESIS ******************************************\n");
+
+
             if(shouldUpdateConfig)
                 updateTemplateFile(
                         json.get("sourceconfig").asText(),
