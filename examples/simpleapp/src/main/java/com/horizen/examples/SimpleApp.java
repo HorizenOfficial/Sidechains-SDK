@@ -16,7 +16,7 @@ public class SimpleApp {
         }
 
         if (!new File(args[0]).exists()) {
-            System.out.println("File on path " + args[0] + " does not exist");
+            System.out.println("File on path " + args[0] + " doesn't exist");
             return;
         }
 
