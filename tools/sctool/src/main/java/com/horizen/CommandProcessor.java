@@ -241,7 +241,9 @@ public class CommandProcessor {
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
 
-            createDirectoryIfNeeded(verificationKeyPath);
+            if(!createDirectoryIfNeeded(verificationKeyPath)){
+                printer.print("Directory does not exist and couldn't be created, check the path you supplied!");
+            };
 
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
                 printer.print("Error occurred during dlog key generation.");
@@ -291,20 +293,19 @@ public class CommandProcessor {
         printer.print(res);
     }
 
-    private void createDirectoryIfNeeded(String verificationKeyPath) {
-        String pathToDir= extractPathWithoutFilename(verificationKeyPath);
-        if(!Files.exists(Paths.get(pathToDir))) {
-            File file = new File(pathToDir);
-            if (!file.mkdirs()) {
-                printer.print("Directory does not exist and couldn't be created, check the path you supplied!");
-            }
+    private boolean createDirectoryIfNeeded(String verificationKeyPath) {
+        File directory = new File (verificationKeyPath).getParentFile();
+        if(directory==null){
+            return true;
         }
-    }
 
-    private String extractPathWithoutFilename(String verificationKeyPath) {
-            String[] parts = verificationKeyPath.split("/");
-            String pathToDir = verificationKeyPath.substring(0,verificationKeyPath.length()-(parts[parts.length -1].length())-1);
-            return pathToDir;
+        if(!directory.exists()) {
+            if (!directory.mkdirs()) {
+                return false;
+            }
+
+        }
+        return true;
     }
 
     private void printGenesisInfoUsageMsg(String error) {
@@ -492,10 +493,6 @@ public class CommandProcessor {
             resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
-
-            // just some separator
-            printer.print("\n\n****************************************** GENESIS ******************************************\n");
-
 
             if(shouldUpdateConfig)
                 updateTemplateFile(
