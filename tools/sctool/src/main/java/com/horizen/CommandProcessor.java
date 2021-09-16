@@ -243,6 +243,7 @@ public class CommandProcessor {
 
             if(!createDirectoryIfNeeded(verificationKeyPath)){
                 printer.print("Directory does not exist and couldn't be created, check the path you supplied!");
+                return;
             };
 
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
