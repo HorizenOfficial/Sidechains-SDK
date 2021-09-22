@@ -75,8 +75,14 @@ class McTxsData(SidechainTestFramework):
 
         # Generate MC block with 1 FT.
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"
-        mc_return_address = mc_node.getnewaddress("", True)
-        mc_node.sc_send(sc_address, 10, sidechain_id_1, mc_return_address)  # 10 Zen
+        mc_return_address = mc_node.getnewaddress()
+        ft_args = [{
+            "toaddress": sc_address,
+            "amount": 10,  # 10 Zen
+            "scid": sidechain_id_1,
+            "mcReturnAddress": mc_return_address
+        }]
+        mc_node.sc_send(ft_args)
         # Generate block
         block_id = mc_node.generate(1)[0]
         block_hex = mc_node.getblock(block_id, False)
@@ -88,9 +94,14 @@ class McTxsData(SidechainTestFramework):
         # Generate MC block with 3 sidechains mentioned.
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"
         # Send 3 FTs to different sidechains
-        mc_node.sc_send(sc_address, 1, sidechain_id_1, mc_return_address)  # 1 Zen
-        mc_node.sc_send(sc_address, 2, sidechain_id_2, mc_return_address)  # 2 Zen
-        mc_node.sc_send(sc_address, 3, sidechain_id_3, mc_return_address)  # 3 Zen
+        ft_args = [
+            {"address": sc_address, "amount": 1, "scid": sidechain_id_1, "mcReturnAddress": mc_return_address},
+            {"address": sc_address, "amount": 2, "scid": sidechain_id_2, "mcReturnAddress": mc_return_address},
+            {"address": sc_address, "amount": 3, "scid": sidechain_id_3, "mcReturnAddress": mc_return_address}
+        ]
+
+        mc_node.sc_sendmany(ft_args)
+
         # Generate block
         block_id = mc_node.generate(1)[0]
         block_hex = mc_node.getblock(block_id, False)
@@ -105,12 +116,15 @@ class McTxsData(SidechainTestFramework):
         # Generate block with 1 MBTR
         fe1 = generate_random_field_element_hex()
         fe2 = generate_random_field_element_hex()
-        pkh1 = mc_node.getnewaddress("", True)
+        pk1 = mc_node.getnewaddress()
         mbtrFee = 10
         mbtrOuts = [
-            {'vScRequestData': [fe1, fe2], 'scFee': str(Decimal(mbtrFee)), 'scid': sidechain_id_1, 'pubkeyhash': pkh1}]
+            {'vScRequestData': [fe1, fe2], 'scFee': str(Decimal(mbtrFee)), 'scid': sidechain_id_1, 'mcDestinationAddress': pk1}]
         # Generate Tx with version -4 with single MBTR output
-        mc_node.request_transfer_from_sidechain(mbtrOuts, {})
+        raw_tx = mc_node.createrawtransaction([], {}, [], [], [], mbtrOuts)
+        funded_tx = mc_node.fundrawtransaction(raw_tx)
+        signed_tx = mc_node.signrawtransaction(funded_tx['hex'])
+        mbtr_tx_id = mc_node.sendrawtransaction(signed_tx['hex'])
         # Generate block
         block_id = mc_node.generate(1)[0]
         block_hex = mc_node.getblock(block_id, False)

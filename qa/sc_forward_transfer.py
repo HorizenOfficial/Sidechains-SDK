@@ -66,7 +66,7 @@ class SCForwardTransfer(SidechainTestFramework):
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         boot_info = self.sc_nodes_bootstrap_info
-        mc_return_address = self.nodes[0].getnewaddress("", True)
+        mc_return_address = self.nodes[0].getnewaddress()
 
         (sc_info, mc_block_count) = forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                                                   self.nodes[0],

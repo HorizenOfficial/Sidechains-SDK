@@ -82,8 +82,15 @@ class SCBackwardTransfer(SidechainTestFramework):
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_account = Account("", sc_address)
         ft_amount = 10
-        mc_return_address = mc_node.getnewaddress("", True)
-        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id, mc_return_address)
+        mc_return_address = mc_node.getnewaddress()
+
+        ft_args = [{
+            "toaddress": sc_address,
+            "amount": ft_amount,
+            "scid": self.sc_nodes_bootstrap_info.sidechain_id,
+            "mcReturnAddress": mc_return_address
+        }]
+        mc_node.sc_send(ft_args)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
@@ -165,15 +172,12 @@ class SCBackwardTransfer(SidechainTestFramework):
 
 
         # Try to withdraw coins from SC to MC: 2 withdrawals with the same amount
-        addresses = mc_node.listaddresses()
-        mc_address1_hash = mc_node.getnewaddress("", True)
-        mc_address1_standard = (set(mc_node.listaddresses()) - set(addresses)).pop()
-        print("First BT MC public key hash is {}".format(mc_address1_hash))
-        print("First BT MC public key address is {}".format(mc_address1_standard))
+        mc_address1 = mc_node.getnewaddress()
+        print("First BT MC public key address is {}".format(mc_address1))
         bt_amount1 = ft_amount - 3
         sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address1_standard,
+                               { "publicKey": mc_address1,
                                  "value": sc_bt_amount1 }
                               ]
                              }
@@ -186,15 +190,12 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        addresses = mc_node.listaddresses()
-        mc_address2_hash = self.nodes[0].getnewaddress("", True)
-        mc_address2_standard = (set(mc_node.listaddresses()) - set(addresses)).pop()
-        print("Second BT MC public key hash is {}".format(mc_address2_hash))
-        print("Second BT MC public key address is {}".format(mc_address2_standard))
+        mc_address2 = self.nodes[0].getnewaddress()
+        print("Second BT MC public key address is {}".format(mc_address2))
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address2_standard,
+                               { "publicKey": mc_address2,
                                  "value": sc_bt_amount2 }
                               ]
                              }
@@ -267,21 +268,9 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(bt_amount2, we1_cert["vout"][2]["value"], "Second BT amount is wrong.")
 
         cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]["addresses"][0]
-        assert_equal(mc_address1_standard, cert_address_1, "First BT standard address is wrong.")
+        assert_equal(mc_address1, cert_address_1, "First BT standard address is wrong.")
         cert_address_2 = we1_cert["vout"][2]["scriptPubKey"]["addresses"][0]
-        assert_equal(mc_address2_standard, cert_address_2, "Second BT standard address is wrong.")
-
-        cert_address_hash_1 = we1_cert["vout"][1]["pubkeyhash"]
-        assert_equal(mc_address1_hash, cert_address_hash_1, "First BT pub key hash address is wrong.")
-        cert_address_hash_2 = we1_cert["vout"][2]["pubkeyhash"]
-        assert_equal(mc_address2_hash, cert_address_hash_2, "Second BT pub key hash address is wrong.")
-
-        # Check changes in balances in MC
-        # Note destination addresses also can contain some fees assigned to them during mining
-        assert_equal(bt_amount1, math.floor(mc_node.getreceivedbyaddress(mc_address1_standard)),
-                     "First BT amount expected to be found in MC wallet")
-        assert_equal(bt_amount2, math.floor(mc_node.getreceivedbyaddress(mc_address2_standard)),
-                     "Second BT amount expected to be found in MC wallet")
+        assert_equal(mc_address2, cert_address_2, "Second BT standard address is wrong.")
 
         # Generate SC block and verify that certificate is synced back
         scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
@@ -303,12 +292,12 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(2, len(we1_sc_cert["backwardTransferOutputs"]),
                      "Backward transfer amount in certificate is wrong.")
 
-        sc_pub_key_hash_1 = we1_sc_cert["backwardTransferOutputs"][0]["pubKeyHash"]
-        assert_equal(mc_address1_standard, sc_pub_key_hash_1, "First BT address is wrong.")
+        sc_pub_key_1 = we1_sc_cert["backwardTransferOutputs"][0]["address"]
+        assert_equal(mc_address1, sc_pub_key_1, "First BT address is wrong.")
         assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
 
-        sc_pub_key_hash_2 = we1_sc_cert["backwardTransferOutputs"][1]["pubKeyHash"]
-        assert_equal(mc_address2_standard, sc_pub_key_hash_2, "Second BT address is wrong.")
+        sc_pub_key_2 = we1_sc_cert["backwardTransferOutputs"][1]["address"]
+        assert_equal(mc_address2, sc_pub_key_2, "Second BT address is wrong.")
         assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")

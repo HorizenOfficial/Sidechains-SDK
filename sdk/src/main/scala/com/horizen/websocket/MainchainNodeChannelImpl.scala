@@ -15,7 +15,7 @@ case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) exte
 case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
-case class BackwardTransfer(pubkeyhash: String, amount: String)
+case class BackwardTransfer(address: String, amount: String)
 case class SendCertificateRequestPayload(scid: String,
                                          epochNumber: Int,
                                          quality: Long,
@@ -136,7 +136,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt =>
-      BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
+      BackwardTransfer(bt.address, bt.amount))
 
     val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(
       BytesUtils.toHexString(certificateRequest.sidechainId),

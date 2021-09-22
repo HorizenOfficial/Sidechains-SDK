@@ -90,7 +90,7 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Send FT to the SC node 2
         ft_amount = self.sc_creation_amount + self.sc_node2_bt_amount
-        mc_return_address = mc_node.getnewaddress("", True)
+        mc_return_address = mc_node.getnewaddress()
         mc_block_hash_with_ft = mc_make_forward_transfer(mc_node, sc_node2, self.sc_nodes_bootstrap_info.sidechain_id,
                                                          ft_amount, mc_return_address)
         mc_blocks_left_for_we -= 1

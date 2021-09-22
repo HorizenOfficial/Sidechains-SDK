@@ -155,7 +155,8 @@ class CertificateSubmitter
             proofWithQuality.getValue,
             dataForProofGeneration.withdrawalRequests,
             dataForProofGeneration.ftMinAmount,
-            dataForProofGeneration.btrFee)
+            dataForProofGeneration.btrFee,
+            params)
 
           log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 

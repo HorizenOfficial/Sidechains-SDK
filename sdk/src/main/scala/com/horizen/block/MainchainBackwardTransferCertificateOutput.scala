@@ -1,16 +1,16 @@
 package com.horizen.block
 
-import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonProperty, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.serialization.{JsonHorizenPublicKeyHashSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils}
 
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("outputBytes"))
+@JsonIgnoreProperties(Array("outputBytes", "hash"))
 case class MainchainBackwardTransferCertificateOutput
   (outputBytes: Array[Byte],
-   @JsonSerialize(using = classOf[JsonHorizenPublicKeyHashSerializer]) pubKeyHash: Array[Byte],
+   @JsonProperty("address") @JsonSerialize(using = classOf[JsonHorizenPublicKeyHashSerializer]) pubKeyHash: Array[Byte],
    amount: Long)
 {
 
