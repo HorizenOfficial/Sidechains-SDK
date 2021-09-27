@@ -214,6 +214,24 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
     return certificate_proof_info
 
+
+"""
+return a string like '["127.0.0.1:xxxx","127.0.0.1:xxxx"]' to be set as known Peers in the configuration.
+Based on a index vector [0, 2, 3] where all peers could be [0,1,2,3,4]
+
+Parameters:
+ - known_peers_indexes: indexes of the known peers 
+"""
+
+
+def get_known_peers(known_peers_indexes):
+    addresses = []
+    for index in known_peers_indexes:
+        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index))) + "\"")
+    peers = "[" + ",".join(addresses) + "]"
+    return peers
+
+
 """
 Create directories for each node and configuration files inside them.
 For each node put also genesis data in configuration files.
@@ -230,6 +248,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     configsData = []
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
+    known_peers = sc_node_config.known_peers
     datadir = os.path.join(dirname, "sc_node" + str(n))
     mc0datadir = os.path.join(dirname, "node0")
     websocket_config = sc_node_config.mc_connection_info
@@ -258,6 +277,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
+        'KNOWN_PEERS': known_peers,
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
@@ -379,6 +399,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
+    proxy.peer_port = str((sc_p2p_port(i)))
     return proxy
 
 

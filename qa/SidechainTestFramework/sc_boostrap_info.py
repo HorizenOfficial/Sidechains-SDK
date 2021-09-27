@@ -56,10 +56,11 @@ SCNodeConfiguration: {
 class SCNodeConfiguration(object):
 
     # Currently we have Cert Signature threshold snark proof with the max PK number = 7
-    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True, submitter_private_keys_number=7):
+    def __init__(self, mc_connection_info=MCConnectionInfo(), cert_submitter_enabled=True, submitter_private_keys_number=7,known_peers=[]):
         self.mc_connection_info = mc_connection_info
         self.cert_submitter_enabled = cert_submitter_enabled
         self.submitter_private_keys_number = submitter_private_keys_number
+        self.known_peers = known_peers
 
 
 """
@@ -81,6 +82,12 @@ class SCNetworkConfiguration(object):
         self.sc_creation_info = sc_creation_info
         self.sc_nodes_configuration = sc_nodes_configuration
 
+
+class SCMultiNetworkConfiguration(SCNetworkConfiguration):
+
+    def __init__(self, sc_creation_info, sc_nodes_configuration):
+        self.sc_creation_info = sc_creation_info
+        self.sc_nodes_configuration = sc_nodes_configuration
 
 """
 An account.
@@ -168,6 +175,7 @@ class SCBootstrapInfo(object):
         self.certificate_proof_info = certificate_proof_info
         self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
         self.keys_paths = keys_paths
+
 
 
 class ProofKeysPaths(object):
