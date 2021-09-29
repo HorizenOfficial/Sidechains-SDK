@@ -149,8 +149,8 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Result data max size values are the same as in MC
-    private static final int maxProofSize = 7 * 1024;
-    private static final int maxVkSize = 4 * 1024;
+    private static final int maxProofSize = 9 * 1024;
+    private static final int maxVkSize = 9 * 1024;
 
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
