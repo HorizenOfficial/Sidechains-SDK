@@ -518,9 +518,9 @@ Output: an array of two information:
 
 
 def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
-                                  public_key, forward_transfer_amount):
+                                  public_key, forward_transfer_amount, mc_return_address):
 
-    transaction_id = mainchain_node.sc_send(public_key, forward_transfer_amount, sidechain_id)
+    transaction_id = mainchain_node.sc_send(public_key, forward_transfer_amount, sidechain_id, mc_return_address)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
     mainchain_node.generate(1)

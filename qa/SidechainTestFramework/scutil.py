@@ -251,6 +251,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
+    all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
+    signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -258,6 +261,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
+        'MAX_CONNECTIONS': sc_node_config.max_connections,
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
@@ -271,11 +275,11 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'CONNECTION_TIMEOUT': websocket_config.connectionTimeout,
         'RECONNECTION_DELAY': websocket_config.reconnectionDelay,
         'RECONNECTION_MAX_ATTEMPTS': websocket_config.reconnectionMaxAttempts,
-        "THRESHOLD" : bootstrap_info.certificate_proof_info.threshold,
-        "SUBMITTER_CERTIFICATE" : ("true" if sc_node_config.cert_submitter_enabled else "false"),
+        "THRESHOLD": bootstrap_info.certificate_proof_info.threshold,
+        "SUBMITTER_CERTIFICATE": ("true" if sc_node_config.cert_submitter_enabled else "false"),
+        "CERTIFICATE_SIGNING": ("true" if sc_node_config.cert_signing_enabled else "false"),
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "SIGNER_PRIVATE_KEY": json.dumps(bootstrap_info.certificate_proof_info
-                                         .schnorr_secrets[:sc_node_config.submitter_private_keys_number]),
+        "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "PROVING_KEY_PATH": bootstrap_info.keys_paths.proving_key_path,
         "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path
@@ -317,8 +321,10 @@ def initialize_default_sc_datadir(dirname, n):
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
         'BIND_PORT': str(bindPort),
+        'MAX_CONNECTIONS': 100,
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
+        "CERTIFICATE_SIGNING": "false",
         "PROVING_KEY_PATH": keys_paths.proving_key_path,
         "VERIFICATION_KEY_PATH": keys_paths.verification_key_path
     }
@@ -459,6 +465,8 @@ def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
     from_connection.node_disconnect(json.dumps(j))
     time.sleep(WAIT_CONST)
 
+def sc_connected_peers(node):
+    return node.node_connectedPeers()["result"]["peers"]
 
 def disconnect_sc_nodes_bi(nodes, a, b):
     disconnect_sc_nodes(nodes[a], b)

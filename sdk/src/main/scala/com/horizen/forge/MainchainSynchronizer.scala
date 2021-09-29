@@ -47,7 +47,16 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
     }
   }
 
-  def getMainchainBlockReferences(history: SidechainHistory, hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainBlockReference]] = Try {
+  def getMainchainBlockReference(hash: MainchainHeaderHash): Try[MainchainBlockReference] = Try {
+    mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash)) match {
+      case Success(ref) =>
+        ref
+      case Failure(ex) =>
+        throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash $hash. Connection error.", ex)
+    }
+  }
+
+  def getMainchainBlockReferences(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainBlockReference]] = Try {
     val references = ListBuffer[MainchainBlockReference]()
     for(hash <- hashes) {
       mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash.data)) match {

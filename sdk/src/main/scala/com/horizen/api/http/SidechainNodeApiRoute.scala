@@ -24,7 +24,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
-  override val route: Route = (pathPrefix("node")) {
+  override val route: Route = pathPrefix("node") {
     connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect
   }
 
@@ -66,7 +66,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   def connect: Route = (post & path("connect")) {
     entity(as[ReqConnect]) {
       body =>
-        var address = body.host + ":" + body.port
+        val address = body.host + ":" + body.port
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
         maybeAddress match {
           case None =>
@@ -94,7 +94,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   def disconnect: Route = (post & path("disconnect")) {
     entity(as[ReqDisconnect]) {
       body =>
-        var address = body.host + ":" + body.port
+        val address = body.host + ":" + body.port
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(address)
         maybeAddress match {
           case None =>

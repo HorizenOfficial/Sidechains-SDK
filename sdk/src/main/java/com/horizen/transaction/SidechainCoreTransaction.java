@@ -21,7 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 
-public class SidechainCoreTransaction
+public final class SidechainCoreTransaction
         extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>>
 {
     private final List<byte[]> inputsIds;

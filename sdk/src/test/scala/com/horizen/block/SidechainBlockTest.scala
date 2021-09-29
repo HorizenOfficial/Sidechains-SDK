@@ -2,17 +2,16 @@ package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.NoncedBox
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.VrfSecretKey
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.SidechainTransaction
+import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
@@ -353,6 +352,38 @@ class SidechainBlockTest
         assertEquals("Different exception type expected during semanticValidity.",
           classOf[InvalidMainchainHeaderException], e.getClass)
     }
+
+
+    // Test 12: Too big SidechainBlock
+    invalidBlock = createBlock(
+      sidechainTransactions = generateExceedingTransactions(SidechainBlock.MAX_BLOCK_SIZE)
+    )
+
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockDataException], e.getClass)
+    }
+  }
+
+  // Generate Seq of Transaction which total size exceeds the limit specified.
+  private def generateExceedingTransactions(sizeToExceed: Int): Seq[RegularTransaction] = {
+    val inputTransactionsList: Seq[PrivateKey25519] = (1 to 10)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes))
+
+    val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to BoxTransaction.MAX_TRANSACTION_NEW_BOXES)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes).publicImage())
+
+    var txsSize: Int = 0
+    var txs: Seq[RegularTransaction] = Seq()
+    while(txsSize < sizeToExceed) {
+      val tx = getRegularTransaction(inputTransactionsList, outputTransactionsList, random, random.nextLong())
+      txsSize += tx.bytes.length
+      txs = tx +: txs
+    }
+    txs
   }
 
   @Test
@@ -828,8 +859,7 @@ class SidechainBlockTest
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
-      sidechainTransactionsCompanion,
-      params
+      sidechainTransactionsCompanion
     ).get
   }
 

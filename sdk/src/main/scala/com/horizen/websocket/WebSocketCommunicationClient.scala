@@ -121,7 +121,7 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
         }
 
       case _ =>
-        log.error("Event without defined handler received. Event type = " + eventType)
+        log.debug("Event without defined handler received. Event type = " + eventType)
     }
 
   }
