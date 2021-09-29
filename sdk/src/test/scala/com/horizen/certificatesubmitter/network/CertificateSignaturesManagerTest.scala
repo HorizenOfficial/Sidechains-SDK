@@ -363,8 +363,8 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val messageToSign: Array[Byte]= FieldElementFixture.generateFieldElement()
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val secret = keyGenerator.generateSecret("seed1".getBytes())
-    val knownIndexes = Seq(0, 2, 4)
-    val knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
+    var knownIndexes = Seq(0, 2, 4)
+    var knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
 
     statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
 
@@ -389,5 +389,15 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
       case _ =>
         Assert.fail("Invalid message data")
     }
+
+
+    // Test 3: Try to send signatures info attempt must be skipped if all the signatures are already known.
+    knownIndexes = 0 until pubKeysNumber
+    knownSigs = ArrayBuffer(knownIndexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
+
+    statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
+
+    certificateSignaturesManagerRef ! TryToSendGetCertificateSignatures
+    networkController.expectNoMessage(timeout.duration)
   }
 }

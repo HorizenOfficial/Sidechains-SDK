@@ -87,9 +87,11 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
             // Collect the list of unknown signatures indexes
             val indexes = (0 until signaturesLimit).filterNot(pubKeyIndex => status.knownSigs.exists(info => info.pubKeyIndex == pubKeyIndex))
 
-            // Request sigs from the random peer.
-            val msg = Message[InvUnknownSignatures](getCertificateSignaturesSpec, Right(InvUnknownSignatures(indexes)), None)
-            networkControllerRef ! SendToNetwork(msg, SendToRandom)
+            if(indexes.nonEmpty) {
+              // Request sigs from the random peer.
+              val msg = Message[InvUnknownSignatures](getCertificateSignaturesSpec, Right(InvUnknownSignatures(indexes)), None)
+              networkControllerRef ! SendToNetwork(msg, SendToRandom)
+            }
 
           case None => // node is not in the submission window -> do nothing
         }

@@ -341,7 +341,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       signaturesStatus match {
         case Some(status) =>
           if(checkQuality(status)) {
-            val delay = Random.nextInt(15) + 5 // random delay from 5 to 15 seconds
+            val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
             log.info(s"Scheduling Certificate generation in $delay seconds")
             timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
             context.system.eventStream.publish(CertificateSubmissionStarted)
