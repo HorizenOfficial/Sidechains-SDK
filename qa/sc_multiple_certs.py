@@ -63,11 +63,11 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, 7  # certificate submitter is enabled with 7 schnorr PKs
+            True, True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, 6  # certificate submitter is enabled with 6 schnorr PKs
+            True, True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
@@ -90,8 +90,9 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Send FT to the SC node 2
         ft_amount = self.sc_creation_amount + self.sc_node2_bt_amount
-        mc_block_hash_with_ft = mc_make_forward_transfer(mc_node, sc_node2,
-                                                         self.sc_nodes_bootstrap_info.sidechain_id, ft_amount)
+        mc_return_address = mc_node.getnewaddress("", True)
+        mc_block_hash_with_ft = mc_make_forward_transfer(mc_node, sc_node2, self.sc_nodes_bootstrap_info.sidechain_id,
+                                                         ft_amount, mc_return_address)
         mc_blocks_left_for_we -= 1
         sc_block_id1 = generate_next_block(sc_node1, "first node")
         check_mcreference_presence(mc_block_hash_with_ft, sc_block_id1, sc_node1)
@@ -132,7 +133,7 @@ class SCMultipleCerts(SidechainTestFramework):
         # Generate 2 SC blocks on both SC nodes and start them automatic cert creation.
         generate_next_block(sc_node2, "second node")  # 1 MC block to reach the end of WE
         generate_next_block(sc_node2, "second node")  # 1 MC block to trigger Submitter logic
-        time.sleep(2)  # to be sure that SC node 2 will finish cert creation faster
+        time.sleep(16)  # to be sure that SC node 2 will finish cert creation faster considering cert submission delay
         # Note: such an order because of the MC wallet behaviour:
         # if lower quality cert will be generated after the higher,
         # wallet will choose another cert change for fee payment.
@@ -142,14 +143,14 @@ class SCMultipleCerts(SidechainTestFramework):
 
         # Wait for Certificates appearance
         time.sleep(10)
-        while (mc_node.getmempoolinfo()["size"] < 2  and
-               (sc_node1.debug_isCertGenerationActive()["result"]["state"]
-                or sc_node2.debug_isCertGenerationActive()["result"]["state"])):
+        while (mc_node.getmempoolinfo()["size"] < 2 and
+               (sc_node1.submitter_isCertGenerationActive()["result"]["state"]
+                or sc_node2.submitter_isCertGenerationActive()["result"]["state"])):
 
             print("Wait for certificates in the MC mempool...")
-            if (sc_node1.debug_isCertGenerationActive()["result"]["state"]):
+            if (sc_node1.submitter_isCertGenerationActive()["result"]["state"]):
                 print("sc_node1 generating certificate now.")
-            if (sc_node2.debug_isCertGenerationActive()["result"]["state"]):
+            if (sc_node2.submitter_isCertGenerationActive()["result"]["state"]):
                 print("sc_node2 generating certificate now.")
 
             time.sleep(2)
@@ -162,7 +163,7 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node1, "first node")
         time.sleep(2)
 
-        assert_false(sc_node1.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node1.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]

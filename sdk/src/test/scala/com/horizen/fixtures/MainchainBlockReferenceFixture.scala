@@ -103,13 +103,14 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
                                         rnd: Random = new Random(),
                                         timestamp: Int = Instant.now.getEpochSecond.toInt
                                        ): Seq[MainchainBlockReference] = {
-      if (rnd.nextBoolean && generated.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
-        val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
-        val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
-        generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
-      }
-      else {
-        generated
-      }
+    val maxMcBlockRefDataPerBlock = 3
+    if (rnd.nextBoolean && generated.size < maxMcBlockRefDataPerBlock) {
+      val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
+      val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
+      generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
+    }
+    else {
+      generated
+    }
   }
 }

@@ -3,15 +3,15 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
-import com.horizen.api.http._
+import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.certificatesubmitter.{CertificateSubmitterObserverRef, CertificateSubmitterRef}
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -39,7 +39,7 @@ import scorex.util.ScorexLogging
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
-import scala.io.Source
+import scala.io.{Codec, Source}
 import com.horizen.network.SidechainNodeViewSynchronizer
 
 import scala.util.Try
@@ -83,7 +83,12 @@ class SidechainApp @Inject()
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
 
-  override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(SidechainSyncInfoMessageSpec)
+  override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
+    SidechainSyncInfoMessageSpec,
+    // It can be no more Certificate signatures than the public keys for the Threshold Signature Circuit
+    new GetCertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size),
+    new CertificateSignaturesSpec(sidechainSettings.withdrawalEpochCertificateSettings.signersPublicKeys.size)
+  )
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
@@ -261,10 +266,9 @@ class SidechainApp @Inject()
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
-  if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled) {
-    val certificateSubmitter: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  }
-  val certificateSubmitterObserver: ActorRef = CertificateSubmitterObserverRef()
+  // Init Certificate Submitter
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
@@ -280,12 +284,9 @@ class SidechainApp @Inject()
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef)
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
   )
-
-  if (sidechainSettings.genesisData.mcNetwork.compareTo("regtest") == 0) {
-      coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, certificateSubmitterObserver, nodeViewHolderRef)
-  }
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
@@ -298,7 +299,7 @@ class SidechainApp @Inject()
     .union(applicationApiRoutes)
     .union(coreApiRoutes)
 
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml").getLines.mkString("\n")
+  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override def stopAll(): Unit = {
     super.stopAll()

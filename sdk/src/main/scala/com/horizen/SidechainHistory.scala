@@ -570,7 +570,7 @@ object SidechainHistory
       // First MC header Cumulative CommTree hash is provided by genesis info
       Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id,
     )

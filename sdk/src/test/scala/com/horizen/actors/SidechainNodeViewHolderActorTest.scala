@@ -48,10 +48,6 @@ class SidechainNodeViewHolderActorTest1
 
     assert(Await.result(nodeView, 5 seconds) != null)
   }
-
-  test("Test2") {
-  }
-
 }
 
 @RunWith(classOf[JUnitRunner])
