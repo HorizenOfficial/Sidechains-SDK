@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks
+    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -82,7 +82,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_account = Account("", sc_address)
         ft_amount = 10
-        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id)
+        mc_return_address = mc_node.getnewaddress("", True)
+        mc_node.sc_send(sc_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id, mc_return_address)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
@@ -94,13 +95,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
         check_box_balance(sc_node, sc_account, 1, 1, ft_amount)
 
-        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
+        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
         print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
         print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
-        scblock_id2 = generate_next_blocks(sc_node, "first node", 3)[2]
+        scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
         # Generate first mc block of the next epoch
@@ -110,16 +111,16 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
-        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.debug_isCertGenerationActive()["result"]["state"]:
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
             print("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
-        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         # Check that certificate generation skipped because mempool have certificate with same quality
         generate_next_blocks(sc_node, "first node", 1)[0]
         time.sleep(2)
-        assert_false(sc_node.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Get Certificate for Withdrawal epoch 0 and verify it
         we0_certHash = mc_node.getrawmempool()[0]
@@ -147,7 +148,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Check that certificate generation skipped because chain have certificate with same quality
         time.sleep(2)
-        assert_false(sc_node.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Verify Certificate for epoch 0 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
@@ -209,13 +210,13 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
+        # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
         print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
         print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
-        we1_end_scblock_id = generate_next_blocks(sc_node, "first node", 3)[2]
+        we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
         # Generate first mc block of the next epoch
@@ -225,16 +226,16 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
-        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.debug_isCertGenerationActive()["result"]["state"]:
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
             print("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
-        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         # Check that certificate generation skipped because mempool have certificate with same quality
         generate_next_blocks(sc_node, "first node", 1)[0]
         time.sleep(2)
-        assert_false(sc_node.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Get Certificate for Withdrawal epoch 1 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
@@ -270,10 +271,10 @@ class SCBackwardTransfer(SidechainTestFramework):
         cert_address_2 = we1_cert["vout"][2]["scriptPubKey"]["addresses"][0]
         assert_equal(mc_address2_standard, cert_address_2, "Second BT standard address is wrong.")
 
-        cert_address_hash_1 = we1_cert["vout"][1]["pubkeyhash"]
-        assert_equal(mc_address1_hash, cert_address_hash_1, "First BT pub key hash address is wrong.")
-        cert_address_hash_2 = we1_cert["vout"][2]["pubkeyhash"]
-        assert_equal(mc_address2_hash, cert_address_hash_2, "Second BT pub key hash address is wrong.")
+        cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]['addresses'][0]
+        assert_equal(mc_address1_standard, cert_address_1, "First BT pub key address is wrong.")
+        cert_address_2 = we1_cert["vout"][2]["scriptPubKey"]['addresses'][0]
+        assert_equal(mc_address2_standard, cert_address_2, "Second BT pub key address is wrong.")
 
         # Check changes in balances in MC
         # Note destination addresses also can contain some fees assigned to them during mining
@@ -288,7 +289,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # Check that certificate generation skipped because chain have certificate with same quality
         time.sleep(2)
-        assert_false(sc_node.debug_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
+        assert_false(sc_node.submitter_isCertGenerationActive()["result"]["state"], "Expected certificate generation will be skipped.")
 
         # Verify Certificate for epoch 1 on SC side
         mbrefdata = sc_node.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]

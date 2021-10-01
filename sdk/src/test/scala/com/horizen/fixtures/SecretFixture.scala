@@ -83,6 +83,13 @@ trait SecretFixture {
     new MCPublicKeyHashProposition(keyHashBytes)
   }
 
+  def getMcReturnAddress: Array[Byte] = {
+    val address = new Array[Byte](MCPublicKeyHashProposition.KEY_LENGTH)
+    Random.nextBytes(address)
+
+    address
+  }
+
   def getMCPublicKeyHashPropositionList(count: Int): JList[MCPublicKeyHashProposition] = {
     val keyList = new JArrayList[MCPublicKeyHashProposition]()
 

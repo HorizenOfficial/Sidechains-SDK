@@ -137,7 +137,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Note: supportedSegmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network (maxSegmentSize).
-    private static final int maxSegmentSize = (1 << 17);
+    private static final int maxSegmentSize = (1 << 18);
     private static final int supportedSegmentSize = (1 << 17);
 
     @Override
@@ -148,9 +148,13 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 supportedSegmentSize);
     }
 
+    // Result data max size values are the same as in MC
+    private static final int maxProofSize = 9 * 1024;
+    private static final int maxVkSize = 9 * 1024;
+
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, provingKeyPath, verificationKeyPath);
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, provingKeyPath, verificationKeyPath, maxProofSize, maxVkSize);
     }
 
     @Override

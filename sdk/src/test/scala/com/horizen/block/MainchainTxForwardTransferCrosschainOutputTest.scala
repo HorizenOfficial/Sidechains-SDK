@@ -19,8 +19,10 @@ class MainchainTxForwardTransferCrosschainOutputTest extends JUnitSuite with Mai
     val proposition: PublicKey25519Proposition = PrivateKey25519Creator.getInstance().generateSecret("test1".getBytes()).publicImage()
     val sidechainId: Array[Byte] = new Array[Byte](32)
     Random.nextBytes(sidechainId)
+    val mcReturnAddress: Array[Byte] = new Array[Byte](20)
+    Random.nextBytes(mcReturnAddress)
 
-    val bytes: Array[Byte] = generateMainchainTxForwardTransferCrosschainOutputBytes(amount, proposition, sidechainId)
+    val bytes: Array[Byte] = generateMainchainTxForwardTransferCrosschainOutputBytes(amount, proposition, sidechainId, mcReturnAddress)
     val hash: String = BytesUtils.toHexString(Utils.doubleSHA256Hash(bytes))
 
 

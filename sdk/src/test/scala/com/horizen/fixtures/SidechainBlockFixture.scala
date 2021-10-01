@@ -68,7 +68,6 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
       firstOrSecond(merklePath, initialBlock.header.forgingStakeMerklePath),
       firstOrSecond(companion, sidechainTransactionsCompanion),
-      params,
       signatureOption
     ).get
 
@@ -109,8 +108,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
-      companion,
-      params
+      companion
     ).get
   }
 }

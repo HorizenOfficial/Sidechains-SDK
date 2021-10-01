@@ -38,8 +38,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     assertEquals("Epoch info expected to be the same as previous.",
@@ -68,8 +67,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
@@ -103,8 +101,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     assertEquals("Epoch info expected to be the changed: epoch index should increase.",
@@ -137,8 +134,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      sidechainTransactionsCompanion
     ).get
 
     assertEquals("Epoch info expected to be the same as previous.",

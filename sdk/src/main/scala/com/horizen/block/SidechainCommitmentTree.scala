@@ -47,6 +47,7 @@ class SidechainCommitmentTree {
       ft.sidechainId(),
       ftOutput.amount,
       ftOutput.propositionBytes,
+      ftOutput.mcReturnAddress,
       ft.transactionHash(),
       ft.transactionIndex()
     )

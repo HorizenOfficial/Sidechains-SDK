@@ -113,12 +113,12 @@ def check_subommer(ommer_scblock_id, subommer_scblock_id, subommer_mcheader_hash
     fail("Ommer id {0} was not found in SC Block {1} ommers.".format(ommer_scblock_id, scblock_id))
 
 
-def mc_make_forward_transfer(mc_node, sc_node, sc_id, ft_zen_amount):
+def mc_make_forward_transfer(mc_node, sc_node, sc_id, ft_zen_amount, mc_return_address):
     # Do FT of `ft_amount` Zen to SC Node
     sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
     sc_account = Account("", sc_address)
     mc_mempool_size = mc_node.getmempoolinfo()["size"]
-    mc_tx_id = mc_node.sc_send(sc_address, ft_zen_amount, sc_id)
+    mc_tx_id = mc_node.sc_send(sc_address, ft_zen_amount, sc_id, mc_return_address)
     print("MC Tx with FT created: " + mc_tx_id)
     assert_equal(mc_mempool_size + 1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
     mc_block_hash = mc_node.generate(1)[0]
