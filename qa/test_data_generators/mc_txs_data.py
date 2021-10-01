@@ -95,23 +95,23 @@ class McTxsData(SidechainTestFramework):
             {
                 "scid": sidechain_id,
                 "amount": 10,
-                "address": "000000000000000000000000000000000000000000000000000000000000add1",
+                "toaddress": "000000000000000000000000000000000000000000000000000000000000add1",
                 "mcReturnAddress": mc_return_address
             },
             {
                 "scid": sidechain_id,
                 "amount": 11,
-                "address": "000000000000000000000000000000000000000000000000000000000000add2",
+                "toaddress": "000000000000000000000000000000000000000000000000000000000000add2",
                 "mcReturnAddress": mc_return_address
             },
             {
                 "scid": sidechain_id,
                 "amount": 12,
-                "address": "000000000000000000000000000000000000000000000000000000000000add3",
+                "toaddress": "000000000000000000000000000000000000000000000000000000000000add3",
                 "mcReturnAddress": mc_return_address
             }
         ]
-        multiple_ft_tx_id = mc_node.sc_sendmany(send_many_params)
+        multiple_ft_tx_id = mc_node.sc_send(send_many_params)
         multiple_ft_tx_hex = mc_node.getrawtransaction(multiple_ft_tx_id)
         print("MC Transaction with version -4 with multiple ForwardTransfer outputs: \nHash = {0}\nSize = {1}\n"
               "Hex = {2}\nForward Transfers: = {3}\n"

@@ -95,12 +95,12 @@ class McTxsData(SidechainTestFramework):
         sc_address = "000000000000000000000000000000000000000000000000000000000000add1"
         # Send 3 FTs to different sidechains
         ft_args = [
-            {"address": sc_address, "amount": 1, "scid": sidechain_id_1, "mcReturnAddress": mc_return_address},
-            {"address": sc_address, "amount": 2, "scid": sidechain_id_2, "mcReturnAddress": mc_return_address},
-            {"address": sc_address, "amount": 3, "scid": sidechain_id_3, "mcReturnAddress": mc_return_address}
+            {"toaddress": sc_address, "amount": 1, "scid": sidechain_id_1, "mcReturnAddress": mc_return_address},
+            {"toaddress": sc_address, "amount": 2, "scid": sidechain_id_2, "mcReturnAddress": mc_return_address},
+            {"toaddress": sc_address, "amount": 3, "scid": sidechain_id_3, "mcReturnAddress": mc_return_address}
         ]
 
-        mc_node.sc_sendmany(ft_args)
+        mc_node.sc_send(ft_args)
 
         # Generate block
         block_id = mc_node.generate(1)[0]

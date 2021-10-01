@@ -132,8 +132,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Get Certificate for Withdrawal epoch 0 and verify it
         we0_certHash = mc_node.getrawmempool()[0]
         print("Withdrawal epoch 0 certificate hash = " + we0_certHash)
-        we0_cert = mc_node.getrawcertificate(we0_certHash, 1)
-        we0_cert_hex = mc_node.getrawcertificate(we0_certHash)
+        we0_cert = mc_node.getrawtransaction(we0_certHash, 1)
+        we0_cert_hex = mc_node.getrawtransaction(we0_certHash)
         print("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
         assert_equal(0, we0_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
@@ -241,8 +241,8 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Get Certificate for Withdrawal epoch 1 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
         print("Withdrawal epoch 1 certificate hash = " + we1_certHash)
-        we1_cert = mc_node.getrawcertificate(we1_certHash, 1)
-        we1_cert_hex = mc_node.getrawcertificate(we1_certHash)
+        we1_cert = mc_node.getrawtransaction(we1_certHash, 1)
+        we1_cert_hex = mc_node.getrawtransaction(we1_certHash)
         print("Withdrawal epoch 1 certificate hex = " + we1_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"],
                      "Sidechain Id in certificate is wrong.")
