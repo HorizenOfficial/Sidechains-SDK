@@ -9,3 +9,5 @@ src/main/resources/sc_settings_with_mc.conf
 .settings/
 .vscode/
 /src/main/MyOwnSettings/
+../Dockerfile
+../entrypoint.sh
