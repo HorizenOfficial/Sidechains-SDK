@@ -64,7 +64,6 @@ class SidechainApp @Inject()
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
-   @Named("UserSettingsFile") val userSettingsFile : String,
   )
   extends Application  with ScorexLogging
 {
@@ -76,7 +75,7 @@ class SidechainApp @Inject()
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
-  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, SidechainSettingsReader.readConfigFromPath(userSettingsFile,Option.empty))
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomNodeConfiguration.getCustomConfig())
 
   private val storageList = mutable.ListBuffer[Storage]()
 

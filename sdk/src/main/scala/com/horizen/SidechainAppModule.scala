@@ -53,8 +53,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
           @Named("ConsensusStorage")  consensusStorage: Storage,
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
-          @Named("UserSettingsFile")  userSettingsFile : String
+          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
          ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -75,7 +74,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           consensusStorage,
           customApiGroups,
           rejectedApiPaths,
-          userSettingsFile,
         )
       }
     }
