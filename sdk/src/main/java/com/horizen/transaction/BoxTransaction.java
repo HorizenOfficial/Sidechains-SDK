@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"signatures", "encoder", "customFieldsHash", "customDataMessageToSignHash"})
+@JsonIgnoreProperties({"signatures", "encoder", "customFieldsData", "customDataMessageToSign"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
