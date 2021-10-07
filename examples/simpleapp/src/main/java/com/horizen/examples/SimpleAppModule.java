@@ -24,19 +24,23 @@ import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
 import com.horizen.utils.Pair;
+import com.typesafe.config.Config;
 
 public class SimpleAppModule extends SidechainAppModule
 {
     private final SettingsReader settingsReader;
+    private final String userSettingsFile;
 
     public SimpleAppModule(String userSettingsFileName) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
+        this.userSettingsFile = userSettingsFileName;
     }
 
     @Override
     public void configureApp() {
 
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
+        //Config customConfig = this.settingsReader.getConfig();
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
@@ -122,5 +126,8 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+       bind(String.class).annotatedWith(Names.named("UserSettingsFile")).toInstance(userSettingsFile);
+
     }
 }

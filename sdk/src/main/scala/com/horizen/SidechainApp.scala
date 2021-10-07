@@ -3,7 +3,7 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
@@ -15,6 +15,7 @@ import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.customconfig.CustomNodeConfiguration
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
@@ -41,6 +42,7 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 import com.horizen.network.SidechainNodeViewSynchronizer
+import com.typesafe.config.Config
 
 import scala.util.Try
 
@@ -62,6 +64,7 @@ class SidechainApp @Inject()
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   @Named("UserSettingsFile") val userSettingsFile : String,
   )
   extends Application  with ScorexLogging
 {
@@ -72,6 +75,8 @@ class SidechainApp @Inject()
   override type NVHT = SidechainNodeViewHolder
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, SidechainSettingsReader.readConfigFromPath(userSettingsFile,Option.empty))
 
   private val storageList = mutable.ListBuffer[Storage]()
 

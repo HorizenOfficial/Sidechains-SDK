@@ -10,7 +10,8 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.DownloadRequest
+import scorex.core.NodeViewHolder.{CurrentView, DownloadRequest}
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.idToVersion
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
@@ -37,7 +38,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
-{
+ {
   override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
   override type MS = SidechainState
@@ -87,8 +88,22 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
+
+  // overridden from base, maybe it needs a try catch block as well??
+  override  protected def getCurrentInfo: Receive = {
+
+    case GetDataFromCurrentView(f) =>{
+      //log.info("*°*°*°*°*°*°*° base sender:%s".format(sender().path.name))
+      sender() ! f(CurrentView(history(), minimalState(), vault(), memoryPool()))
+    }
+  }
+
+
   protected def getCurrentSidechainNodeViewInfo: Receive = {
+
     case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
+
+      //log.info("*°*°*°*°*°*°*° my sender:%s".format(sender().path.name))
       sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
     }
     catch {
@@ -306,7 +321,7 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -324,7 +339,7 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -343,5 +358,4 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
-}
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)}

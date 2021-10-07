@@ -14,6 +14,7 @@ import com.horizen.storage.Storage
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
+import com.typesafe.config.Config
 
 abstract class SidechainAppModule extends com.google.inject.AbstractModule {
 
@@ -52,7 +53,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
           @Named("ConsensusStorage")  consensusStorage: Storage,
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
+          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+          @Named("UserSettingsFile")  userSettingsFile : String
          ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -72,7 +74,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           walletForgingBoxesInfoStorage,
           consensusStorage,
           customApiGroups,
-          rejectedApiPaths
+          rejectedApiPaths,
+          userSettingsFile,
         )
       }
     }
