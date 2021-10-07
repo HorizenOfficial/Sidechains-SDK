@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.customconfig.CustomNodeConfiguration
+import com.horizen.customconfig.CustomAkkaConfiguration
 
 import java.io.File
 import java.net.URL
@@ -56,7 +56,7 @@ object SidechainSettingsReader
 
     config = config
       .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
-      .withFallback(CustomNodeConfiguration.getCustomConfig()) // added for custom config
+      .withFallback(CustomAkkaConfiguration.getCustomConfig()) // added for custom config
       .withFallback(ConfigFactory.defaultReference())
       .resolve()
 

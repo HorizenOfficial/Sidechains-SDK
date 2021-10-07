@@ -2,7 +2,7 @@ package com.horizen.customconfig
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-object CustomNodeConfiguration {
+object CustomAkkaConfiguration {
 
   def getCustomConfig(): Config = {
 

@@ -15,7 +15,7 @@ import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.customconfig.CustomNodeConfiguration
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
@@ -75,7 +75,7 @@ class SidechainApp @Inject()
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
-  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomNodeConfiguration.getCustomConfig())
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
   private val storageList = mutable.ListBuffer[Storage]()
 
