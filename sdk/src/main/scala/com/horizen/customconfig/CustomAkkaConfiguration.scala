@@ -6,14 +6,12 @@ object CustomAkkaConfiguration {
 
   def getCustomConfig(): Config = {
 
-    val customConf =  ConfigFactory.parseString("""
+   ConfigFactory.parseString("""
         akka.actor.deployment {
             prio-mailbox {
                 mailbox-type = "com.horizen.mailbox.PrioritizedMailbox"
             }
         }
       """)
-
-    customConf
   }
 }

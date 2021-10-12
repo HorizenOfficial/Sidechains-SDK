@@ -89,22 +89,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
 
-  // overridden from base, maybe it needs a try catch block as well??
-  override  protected def getCurrentInfo: Receive = {
-
-    case GetDataFromCurrentView(f) =>{
-      //log.info("*°*°*°*°*°*°*° base sender:%s".format(sender().path.name))
-      sender() ! f(CurrentView(history(), minimalState(), vault(), memoryPool()))
-    }
-  }
-
-
   protected def getCurrentSidechainNodeViewInfo: Receive = {
 
     case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-
-      //log.info("*°*°*°*°*°*°*° my sender:%s".format(sender().path.name))
-      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
+     sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
     }
     catch {
       case e: Exception => sender() ! akka.actor.Status.Failure(e)

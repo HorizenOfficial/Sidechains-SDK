@@ -1,10 +1,9 @@
 package com.horizen
 
-import com.horizen.customconfig.CustomAkkaConfiguration
-
 import java.io.File
 import java.net.URL
 import java.util.{Optional => JOptional}
+
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -56,7 +55,6 @@ object SidechainSettingsReader
 
     config = config
       .withFallback(ConfigFactory.parseResources(sidechainSettingsName))
-      .withFallback(CustomAkkaConfiguration.getCustomConfig()) // added for custom config
       .withFallback(ConfigFactory.defaultReference())
       .resolve()
 
@@ -68,5 +66,4 @@ object SidechainSettingsReader
 
   def read(userConfigPath: String, applicationConfigPath: Option[String]) : SidechainSettings =
     fromConfig(readConfigFromPath(userConfigPath, applicationConfigPath))
-
 }

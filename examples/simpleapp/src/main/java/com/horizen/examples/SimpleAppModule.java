@@ -24,7 +24,6 @@ import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
 import com.horizen.utils.Pair;
-import com.typesafe.config.Config;
 
 public class SimpleAppModule extends SidechainAppModule
 {
