@@ -8,4 +8,3 @@ src/main/resources/sc_settings_with_mc.conf
 .classpath
 .settings/
 .vscode/
-../entrypoint.sh

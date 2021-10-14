@@ -10,8 +10,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.{CurrentView, DownloadRequest}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import scorex.core.NodeViewHolder.{DownloadRequest}
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.idToVersion
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
