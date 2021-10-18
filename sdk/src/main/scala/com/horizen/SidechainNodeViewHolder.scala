@@ -10,7 +10,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.{DownloadRequest}
+import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.idToVersion
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
@@ -37,7 +37,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
- {
+{
   override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
   override type MS = SidechainState
@@ -87,11 +87,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-
   protected def getCurrentSidechainNodeViewInfo: Receive = {
-
     case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-     sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
+      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
     }
     catch {
       case e: Exception => sender() ! akka.actor.Status.Failure(e)
