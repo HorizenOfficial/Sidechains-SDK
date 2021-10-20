@@ -156,7 +156,7 @@ def sc_make_withdrawal_request_mempool(mc_node, sc_node, bt_zen_amount):
     withdrawal_request = {
         "outputs": [
             {
-                "publicKey": mc_address_standard,
+                "mainchainAddress": mc_address_standard,
                 "value": bt_zen_amount * 100000000  # in Satoshi
             }
         ]

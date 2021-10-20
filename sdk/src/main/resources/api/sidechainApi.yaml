@@ -503,12 +503,12 @@ paths:
                   items:
                     type: object
                     required:
-                      - publicKey
-                      - value
+                     - mainchainAddress
+                     - value
                     properties:
-                      publicKey:
+                      mainchainAddress:
                         type: string
-                        description: base58 string - standard Horizen public key address
+                        description: base58check - Horizen pay to pubkeyhash address
                       value:
                         type: integer
                         format: int64
@@ -593,12 +593,12 @@ paths:
                   items:
                     type: object
                     required:
-                      - publicKey
-                      - value
+                     - mainchainAddress
+                     - value
                     properties:
-                      publicKey:
+                      mainchainAddress:
                         type: string
-                        description: base58 string - standard Horizen public key address
+                        description: base58check - Horizen pay to pubkeyhash address
                       value:
                         type: integer
                         format: int64
@@ -725,7 +725,7 @@ paths:
                       - mainchainAddress
                       - value
                     properties:
-                      publicKey:
+                      mainchainAddress:
                         type: string
                         description: base58check - Horizen pay to pubkeyhash address
                       value:
@@ -1019,43 +1019,43 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
   /wallet/balanceOfType:
-    post:
-      tags:
-        - wallet
-      summary: the total balance of boxes of given type
-      description: Return the global balance for given type of boxes
-      operationId: getBalance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                boxType:
-                  description: Filter balance for given box type
-                  type: string
-      responses:
-        '200':
-          description: successful operation
+      post:
+        tags:
+          - wallet
+        summary: the total balance of boxes of given type
+        description: Return the global balance for given type of boxes
+        operationId: getBalance
+        requestBody:
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  result:
-                    type: object
-                    properties:
-                      balance:
-                        type: integer
-                        format: int64
-                  error:
-                    $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
+                  boxType:
+                    description: Filter balance for given box type
+                    type: string
+        responses:
+          '200':
+            description: successful operation
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    result:
+                      type: object
+                      properties:
+                        balance:
+                          type: integer
+                          format: int64
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
+          default:
+            description: any kind of http error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/SidechainApiError'
 
   /wallet/createPrivateKey25519:
     post:
