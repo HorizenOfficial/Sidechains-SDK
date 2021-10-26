@@ -32,9 +32,9 @@ class MCPublicKeyHashPropositionJsonTest
 
     val node : JsonNode = serializer.getObjectMapper().readTree(jsonStr)
 
-    assertEquals("Json must contain only 1 publicKey.",
-      1, node.findValues("publicKey").size())
-    val pubKey: String = node.path("publicKey").asText()
+    assertEquals("Json must contain only 1 mainchainAddress.",
+      1, node.findValues("mainchainAddress").size())
+    val pubKey: String = node.path("mainchainAddress").asText()
     var parsedPubKeyHashBytes: Array[Byte] = null
     try {
       parsedPubKeyHashBytes = BytesUtils.fromHorizenPublicKeyAddress(pubKey, params)
