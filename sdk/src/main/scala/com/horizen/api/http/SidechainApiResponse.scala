@@ -20,7 +20,7 @@ class SidechainApiResponse(statusCode: StatusCode) {
   def withString(s: String): Route = complete(s)
 
   def complete(result: String): Route = {
-    val httpEntity = HttpEntity(ContentTypes.`application/json`, result)
+    val httpEntity = HttpEntity(ContentTypes.`application/json`, ApiResponseUtil.formatResponse(result))
     Directives.complete(statusCode.intValue() -> httpEntity)
   }
 }

@@ -143,11 +143,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       history().append(pmod) match {
         case Success((historyBeforeStUpdate, progressInfo)) =>
-          log.debug(s"Going to apply modifications to the state: $progressInfo")
+          log.info(s"Going to apply modifications to the state: $progressInfo")
           context.system.eventStream.publish(SyntacticallySuccessfulModifier(pmod))
           context.system.eventStream.publish(NewOpenSurface(historyBeforeStUpdate.openSurfaceIds()))
 
           if (progressInfo.toApply.nonEmpty) {
+
+            log.info("case that progressInfo.toApply.nonEmpty = TRUE")
+
             val (newHistory, newStateTry, newWallet, blocksApplied) =
               updateStateAndWallet(historyBeforeStUpdate, minimalState(), vault(), progressInfo, IndexedSeq())
 
@@ -166,6 +169,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 context.system.eventStream.publish(SemanticallyFailedModification(pmod, e))
             }
           } else {
+            log.info("case that progressInfo.toApply.nonEmpty = TRUE")
             requestDownloads(progressInfo)
             updateNodeView(updatedHistory = Some(historyBeforeStUpdate))
           }
@@ -210,6 +214,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) =>
+        log.info("case (Success(stateToApply), Success(walletToApply))")
         val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo)
 
         nodeUpdateInfo.failedMod match {
@@ -264,6 +269,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         updateInfo.state.applyModifier(modToApply) match {
           case Success(stateAfterApply) =>
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
+            log.info("going to publish SemanticallySuccessfulModifier")
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
             val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
               newWallet.scanPersistent(modToApply, stateAfterApply.getFeePayments(stateAfterApply.getWithdrawalEpochInfo.epoch))

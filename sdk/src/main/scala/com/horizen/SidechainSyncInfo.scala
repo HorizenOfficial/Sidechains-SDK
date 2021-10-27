@@ -14,7 +14,8 @@ import scorex.util.{bytesToId, idToBytes}
 import scala.util.Try
 
 // knownBlockIds ordered backward most recent one to oldest
-case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
+case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId], chainHeight: Int) extends SyncInfo {
+
   override type M = SidechainSyncInfo
 
   override def serializer: ScorexSerializer[SidechainSyncInfo] = SidechainSyncInfoSerializer
@@ -32,20 +33,22 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
 
   override def serialize(obj: SidechainSyncInfo, w: Writer): Unit = {
+    w.putInt(obj.chainHeight)
     w.putInt(obj.knownBlockIds.size)
     for(b <- obj.knownBlockIds)
       w.putBytes(idToBytes(b))
   }
 
   override def parse(r: Reader): SidechainSyncInfo = {
+
+    val chainHeight : Int = r.getInt()
     val length = r.getInt()
     if (r.remaining != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
-
     val modifierIds : Seq[ModifierId] = for(b <- 0 until length)
       yield bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 
-    SidechainSyncInfo(modifierIds)
+    SidechainSyncInfo(modifierIds,chainHeight)
   }
 }
 

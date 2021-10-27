@@ -508,7 +508,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                        desctiption: base58 string - standard Horizen public key address
+                        description: base58 string - standard Horizen public key address
                       value:
                         type: integer
                         format: int64
@@ -598,7 +598,7 @@ paths:
                     properties:
                       publicKey:
                         type: string
-                        desctiption: base58 string - standard Horizen public key address
+                        description: base58 string - standard Horizen public key address
                       value:
                         type: integer
                         format: int64
@@ -722,12 +722,12 @@ paths:
                     items:
                       type: object
                       required:
-                        - publicKey
+                        - mainchainAddress
                         - value
                       properties:
                         publicKey:
                           type: string
-                          desctiption: base58 string - standard Horizen public key address
+                          description: base58check - Horizen pay to pubkeyhash address
                         value:
                           type: integer
                           format: int64
@@ -1287,6 +1287,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  # DIRAC THIS IS BLOCK/NODE operations
+  /node/nodeSyncStatus:
+    post:
+      tags:
+        - node
+      summary: Get node Sync Info
+      description: Returns percentage and numbers of sync status
+      operationId: nodeSyncStatus
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      peers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SidechainPeerNode'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+
+
+
+
+
   /mainchain/bestBlockReferenceInfo:
     post:
       tags:
@@ -1620,3 +1657,22 @@ components:
           $ref: '#/components/schemas/Proposition'
         signature:
           $ref: '#/components/schemas/Signature25519'
+
+    NodeSyncInfo:
+      type: object
+      properties:
+        status:
+          type: string
+        blockChainHeight:
+          type: integer
+          format: int64
+        syncPercentage:
+          type: integer
+          format: int32
+        nodeHeight:
+          type: integer
+          format: int64
+        error:
+          type: string
+        nodeType:
+          type: string

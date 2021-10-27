@@ -303,7 +303,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     // collect control points of block ids like in bitcoin (last 10, then increase step exponentially until genesis block)
     SidechainSyncInfo(
       // return a sequence of block ids for given blocks height backward starting from blockId
-      knownBlocksHeightToSync().map(height => storage.activeChainBlockId(height).get)
+      knownBlocksHeightToSync().map(height => storage.activeChainBlockId(height).get),
+      height
     )
 
   }

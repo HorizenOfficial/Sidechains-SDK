@@ -35,4 +35,13 @@ object ApiResponseUtil {
       }
     }
   }
+
+
+  def formatResponse(response:String):String ={
+   // response.replace(",",",\n\t").replace("[","[\n\t") .replace(",\n\t\n",",\n") + "\n\n"
+    response + "\n"
+  }
+
+
+
 }
