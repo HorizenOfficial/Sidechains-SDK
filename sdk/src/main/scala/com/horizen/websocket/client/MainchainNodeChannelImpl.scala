@@ -1,7 +1,6 @@
+package com.horizen.websocket.client
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
-package com.horizen.websocket.client
-import com.horizen.block.MainchainBlockReference
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils

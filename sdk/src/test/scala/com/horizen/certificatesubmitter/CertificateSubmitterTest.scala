@@ -11,7 +11,7 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.websocket.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
+import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo}
 import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
@@ -21,6 +21,7 @@ import com.horizen.fixtures.FieldElementFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
 import com.horizen.utils.WithdrawalEpochInfo
+import com.horizen.websocket.client.TopQualityCertificates
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}

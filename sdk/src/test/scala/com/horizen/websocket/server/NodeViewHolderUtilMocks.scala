@@ -1,13 +1,13 @@
-package com.horizen.api.http
+package com.horizen.websocket.server
 
+import com.horizen.api.http.SidechainApiMockConfiguration
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainTypes, SidechainWallet}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.data.{NoncedBoxData, RegularBoxData}
-import com.horizen.box.{Box, NoncedBox, RegularBox}
+import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
+import com.horizen.box.{Box, NoncedBox, ZenBox}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
@@ -19,9 +19,7 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
-import scorex.core.ModifierTypeId
 import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.consensus.History.ModifierIds
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
@@ -44,9 +42,9 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
   val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
   val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  val box_1 = getRegularBox(secret1.publicImage(), 1, 10)
-  val box_2 = getRegularBox(secret2.publicImage(), 1, 20)
-  val box_3 = getRegularBox(secret3.publicImage(), 1, 30)
+  val box_1 = getZenBox(secret1.publicImage(), 1, 10)
+  val box_2 = getZenBox(secret2.publicImage(), 1, 20)
+  val box_3 = getZenBox(secret3.publicImage(), 1, 30)
   val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
@@ -64,8 +62,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     forgerBoxMetadata.forgingStakeInfo,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
-    sidechainTransactionsCompanion,
-    null).get
+    sidechainTransactionsCompanion).get
 
   val genesisBlockInfo: SidechainBlockInfo = new SidechainBlockInfo(
     100,
@@ -187,7 +184,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainWallet = {
     val wallet: SidechainWallet = mock[SidechainWallet]
     Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
-    Mockito.when(wallet.allBoxesBalance).thenAnswer(_ => Long.box(5500))
+    Mockito.when(wallet.allCoinsBoxesBalance()).thenAnswer(_ => Long.box(5500))
 
     Mockito.when(wallet.allBoxes()).thenAnswer(_ => allBoxes)
     Mockito.when(wallet.allBoxes(ArgumentMatchers.any[util.List[Array[Byte]]])).thenAnswer(asw => {
@@ -227,15 +224,15 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   }
 
   private def getTransaction(fee: Long): RegularTransaction = {
-    val from: util.List[Pair[RegularBox, PrivateKey25519]] = new util.ArrayList[Pair[RegularBox, PrivateKey25519]]()
+    val from: util.List[Pair[ZenBox, PrivateKey25519]] = new util.ArrayList[Pair[ZenBox, PrivateKey25519]]()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))
 
-    to.add(new RegularBoxData(secret3.publicImage(), box_1.value() + box_2.value() - fee))
+    to.add(new ZenBoxData(secret3.publicImage(), box_1.value() + box_2.value() - fee))
 
-    RegularTransaction.create(from, to, fee, 1547798549470L)
+    RegularTransaction.create(from, to, fee)
   }
 
   private def getTransactionList: util.List[RegularTransaction] = {

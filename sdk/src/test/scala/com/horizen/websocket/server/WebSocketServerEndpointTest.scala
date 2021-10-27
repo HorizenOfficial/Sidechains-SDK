@@ -9,7 +9,7 @@ import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.{SidechainMemoryPool}
-import com.horizen.api.http.{NodeViewHolderUtilMocks, SidechainApiMockConfiguration}
+import com.horizen.api.http.{SidechainApiMockConfiguration}
 import javax.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -127,7 +127,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     var nTx = 0
     responsePayload.get("transactions").forEach(tx => {
       nTx += 1
-      assertEquals( "9e8d287524000a128f3d936ffdc1df1f2a54fa85a2800bc7b681e934d251efac", tx.asText())
+      assertEquals( "b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.asText())
     })
     assertEquals(2, nTx)
     session.close()
@@ -147,7 +147,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
       .put("msgType", 1)
       .put("requestId",0)
       .put("requestType", 4)
-    rawMempoolRequest.putObject("requestPayload").putArray("hash").add("9e8d287524000a128f3d936ffdc1df1f2a54fa85a2800bc7b681e934d251efac")
+    rawMempoolRequest.putObject("requestPayload").putArray("hash").add("b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb")
 
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
     Thread.sleep(3000)
@@ -164,7 +164,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     var counter: Int = 0
     responsePayload.get("transactions").forEach(tx => {
       counter += 1
-      assertEquals("9e8d287524000a128f3d936ffdc1df1f2a54fa85a2800bc7b681e934d251efac", tx.get("id").asText())
+      assertEquals("b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.get("id").asText())
     })
     assertEquals(1, counter)
 
@@ -321,7 +321,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     var nTx = 0
     eventPayload.get("transactions").forEach(tx => {
       nTx += 1
-      assertEquals( "9e8d287524000a128f3d936ffdc1df1f2a54fa85a2800bc7b681e934d251efac", tx.asText())
+      assertEquals( "b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.asText())
     })
     assertEquals(2, nTx)
 
