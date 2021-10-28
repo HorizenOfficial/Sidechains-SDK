@@ -137,7 +137,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
       (bBlock,height)
     }
 
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(bestBlock))
+    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(bestBlock._1))
 
     eventPayload.put("height",bestBlock._2)
     eventPayload.put("hash",bestBlock._1.id)
