@@ -14,6 +14,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
 import com.horizen.serialization.SerializationUtil
+import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
@@ -23,44 +24,55 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   implicit val duration: Timeout = 20 seconds
   implicit val ec:ExecutionContext = ExecutionContext.Implicits.global
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
-
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-  protected def viewAsync(): Future[View] = {
-    def f(v: View) = v
 
-    (WebSocketServerRef.sidechainNodeViewHolderRef ? GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, View](f))
-      .mapTo[View]
+  def applyOnNodeView[R](functionToBeApplied: View => R): R = {
+    try {
+      val res = (sidechainNodeViewHolderRef ? GetDataFromCurrentView(functionToBeApplied)).asInstanceOf[Future[R]]
+      val result = Await.result[R](res, 5000 millis)
+      result
+    }
+    catch {
+      case e: Exception => throw new Exception(e)
+    }
+
   }
-
 
   override def getBlockByHeight(height: Int): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
-    //get block hash by id
-    val sidechainBlockHash = sidechainNodeView.history.blockIdByHeight(height).get
-    //get block by hash
-    val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.asInstanceOf[ModifierId]).get
+    val block: SidechainBlock = applyOnNodeView {sidechainNodeView =>
+      //get block hash by id
+     val sidechainBlockHash = sidechainNodeView.history.blockIdByHeight(height).get
+      //get block by hash
+      val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.asInstanceOf[ModifierId]).get
+      sblock
+    }
+
     //serialize JSON
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(sblock))
+    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block))
     responsePayload.put("block", blockJson.get("result"))
-    responsePayload.put("hash",sidechainBlockHash)
+    responsePayload.put("hash", block.id)
     responsePayload.put("height",height)
     responsePayload
   }
 
   override def getBlockByHash(hash: String): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
-    //get block by hash
-    val sidechainBlock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId]).get
-    val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
+    val block: (SidechainBlock, Integer) = applyOnNodeView {sidechainNodeView =>
+      //get block by hash
+      val sblock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId]).get
+      //get block height by hash
+      val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
+      (sblock,height)
+    }
+
     //serialize JSON
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(sidechainBlock))
+    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block._1))
     responsePayload.put("block", blockJson.get("result"))
     responsePayload.put("hash",hash)
-    responsePayload.put("height",height)
+    responsePayload.put("height",block._2)
 
     responsePayload
   }
@@ -69,11 +81,13 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
     var lastHeight = -1
     val responsePayload = mapper.createObjectNode()
 
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
-    var scInfo: SidechainSyncInfo = new SidechainSyncInfo(locatorHashes.asInstanceOf[Seq[ModifierId]])
-    var headerList = sidechainNodeView.history.continuationIds(scInfo ,limit)
-    if (headerList.size > 0) {
-      lastHeight = sidechainNodeView.history.blockInfoById(headerList.last._2.asInstanceOf[ModifierId]).height
+    val scInfo: SidechainSyncInfo = new SidechainSyncInfo(locatorHashes.asInstanceOf[Seq[ModifierId]])
+    val headerList = applyOnNodeView {sidechainNodeView =>
+      val headers = sidechainNodeView.history.continuationIds(scInfo ,limit)
+      if (headers.size > 0) {
+        lastHeight = sidechainNodeView.history.blockInfoById(headers.last._2.asInstanceOf[ModifierId]).height
+      }
+      headers
     }
 
     val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.map(el =>el._2)))
@@ -85,9 +99,10 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
 
   override def getMempoolTxs(txids: Seq[String]): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
-    val txs = sidechainNodeView.pool.getAll(txids.asInstanceOf[Seq[ModifierId]])
+    val txs = applyOnNodeView {sidechainNodeView =>
+      sidechainNodeView.pool.getAll(txids.asInstanceOf[Seq[ModifierId]])
+    }
 
     val txsJson = mapper.readTree(SerializationUtil.serializeWithResult(txs))
     responsePayload.put("transactions",txsJson.get("result"))
@@ -96,10 +111,12 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
 
   override def getRawMempool(): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
-    val txids: util.ArrayList[String] = new util.ArrayList[String]()
-    sidechainNodeView.pool.take(sidechainNodeView.pool.size).foreach(txs => txids.add(txs.id()))
+    val txids = applyOnNodeView {sidechainNodeView =>
+      val txs: util.ArrayList[String] = new util.ArrayList[String]()
+      sidechainNodeView.pool.take(sidechainNodeView.pool.size).foreach(tx => txs.add(tx.id()))
+      txs
+    }
 
     val json = mapper.readTree(SerializationUtil.serializeWithResult(txids.toArray()))
 
@@ -111,14 +128,19 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
 
   override def getBestBlock(): Try[ObjectNode] = Try {
     val eventPayload = mapper.createObjectNode()
-    val sidechainNodeView: View = Await.result(viewAsync(), 5000 millis)
 
-    val bestBlock = sidechainNodeView.history.bestBlock
-    val height = sidechainNodeView.history.getCurrentHeight
+    val bestBlock: (SidechainBlock, Integer) = applyOnNodeView {sidechainNodeView =>
+      //get best block
+      val bBlock = sidechainNodeView.history.bestBlock
+      //get block height by hash
+      val height = sidechainNodeView.history.getCurrentHeight
+      (bBlock,height)
+    }
+
     val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(bestBlock))
 
-    eventPayload.put("height",height)
-    eventPayload.put("hash",bestBlock.id)
+    eventPayload.put("height",bestBlock._2)
+    eventPayload.put("hash",bestBlock._1.id)
     eventPayload.put("block",blockJson.get("result"))
 
     eventPayload

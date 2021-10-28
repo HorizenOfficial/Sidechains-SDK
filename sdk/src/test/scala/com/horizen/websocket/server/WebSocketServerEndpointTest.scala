@@ -2,14 +2,14 @@ package com.horizen.websocket.server
 
 import java.net.URI
 import java.util
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.horizen.{SidechainMemoryPool}
-import com.horizen.api.http.{SidechainApiMockConfiguration}
+import com.horizen.SidechainMemoryPool
+import com.horizen.api.http.SidechainApiMockConfiguration
+
 import javax.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -19,11 +19,11 @@ import org.scalatest.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.{ExecutionContext}
 
 class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
   private var server: ActorRef = _
-  private var mapper : ObjectMapper = new ObjectMapper().registerModule(DefaultScalaModule)
+  private val mapper: ObjectMapper = new ObjectMapper().registerModule(DefaultScalaModule)
   implicit val ec:ExecutionContext = ExecutionContext.Implicits.global
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-wwebsocket-server")
