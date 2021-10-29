@@ -498,7 +498,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     submitter.certificateSigningEnabled = true
 
 
-    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs witch is exactly the threshold.
+    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // But in MC the better quality Cert exists -> no cert scheduling
     submitter.signaturesStatus = None
 
