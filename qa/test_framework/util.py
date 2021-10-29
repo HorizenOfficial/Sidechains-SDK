@@ -489,10 +489,21 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     ft_min_amount = 0
     btr_fee = 0
 
-    sc_create_res = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount,
-                                             cert_vk, custom_creation_data, gen_sys_constant, ceased_vk,
-                                             fe_certificate_field_configs, bitvector_certificate_field_configs,
-                                             ft_min_amount, btr_fee, btr_data_length)
+    sc_create_args = {
+        "withdrawalEpochLength": withdrawal_epoch_length,
+        "toaddress": public_key,
+        "amount": forward_transfer_amount,
+        "wCertVk": cert_vk,
+        "customData": custom_creation_data,
+        "constant": gen_sys_constant,
+        "wCeasedVk": ceased_vk,
+        "vFieldElementCertificateFieldConfig": fe_certificate_field_configs,
+        "vBitVectorCertificateFieldConfig": bitvector_certificate_field_configs,
+        "forwardTransferScFee": ft_min_amount,
+        "mainchainBackwardTransferScFee": btr_fee,
+        "mainchainBackwardTransferRequestDataLength": btr_data_length
+    }
+    sc_create_res = mainchain_node.sc_create(sc_create_args)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
@@ -520,7 +531,13 @@ Output: an array of two information:
 def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
                                   public_key, forward_transfer_amount, mc_return_address):
 
-    transaction_id = mainchain_node.sc_send(public_key, forward_transfer_amount, sidechain_id, mc_return_address)
+    ft_args = [{
+        "toaddress": public_key,
+        "amount": forward_transfer_amount,
+        "scid": sidechain_id,
+        "mcReturnAddress": mc_return_address
+    }]
+    transaction_id = mainchain_node.sc_send(ft_args)
     print "Id of the sidechain transaction creation: {0}".format(transaction_id)
 
     mainchain_node.generate(1)

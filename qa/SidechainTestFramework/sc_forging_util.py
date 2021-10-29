@@ -118,7 +118,13 @@ def mc_make_forward_transfer(mc_node, sc_node, sc_id, ft_zen_amount, mc_return_a
     sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
     sc_account = Account("", sc_address)
     mc_mempool_size = mc_node.getmempoolinfo()["size"]
-    mc_tx_id = mc_node.sc_send(sc_address, ft_zen_amount, sc_id, mc_return_address)
+    ft_args = [{
+        "toaddress": sc_address,
+        "amount": ft_zen_amount,
+        "scid": sc_id,
+        "mcReturnAddress": mc_return_address
+    }]
+    mc_tx_id = mc_node.sc_send(ft_args)
     print("MC Tx with FT created: " + mc_tx_id)
     assert_equal(mc_mempool_size + 1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
     mc_block_hash = mc_node.generate(1)[0]
@@ -149,14 +155,12 @@ def sc_create_forging_stake_mempool(sc_node, stake_zen_amount):
 
 
 def sc_make_withdrawal_request_mempool(mc_node, sc_node, bt_zen_amount):
-    addresses = mc_node.listaddresses()
-    mc_address_hash = mc_node.getnewaddress("", True)  # what we will see in SC WRBox
-    mc_address_standard = (set(mc_node.listaddresses()) - set(addresses)).pop()
+    mc_address = mc_node.getnewaddress()
 
     withdrawal_request = {
         "outputs": [
             {
-                "publicKey": mc_address_standard,
+                "publicKey": mc_address,
                 "value": bt_zen_amount * 100000000  # in Satoshi
             }
         ]
