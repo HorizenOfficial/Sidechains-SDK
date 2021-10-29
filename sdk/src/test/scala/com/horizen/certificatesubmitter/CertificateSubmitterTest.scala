@@ -554,7 +554,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Actor expected not submitting at the moment", certState)
 
 
-    // Test 6: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Test 6: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // Certificate submitter is disabled
     submitter.signaturesStatus = None
     submitter.submitterEnabled = false
@@ -573,7 +573,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     submitter.submitterEnabled = true
 
-    // Test 7: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs witch is exactly the threshold.
+    // Test 7: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // No better cert quality found
     submitter.signaturesStatus = None
 
@@ -598,7 +598,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     submitter.certGenerationState = false
 
 
-    // Test 8: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs witch is exactly the threshold.
+    // Test 8: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // Get quality exception occurred
 
     // 8.1 Get quality failed with the MC server internal error -> we expect to continue the flow, so to schedule the generation
