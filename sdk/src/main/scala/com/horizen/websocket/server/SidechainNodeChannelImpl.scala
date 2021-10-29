@@ -41,18 +41,20 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   override def getBlockByHeight(height: Int): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
 
-    val block: SidechainBlock = applyOnNodeView {sidechainNodeView =>
+    val block: Option[SidechainBlock] = applyOnNodeView {sidechainNodeView =>
       //get block hash by id
-     val sidechainBlockHash = sidechainNodeView.history.blockIdByHeight(height).get
+      val sidechainBlockHash: Option[String] = sidechainNodeView.history.blockIdByHeight(height)
+      if (sidechainBlockHash.isEmpty) throw new IllegalStateException(s"Block not found for height: "+height)
       //get block by hash
-      val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.asInstanceOf[ModifierId]).get
+      val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.get.asInstanceOf[ModifierId])
+      if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: "+sidechainBlockHash)
       sblock
     }
 
     //serialize JSON
     val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block))
     responsePayload.put("block", blockJson.get("result"))
-    responsePayload.put("hash", block.id)
+    responsePayload.put("hash", block.get.id)
     responsePayload.put("height",height)
     responsePayload
   }
@@ -60,9 +62,10 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   override def getBlockByHash(hash: String): Try[ObjectNode] = Try {
     val responsePayload = mapper.createObjectNode()
 
-    val block: (SidechainBlock, Integer) = applyOnNodeView {sidechainNodeView =>
+    val block: (Option[SidechainBlock], Integer) = applyOnNodeView {sidechainNodeView =>
       //get block by hash
-      val sblock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId]).get
+      val sblock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId])
+      if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: "+hash)
       //get block height by hash
       val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
       (sblock,height)

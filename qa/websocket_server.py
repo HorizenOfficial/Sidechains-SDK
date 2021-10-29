@@ -8,7 +8,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_balance, generate_next_blocks
+    check_mainchain_block_reference_info, generate_next_blocks
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey25519
@@ -73,7 +73,8 @@ class SCWsServer(SidechainTestFramework):
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node,
                                       publicKey1,
-                                      self.sc_nodes_bootstrap_info.genesis_account_balance)
+                                      self.sc_nodes_bootstrap_info.genesis_account_balance,
+                                      mc_node.getnewaddress())
         self.sc_sync_all()
         self.blocks.append(generate_next_blocks(sc_node1, "", 1)[0])
         self.sc_sync_all()
