@@ -517,7 +517,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     // Create unsigned tx
     val boxIds = boxes.map(_.id()).asJava
-    val timestamp = System.currentTimeMillis
     // Create a list of fake proofs for further messageToSign calculation
     val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
     val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee)

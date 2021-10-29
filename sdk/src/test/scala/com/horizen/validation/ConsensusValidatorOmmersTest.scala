@@ -24,9 +24,10 @@ class ConsensusValidatorOmmersTest
     with MockitoSugar
     with CompanionsFixture
     with TransactionFixture
-    with SidechainBlockFixture {
+    with SidechainBlockFixture
+    with TimeProviderFixture {
 
-  val consensusValidator: ConsensusValidator = new ConsensusValidator {
+  val consensusValidator: ConsensusValidator = new ConsensusValidator(timeProvider) {
     // always successful
     override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {}
   }
@@ -88,7 +89,7 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
-    val currentEpochConsensusValidator = new ConsensusValidator {
+    val currentEpochConsensusValidator = new ConsensusValidator(timeProvider) {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
@@ -105,7 +106,7 @@ class ConsensusValidatorOmmersTest
 
     // Test 2: Same as above, but Ommers contains invalid forging stake info data
     val fsException = new Exception("ForgingStakeException")
-    val forgingStakeFailConsensusValidator = new ConsensusValidator {
+    val forgingStakeFailConsensusValidator = new ConsensusValidator(timeProvider) {
       // always fail
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = throw fsException
     }
@@ -169,7 +170,7 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
-    val previousEpochConsensusValidator = new ConsensusValidator {
+    val previousEpochConsensusValidator = new ConsensusValidator(timeProvider) {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
@@ -278,7 +279,7 @@ class ConsensusValidatorOmmersTest
       currentFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    var switchedEpochConsensusValidator = new ConsensusValidator {
+    var switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
@@ -340,7 +341,7 @@ class ConsensusValidatorOmmersTest
       switchedOmmersFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    switchedEpochConsensusValidator = new ConsensusValidator {
+    switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
@@ -455,7 +456,7 @@ class ConsensusValidatorOmmersTest
       switchedOmmersFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    val switchedEpochConsensusValidator = new ConsensusValidator {
+    val switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
       override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
