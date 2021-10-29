@@ -38,46 +38,53 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
 
   }
 
-  override def getBlockByHeight(height: Int): Try[ObjectNode] = Try {
-    val responsePayload = mapper.createObjectNode()
+  override def getBlockByHeight(height: Int): Try[ObjectNode] = {
 
-    val block: Option[SidechainBlock] = applyOnNodeView {sidechainNodeView =>
-      //get block hash by id
-      val sidechainBlockHash: Option[String] = sidechainNodeView.history.blockIdByHeight(height)
-      if (sidechainBlockHash.isEmpty) throw new IllegalStateException(s"Block not found for height: "+height)
-      //get block by hash
-      val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.get.asInstanceOf[ModifierId])
-      if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: "+sidechainBlockHash)
-      sblock
-    }
+    applyOnNodeView {sidechainNodeView =>
+      Try {
+        //get block hash by id
+        val sidechainBlockHash: Option[String] = sidechainNodeView.history.blockIdByHeight(height)
+        if (sidechainBlockHash.isEmpty) throw new IllegalStateException(s"Block not found for height: " + height)
+        //get block by hash
+        val sblock = sidechainNodeView.history.modifierById(sidechainBlockHash.get.asInstanceOf[ModifierId])
+        if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + sidechainBlockHash)
+        sblock
+      }
+    }.map(block => {
+      //serialize JSON
+      val responsePayload = mapper.createObjectNode()
+      val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block))
+      responsePayload.put("block", blockJson.get("result"))
+      responsePayload.put("hash", block.get.id)
+      responsePayload.put("height",height)
 
-    //serialize JSON
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block))
-    responsePayload.put("block", blockJson.get("result"))
-    responsePayload.put("hash", block.get.id)
-    responsePayload.put("height",height)
-    responsePayload
+      responsePayload
+    })
+
   }
 
-  override def getBlockByHash(hash: String): Try[ObjectNode] = Try {
-    val responsePayload = mapper.createObjectNode()
 
-    val block: (Option[SidechainBlock], Integer) = applyOnNodeView {sidechainNodeView =>
-      //get block by hash
-      val sblock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId])
-      if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: "+hash)
-      //get block height by hash
-      val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
-      (sblock,height)
-    }
+  override def getBlockByHash(hash: String): Try[ObjectNode] = {
 
-    //serialize JSON
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block._1))
-    responsePayload.put("block", blockJson.get("result"))
-    responsePayload.put("hash",hash)
-    responsePayload.put("height",block._2)
+    applyOnNodeView {sidechainNodeView =>
+      Try {
+        //get block by hash
+        val sblock = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId])
+        if (sblock.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + hash)
+        //get block height by hash
+        val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
+        (sblock, height)
+      }
+    }.map(blockInfo => {
+      //serialize JSON
+      val responsePayload = mapper.createObjectNode()
+      val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(blockInfo._1))
+      responsePayload.put("block", blockJson.get("result"))
+      responsePayload.put("hash",hash)
+      responsePayload.put("height",blockInfo._2)
 
-    responsePayload
+      responsePayload
+    })
   }
 
   override def getNewBlockHashes(locatorHashes: Seq[String], limit: Int): Try[ObjectNode] = Try {
