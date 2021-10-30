@@ -1,18 +1,15 @@
 #!/usr/bin/env python2
-import json
 import time
 from string import upper
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SCMultiNetworkConfiguration
+    SCMultiNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
+from SidechainTestFramework.scutil import connect_sc_nodes, \
+    bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
+    sc_p2p_port, sync_sc_blocks
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false,assert_not_equal
-from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, get_known_peers, sc_p2p_port, stop_sc_node, \
-    start_sc_node, TimeoutException, WAIT_CONST, sync_sc_blocks
+    websocket_port_by_mc_node_index, assert_not_equal, separator
 
 """
 Check that a node could response to api calls though if it is Syncronizing
@@ -29,14 +26,6 @@ Test:
     - verify that:
         - node responses to API call block/bestBlock
 """
-
-
-def separator(name=""):
-    if len(name) > 0:
-        print "\n************************ " + upper(name) + " *****************************\n"
-    else:
-        print "\n*****************************************************\n"
-
 
 
 def print_peers_addresses(node):

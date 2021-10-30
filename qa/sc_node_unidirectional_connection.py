@@ -1,17 +1,14 @@
 #!/usr/bin/env python2
-import json
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SCMultiNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
-from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
-from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, get_known_peers, sc_p2p_port, stop_sc_node, \
-    start_sc_node
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, get_known_peers, sc_p2p_port, \
+    stop_sc_node, \
+    start_sc_node, sc_create_multiple_nodes_network
+from test_framework.util import initialize_chain_clean, start_nodes, \
+    websocket_port_by_mc_node_index, assert_true
 
 """
 Check the connection between sidechain nodes to be unidirectional.
@@ -25,11 +22,8 @@ Test:
 """
 
 
-def separator():
-    print "\n*****************************************************\n"
 
-
-def print_peers_addresses(node):
+def print_connected_peers_addresses(node):
     for peer in node.node_connectedPeers()["result"]["peers"]:
         print peer['address'] + " - " + peer['connectionType']
 
@@ -39,7 +33,7 @@ def print_peers_connections(sc_nodes):
     for i in range(len(sc_nodes)):
         print "\n****** " + str(i) + " ******"
         print "node " + "127.0.0.1:" + str(sc_p2p_port(i)) + " peers:"
-        print_peers_addresses(sc_nodes[i])
+        print_connected_peers_addresses(sc_nodes[i])
     return ""
 
 
@@ -50,10 +44,7 @@ def get_node_ports(sc_nodes):
     print ports
 
 
-def get_known_peers_indexes(i, num):
-    indexes = range(num)
-    indexes.remove(i)
-    return indexes
+
 
 
 def create_three_nodes_network(mc_node_1):
@@ -77,19 +68,6 @@ def create_three_nodes_network(mc_node_1):
         sc_node_1_configuration,
         sc_node_2_configuration,
         sc_node_3_configuration)
-    return network
-
-
-def sc_create_multiple_nodes_network(mc_node_1, num_of_nodes_to_start):
-    nodes_config = []
-    for i in range(num_of_nodes_to_start):
-        a_config = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            known_peers=get_known_peers(get_known_peers_indexes(i, num_of_nodes_to_start))
-        )
-        nodes_config.append(a_config)
-    nodes_tuple = tuple(nodes_config)
-    network = SCMultiNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000), nodes_tuple)
     return network
 
 

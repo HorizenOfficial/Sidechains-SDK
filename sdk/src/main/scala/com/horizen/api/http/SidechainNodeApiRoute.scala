@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.horizen.api.http.SidechainNodeRestSchema._
@@ -13,15 +12,22 @@ import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
+import akka.actor.TypedActor.self
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
+import com.horizen.network.SidechainNodeViewSynchronizer
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.GetSyncInfo
+import com.horizen.network.SidechainNodeViewSynchronizer.SidechainNodeSyncInfo
 import com.horizen.serialization.Views
+
 import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 override val settings: RESTApiSettings,
+                                 sidechainNodeViewHolderRef: ActorRef,
+                                 sidechainNodeViewSynchronizerRef: ActorRef)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
@@ -114,58 +120,27 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def nodeSyncStatus: Route = (path("syncStatus") & post) {
 
-  def nodeSyncStatus: Route = (path("nodeSyncStatus") & post) {
+    //val result = sidechainNodeViewSynchronizerRef ! GetSyncInfo
+    val asked = askActor[SidechainNodeSyncInfo](sidechainNodeViewSynchronizerRef,GetSyncInfo)
+      .map(info => NodeSyncInfo(
+        info.status,
+        info.blockChainHeight,
+        info.syncPercentage,
+        info.nodeHeight,
+        info.error,
+        info.nodeType
+      ))
 
-    // how to get the status name ? will I determine like 'finished' if it is 100% and syncing otherwise??
-    //   -->   FINISHED it's just a word by js file for indicating that it is Sync, so just pair another word if it is not
-
-
-    // get the reference of the node with highest best block, then the height of this
-        // how to make? search all peers and for each peers check and find the highest best_block ? no, maybe in the headers received that is a very fast at beginning
-
-    // get the current height of the block itself, then calculate percentage // probably the simplest part
-
-    // what is the node type?
-
-    // error is maybe useless, the explorer needs it , but we don't ???
-
-
-    // first thing is understand what mainchain return us from rpc calls
-    // what mainchain can provide us
-    // consider cheating / forking
-
-
-    //Class invokated->  src/checkpoints.cpp
-    // methods
-    //double GuessVerificationProgress(const CCheckpointData& data, CBlockIndex *pindex, bool fSigchecks)
-
-
-// Class checkpoint hardcoded ->   src/chainparams.cpp
-     //checkpointData = (Checkpoints::CCheckpointData) {...
-
-
-    /*
-        As the node connect to the network, it is very fast for it to get the headers missing to its stack (if it is at 220 height and best_block is 400 it ll get 200 headers)
-        ( there is also a mechanism of hardcoded checkpoints, so the node will start from a certain check point, let's understand better )
-        , when it get the headers list it can calculate with that method an approximative percentage (in time) to get to completion, it is not based on ratio ( like 200/400 ),
-        it mostly  considers all the transactions are in the blocks to come and provides a percentage
-        ( so it probably consider how much the block made since the sync has started and how much it weill need for getting done)
-
-
-
-
-
-     */
-
-
-
-    ApiResponseUtil.toResponse( RespSyncInfo( NodeSyncInfo("Statusss",167633232, 56, 89565655, "no error at all", "a node of TYPE")))
+    val result = Await.result(asked, settings.timeout)
+    ApiResponseUtil.toResponse( RespSyncInfo(result))
   }
 
 
 
 }
+
 
 object SidechainNodeRestSchema {
 
@@ -189,12 +164,12 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespDisconnect(disconnectedFrom: String) extends SuccessResponse
-// DIRAC 202
+
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespSyncInfo(syncStatus: NodeSyncInfo) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class NodeSyncInfo(status: String, blockChainHeight: Long,  syncPercentage: Int,   nodeHeight: Long, error: String, nodeType :String)
+  private[api] case class NodeSyncInfo(status: String, blockChainHeight: Long,  syncPercentage: Int,   nodeHeight: Long, error: String, nodeType: String)
 
 }
 

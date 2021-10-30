@@ -3,8 +3,9 @@ package com.horizen.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCode, StatusCodes}
 import akka.http.scaladsl.server.{Directives, Route}
 import JacksonSupport._
-import scala.language.implicitConversions
+import com.horizen.serialization.SerializationUtil
 
+import scala.language.implicitConversions
 import scala.concurrent.Future
 
 class SidechainApiResponse(statusCode: StatusCode) {
@@ -20,7 +21,7 @@ class SidechainApiResponse(statusCode: StatusCode) {
   def withString(s: String): Route = complete(s)
 
   def complete(result: String): Route = {
-    val httpEntity = HttpEntity(ContentTypes.`application/json`, ApiResponseUtil.formatResponse(result))
+    val httpEntity = HttpEntity(ContentTypes.`application/json`, SerializationUtil.formatResponse(result))
     Directives.complete(statusCode.intValue() -> httpEntity)
   }
 }

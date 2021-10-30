@@ -1,17 +1,14 @@
 #!/usr/bin/env python2
-import json
 import time
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SCMultiNetworkConfiguration
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
-from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
-from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
-    bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, get_known_peers, sc_p2p_port, stop_sc_node, \
-    start_sc_node
+from SidechainTestFramework.sc_boostrap_info \
+    import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, SCNetworkConfiguration
+from SidechainTestFramework.sc_test_framework \
+    import SidechainTestFramework
+from SidechainTestFramework.scutil \
+    import bootstrap_sidechain_nodes, start_sc_nodes, get_known_peers, sc_p2p_port
+from test_framework.util \
+    import initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, assert_true, assert_false
 
 """
 Check the connection between sidechain nodes to be unidirectional.

@@ -5,14 +5,14 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, SCCreationInfo, SCMultiNetworkConfiguration
 from sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
 
-from test_framework.util import initialize_new_sidechain_in_mainchain
+from test_framework.util import initialize_new_sidechain_in_mainchain, websocket_port_by_mc_node_index
 
 WAIT_CONST = 1
 
@@ -792,3 +792,34 @@ SC_FIELD_SAFE_SIZE = 31
 
 def generate_random_field_element_hex():
     return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
+
+
+def get_known_peers_indexes(i, num):
+    indexes = range(num)
+    indexes.remove(i)
+    return indexes
+
+def sc_create_multiple_nodes_network(mc_node_1, num_of_nodes_to_start):
+    nodes_config = []
+    for i in range(num_of_nodes_to_start):
+        a_config = SCNodeConfiguration(
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            known_peers=get_known_peers(get_known_peers_indexes(i, num_of_nodes_to_start))
+        )
+        nodes_config.append(a_config)
+    nodes_tuple = tuple(nodes_config)
+    network = SCMultiNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000), nodes_tuple)
+    return network
+
+
+def sc_create_multiple_nodes_network_unconnected(mc_node_1, num_of_nodes_to_start):
+    nodes_config = []
+    for i in range(num_of_nodes_to_start):
+        a_config = SCNodeConfiguration(
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            known_peers="[]"
+        )
+        nodes_config.append(a_config)
+    nodes_tuple = tuple(nodes_config)
+    network = SCMultiNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000), nodes_tuple)
+    return network

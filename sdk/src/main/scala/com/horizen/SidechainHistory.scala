@@ -353,6 +353,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
         // why approximately? see knownBlocksHeightToSync algorithm: blocks to sync step increasing.
         // to do: need to discuss
         val otherBestBlockApproxHeight = otherBestKnownBlockHeight + (dSuffix.size - 1 - otherBestKnownBlockIndex)
+
+       log.info(s"\n\nstorage.height = ${storage.height} \notherBestKnownBlockHeight = $otherBestKnownBlockHeight \notherBestBlockApproxHeight = $otherBestBlockApproxHeight \notherBestKnownBlockIndex = $otherBestKnownBlockIndex\n")
         if (storage.height < otherBestBlockApproxHeight)
           Older
         else if (storage.height == otherBestBlockApproxHeight) {

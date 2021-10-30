@@ -44,6 +44,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
+
+
   case class SidechainNodeUpdateInformation(history: HIS,
                                             state: MS,
                                             wallet: VL,
@@ -140,10 +142,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       context.system.eventStream.publish(StartingPersistentModifierApplication(pmod))
 
       log.info(s"Apply modifier ${pmod.encodedId} of type ${pmod.modifierTypeId} to nodeViewHolder")
-
       history().append(pmod) match {
         case Success((historyBeforeStUpdate, progressInfo)) =>
-          log.info(s"Going to apply modifications to the state: $progressInfo")
+          log.debug(s"Going to apply modifications to the state: $progressInfo")
           context.system.eventStream.publish(SyntacticallySuccessfulModifier(pmod))
           context.system.eventStream.publish(NewOpenSurface(historyBeforeStUpdate.openSurfaceIds()))
 

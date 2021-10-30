@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -40,6 +39,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import akka.http.javadsl.marshallers.jackson.Jackson
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.GetSyncInfo
+
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
@@ -119,6 +120,35 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     }
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+  // DIRAC
+  val mockedSidechainNodeViewSynchronizer = TestProbe()
+  mockedSidechainNodeViewSynchronizer.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetSyncInfo =>
+          println("well very well")
+      }
+      TestActor.KeepRunning
+    }
+  })
+  val mockedSidechainNodeViewSynchronizerRef: ActorRef = mockedSidechainNodeViewSynchronizer.ref
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   val mockedSidechainTransactionActor = TestProbe()
   mockedSidechainTransactionActor.setAutoPilot(new testkit.TestActor.AutoPilot {
@@ -232,7 +262,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef,mockedSidechainNodeViewSynchronizerRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route

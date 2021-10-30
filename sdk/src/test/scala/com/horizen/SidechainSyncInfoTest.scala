@@ -16,7 +16,7 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
   @Test
   def creation(): Unit = {
     // Test 1: create empty sync info
-    var info: SidechainSyncInfo = SidechainSyncInfo(Seq(),0)
+    var info: SidechainSyncInfo = SidechainSyncInfo(Seq(), 0)
     assertTrue("SidechainSyncInfo expected to be empty", info.knownBlockIds.isEmpty)
     assertTrue("SidechainSyncInfo starting points expected to be empty", info.startingPoints.isEmpty)
 
@@ -30,7 +30,7 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
 
   @Test
   def serialization(): Unit = {
-    val info: SidechainSyncInfo = SidechainSyncInfo(modifiers,0)
+    val info: SidechainSyncInfo = SidechainSyncInfo(modifiers, 0)
     val bytes = info.bytes
 
     // Test 1: try to deserializer valid bytes

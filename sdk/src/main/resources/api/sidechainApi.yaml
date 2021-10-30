@@ -1288,13 +1288,13 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
   # DIRAC THIS IS BLOCK/NODE operations
-  /node/nodeSyncStatus:
+  /node/syncStatus:
     post:
       tags:
         - node
       summary: Get node Sync Info
       description: Returns percentage and numbers of sync status
-      operationId: nodeSyncStatus
+      operationId: syncStatus
       responses:
         '200':
           description: successful operation
@@ -1306,10 +1306,8 @@ paths:
                   result:
                     type: object
                     properties:
-                      peers:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/SidechainPeerNode'
+                      NodeSyncInfo:
+                          $ref: '#/components/schemas/NodeSyncInfo'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:

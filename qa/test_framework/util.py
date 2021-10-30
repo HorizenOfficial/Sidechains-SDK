@@ -20,7 +20,9 @@ import shutil
 import subprocess
 import time
 import re
+from string import upper
 
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, MCConnectionInfo
 from authproxy import AuthServiceProxy
 
 def p2p_port(n):
@@ -532,3 +534,12 @@ def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
 
     mainchain_node.generate(1)
     return [mainchain_node.getscinfo(sidechain_id), mainchain_node.getblockcount()]
+
+
+def separator(name=""):
+    if len(name) > 0:
+        print "\n************************ " + upper(name) + " *****************************\n"
+    else:
+        print "\n*****************************************************\n"
+
+

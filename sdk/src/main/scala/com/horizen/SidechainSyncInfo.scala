@@ -40,14 +40,12 @@ object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
   }
 
   override def parse(r: Reader): SidechainSyncInfo = {
-
     val chainHeight : Int = r.getInt()
     val length = r.getInt()
     if (r.remaining != length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
     val modifierIds : Seq[ModifierId] = for(b <- 0 until length)
       yield bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
-
     SidechainSyncInfo(modifierIds,chainHeight)
   }
 }

@@ -1,18 +1,13 @@
 package com.horizen.network
 
-import akka.actor.{ActorContext, ActorRef, Cancellable}
-import scorex.core.consensus.History.{Fork, HistoryComparisonResult, Older, Unknown}
-import scorex.core.network.NodeViewSynchronizer.Events.{BetterNeighbourAppeared, NoBetterNeighbour}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SendLocalSyncInfo
+import akka.actor.{ActorContext, ActorRef}
+import scorex.core.consensus.History.Older
 import scorex.core.network.{ConnectedPeer, SyncTracker}
 import scorex.core.settings.NetworkSettings
 import scorex.core.utils.TimeProvider
 import scorex.core.utils.TimeProvider.Time
-
-import java.net.InetSocketAddress
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 
 
 class SidechainSyncTracker (nvsRef: ActorRef,
@@ -24,30 +19,52 @@ class SidechainSyncTracker (nvsRef: ActorRef,
     networkSettings: NetworkSettings,
     timeProvider: TimeProvider) {
 
+
+
   private var olderStatusesMap = mutable.Map[ConnectedPeer, SidechainSyncStatus]()
-  var betterNeighbourHeight = 0
-  var myHeight = 0 // DIRAC TODO update first on processSync after every succesfulModifier applied
+  private var failedStatusesMap = mutable.Map[ConnectedPeer, SidechainFailedSync]()
+  var betterNeighbourHeight = -1
+  var myHeight = -1 // DIRAC TODO update first on processSync after every succesfulModifier applied
 
   def updateSyncStatus(peer: ConnectedPeer, syncStatus: SidechainSyncStatus): Unit = {
-    super.updateStatus(peer,syncStatus.historyCompare)
+    updateStatus(peer,syncStatus.historyCompare)
     if (syncStatus.historyCompare == Older){
       log.info(s"updating syncStatus , height = ${syncStatus.otherNodeDeclaredHeight}")
-      olderStatusesMap += peer -> syncStatus
+      if(olderStatusesMap.contains(peer)){ // update only the heights
+        olderStatusesMap(peer).otherNodeDeclaredHeight = syncStatus.otherNodeDeclaredHeight
+        olderStatusesMap(peer).myOwnHeight = syncStatus.myOwnHeight
+      }
+      else{
+        olderStatusesMap += peer -> syncStatus
+      }
+      log.info(s"updateSyncStatus : olderStatusesMap = ${olderStatusesMap.toSeq.toString()} ,size = ${olderStatusesMap.size}")
       // DIRAC not sure if correct, just to have the best height we got through the sync phase
-      betterNeighbourHeight = if (syncStatus.otherNodeDeclaredHeight > betterNeighbourHeight) syncStatus.otherNodeDeclaredHeight
-                              else betterNeighbourHeight
+      betterNeighbourHeight =
+        if (syncStatus.otherNodeDeclaredHeight > betterNeighbourHeight)
+          syncStatus.otherNodeDeclaredHeight
+        else betterNeighbourHeight
+      myHeight = syncStatus.myOwnHeight
+    }else{
+      // DIRAC TODO update to tell that's not older anymore
     }
+
   }
+
+  // DIRAC TODO what if We don't have a peer on the other side....
+  def updateForFailing(peer: ConnectedPeer, sidechainFailedSync: SidechainFailedSync):Unit ={
+    failedStatusesMap += peer -> sidechainFailedSync
+  }
+
 
   def updateStatusWithLastSyncTime(peer:ConnectedPeer, time: Time): Unit = {
+    // DIRAC TODO at the beginning have to check if it exist, if not u have to put @ASKSasha
+    // try to do with catching exception java.util.NoSuchElementException: @ASKSasha
     olderStatusesMap(peer).lastTipSyncTime = time
+    log.info(s"updateStatusWithLastSyncTime peer = $peer  -  olderStatusesMap(peer) = ${olderStatusesMap(peer)} ")
   }
 
-  def updateStatusWithNeighbourHeight(peer:ConnectedPeer, height: Int): Unit = {
-    olderStatusesMap(peer).otherNodeDeclaredHeight = height
-  }
-
-  def updateStatusWithNeighbourHeight(peer:ConnectedPeer, compared: HistoryComparisonResult): Unit = {
-    olderStatusesMap(peer).historyCompare = compared
+  def updateStatusWithMyHeight(peer: ConnectedPeer):Unit = {
+    olderStatusesMap(peer).myOwnHeight += 1
+    myHeight+=1
   }
 }

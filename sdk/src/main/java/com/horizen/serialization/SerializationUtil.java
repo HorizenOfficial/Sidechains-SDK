@@ -41,4 +41,9 @@ public class SerializationUtil {
                         new SidechainApiManagedError(code, description, Option.apply(detail))
                 ));
     }
+
+    public static String formatResponse(String response){
+        return response + "\n";
+    }
+
 }
