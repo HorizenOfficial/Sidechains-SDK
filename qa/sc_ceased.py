@@ -10,7 +10,7 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks
+    start_sc_nodes, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -72,10 +72,10 @@ class SCCeased(SidechainTestFramework):
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1
 
         # Generate MC blocks to reach the end of the withdrawal epoch
-        mc_block_hashes = mc_node.generate(mc_blocks_left_for_we)
-        # Generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes)/3.0))):
-            generate_next_block(sc_node, "first node")
+        mc_node.generate(mc_blocks_left_for_we)
+
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node, "first node")
 
         # Generate MC blocks to reach one block before the end of the certificate submission window.
         mc_blocks_left_for_window_end = self.sc_withdrawal_epoch_length / 5
@@ -86,9 +86,8 @@ class SCCeased(SidechainTestFramework):
         sc_info = mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)['items'][0]
         assert_equal("ALIVE", sc_info['state'], "Sidechain expected to be alive.")
 
-        # Generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes)/3.0))):
-            generate_next_block(sc_node, "first node")
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node, "first node")
 
         # Generate 1 MC block to reach the end of the certificate submission window.
         mc_node.generate(1)
