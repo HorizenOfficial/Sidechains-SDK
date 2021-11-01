@@ -1,32 +1,33 @@
-package com.horizen.api.http
+package com.horizen.websocket.server
 
+import com.horizen.api.http.SidechainApiMockConfiguration
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainTypes, SidechainWallet}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
-import com.horizen.box.{Box, ForgerBox, NoncedBox, ZenBox}
+import com.horizen.box.{Box, NoncedBox, ZenBox}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
-import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
-import com.horizen.wallet.ApplicationWallet
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.mockito.MockitoSugar
+import scorex.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
-class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
+class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -63,8 +64,21 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     MerkleTreeFixture.generateRandomMerklePath(456L),
     sidechainTransactionsCompanion).get
 
-  def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
-    val history: NodeHistory = mock[NodeHistory]
+  val genesisBlockInfo: SidechainBlockInfo = new SidechainBlockInfo(
+    100,
+    100,
+     bytesToId(new Array[Byte](32)),
+    Instant.now.getEpochSecond - 10000,
+    null,
+    Seq(),
+    Seq(),
+    null,
+    null,
+    bytesToId(new Array[Byte](32)),
+  )
+
+  def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
+    val history: SidechainHistory = mock[SidechainHistory]
 
     Mockito.when(history.getBlockById(ArgumentMatchers.any[String])).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockById_return_value()) Optional.of(genesisBlock)
@@ -80,11 +94,30 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
     Mockito.when(history.getBestBlock).thenAnswer(_ => genesisBlock)
 
+    Mockito.when(history.bestBlock).thenAnswer(_ => genesisBlock)
+
+    Mockito.when(history.height).thenAnswer(_ =>Optional.of(100))
+
+    Mockito.when(history.modifierById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
+      Option(genesisBlock)
+   )
+    Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
+      genesisBlockInfo
+    )
+
     Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ =>Optional.of(100))
 
     Mockito.when(history.getBlockIdByHeight(ArgumentMatchers.any())).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockIdByHeight_return_value()) Optional.of("the_block_id")
       else Optional.empty())
+
+    Mockito.when(history.blockIdByHeight(ArgumentMatchers.any[Int])).thenAnswer(_ =>
+      Option("the_block_id")
+    )
+
+    Mockito.when(history.continuationIds(ArgumentMatchers.any[SidechainSyncInfo],ArgumentMatchers.any[Int])).thenAnswer(_ =>{
+      Seq(Tuple2(null,null))
+    })
 
     Mockito.when(history.getCurrentHeight).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getCurrentHeight_return_value()) 230
@@ -135,8 +168,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     history
   }
 
-  def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeState = {
-    mock[NodeState]
+  def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainState = {
+    mock[SidechainState]
   }
 
   private def walletAllBoxes(): util.List[Box[Proposition]] = {
@@ -148,8 +181,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     list
   }
 
-  def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
-    val wallet: NodeWallet = mock[NodeWallet]
+  def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainWallet = {
+    val wallet: SidechainWallet = mock[SidechainWallet]
     Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
     Mockito.when(wallet.allCoinsBoxesBalance()).thenAnswer(_ => Long.box(5500))
 
@@ -209,8 +242,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     list
   }
 
-  def getNodeMemoryPoolMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeMemoryPool = {
-    val memoryPool: NodeMemoryPool = mock[NodeMemoryPool]
+  def getNodeMemoryPoolMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainMemoryPool = {
+    val memoryPool: SidechainMemoryPool = mock[SidechainMemoryPool]
 
     Mockito.when(memoryPool.getTransactions).thenAnswer(_ => transactionList)
 
@@ -228,16 +261,23 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         Optional.empty()
     })
 
+    Mockito.when(memoryPool.getAll(ArgumentMatchers.any[Seq[ModifierId]])).thenAnswer(_ => {
+      Seq[RegularTransaction]() :+ transactionList.get(0)
+    })
+
+    Mockito.when(memoryPool.take(ArgumentMatchers.any[Int])).thenAnswer(_ => JavaConversions.iterableAsScalaIterable(transactionList))
+
     memoryPool
   }
 
-  def getSidechainNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainNodeView =
-      new SidechainNodeView(
-        getNodeHistoryMock(sidechainApiMockConfiguration),
-        getNodeStateMock(sidechainApiMockConfiguration),
-        getNodeWalletMock(sidechainApiMockConfiguration),
-        getNodeMemoryPoolMock(sidechainApiMockConfiguration),
-        mock[ApplicationState],
-        mock[ApplicationWallet])
+  def getNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): CurrentView[Any, Any, Any, Any] = {
+    CurrentView[Any, Any, Any, Any](
+      getNodeHistoryMock(sidechainApiMockConfiguration),
+      getNodeStateMock(sidechainApiMockConfiguration),
+      getNodeWalletMock(sidechainApiMockConfiguration),
+      getNodeMemoryPoolMock(sidechainApiMockConfiguration)
+    )
+  }
+
 
 }

@@ -1,5 +1,4 @@
-package com.horizen.websocket
-
+package com.horizen.websocket.client
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.MainchainNodeApi
 
