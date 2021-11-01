@@ -3,6 +3,7 @@ import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
+from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
@@ -17,6 +18,7 @@ from mc_sc_nodes_alive import MCSCNodesAlive
 from sc_backward_transfer import SCBackwardTransfer
 from sc_bootstrap import SCBootstrap
 from sc_forward_transfer import SCForwardTransfer
+from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 
 
@@ -67,6 +69,9 @@ def run_tests(log_file):
     result = run_test(SCCumCommTreeHash())
     assert_equal(0, result, "sc_cum_comm_tree_hash test failed!")
 
+    result = run_test(SCWsServer())
+    assert_equal(0, result, "websocket_server test failed!")
+
     result = run_test(SCBackwardTransfer())
     assert_equal(0, result, "sc_backward_transfer test failed!")
 
@@ -78,6 +83,10 @@ def run_tests(log_file):
 
     result = run_test(SCCertSubmissionDecentralization())
     assert_equal(0, result, "sc_cert_submission_decentralization test failed!")
+
+    result = run_test(SCCertNoCoinRecord())
+    assert_equal(0, result, "sc_cert_no_coin_record test failed!")
+
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")

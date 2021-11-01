@@ -85,13 +85,16 @@ class Demo(SidechainTestFramework):
         certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
 
         custom_data = vrf_key.publicKey
+        cmdInput = {
+            "withdrawalEpochLength": withdrawal_epoch_length,
+            "toaddress": genesis_account.publicKey,
+            "amount": sc_creation_info.forward_amount,
+            "wCertVk": certificate_proof_info.verificationKey,
+            "customData": custom_data,
+            "constant": certificate_proof_info.genSysConstant
+        }
         print("Running sc_create RPC call on MC node:\n" +
-              'sc_create {} "{}" {} "{}" "{}" "{}"'.format(withdrawal_epoch_length,
-                                                           genesis_account.publicKey,
-                                                           sc_creation_info.forward_amount,
-                                                           certificate_proof_info.verificationKey,
-                                                           custom_data,
-                                                           certificate_proof_info.genSysConstant))
+              'sc_create {} '.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
         print(
             "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount - {} ({} Zen)\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
                 withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * coin,  sc_creation_info.forward_amount,
@@ -100,12 +103,7 @@ class Demo(SidechainTestFramework):
         self.pause()
 
         # Create Tx and Block
-        sc_create_res = mc_node.sc_create(withdrawal_epoch_length,
-                                           genesis_account.publicKey,
-                                           sc_creation_info.forward_amount,
-                                           certificate_proof_info.verificationKey,
-                                           custom_data,
-                                           certificate_proof_info.genSysConstant)
+        sc_create_res = mc_node.sc_create(cmdInput)
 
         transaction_id = sc_create_res["txid"]
         print "Sidechain creation transaction Id - {0}".format(transaction_id)
@@ -180,13 +178,15 @@ class Demo(SidechainTestFramework):
         # Do FT
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount = 5
-        mc_return_address = mc_node.getnewaddress("", True)
+        mc_return_address = mc_node.getnewaddress()
+        cmdInput = [{'toaddress': sc_address, 'amount': ft_amount, "scid": sc_bootstrap_info.sidechain_id,
+                     "mcReturnAddress": mc_return_address}]
         print("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * coin, ft_amount) +
-              'sc_send "{}" {} "{}" "{}"'.format(sc_address, ft_amount, sc_bootstrap_info.sidechain_id, mc_return_address))
+              'sc_send {}'.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
 
         self.pause()
 
-        ft_tx_id = mc_node.sc_send(sc_address, ft_amount, sc_bootstrap_info.sidechain_id, mc_return_address)
+        ft_tx_id = mc_node.sc_send(cmdInput)
         print("\nFT transaction id - {}".format(ft_tx_id))
 
 
@@ -240,7 +240,7 @@ class Demo(SidechainTestFramework):
 
         # Do BT
         self.pause()
-        mc_address = mc_node.getnewaddress("")
+        mc_address = mc_node.getnewaddress()
         bt_amount = 2  # Zen
         withdrawal_request = {"outputs": [
             {"mainchainAddress": mc_address,
@@ -272,7 +272,7 @@ class Demo(SidechainTestFramework):
 
         certHash = mc_node.getrawmempool()[0]
         print("Withdrawal certificate hash - " + certHash)
-        cert = mc_node.getrawcertificate(certHash, 1)
+        cert = mc_node.getrawtransaction(certHash, 1)
         print("Withdrawal certificate - {}".format(json.dumps(cert, indent=4, sort_keys=True, default=str)))
 
         self.pause()
