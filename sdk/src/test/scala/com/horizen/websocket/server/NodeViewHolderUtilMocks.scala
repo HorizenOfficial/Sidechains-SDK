@@ -1,13 +1,14 @@
 package com.horizen.websocket.server
 
 import com.horizen.api.http.SidechainApiMockConfiguration
+
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainTypes, SidechainWallet}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
-import com.horizen.box.{Box, NoncedBox, ZenBox}
+import com.horizen.box.{Box, ForgerBox, NoncedBox, ZenBox}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
@@ -23,7 +24,6 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
@@ -38,14 +38,14 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208"),
     BytesUtils.fromHexString("69c4f36c2b3f546aa57fa03c4df51923e17e8ea59ecfdea7f49c8aff06ec8208")) // TO DO: check, probably use different sc id
 
-  val secret1 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
-  val secret2 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
-  val secret3 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
-  val secret4 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
-  val box_1 = getZenBox(secret1.publicImage(), 1, 10)
-  val box_2 = getZenBox(secret2.publicImage(), 1, 20)
-  val box_3 = getZenBox(secret3.publicImage(), 1, 30)
-  val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
+  val secret1: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed1".getBytes())
+  val secret2: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed2".getBytes())
+  val secret3: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed3".getBytes())
+  val secret4: PrivateKey25519 = PrivateKey25519Creator.getInstance().generateSecret("testSeed4".getBytes())
+  val box_1: ZenBox = getZenBox(secret1.publicImage(), 1, 10)
+  val box_2: ZenBox = getZenBox(secret2.publicImage(), 1, 20)
+  val box_3: ZenBox = getZenBox(secret3.publicImage(), 1, 30)
+  val box_4: ForgerBox = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList
@@ -53,6 +53,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
+    SidechainBlock.BLOCK_VERSION,
     Instant.now.getEpochSecond - 10000,
     Seq(),
     Seq(),
@@ -67,7 +68,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   val genesisBlockInfo: SidechainBlockInfo = new SidechainBlockInfo(
     100,
     100,
-     bytesToId(new Array[Byte](32)),
+    bytesToId(new Array[Byte](32)),
     Instant.now.getEpochSecond - 10000,
     null,
     Seq(),
@@ -96,16 +97,16 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
     Mockito.when(history.bestBlock).thenAnswer(_ => genesisBlock)
 
-    Mockito.when(history.height).thenAnswer(_ =>Optional.of(100))
+    Mockito.when(history.height).thenAnswer(_ => Optional.of(100))
 
     Mockito.when(history.modifierById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
       Option(genesisBlock)
-   )
+    )
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
       genesisBlockInfo
     )
 
-    Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ =>Optional.of(100))
+    Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ => Optional.of(100))
 
     Mockito.when(history.getBlockIdByHeight(ArgumentMatchers.any())).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockIdByHeight_return_value()) Optional.of("the_block_id")
@@ -115,8 +116,8 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
       Option("the_block_id")
     )
 
-    Mockito.when(history.continuationIds(ArgumentMatchers.any[SidechainSyncInfo],ArgumentMatchers.any[Int])).thenAnswer(_ =>{
-      Seq(Tuple2(null,null))
+    Mockito.when(history.continuationIds(ArgumentMatchers.any[SidechainSyncInfo], ArgumentMatchers.any[Int])).thenAnswer(_ => {
+      Seq(Tuple2(null, null))
     })
 
     Mockito.when(history.getCurrentHeight).thenAnswer(_ =>
@@ -144,7 +145,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
         val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
         MainchainBlockReference.create(mcBlockBytes, MainNetParams()) match {
           case Success(ref) => Optional.of(ref)
-          case Failure(exception) => Optional.empty()
+          case Failure(_) => Optional.empty()
         }
       }
       else Optional.empty())
@@ -168,7 +169,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     history
   }
 
-  def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainState = {
+  def getNodeStateMock: SidechainState = {
     mock[SidechainState]
   }
 
@@ -181,7 +182,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     list
   }
 
-  def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainWallet = {
+  def getNodeWalletMock: SidechainWallet = {
     val wallet: SidechainWallet = mock[SidechainWallet]
     Mockito.when(wallet.boxesBalance(ArgumentMatchers.any())).thenAnswer(_ => Long.box(1000))
     Mockito.when(wallet.allCoinsBoxesBalance()).thenAnswer(_ => Long.box(5500))
@@ -209,21 +210,19 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
     Mockito.when(wallet.secretByPublicKey(ArgumentMatchers.any[Proposition])).thenAnswer(asw => {
       val prop: Proposition = asw.getArgument(0).asInstanceOf[Proposition]
-      if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
-      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)
-      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret3.publicImage().bytes))) Optional.of(secret3)
-      else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret4.publicImage().bytes))) Optional.of(secret4)
+      if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
+      else if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)
+      else if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret3.publicImage().bytes))) Optional.of(secret3)
+      else if (BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret4.publicImage().bytes))) Optional.of(secret4)
       else Optional.empty()
     })
 
-    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any(), ArgumentMatchers.any())).thenAnswer(asw => {
-      allBoxes
-    })
+    Mockito.when(wallet.boxesOfType(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(allBoxes)
 
     wallet
   }
 
-  private def getTransaction(fee: Long): RegularTransaction = {
+  private def getTransaction(fee: Long = 1L): RegularTransaction = {
     val from: util.List[Pair[ZenBox, PrivateKey25519]] = new util.ArrayList[Pair[ZenBox, PrivateKey25519]]()
     val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
 
@@ -237,8 +236,8 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
   private def getTransactionList: util.List[RegularTransaction] = {
     val list: util.List[RegularTransaction] = new util.ArrayList[RegularTransaction]()
-    list.add(getTransaction(1L))
-    list.add(getTransaction(1L))
+    list.add(getTransaction())
+    list.add(getTransaction())
     list
   }
 
@@ -265,7 +264,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
       Seq[RegularTransaction]() :+ transactionList.get(0)
     })
 
-    Mockito.when(memoryPool.take(ArgumentMatchers.any[Int])).thenAnswer(_ => JavaConversions.iterableAsScalaIterable(transactionList))
+    Mockito.when(memoryPool.take(ArgumentMatchers.any[Int])).thenAnswer(_ => transactionList.asScala)
 
     memoryPool
   }
@@ -273,11 +272,9 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
   def getNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): CurrentView[Any, Any, Any, Any] = {
     CurrentView[Any, Any, Any, Any](
       getNodeHistoryMock(sidechainApiMockConfiguration),
-      getNodeStateMock(sidechainApiMockConfiguration),
-      getNodeWalletMock(sidechainApiMockConfiguration),
+      getNodeStateMock,
+      getNodeWalletMock,
       getNodeMemoryPoolMock(sidechainApiMockConfiguration)
     )
   }
-
-
 }
