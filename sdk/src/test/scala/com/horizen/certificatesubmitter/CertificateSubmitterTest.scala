@@ -11,7 +11,7 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.websocket.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates}
+import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
@@ -498,16 +498,16 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     submitter.certificateSigningEnabled = true
 
 
-    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Test 5: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // But in MC the better quality Cert exists -> no cert scheduling
     submitter.signaturesStatus = None
 
     val mcTopCertQuality: Long = 3
     Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // Cert with mcTopCertQuality presents in the MC
-      new TopQualityCertificates(
-        MempoolTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, Some(mcTopCertQuality), None),
-        ChainTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, None)
+      TopQualityCertificates(
+        Some(MempoolTopQualityCertificateInfo("", referencedEpochNumber, mcTopCertQuality, 0.0)),
+        None
       )
     })
 
@@ -554,7 +554,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     assertFalse("Actor expected not submitting at the moment", certState)
 
 
-    // Test 6: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
+    // Test 6: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
     // Certificate submitter is disabled
     submitter.signaturesStatus = None
     submitter.submitterEnabled = false
@@ -573,16 +573,13 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     submitter.submitterEnabled = true
 
-    // Test 7: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs with is exactly the threshold.
-    // Nop better cert quality found
+    // Test 7: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
+    // No better cert quality found
     submitter.signaturesStatus = None
 
     Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // No certs in MC
-      new TopQualityCertificates(
-        MempoolTopQualityCertificateInfo(None, None, None, None, None),
-        ChainTopQualityCertificateInfo(None, None, None, None)
-      )
+      TopQualityCertificates(None, None)
     })
 
     actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
@@ -596,9 +593,78 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
     assertTrue("Actor expected being submitting at the moment.", certState)
+    // Stop events
+    submitter.timers.cancelAll()
+    submitter.certGenerationState = false
 
 
-    // Test 8: block outside the epoch when the cert submission is scheduled
+    // Test 8: reset SignatureStatus and test block inside the window that will lead to generating 2 sigs which is exactly the threshold.
+    // Get quality exception occurred
+
+    // 8.1 Get quality failed with the MC server internal error -> we expect to continue the flow, so to schedule the generation
+    submitter.signaturesStatus = None
+    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+      throw new WebsocketErrorResponseException("ERROR")
+    })
+
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
+    watch.expectNoMessage(timeout.duration)
+
+    assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
+    assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
+    assertEquals("Different signatures number expected.", walletSecrets.size, submitter.signaturesStatus.get.knownSigs.size)
+    assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
+    assertTrue("Certificate generation schedule expected to be enabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
+    assertTrue("Actor expected being submitting at the moment.", certState)
+    // Stop events
+    submitter.timers.cancelAll()
+    submitter.certGenerationState = false
+
+    // 8.2 Get quality failed with the MC server inconsistent error message -> we expect to continue the flow, so to schedule the generation
+    submitter.signaturesStatus = None
+    Mockito.reset(mockedMainchainChannel)
+    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+      throw new WebsocketInvalidErrorMessageException("Inconsistent error message")
+    })
+
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
+    watch.expectNoMessage(timeout.duration)
+
+    assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
+    assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
+    assertEquals("Different signatures number expected.", walletSecrets.size, submitter.signaturesStatus.get.knownSigs.size)
+    assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
+    assertTrue("Certificate generation schedule expected to be enabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+
+    certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
+    assertTrue("Actor expected being submitting at the moment.", certState)
+    // Stop events
+    submitter.timers.cancelAll()
+    submitter.certGenerationState = false
+
+    // 8.3 Get quality failed with any other error (connection/network error, for example) -> no cert generation expected
+    submitter.signaturesStatus = None
+    Mockito.reset(mockedMainchainChannel)
+    Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
+      throw new RuntimeException("other exception")
+    })
+
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier(mock[SidechainBlock]))
+    watch.expectNoMessage(timeout.duration)
+
+    assertTrue("Signature status expected to be defined.", submitter.signaturesStatus.isDefined)
+    assertEquals("Different referenced epoch expected.", referencedEpochNumber, submitter.signaturesStatus.get.referencedEpoch)
+    assertEquals("Different signatures number expected.", walletSecrets.size, submitter.signaturesStatus.get.knownSigs.size)
+    assertTrue("MessageToSign should be defined.", submitter.signaturesStatus.get.messageToSign.nonEmpty)
+
+    assertFalse("Certificate generation schedule expected to be disabled.", submitter.timers.isTimerActive(CertificateGenerationTimer))
+    certState = Await.result(certificateSubmitterRef ? GetCertificateGenerationState, timeout.duration).asInstanceOf[Boolean]
+    assertFalse("Actor expected not submitting at the moment.", certState)
+
+
+    // Test 9: block outside the epoch when the cert submission is scheduled
     Mockito.reset(history)
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ => {
       val blockInfo: SidechainBlockInfo = mock[SidechainBlockInfo]
@@ -818,15 +884,16 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     }
     Mockito.when(mockedMainchainChannel.getTopQualityCertificates(ArgumentMatchers.any[String]())).thenAnswer(_ => Try {
       // In-chain Cert in the MC
-      new TopQualityCertificates(
-        MempoolTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, None, None),
-        ChainTopQualityCertificateInfo(None, Some(referencedEpochNumber), None, Some(schnorrSecrets.size))
+      TopQualityCertificates(
+        None,
+        Some(ChainTopQualityCertificateInfo("", referencedEpochNumber, schnorrSecrets.size))
       )
     })
 
     certificateSubmitterRef ! TryToGenerateCertificate
     certSubmissionEventListener.fishForMessage(timeout.duration) { case m => m == CertificateSubmissionStopped }
   }
+
   @Test
   def switchSubmitterStatus(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)

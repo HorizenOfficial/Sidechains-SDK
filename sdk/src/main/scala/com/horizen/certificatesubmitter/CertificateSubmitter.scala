@@ -19,7 +19,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.websocket.MainchainNodeChannel
+import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
@@ -61,7 +61,7 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
 
-  private var certGenerationState: Boolean = false
+  private[certificatesubmitter] var certGenerationState: Boolean = false
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
@@ -303,18 +303,21 @@ class CertificateSubmitter(settings: SidechainSettings,
       }
   }
 
-  private def getCertificateTopQuality(epoch: Int): Try[Long] = Try {
-    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))) match {
-      case Success(topQualityCertificates) =>
-        if (topQualityCertificates.mempoolCertInfo.quality.isDefined && topQualityCertificates.mempoolCertInfo.epoch.get == epoch) {
-          topQualityCertificates.mempoolCertInfo.quality.get
-        } else if (topQualityCertificates.chainCertInfo.quality.isDefined && topQualityCertificates.chainCertInfo.epoch.get == epoch) {
-          topQualityCertificates.chainCertInfo.quality.get
-        } else {
-          0
+  private def getCertificateTopQuality(epoch: Int): Try[Long] = {
+    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
+      .map(topQualityCertificates => {
+        topQualityCertificates.mempoolCertInfo match {
+          // case we have mempool cert for the given epoch return its quality.
+          case Some(mempoolInfo) if (mempoolInfo.epoch == epoch) => mempoolInfo.quality
+          // else look for inchain cert
+          case _ => topQualityCertificates.chainCertInfo match {
+            // case we have chain cert for the given epoch return its quality.
+            case Some(chainInfo) if (chainInfo.epoch == epoch) => chainInfo.quality
+            // no known certs
+            case _ => 0
+          }
         }
-      case Failure(ex) => throw new Exception("Unable to retrieve topQualityCertificates", ex)
-    }
+      })
   }
 
   private def checkQuality(status: SignaturesStatus): Boolean = {
@@ -323,9 +326,25 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Success(currentCertificateTopQuality) =>
           if (status.knownSigs.size > currentCertificateTopQuality)
             return true
-
-        case Failure(ex) =>
-          log.error("Unable to retrieve actual top quality certificates from Mainchain(" + ex.getCause + ")")
+        case Failure(e) => e match {
+          // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
+          case ex: WebsocketErrorResponseException =>
+            log.error("Mainchain error occurred while processed top quality certificates request(" + ex + ")")
+            // So we don't know the result
+            // Return true to keep submitter going and prevent SC ceasing
+            return true
+          // May happen if MC and SDK websocket protocol is inconsistent.
+          // Should never happen in production.
+          case ex: WebsocketInvalidErrorMessageException =>
+            log.error("Mainchain error message is inconsistent to SC implementation(" + ex + ")")
+            // So we don't know the result
+            // Return true to keep submitter going and prevent SC ceasing
+            return true
+          // Various connection errors
+          case other =>
+            log.error("Unable to retrieve actual top quality certificates from Mainchain(" + other + ")")
+            return false
+        }
       }
     }
     false
@@ -376,7 +395,8 @@ class CertificateSubmitter(settings: SidechainSettings,
                   proofWithQuality.getValue,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
-                  dataForProofGeneration.btrFee)
+                  dataForProofGeneration.btrFee,
+                  params)
 
                 log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
 

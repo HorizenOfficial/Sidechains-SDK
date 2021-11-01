@@ -1,4 +1,4 @@
-package com.horizen.websocket
+package com.horizen.websocket.client
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -8,6 +8,14 @@ object DisconnectionCode extends Enumeration {
   val ON_SUCCESS = Value(0)
   val UNEXPECTED = Value(1)
 }
+
+// Used by WebSocketMessageHandler in case server got an internal error while processing the request
+class WebsocketErrorResponseException(message: String = "", cause: Option[Throwable] = None)
+  extends RuntimeException(message, cause.orNull)
+
+// Used by WebSocketMessageHandler in case server returned an invalid error message: unexpected structure.
+class WebsocketInvalidErrorMessageException(message: String = "", cause: Option[Throwable] = None)
+  extends RuntimeException(message, cause.orNull)
 
 trait WebSocketMessageHandler {
   def onReceivedMessage(message: String): Unit
@@ -28,7 +36,7 @@ trait WebSocketReconnectionHandler {
   def onConnectionSuccess(): Unit
 }
 
-trait WebSocketConnector extends WebSocketChannel {
+trait  WebSocketConnector{
   def isStarted(): Boolean
 
   def start(): Try[Unit]

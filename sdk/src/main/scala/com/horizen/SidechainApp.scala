@@ -25,7 +25,6 @@ import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.websocket._
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import scorex.core.network.message.MessageSpec
@@ -41,6 +40,9 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 import com.horizen.network.SidechainNodeViewSynchronizer
+import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
+import com.horizen.websocket.server.WebSocketServerRef
+import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 
 import scala.util.Try
 
@@ -162,6 +164,9 @@ class SidechainApp @Inject()
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
+  // Configure Horizen address json serializer specifying proper network type.
+  JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
+
   // Generate Coboundary Marlin Proving System dlog keys
   log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
   if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
@@ -241,7 +246,7 @@ class SidechainApp @Inject()
   val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
 
   // Create the web socket connector and configure it
-  val webSocketConnector : WebSocketConnector = new WebSocketConnectorImpl(
+  val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
     sidechainSettings.websocket.address,
     sidechainSettings.websocket.connectionTimeout,
     communicationClient,
@@ -269,6 +274,11 @@ class SidechainApp @Inject()
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+
+  //Websocket server for the Explorer
+  if(sidechainSettings.websocket.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  }
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
