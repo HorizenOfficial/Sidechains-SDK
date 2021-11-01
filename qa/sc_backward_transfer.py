@@ -177,7 +177,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount1 = ft_amount - 3
         sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address1,
+                               { "mainchainAddress": mc_address1,
                                  "value": sc_bt_amount1 }
                               ]
                              }
@@ -195,7 +195,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address2,
+                               { "mainchainAddress": mc_address2,
                                  "value": sc_bt_amount2 }
                               ]
                              }
