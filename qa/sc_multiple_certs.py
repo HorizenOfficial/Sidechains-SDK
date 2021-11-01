@@ -56,8 +56,9 @@ class SCMultipleCerts(SidechainTestFramework):
     sc_node2_bt_amount = 20  # Zen
 
     def setup_nodes(self):
+        # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]

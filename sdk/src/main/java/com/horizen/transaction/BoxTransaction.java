@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"signatures", "encoder"})
+@JsonIgnoreProperties({"signatures", "encoder", "customFieldsData", "customDataMessageToSign"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
@@ -50,7 +50,12 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
-    // Transaction Id must depend on the whole transaction content including proof
+    // Transactions custom data to be considered during Transaction id calculation.
+    // Note: in case custom field must be protected by the box unlocker proof,
+    // it must be used in `customDataMessageToSign` only, so will be considered during id calculation.
+    public abstract byte[] customFieldsData();
+
+    // Transaction Id must depend on the whole transaction content including proof and custom data outside the Boxes.
     // Note: In future inside snarks id calculation will be different
     @JsonProperty("id")
     @Override
@@ -63,7 +68,8 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
         return BytesUtils.toHexString(Blake2b256.hash(Bytes.concat(
                 messageToSign(),
-                proofsStream.toByteArray()
+                proofsStream.toByteArray(),
+                customFieldsData()
         )));
     }
 
@@ -79,7 +85,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
-    
+
+    // Transactions custom data hash to be included into messageToSign.
+    // Note: there can be data which has no impact on message to sign, but only on id(). For example, custom non-box signature.
+    public abstract byte[] customDataMessageToSign();
+
     @Override
     public byte[] messageToSign() {
         ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
@@ -98,6 +108,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
                 new byte[]{version()},
                 unlockersStream.toByteArray(),
                 newBoxesStream.toByteArray(),
-                Longs.toByteArray(fee()));
+                Longs.toByteArray(fee()),
+                customDataMessageToSign());
     }
 }

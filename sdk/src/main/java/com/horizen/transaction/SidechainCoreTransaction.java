@@ -13,6 +13,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
+import scala.Array;
 import scorex.core.NodeViewModifier$;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
@@ -131,6 +132,16 @@ public final class SidechainCoreTransaction
     @Override
     public byte version() {
         return version;
+    }
+
+    @Override
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
     }
 
     @Override

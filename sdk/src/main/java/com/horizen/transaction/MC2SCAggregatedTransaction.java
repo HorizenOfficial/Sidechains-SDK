@@ -12,6 +12,7 @@ import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
+import scala.Array;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.encode.Base16;
 
@@ -60,6 +61,11 @@ public final class MC2SCAggregatedTransaction
     @Override
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return null;
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
     }
 
     @Override
@@ -121,6 +127,11 @@ public final class MC2SCAggregatedTransaction
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "unsupported version number.", id()));
         }
+    }
+
+    @Override
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
     }
 
 
