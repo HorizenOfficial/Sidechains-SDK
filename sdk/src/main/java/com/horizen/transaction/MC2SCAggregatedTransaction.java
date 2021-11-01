@@ -12,6 +12,7 @@ import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
+import scala.Array;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.encode.Base16;
 
@@ -29,6 +30,10 @@ public final class MC2SCAggregatedTransaction
 
     private List<Box<Proposition>> newBoxes;
 
+    private final byte version;
+
+    public final static byte MC2SC_AGGREGATED_TRANSACTION_VERSION = 1;
+
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
@@ -39,10 +44,11 @@ public final class MC2SCAggregatedTransaction
                 }}, new HashMap<>()
             ));
 
-    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs) {
+    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, byte version) {
         if(mc2scTransactionsOutputs.isEmpty())
             throw new IllegalArgumentException("Empty sidechain related mainchain outputs passed.");
         this.mc2scTransactionsOutputs = mc2scTransactionsOutputs;
+        this.version = version;
     }
 
     @Override
@@ -55,6 +61,11 @@ public final class MC2SCAggregatedTransaction
     @Override
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return null;
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
     }
 
     @Override
@@ -84,6 +95,9 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
+    public byte version() { return version; }
+
+    @Override
     public String id() {
         return Base16.encode(mc2scMerkleRootHash());
     }
@@ -109,21 +123,30 @@ public final class MC2SCAggregatedTransaction
     }
 
     public void semanticValidity() throws TransactionSemanticValidityException {
-        // no specific checks
+        if (version != MC2SC_AGGREGATED_TRANSACTION_VERSION) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "unsupported version number.", id()));
+        }
+    }
+
+    @Override
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
     }
 
 
     @Override
     public byte[] bytes() {
         byte[] transactions = mc2scTransactionsSerializer.toBytes(mc2scTransactionsOutputs);
-        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 12 bytes
+        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 5 bytes
+                new byte[] {version},
                 Ints.toByteArray(transactions.length),              // 4 bytes
                 transactions                                        // depends on previous value (>=4 bytes)
         );
     }
 
     public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
-        if (bytes.length < 12)
+        if (bytes.length < 5)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if (bytes.length > MAX_TRANSACTION_SIZE)
@@ -131,10 +154,17 @@ public final class MC2SCAggregatedTransaction
 
         int offset = 0;
 
+        byte version = bytes[offset];
+        offset += 1;
+
+        if (version != MC2SC_AGGREGATED_TRANSACTION_VERSION) {
+            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
+        }
+
         int batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
         List<SidechainRelatedMainchainOutput> mc2scTransactions = mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new MC2SCAggregatedTransaction(mc2scTransactions);
+        return new MC2SCAggregatedTransaction(mc2scTransactions, version);
     }
 }

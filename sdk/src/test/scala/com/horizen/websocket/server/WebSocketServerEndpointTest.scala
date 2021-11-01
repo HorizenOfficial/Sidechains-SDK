@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.SidechainMemoryPool
 import com.horizen.api.http.SidechainApiMockConfiguration
+import com.horizen.transaction.RegularTransaction
 
 import javax.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
@@ -19,23 +20,25 @@ import org.scalatest.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
-import scala.concurrent.{ExecutionContext}
+import scala.concurrent.ExecutionContext
+import scala.collection.JavaConverters._
 
-class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
+class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
   private var server: ActorRef = _
   private val mapper: ObjectMapper = new ObjectMapper().registerModule(DefaultScalaModule)
-  implicit val ec:ExecutionContext = ExecutionContext.Implicits.global
+  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-wwebsocket-server")
-  val mockedSidechainNodeViewHolder = TestProbe()
+  val mockedSidechainNodeViewHolder: TestProbe = TestProbe()
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
   val utilMocks = new NodeViewHolderUtilMocks()
+  val mempoolTxs: Seq[RegularTransaction] = utilMocks.transactionList.asScala
 
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case GetDataFromCurrentView(f) =>
-            sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
+          sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
       }
       TestActor.KeepRunning
     }
@@ -57,42 +60,42 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     val client = ClientManager.createClient
 
     val endpoint = new WsEndpoint
-    var session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
 
     val wrongRequest = mapper.createObjectNode()
-        .put("wrong_key", 1)
+      .put("wrong_key", 1)
 
     session.getBasicRemote.sendText(wrongRequest.toString)
     Thread.sleep(2000)
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json,3,-1,-1))
+    assertTrue(checkStaticResponseFields(json, 3, -1, -1))
 
     assertTrue(json.has("errorCode"))
-    assertEquals(5,json.get("errorCode").asInt())
+    assertEquals(5, json.get("errorCode").asInt())
 
     assertTrue(json.has("responsePayload"))
-    assertEquals("WebSocket message error!",json.get("responsePayload").asText())
+    assertEquals("WebSocket message error!", json.get("responsePayload").asText())
 
 
     //Verify that processError of WebSocketServerEndpoint is called with wrong message structure
     val badMsgTypeRequest = mapper.createObjectNode()
       .put("msgType", 2)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 5)
       .put("requestPayload", "{}")
     session.getBasicRemote.sendText(badMsgTypeRequest.toString)
     Thread.sleep(2000)
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
-    assertTrue(checkStaticResponseFields(json,3,0,5))
+    assertTrue(checkStaticResponseFields(json, 3, 0, 5))
 
     assertTrue(json.has("errorCode"))
-    assertEquals(5,json.get("errorCode").asInt())
+    assertEquals(5, json.get("errorCode").asInt())
 
     assertTrue(json.has("responsePayload"))
-    assertEquals("WebSocket message error!",json.get("responsePayload").asText())
+    assertEquals("WebSocket message error!", json.get("responsePayload").asText())
 
     session.close()
   }
@@ -104,34 +107,36 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     val client = ClientManager.createClient
 
     val endpoint = new WsEndpoint
-    var session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
 
     // Get raw mempool
     val rawMempoolRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 5)
       .put("requestPayload", "{}")
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
     Thread.sleep(2000)
+
+    // Check response
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json,2,0,5))
+    assertTrue(checkStaticResponseFields(json, 2, 0, 5))
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
     assertTrue(responsePayload.has("size"))
-    assertEquals(2, responsePayload.get("size").asInt())
+    assertEquals(mempoolTxs.size, responsePayload.get("size").asInt())
     assertTrue(responsePayload.has("transactions"))
     assertTrue(responsePayload.get("transactions").isArray)
-    var nTx = 0
-    responsePayload.get("transactions").forEach(tx => {
-      nTx += 1
-      assertEquals( "b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.asText())
-    })
-    assertEquals(2, nTx)
-    session.close()
 
+    val resTxs = responsePayload.get("transactions")
+    for(i <- mempoolTxs.indices) {
+      assertEquals(s"Different transaction id returned by server for tx idx = $i.",
+        mempoolTxs(i).id(), resTxs.get(i).asText())
+    }
+
+    session.close()
   }
 
   @Test
@@ -145,35 +150,37 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
 
     val rawMempoolRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 4)
-    rawMempoolRequest.putObject("requestPayload").putArray("hash").add("b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb")
+
+    // Set the first mempool Tx id to look for
+    rawMempoolRequest.putObject("requestPayload")
+      .putArray("hash")
+      .add(mempoolTxs.head.id())
 
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
     Thread.sleep(3000)
 
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json,2,0,4))
+    assertTrue(checkStaticResponseFields(json, 2, 0, 4))
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
     assertTrue(responsePayload.has("transactions"))
-    assertTrue(responsePayload.get("transactions").isArray)
 
-    var counter: Int = 0
-    responsePayload.get("transactions").forEach(tx => {
-      counter += 1
-      assertEquals("b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.get("id").asText())
-    })
-    assertEquals(1, counter)
+    val resTxs = responsePayload.get("transactions")
+    assertTrue(resTxs.isArray)
+    assertEquals("Different txs size found", 1, resTxs.size())
+
+    assertEquals(s"Different transaction id returned by server.",
+      mempoolTxs.head.id(), resTxs.get(0).get("id").asText())
 
     session.close()
-
   }
 
   @Test
-  def getSingleBlockTest():Unit = {
+  def getSingleBlockTest(): Unit = {
     // Test the getSingleBlock request
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
@@ -184,16 +191,16 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get block by hash
     val blockByHashtRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash","21438dfafec6d70317574cc3307bedf801e3f9137835ae8b36d12653c4d26e95")
+    blockByHashtRequest.putObject("requestPayload").put("hash", "21438dfafec6d70317574cc3307bedf801e3f9137835ae8b36d12653c4d26e95")
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
     Thread.sleep(3000)
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json,2,0,0))
+    assertTrue(checkStaticResponseFields(json, 2, 0, 0))
 
     assertTrue(json.has("responsePayload"))
     var responsePayload = json.get("responsePayload")
@@ -206,16 +213,16 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get block by height
     val blockByHeightRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 0)
-    blockByHeightRequest.putObject("requestPayload").put("height",100)
+    blockByHeightRequest.putObject("requestPayload").put("height", 100)
 
     session.getBasicRemote.sendText(blockByHeightRequest.toString)
     Thread.sleep(3000)
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
-    assertTrue(checkStaticResponseFields(json,2,0,0))
+    assertTrue(checkStaticResponseFields(json, 2, 0, 0))
 
     assertTrue(json.has("responsePayload"))
     responsePayload = json.get("responsePayload")
@@ -227,7 +234,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
   }
 
   @Test
-  def getNewBlockHashes():Unit = {
+  def getNewBlockHashes(): Unit = {
     // Test the getNewBlockHashes request
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
@@ -238,17 +245,17 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get block by hash
     val newBlockHashesRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 2)
     newBlockHashesRequest.putObject("requestPayload").putArray("locatorHashes").add("some_bock_hash")
-    newBlockHashesRequest.findParent("locatorHashes").put("limit",5)
+    newBlockHashesRequest.findParent("locatorHashes").put("limit", 5)
 
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
     Thread.sleep(3000)
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json,2,0,2))
+    assertTrue(checkStaticResponseFields(json, 2, 0, 2))
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
@@ -257,23 +264,22 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     assertTrue(responsePayload.get("hashes").isArray)
 
     // Test with limit greater than max
-    newBlockHashesRequest.findParent("locatorHashes").put("limit",100)
+    newBlockHashesRequest.findParent("locatorHashes").put("limit", 100)
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
     Thread.sleep(3000)
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
-    assertTrue(checkStaticResponseFields(json,3,0,2))
+    assertTrue(checkStaticResponseFields(json, 3, 0, 2))
     assertTrue(json.has("errorCode"))
-    assertEquals(4,json.get("errorCode").asInt())
+    assertEquals(4, json.get("errorCode").asInt())
     assertTrue(json.has("responsePayload"))
     assertEquals(json.get("responsePayload").asText(), "Invalid limit size! Max limit is 50")
 
     session.close()
-
   }
 
   @Test
-  def eventsTest():Unit = {
+  def eventsTest(): Unit = {
     // Test the websocket server events
 
     //Connect to the websocket server with some request
@@ -286,9 +292,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get block by hash
     val blockByHashtRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash","some_block_hash")
+    blockByHashtRequest.putObject("requestPayload").put("hash", "some_block_hash")
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
     Thread.sleep(3000)
@@ -317,19 +323,20 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     assertTrue(eventPayload.has("size"))
     assertEquals(2, eventPayload.get("size").asInt())
     assertTrue(eventPayload.has("transactions"))
-    assertTrue(eventPayload.get("transactions").isArray)
-    var nTx = 0
-    eventPayload.get("transactions").forEach(tx => {
-      nTx += 1
-      assertEquals( "b67b880eced3f3af008e04e6b799c5392d8a982366e73c828f767ee7ee468ddb", tx.asText())
-    })
-    assertEquals(2, nTx)
+
+    val resTxs = eventPayload.get("transactions")
+    assertTrue(resTxs.isArray)
+
+    for(i <- mempoolTxs.indices) {
+      assertEquals(s"Different transaction id returned by server for tx idx = $i.",
+        mempoolTxs(i).id(), resTxs.get(i).asText())
+    }
 
     session.close()
   }
 
   @Test
-  def sessionTest():Unit = {
+  def sessionTest(): Unit = {
     // Test the handle of multiple client connections
 
     // Add client 1
@@ -342,9 +349,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get block by hash
     val blockByHashtRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",0)
+      .put("requestId", 0)
       .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash","some_block_hash")
+    blockByHashtRequest.putObject("requestPayload").put("hash", "some_block_hash")
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
     Thread.sleep(3000)
@@ -359,7 +366,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     // Get raw mempool
     val rawMempoolRequest = mapper.createObjectNode()
       .put("msgType", 1)
-      .put("requestId",1)
+      .put("requestId", 1)
       .put("requestType", 5)
       .put("requestPayload", "{}")
 
@@ -411,12 +418,11 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     session.close()
   }
 
-  class wsActor  ()
+  class wsActor()
     extends Actor {
 
     override def receive: Receive = {
-      case _  => {
-      }
+      case _ =>
     }
 
     override def preStart(): Unit = {
@@ -427,10 +433,10 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
     }
 
   }
-  object wsActorRef {
 
+  object wsActorRef {
     def props()
-             (implicit ec: ExecutionContext) : Props = {
+             (implicit ec: ExecutionContext): Props = {
       Props(new wsActor())
     }
 
@@ -451,17 +457,18 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar{
         json.has("answerType") &&
         answerType == json.get("answerType").asInt()
     else
-    json.has("msgType") &&
-      msgType == json.get("msgType").asInt() &&
-      json.has("requestId") &&
-      requestId == json.get("requestId").asInt() &&
-      json.has("answerType") &&
-      answerType == json.get("answerType").asInt()
+      json.has("msgType") &&
+        msgType == json.get("msgType").asInt() &&
+        json.has("requestId") &&
+        requestId == json.get("requestId").asInt() &&
+        json.has("answerType") &&
+        answerType == json.get("answerType").asInt()
   }
 }
 
 private class WsEndpoint extends Endpoint {
   var receivedMessage: util.ArrayList[String] = new util.ArrayList[String]()
+
   override def onOpen(session: Session, config: EndpointConfig): Unit = {
     session.addMessageHandler(new MessageHandler.Whole[String]() {
       override def onMessage(message: String): Unit = {

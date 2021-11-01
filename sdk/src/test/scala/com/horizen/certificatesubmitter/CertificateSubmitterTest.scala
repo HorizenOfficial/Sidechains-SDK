@@ -73,7 +73,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     Mockito.when(mockedRefData.sidechainRelatedAggregatedTransaction).thenAnswer(_ => {
       val outputs: ListBuffer[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = ListBuffer()
       outputs.append(new SidechainCreation(mockedOutput, new Array[Byte](32), 0))
-      Some(new MC2SCAggregatedTransaction(outputs.asJava))
+      Some(new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
     })
     new MainchainBlockReference(mock[MainchainHeader], mockedRefData)
   }

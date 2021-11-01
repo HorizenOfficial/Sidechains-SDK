@@ -13,6 +13,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
+import scala.Array;
 import scorex.core.NodeViewModifier$;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
@@ -24,6 +25,8 @@ import java.util.*;
 public final class SidechainCoreTransaction
         extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>>
 {
+    public final static byte SIDECHAIN_CORE_TRANSACTION_VERSION = 1;
+
     private final List<byte[]> inputsIds;
     private final List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData;
     private final List<Proof<Proposition>> proofs;
@@ -43,13 +46,16 @@ public final class SidechainCoreTransaction
 
     private final long fee;
 
+    private final byte version;
+
     private List<BoxUnlocker<Proposition>> unlockers;
 
 
     public SidechainCoreTransaction(List<byte[]> inputsIds,
                              List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData,
                              List<Proof<Proposition>> proofs,
-                             long fee) {
+                             long fee,
+                             byte version) {
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
@@ -59,6 +65,7 @@ public final class SidechainCoreTransaction
         this.outputsData = outputsData;
         this.proofs = proofs;
         this.fee = fee;
+        this.version = version;
     }
 
     @Override
@@ -102,6 +109,11 @@ public final class SidechainCoreTransaction
 
     @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
+        if (version != SIDECHAIN_CORE_TRANSACTION_VERSION) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "unsupported version number.", id()));
+        }
+
         if(inputsIds.isEmpty() || outputsData.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input and output data present.", id()));
@@ -118,6 +130,21 @@ public final class SidechainCoreTransaction
     }
 
     @Override
+    public byte version() {
+        return version;
+    }
+
+    @Override
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
+    }
+
+    @Override
     public byte[] bytes() {
         ByteArrayOutputStream inputsIdsStream = new ByteArrayOutputStream();
         for(byte[] id: inputsIds)
@@ -129,7 +156,8 @@ public final class SidechainCoreTransaction
 
         byte[] proofsBytes = proofsSerializer.toBytes(proofs);
 
-        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 28 bytes
+        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 29 bytes
+                new byte[] {version()},                             // 1 byte
                 Longs.toByteArray(fee()),                           // 8 bytes
                 Ints.toByteArray(inputIdsBytes.length),             // 4 bytes
                 inputIdsBytes,                                      // depends in previous value(>=0 bytes)
@@ -141,13 +169,20 @@ public final class SidechainCoreTransaction
     }
 
     public static SidechainCoreTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 28)
+        if(bytes.length < 29)
             throw new IllegalArgumentException("Input data corrupted.");
 
         if(bytes.length > MAX_TRANSACTION_SIZE)
             throw new IllegalArgumentException("Input data length is too large.");
 
         int offset = 0;
+
+        byte version = bytes[offset];
+        offset += 1;
+
+        if (version != SIDECHAIN_CORE_TRANSACTION_VERSION) {
+            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
+        }
 
         long fee = BytesUtils.getLong(bytes, offset);
         offset += 8;
@@ -176,6 +211,6 @@ public final class SidechainCoreTransaction
 
         List<Proof<Proposition>> proofs = proofsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
 
-        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee);
+        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, version);
     }
 }
