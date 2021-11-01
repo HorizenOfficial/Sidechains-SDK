@@ -189,7 +189,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
-              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
+              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.mainchainAddress)),
               element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
           )
 
@@ -477,7 +477,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       outputs.add(new WithdrawalRequestBoxData(
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
-        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.publicKey, params)),
+        MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
         element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
     )
 
@@ -566,7 +566,7 @@ object SidechainTransactionRestScheme {
   private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionWithdrawalRequestOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+  private[api] case class TransactionWithdrawalRequestOutput(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)

@@ -20,12 +20,7 @@ case class SidechainInfoResponse
   )
 
 @JsonView(Array(classOf[Views.Default]))
-case class BackwardTransferEntry
-  (pubkeyhash: Array[Byte],
-   amount: String)
-{
-  require(pubkeyhash != null, "Address MUST be NOT NULL.")
-}
+case class BackwardTransferEntry(address: String, amount: String)
 
 @JsonView(Array(classOf[Views.Default]))
 case class SendCertificateRequest
@@ -66,7 +61,8 @@ object CertificateRequestCreator {
              quality: Long,
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
-             btrFee: Long) : SendCertificateRequest = {
+             btrFee: Long,
+             params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
       // Note: we should send uint256 types in BE.
       BytesUtils.reverseBytes(sidechainId),
@@ -75,7 +71,10 @@ object CertificateRequestCreator {
       proofBytes,
       quality,
       // Note: we should send BT entries public key hashes in reversed BE endianness.
-      withdrawalRequestBoxes.map(wrb => BackwardTransferEntry(BytesUtils.reverseBytes(wrb.proposition().bytes()), new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)),
+      withdrawalRequestBoxes.map(wrb => {
+        val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.proposition().bytes(), params)
+        BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)
+      }),
       Seq(), // No custom field elements support for Threshold signature proof
       Seq(), // No bitvectors support for Threshold signature proofs
       new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,

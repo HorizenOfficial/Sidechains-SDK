@@ -91,7 +91,7 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
         # Send FT to the SC node 2
         ft_amount = self.sc_creation_amount + self.sc_node2_bt_amount
-        mc_return_address = mc_node.getnewaddress("", True)
+        mc_return_address = mc_node.getnewaddress()
         mc_block_hash_with_ft = mc_make_forward_transfer(mc_node, sc_node2, self.sc_nodes_bootstrap_info.sidechain_id,
                                                          ft_amount, mc_return_address)
         mc_blocks_left_for_we -= 1
@@ -111,13 +111,12 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
         self.sc_sync_all()  # Sync SC nodes
 
-        # generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
+        # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_we - 1)
         mc_blocks_left_for_we -= len(mc_block_hashes)
 
-        # generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes)/3.0))):
-            generate_next_block(sc_node1, "first node")
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node1, "first node")
         self.sc_sync_all()  # Sync SC nodes
 
         # Disconnect SC nodes
