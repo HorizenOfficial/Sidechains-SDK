@@ -52,6 +52,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val (forgingBox, forgerBoxMetadata) = ForgerBoxFixture.generateForgerBox(234)
   val genesisBlock: SidechainBlock = SidechainBlock.create(
     bytesToId(new Array[Byte](32)),
+    SidechainBlock.BLOCK_VERSION,
     Instant.now.getEpochSecond - 10000,
     Seq(),
     Seq(),
@@ -79,6 +80,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     })
 
     Mockito.when(history.getBestBlock).thenAnswer(_ => genesisBlock)
+
+    Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ =>Optional.of(100))
 
     Mockito.when(history.getBlockIdByHeight(ArgumentMatchers.any())).thenAnswer(_ =>
       if (sidechainApiMockConfiguration.getShould_history_getBlockIdByHeight_return_value()) Optional.of("the_block_id")

@@ -148,6 +148,9 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
 
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
+    if(version != SidechainBlock.BLOCK_VERSION)
+      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id version $version is invalid.")
+
     // Check that header is valid.
     header.semanticValidity(params) match {
       case Success(_) =>
@@ -212,6 +215,7 @@ object SidechainBlock extends ScorexEncoding {
   val BLOCK_VERSION: Block.Version = 1: Byte
 
   def create(parentId: Block.BlockId,
+             blockVersion: Block.Version,
              timestamp: Block.Timestamp,
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
@@ -244,7 +248,7 @@ object SidechainBlock extends ScorexEncoding {
       case Some(sig) => sig
       case None =>
         val unsignedBlockHeader: SidechainBlockHeader = SidechainBlockHeader(
-          SidechainBlock.BLOCK_VERSION,
+          blockVersion,
           parentId,
           timestamp,
           forgingStakeInfo,
@@ -262,7 +266,7 @@ object SidechainBlock extends ScorexEncoding {
 
 
     val signedBlockHeader: SidechainBlockHeader = SidechainBlockHeader(
-      SidechainBlock.BLOCK_VERSION,
+      blockVersion,
       parentId,
       timestamp,
       forgingStakeInfo,

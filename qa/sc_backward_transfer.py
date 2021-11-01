@@ -43,7 +43,8 @@ class SCBackwardTransfer(SidechainTestFramework):
 
     def setup_nodes(self):
         num_nodes = 1
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1']] * num_nodes)
+        # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -177,7 +178,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount1 = ft_amount - 3
         sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address1,
+                               { "mainchainAddress": mc_address1,
                                  "value": sc_bt_amount1 }
                               ]
                              }
@@ -195,7 +196,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         bt_amount2 = ft_amount - bt_amount1
         sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
         withdrawal_request = {"outputs": [ \
-                               { "publicKey": mc_address2,
+                               { "mainchainAddress": mc_address2,
                                  "value": sc_bt_amount2 }
                               ]
                              }

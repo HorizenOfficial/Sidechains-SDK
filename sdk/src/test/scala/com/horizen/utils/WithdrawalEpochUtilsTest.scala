@@ -28,6 +28,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(), // no MainchainBlockReferenceData
       Seq(),
@@ -56,6 +57,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference().data),
       Seq(),
@@ -89,6 +91,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(generateMainchainBlockReference().data, generateMainchainBlockReference().data),
       Seq(),
@@ -121,6 +124,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(328)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(), // no MainchainBlockReferenceData
       Seq(),

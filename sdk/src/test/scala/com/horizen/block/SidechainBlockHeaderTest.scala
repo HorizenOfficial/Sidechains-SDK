@@ -137,8 +137,20 @@ class SidechainBlockHeaderTest extends JUnitSuite with CompanionsFixture with Si
 
     // Test 4: invalid timestamp < 0
     val header = baseUnsignedHeader.copy(timestamp = -1L)
-    val headerSignature = forgerMetadata.blockSignSecret.sign(header.messageToSign)
-    val signedHeader = header.copy(signature = headerSignature)
+    var headerSignature = forgerMetadata.blockSignSecret.sign(header.messageToSign)
+    var signedHeader = header.copy(signature = headerSignature)
+    signedHeader.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("Signed header with negative timestamp expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockHeaderException], e.getClass)
+    }
+
+    // Test 4: unsupported block version
+    val invalidHeader = baseUnsignedHeader.copy(version = Byte.MaxValue)
+    headerSignature = forgerMetadata.blockSignSecret.sign(invalidHeader.messageToSign)
+    signedHeader = invalidHeader.copy(signature = headerSignature)
     signedHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Signed header with negative timestamp expected to be semantically Invalid.")
