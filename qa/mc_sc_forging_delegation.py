@@ -71,8 +71,14 @@ class MCSCForgingDelegation(SidechainTestFramework):
         sc_node1_address = sc_node1.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_node1_account = Account("", sc_node1_address)
         ft_amount = 500 # Zen
-        mc_return_address = mc_node.getnewaddress("", True)
-        mc_node.sc_send(sc_node1_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id, mc_return_address)
+        mc_return_address = mc_node.getnewaddress()
+        ft_args = [{
+            "toaddress": sc_node1_address,
+            "amount": ft_amount,
+            "scid": self.sc_nodes_bootstrap_info.sidechain_id,
+            "mcReturnAddress": mc_return_address
+        }]
+        mc_node.sc_send(ft_args)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet

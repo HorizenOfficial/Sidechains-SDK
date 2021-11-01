@@ -41,6 +41,7 @@ import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 import com.horizen.network.SidechainNodeViewSynchronizer
+import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 
 import scala.util.Try
 
@@ -161,6 +162,9 @@ class SidechainApp @Inject()
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
+
+  // Configure Horizen address json serializer specifying proper network type.
+  JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
 
   // Generate Coboundary Marlin Proving System dlog keys
   log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")

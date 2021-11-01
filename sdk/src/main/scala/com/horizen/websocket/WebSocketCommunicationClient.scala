@@ -1,21 +1,22 @@
 package com.horizen.websocket
 
 import java.util.concurrent.atomic.AtomicInteger
-
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.{DeserializationFeature, JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import scorex.util.ScorexLogging
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Future, Promise}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+case class WebSocketServerError(msgType: Int, requestId: String, errorCode: Int, message: String)
+
 class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
 
-  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule)
+  private val mapper = new ObjectMapper().registerModule(DefaultScalaModule).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
   private var requestsPool: TrieMap[String, (Promise[ResponsePayload], Class[ResponsePayload])] = TrieMap()
   private var eventHandlersPool: TrieMap[Int, Seq[(EventHandler[EventPayload], Class[EventPayload])]] = TrieMap()
@@ -88,18 +89,18 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
   }
 
   private def processError(json: JsonNode): Unit = {
-    case class Error(msgType: Int, requestId: String, errorCode: Int, message: String)
     val requestId = json.get("requestId").asText("")
     requestsPool.remove(requestId) match {
       case Some((promise, _)) =>
-        try {
-          val resp = mapper.convertValue(json, classOf[Error])
-          promise.failure(new RuntimeException(resp.message))
-        } catch {
-          case e: Throwable =>
-            promise.failure(new RuntimeException(json.toString))
+        Try {
+          mapper.convertValue(json, classOf[WebSocketServerError])
+        } match {
+          case Success(errorResponse) =>
+            promise.failure(new WebsocketErrorResponseException(errorResponse.message))
+          case Failure(_) =>
+            // Unexpected error structure received from the server
+            promise.failure(new WebsocketInvalidErrorMessageException(json.toString))
         }
-
       case None =>
         log.error("Unknown response received: " + json.toString)
     }

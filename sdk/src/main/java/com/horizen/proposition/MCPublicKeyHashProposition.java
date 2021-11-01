@@ -9,16 +9,16 @@ import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
-// Note: Horizen address (constructed by `getnewaddress` RPC command) contains public key hash in original LE endianness.
-// But public key hash constructed by `getnewaddress "" true` is in reversed BE endianness.
-// IMPORTANT: inside MCPublicKeyHashProposition we suppose to keep Horizen public key hash bytes in original LE endianness.
+// Note: Horizen taddress (constructed by `getnewaddress` RPC command) contains public key hash in original LE endianness.
+// Inside MCPublicKeyHashProposition we suppose to keep Horizen public key hash bytes only in original LE endianness
+// and reconstruct taddress for JSON view.
 
 @JsonView(Views.Default.class)
 public final class MCPublicKeyHashProposition implements Proposition {
 
     public static final int KEY_LENGTH = 20;
 
-    @JsonProperty("publicKey")
+    @JsonProperty("mainchainAddress")
     @JsonSerialize(using = JsonHorizenPublicKeyHashSerializer.class)
     private byte[] pubKeyHashBytes;
 

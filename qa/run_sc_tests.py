@@ -3,6 +3,7 @@ import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
+from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
@@ -78,6 +79,10 @@ def run_tests(log_file):
 
     result = run_test(SCCertSubmissionDecentralization())
     assert_equal(0, result, "sc_cert_submission_decentralization test failed!")
+
+    result = run_test(SCCertNoCoinRecord())
+    assert_equal(0, result, "sc_cert_no_coin_record test failed!")
+
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")

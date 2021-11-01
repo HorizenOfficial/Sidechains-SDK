@@ -1,5 +1,5 @@
 package com.horizen.websocket
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
@@ -15,7 +15,7 @@ case class GetBlocksAfterHeightRequestPayload(afterHeight: Int, limit: Int) exte
 case class GetBlocksAfterHashRequestPayload(afterHash: String, limit: Int) extends RequestPayload
 case class GetNewBlocksRequestPayload(locatorHashes: Seq[String], limit: Int) extends RequestPayload
 case class GetBlockHeadersRequestPayload(hashes: Seq[String]) extends RequestPayload
-case class BackwardTransfer(pubkeyhash: String, amount: String)
+case class BackwardTransfer(address: String, amount: String)
 case class SendCertificateRequestPayload(scid: String,
                                          epochNumber: Int,
                                          quality: Long,
@@ -37,16 +37,12 @@ case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends Respo
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
-case class MempoolTopQualityCertificateInfo(certHash: Option[String],
-                                            epoch: Option[Int],
-                                            rawCertificateHex: Option[String],
-                                            @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long],
-                                            fee: Option[Double]) extends ResponsePayload
-case class ChainTopQualityCertificateInfo(certHash: Option[String],
-                                          epoch: Option[Int],
-                                          rawCertificateHex: Option[String],
-                                          @JsonDeserialize(contentAs = classOf[java.lang.Long]) quality: Option[Long]) extends ResponsePayload
-case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: MempoolTopQualityCertificateInfo, chainTopQualityCert: ChainTopQualityCertificateInfo) extends ResponsePayload
+
+case class MempoolTopQualityCertificateInfo(certHash: String, epoch: Int, quality: Long, fee: Double)
+case class ChainTopQualityCertificateInfo(certHash: String, epoch: Int, quality: Long)
+
+case class TopQualityCertificateResponsePayload(mempoolTopQualityCert: Option[MempoolTopQualityCertificateInfo],
+                                                chainTopQualityCert: Option[ChainTopQualityCertificateInfo]) extends ResponsePayload
 
 
 case object GET_SINGLE_BLOCK_REQUEST_TYPE extends RequestType(0)
@@ -136,7 +132,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
 
   override def sendCertificate(certificateRequest: SendCertificateRequest): Try[SendCertificateResponse] = Try {
     val backwardTransfers: Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt =>
-      BackwardTransfer(BytesUtils.toHexString(bt.pubkeyhash), bt.amount))
+      BackwardTransfer(bt.address, bt.amount))
 
     val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(
       BytesUtils.toHexString(certificateRequest.sidechainId),
@@ -165,12 +161,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     val future: Future[TopQualityCertificateResponsePayload] =
       client.sendRequest(GET_TOP_QUALITY_CERTIFICATES_TYPE, TopQualityCertificatePayload(scId), classOf[TopQualityCertificateResponsePayload])
 
-    processTopQualityCertificatesPayload(future).get
-  }
-
-  private def processTopQualityCertificatesPayload(future: Future[TopQualityCertificateResponsePayload]): Try[TopQualityCertificates] = Try {
-    val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration());
-
-    new TopQualityCertificates(response.mempoolTopQualityCert, response.chainTopQualityCert)
+    val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration())
+    TopQualityCertificates(response.mempoolTopQualityCert, response.chainTopQualityCert)
   }
 }
