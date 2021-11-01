@@ -103,9 +103,8 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         mc_block_hashes = mc_node1.generate(mc_blocks_left_for_we)
         mc_blocks_left_for_we -= len(mc_block_hashes)
 
-        # Generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes)/3.0))):
-            generate_next_block(sc_node1, "first node")
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node1, "first node")
         self.sc_sync_all()  # Sync SC nodes
 
         # Generate first mc block of the next epoch
@@ -150,9 +149,8 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         mc_block_hashes = mc_node1.generate(mc_blocks_left_for_we)
         mc_blocks_left_for_we -= len(mc_block_hashes)
 
-        # Generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes) / 3.0))):
-            generate_next_block(sc_node1, "first node")
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node1, "first node")
         self.sc_sync_all()  # Sync SC nodes
 
         # Generate first mc block of the next epoch
