@@ -14,7 +14,8 @@ import scala.language.postfixOps
 
 case class WebSocketServerError(msgType: Int, requestId: String, errorCode: Int, message: String)
 
-class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
+class WebSocketCommunicationClient(requestTimeOut: FiniteDuration = 5 seconds)
+  extends WebSocketChannelCommunicationClient with WebSocketMessageHandler with ScorexLogging {
 
   private val mapper = new ObjectMapper().registerModule(DefaultScalaModule).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
@@ -160,5 +161,5 @@ class WebSocketCommunicationClient extends WebSocketChannelCommunicationClient w
     String.valueOf(counter.addAndGet(1))
   }
 
-  override def requestTimeoutDuration(): FiniteDuration = 5 seconds
+  override def requestTimeoutDuration(): FiniteDuration = requestTimeOut
 }

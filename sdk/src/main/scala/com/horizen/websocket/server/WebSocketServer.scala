@@ -1,22 +1,19 @@
 package com.horizen.websocket.server
 
-import java.util
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import javax.websocket.Session
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
 
-class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
+class WebSocketServer(wsPort: Int)
   extends Actor
   with ScorexLogging {
   val websocket = new WebSocketServerImpl(wsPort, classOf[WebSocketServerEndpoint]);
 
   try {
     websocket.start()
-  }catch {
+  } catch {
     case _: Throwable => println("Couldn't start websocket server!")
   }
 
@@ -26,6 +23,11 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[_]])
   }
 
+  override def postStop(): Unit = {
+    websocket.stop()
+    super.postStop()
+  }
+
   override def receive: Receive = {
     checkMessage orElse {
       case message: Any => log.error("WebsocketServer received strange message: " + message)
@@ -33,7 +35,7 @@ class WebSocketServer  (sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
   }
 
   protected def checkMessage: Receive = {
-    case ChangedMempool(_)  => {
+    case ChangedMempool(_) => {
       websocket.onMempoolChanged()
     }
     case SemanticallySuccessfulModifier(_) => {
@@ -47,9 +49,9 @@ object WebSocketServerRef {
   var sidechainNodeViewHolderRef: ActorRef = null
 
   def props(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)
-           (implicit ec: ExecutionContext) : Props = {
+           (implicit ec: ExecutionContext): Props = {
     this.sidechainNodeViewHolderRef = sidechainNodeViewHolderRef
-    Props(new WebSocketServer(sidechainNodeViewHolderRef, wsPort))
+    Props(new WebSocketServer(wsPort))
   }
 
   def apply(sidechainNodeViewHolderRef: ActorRef, wsPort: Int)

@@ -2,7 +2,7 @@ package com.horizen.websocket.server
 
 import java.net.URI
 import java.util
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
@@ -10,11 +10,13 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.SidechainMemoryPool
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.transaction.RegularTransaction
+import com.horizen.utils.CountDownLatchController
 
-import javax.websocket.{ClientEndpointConfig, Endpoint, EndpointConfig, MessageHandler, Session}
+import javax.websocket.{ClientEndpointConfig, DeploymentException, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Before, Test}
+import org.junit.{After, Assert, Before, Test}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -22,9 +24,9 @@ import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempo
 
 import scala.concurrent.ExecutionContext
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
-class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
-  private var server: ActorRef = _
+class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with BeforeAndAfterAll {
   private val mapper: ObjectMapper = new ObjectMapper().registerModule(DefaultScalaModule)
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
@@ -44,14 +46,30 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     }
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+  private val server: ActorRef = WebSocketServerRef(mockedSidechainNodeViewHolderRef, 9025)
 
-  @Before
-  def setUp(): Unit = {
-    // start server on default port
-    server = WebSocketServerRef(mockedSidechainNodeViewHolderRef, 9025)
-    Thread.sleep(3000)
+  @After
+  def after(): Unit = {
+    actorSystem.stop(server)
   }
 
+  def startSession(client: ClientManager, cec: ClientEndpointConfig, endpoint: WsEndpoint): Session = {
+    var attempts = 30
+    while(attempts > 0) {
+      Try {
+        client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+      } match {
+        case Success(session) =>
+          return session
+        case Failure(_) =>
+          // server is instantiating => try again in a while
+          attempts -= 1
+          Thread.sleep(100)
+      }
+    }
+    Assert.fail("Not able to connect to server")
+    null
+  }
 
   @Test
   def badRequestMessage(): Unit = {
@@ -59,14 +77,15 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     val wrongRequest = mapper.createObjectNode()
       .put("wrong_key", 1)
 
     session.getBasicRemote.sendText(wrongRequest.toString)
-    Thread.sleep(2000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -85,8 +104,11 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
       .put("requestId", 0)
       .put("requestType", 5)
       .put("requestPayload", "{}")
+
+    countDownController.reset(1)
     session.getBasicRemote.sendText(badMsgTypeRequest.toString)
-    Thread.sleep(2000)
+
+    assertTrue("No message received.", countDownController.await(3000))
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
     assertTrue(checkStaticResponseFields(json, 3, 0, 5))
@@ -106,8 +128,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     // Get raw mempool
     val rawMempoolRequest = mapper.createObjectNode()
@@ -116,7 +139,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
       .put("requestType", 5)
       .put("requestPayload", "{}")
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
-    Thread.sleep(2000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     // Check response
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
@@ -145,8 +168,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     val rawMempoolRequest = mapper.createObjectNode()
       .put("msgType", 1)
@@ -159,7 +183,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
       .add(mempoolTxs.head.id())
 
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -185,8 +209,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     // Get block by hash
     val blockByHashtRequest = mapper.createObjectNode()
@@ -196,7 +221,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     blockByHashtRequest.putObject("requestPayload").put("hash", "21438dfafec6d70317574cc3307bedf801e3f9137835ae8b36d12653c4d26e95")
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -217,8 +242,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
       .put("requestType", 0)
     blockByHeightRequest.putObject("requestPayload").put("height", 100)
 
+    countDownController.reset(1)
     session.getBasicRemote.sendText(blockByHeightRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
@@ -239,8 +265,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     // Get block by hash
     val newBlockHashesRequest = mapper.createObjectNode()
@@ -251,7 +278,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     newBlockHashesRequest.findParent("locatorHashes").put("limit", 5)
 
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController.await(3000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -265,8 +292,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
 
     // Test with limit greater than max
     newBlockHashesRequest.findParent("locatorHashes").put("limit", 100)
+    countDownController.reset(1)
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController.await(3000))
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
     assertTrue(checkStaticResponseFields(json, 3, 0, 2))
@@ -286,24 +314,16 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
-    // Get block by hash
-    val blockByHashtRequest = mapper.createObjectNode()
-      .put("msgType", 1)
-      .put("requestId", 0)
-      .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash", "some_block_hash")
-
-    session.getBasicRemote.sendText(blockByHashtRequest.toString)
-    Thread.sleep(3000)
-
-    val testActor = wsActorRef()
-    Thread.sleep(5000)
 
     //Check SemanticallySuccessfulModifier event
-    val tipJson = mapper.readTree(endpoint.receivedMessage.get(1))
+    countDownController.reset(1)
+    publishNewTipEvent()
+    assertTrue("No event message received.", countDownController.await(3000))
+    val tipJson = mapper.readTree(endpoint.receivedMessage.get(0))
 
     assertTrue(checkStaticResponseFields(tipJson, 0, -1, 0))
 
@@ -314,7 +334,10 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     assertTrue(eventPayload.has("block"))
 
     //Check ChangedMempool event
-    val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(2))
+    countDownController.reset(1)
+    publishMempoolEvent()
+    assertTrue("No event message received.", countDownController.await(3000))
+    val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(1))
 
     assertTrue(checkStaticResponseFields(mempoolJson, 0, -1, 2))
 
@@ -343,25 +366,27 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
-    val endpoint = new WsEndpoint
-    val session: Session = client.connectToServer(endpoint, cec, new URI("ws://localhost:9025/"))
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
 
     // Get block by hash
-    val blockByHashtRequest = mapper.createObjectNode()
+    val blockByHashRequest = mapper.createObjectNode()
       .put("msgType", 1)
       .put("requestId", 0)
       .put("requestType", 0)
-    blockByHashtRequest.putObject("requestPayload").put("hash", "some_block_hash")
+    blockByHashRequest.putObject("requestPayload").put("hash", "some_block_hash")
 
-    session.getBasicRemote.sendText(blockByHashtRequest.toString)
-    Thread.sleep(3000)
+    session.getBasicRemote.sendText(blockByHashRequest.toString)
+    assertTrue("No message received.", countDownController.await(3000))
 
     // Add client 2
     val cec2 = ClientEndpointConfig.Builder.create.build
     val client2 = ClientManager.createClient
 
-    val endpoint2 = new WsEndpoint
-    val session2: Session = client2.connectToServer(endpoint2, cec2, new URI("ws://localhost:9025/"))
+    val countDownController2: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint2 = new WsEndpoint(countDownController2)
+    val session2: Session = startSession(client2, cec2, endpoint2)
 
     // Get raw mempool
     val rawMempoolRequest = mapper.createObjectNode()
@@ -371,11 +396,15 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
       .put("requestPayload", "{}")
 
     session2.getBasicRemote.sendText(rawMempoolRequest.toString)
-    Thread.sleep(3000)
+    assertTrue("No message received.", countDownController2.await(3000))
 
-    // Send event
-    val testActor = wsActorRef()
-    Thread.sleep(5000)
+    // Send events
+    countDownController.reset(2)
+    countDownController2.reset(2)
+    publishAllEvents()
+
+    assertTrue("No event messages received.", countDownController.await(3000))
+    assertTrue("No event messages received.", countDownController2.await(3000))
 
     //Both client1 and client2 have 3 message (1 request and 2 events)
     assertEquals(3, endpoint.receivedMessage.size())
@@ -403,8 +432,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     session2.close()
 
     // Resend event only on client 1
-    val testActor2 = wsActorRef()
-    Thread.sleep(5000)
+    countDownController.reset(2)
+    publishAllEvents()
+    assertTrue("No event messages received.", countDownController.await(3000))
 
     assertEquals(3, endpoint2.receivedMessage.size())
     assertEquals(5, endpoint.receivedMessage.size())
@@ -418,37 +448,18 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
     session.close()
   }
 
-  class wsActor()
-    extends Actor {
-
-    override def receive: Receive = {
-      case _ =>
-    }
-
-    override def preStart(): Unit = {
-      context.system.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](mock[scorex.core.PersistentNodeViewModifier]))
-      Thread.sleep(2000)
-      context.system.eventStream.publish(ChangedMempool[SidechainMemoryPool](mock[SidechainMemoryPool]))
-      Thread.sleep(2000)
-    }
-
+  def publishAllEvents(): Unit = {
+    publishNewTipEvent()
+    publishMempoolEvent()
   }
 
-  object wsActorRef {
-    def props()
-             (implicit ec: ExecutionContext): Props = {
-      Props(new wsActor())
-    }
-
-    def apply()
-             (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-      system.actorOf(props())
-
-    def apply(name: String)
-             (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-      system.actorOf(props(), name)
+  def publishNewTipEvent(): Unit = {
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](mock[scorex.core.PersistentNodeViewModifier]))
   }
 
+  def publishMempoolEvent(): Unit = {
+    actorSystem.eventStream.publish(ChangedMempool[SidechainMemoryPool](mock[SidechainMemoryPool]))
+  }
 
   private def checkStaticResponseFields(json: JsonNode, msgType: Int, requestId: Int, answerType: Int): Boolean = {
     if (requestId == -1)
@@ -466,13 +477,15 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar {
   }
 }
 
-private class WsEndpoint extends Endpoint {
+private class WsEndpoint(countDownLatchController: CountDownLatchController) extends Endpoint {
   var receivedMessage: util.ArrayList[String] = new util.ArrayList[String]()
 
   override def onOpen(session: Session, config: EndpointConfig): Unit = {
     session.addMessageHandler(new MessageHandler.Whole[String]() {
       override def onMessage(message: String): Unit = {
         receivedMessage.add(message)
+        // notify the message was received
+        countDownLatchController.countDown()
       }
     })
   }
