@@ -62,6 +62,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   private[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
 
   private[certificatesubmitter] var certGenerationState: Boolean = false
+  private val certificateFee = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
@@ -396,6 +397,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
+                  certificateFee,
                   params)
 
                 log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")

@@ -28,7 +28,10 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               maxPks: Long,
                                               provingKeyFilePath: String,
                                               verificationKeyFilePath: String,
-                                              certificateSigningIsEnabled: Boolean = true)
+                                              certificateSigningIsEnabled: Boolean = true,
+                                              certificateAutomaticFeeComputation: Boolean = true,
+                                              certificateFee: String = "0.0001"
+                                             )
 
 case class ForgerSettings(automaticForging: Boolean = false)
 
