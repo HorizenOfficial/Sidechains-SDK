@@ -4,8 +4,8 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.utils.BytesUtils
-import com.horizen.websocket.MainchainNodeChannel
 import com.horizen.utils._
+import com.horizen.websocket.client.MainchainNodeChannel
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -63,7 +63,7 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
         case Success(ref) =>
           references.append(ref)
         case Failure(ex) =>
-          throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash $hash. Connection error.", ex)
+          throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash ${hash.data}. Connection error.", ex)
       }
     }
     references

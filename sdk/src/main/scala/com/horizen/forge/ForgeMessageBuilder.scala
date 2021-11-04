@@ -316,6 +316,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val tryBlock = SidechainBlock.create(
       parentBlockId,
+      SidechainBlock.BLOCK_VERSION,
       timestamp,
       mainchainReferenceData,
       transactions,

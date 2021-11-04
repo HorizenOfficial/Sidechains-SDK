@@ -56,8 +56,9 @@ class SCMultipleCerts(SidechainTestFramework):
     sc_node2_bt_amount = 20  # Zen
 
     def setup_nodes(self):
+        # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-logtimemicros=1']] * self.number_of_mc_nodes)
+                           extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * self.number_of_mc_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -110,13 +111,12 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
         self.sc_sync_all()  # Sync SC nodes
 
-        # generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
+        # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_we - 1)
         mc_blocks_left_for_we -= len(mc_block_hashes)
 
-        # generate SC blocks to sync with MC node
-        for x in range(int(math.ceil(len(mc_block_hashes)/3.0))):
-            generate_next_block(sc_node1, "first node")
+        # Generate 1 more SC block to sync with MC
+        generate_next_block(sc_node1, "first node")
         self.sc_sync_all()  # Sync SC nodes
 
         # Disconnect SC nodes

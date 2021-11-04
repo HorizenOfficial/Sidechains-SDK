@@ -243,7 +243,7 @@ class Demo(SidechainTestFramework):
         mc_address = mc_node.getnewaddress()
         bt_amount = 2  # Zen
         withdrawal_request = {"outputs": [
-            {"publicKey": mc_address,
+            {"mainchainAddress": mc_address,
              "value": bt_amount * coin}
         ]
         }

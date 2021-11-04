@@ -455,17 +455,16 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
         time.sleep(WAIT_CONST)
 
 
-def disconnect_sc_nodes(from_connection, node_num, wait_for=25):
+def disconnect_sc_nodes(from_connection, node_num):
     """
     Disconnect a SC node, from_connection, to another one, specifying its node_num.
-    Method will attempt to disconnect for maximum wait_for seconds.
     """
     j = {"host": "127.0.0.1", \
          "port": str(sc_p2p_port(node_num))}
     ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
     print("Disconnecting from " + ip_port)
     from_connection.node_disconnect(json.dumps(j))
-    time.sleep(WAIT_CONST)
+
 
 def sc_connected_peers(node):
     return node.node_connectedPeers()["result"]["peers"]
@@ -473,6 +472,7 @@ def sc_connected_peers(node):
 def disconnect_sc_nodes_bi(nodes, a, b):
     disconnect_sc_nodes(nodes[a], b)
     disconnect_sc_nodes(nodes[b], a)
+    time.sleep(WAIT_CONST)
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)

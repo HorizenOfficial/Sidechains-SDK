@@ -1,12 +1,11 @@
-package com.horizen.websocket
-
+package com.horizen.websocket.client
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
 
-import scala.util.{Failure, Success, Try}
 import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success, Try}
 
 
 case class GetBlockByHeightRequestPayload(height: Int) extends RequestPayload

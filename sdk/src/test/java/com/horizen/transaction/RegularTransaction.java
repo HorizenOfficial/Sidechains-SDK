@@ -15,6 +15,7 @@ import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
+import scala.Array;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -126,6 +127,16 @@ public final class RegularTransaction
     }
 
     @Override
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
+    }
+
+    @Override
     public void transactionSemanticValidity() throws TransactionSemanticValidityException {
         // check that we have enough proofs and try to open each box only once.
         if(inputs.size() != signatures.size() || inputs.size() != boxIdsToOpen().size())
@@ -158,6 +169,11 @@ public final class RegularTransaction
     @Override
     public byte transactionTypeId() {
         return 111;
+    }
+
+    @Override
+    public byte version() {
+        return 100;
     }
 
     @Override
