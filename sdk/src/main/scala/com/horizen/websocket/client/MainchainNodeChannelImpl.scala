@@ -27,15 +27,6 @@ case class SendCertificateRequestPayload(scid: String,
                                          vFieldElementCertificateField: Seq[String], // Seq of compressed FE hex strings
                                          vBitVectorCertificateField: Seq[String] // Seq of compressed bitvectors hex strings
                                         ) extends RequestPayload
-case class SendCertificateAutoFeeRequestPayload(scid: String,
-                                                epochNumber: Int,
-                                                quality: Long,
-                                                endEpochCumCommTreeHash: String,
-                                                scProof: String,
-                                                backwardTransfers: Seq[BackwardTransfer],
-                                                forwardTransferScFee: String, // Decimal string
-                                                mainchainBackwardTransferScFee: String // Decimal string
-                                                ) extends RequestPayload
 case class TopQualityCertificatePayload(scid: String) extends RequestPayload
 
 
@@ -142,8 +133,12 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     val backwardTransfers: Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt =>
       BackwardTransfer(bt.address, bt.amount))
 
-    val requestPayload = certificateRequest.fee match {
-      case Some(fee) => SendCertificateRequestPayload(
+    val fee: String = certificateRequest.fee match {
+      case Some(fee) => fee
+      case None => "-1"
+    }
+
+    val requestPayload:SendCertificateRequestPayload = SendCertificateRequestPayload(
         BytesUtils.toHexString(certificateRequest.sidechainId),
         certificateRequest.epochNumber,
         certificateRequest.quality,
@@ -155,17 +150,6 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
         fee,
         certificateRequest.fieldElementCertificateFields,
         certificateRequest.bitVectorCertificateFields)
-      case None => SendCertificateAutoFeeRequestPayload(
-        BytesUtils.toHexString(certificateRequest.sidechainId),
-        certificateRequest.epochNumber,
-        certificateRequest.quality,
-        BytesUtils.toHexString(certificateRequest.endEpochCumCommTreeHash),
-        BytesUtils.toHexString(certificateRequest.proofBytes),
-        backwardTransfers,
-        certificateRequest.ftrMinAmount,
-        certificateRequest.btrMinFee,
-      )
-    }
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 

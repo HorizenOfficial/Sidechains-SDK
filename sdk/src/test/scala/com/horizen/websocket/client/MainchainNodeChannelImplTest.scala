@@ -336,7 +336,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val scProof = "f596814b17a5d9bae82b7c377d8cbf44b4d07e6430b26346dde4fef807b1138d877817226dbf9648a87ba278d6de63a0f5a4702e6e16b8e4b6794889de709f80f04b331af7c7b49a41518c73cf4a7d869f933b9241e1dfc584997963f7d40000405fb19b84afd7704bf9823d42cbb6ef8c14fd703f84866e0f6a9177d5060052bb51d1fc4696f505642251ac6041f2762d9386635e7f222b7106f73341f2f7e907e99034955648df11a1f0aeffece9e1ae3add7436d43c6444cefa4b286a0100007547473dec029e91dc774e40b91377ae63591dd3347f15ced6df93956a1b3a587df464f9c0900ba6870e87cdc262318b8f1d5f8823cdd4347697bc1237c2c2a085515623d0814486f69e5b04c9426834855dd8515f16f1fbe66252096ae600002f2a6b043302f126ca7fe6fb6c50b1ea882d5f7023a7de427b68108a7e9f53e0b630f771f5d7d3dec0e978e2cad364350bd6ac15bd7f27d7a2de92e9d87a5fc71e7e14427b2f49e1e01e21ef2f79533e70ac0cba5ae2a0bb1a2c12ca9223010071e2aca4f2ed6b5d393c6ac783e3c60a2a885906d299cf32ddb733e5a21886e2db0157af9ba53fe2158c4d165a64f80741eaa49fd9c6441730b5543b738f49b980f6c4fd80000ac4dc82950ca08d8b2c67c31b1073531569c0f5ae1603920000290260cf79ce7b036e0bffcea983f6b9f7aac23743fd0d3af2ff8c16c3778c7aaedddeb0b3ab6c976364c7e50227133c47a2dc53e8fc92efe380a416e24961a283e84513882d61707d7f498c94242c921521cfa99e697ed64edc49d2b5ad00000043cb9976c1a1b16bdf5e360f536f553c9f7da716881d80dcec703bd919c14498059595358644de34ccc976dc56467b3d7e61c2f9b4d352158de64f6f708c869943d9363bd196e8ec486529e197a319815d0f6a46f1a902558074c3b16d8e0100cd3daed0c59fafb2008797eb0261cabea67fc0d6b2cb087d2ca902a30e0e76bf87987d24e650cc0178c5ecb8ef986b490c6ba8985dc1e18fbf2892fa2a0d89c716fb3452f4fde026623ea38e558099092d55439c1aca427e0386e712ac9f010000"
     val ftrMinAmount = "0.00002"
     val btrMinFee = "0.00003"
-    val fee = None
+    val fee = "-1"
 
     val certHash = "a853d5f5251a8ef5dc248d3fff45301249934bdda48d1d3c0c97b58918e05aa0"
     val expectedReqType = SEND_CERTIFICATE_REQUEST_TYPE
@@ -347,7 +347,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     )).thenAnswer(answer => {
       val reqType = answer.getArgument(0).asInstanceOf[RequestType]
       assertEquals("Send certificate request type is wrong.", expectedReqType, reqType)
-      val req = answer.getArgument(1).asInstanceOf[SendCertificateAutoFeeRequestPayload]
+      val req = answer.getArgument(1).asInstanceOf[SendCertificateRequestPayload]
       assertEquals("Send certificate request data (scid) is wrong.", scid, req.scid)
       assertEquals("Send certificate request data (epochNumber) is wrong.", epochNumber, req.epochNumber)
       assertEquals("Send certificate request data (quality) is wrong.", quality, req.quality)
@@ -356,6 +356,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       assertEquals("Send certificate request data (scProof) is wrong.", scProof, req.scProof)
       assertEquals("Send certificate request data (ftrMinAmount) is wrong.", ftrMinAmount, req.forwardTransferScFee)
       assertEquals("Send certificate request data (btrMinFee) is wrong.", btrMinFee, req.mainchainBackwardTransferScFee)
+      assertEquals("Send certificate request data (fee) is wrong.", fee, req.fee)
 
       assertTrue("Send certificate response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[ResponsePayload]])
 
@@ -384,7 +385,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
       Seq(),
       ftrMinAmount,
       btrMinFee,
-      fee)
+      None)
 
     val mcRefTry = mcnode.sendCertificate(certificate)
 
@@ -404,7 +405,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     val scProof = "f596814b17a5d9bae82b7c377d8cbf44b4d07e6430b26346dde4fef807b1138d877817226dbf9648a87ba278d6de63a0f5a4702e6e16b8e4b6794889de709f80f04b331af7c7b49a41518c73cf4a7d869f933b9241e1dfc584997963f7d40000405fb19b84afd7704bf9823d42cbb6ef8c14fd703f84866e0f6a9177d5060052bb51d1fc4696f505642251ac6041f2762d9386635e7f222b7106f73341f2f7e907e99034955648df11a1f0aeffece9e1ae3add7436d43c6444cefa4b286a0100007547473dec029e91dc774e40b91377ae63591dd3347f15ced6df93956a1b3a587df464f9c0900ba6870e87cdc262318b8f1d5f8823cdd4347697bc1237c2c2a085515623d0814486f69e5b04c9426834855dd8515f16f1fbe66252096ae600002f2a6b043302f126ca7fe6fb6c50b1ea882d5f7023a7de427b68108a7e9f53e0b630f771f5d7d3dec0e978e2cad364350bd6ac15bd7f27d7a2de92e9d87a5fc71e7e14427b2f49e1e01e21ef2f79533e70ac0cba5ae2a0bb1a2c12ca9223010071e2aca4f2ed6b5d393c6ac783e3c60a2a885906d299cf32ddb733e5a21886e2db0157af9ba53fe2158c4d165a64f80741eaa49fd9c6441730b5543b738f49b980f6c4fd80000ac4dc82950ca08d8b2c67c31b1073531569c0f5ae1603920000290260cf79ce7b036e0bffcea983f6b9f7aac23743fd0d3af2ff8c16c3778c7aaedddeb0b3ab6c976364c7e50227133c47a2dc53e8fc92efe380a416e24961a283e84513882d61707d7f498c94242c921521cfa99e697ed64edc49d2b5ad00000043cb9976c1a1b16bdf5e360f536f553c9f7da716881d80dcec703bd919c14498059595358644de34ccc976dc56467b3d7e61c2f9b4d352158de64f6f708c869943d9363bd196e8ec486529e197a319815d0f6a46f1a902558074c3b16d8e0100cd3daed0c59fafb2008797eb0261cabea67fc0d6b2cb087d2ca902a30e0e76bf87987d24e650cc0178c5ecb8ef986b490c6ba8985dc1e18fbf2892fa2a0d89c716fb3452f4fde026623ea38e558099092d55439c1aca427e0386e712ac9f010000"
     val ftrMinAmount = "0.00002"
     val btrMinFee = "0.00003"
-    val fee ="0.00004"
+    val fee = "0.00004"
     val backwardTransfer:Seq[BackwardTransfer] = Seq(BackwardTransfer("znVvMy7tN53HbYNfWK788k12q9ZgqKuPpuV", "7"),
                                                      BackwardTransfer("znVvMy7tN53KrMFJizijCg8UAqqKm4fyo6e", "3"))
 
