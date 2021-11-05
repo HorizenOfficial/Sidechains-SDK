@@ -12,18 +12,16 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
 from SidechainTestFramework.sc_forging_util import *
 
 """
-Check the bootstrap feature.
-
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
     - Create 2 SC node(first nod with constant fee, second nod with automatic fee computation)
 
 Test:
     - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
-    - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
+    - generate one more MC and SC block accordingly and await for certificate(with constant fee from the first node) submission to MC node mempool
     - check epoch 0 certificate fee
     - generate MC and SC blocks to reach the end of the Withdrawal epoch 1
-    - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
+    - generate one more MC and SC block accordingly and await for certificate(with no fee from the second node) submission to MC node mempool
     - check epoch 1 certificate fee, certificate fee rate must be close to paytxfee MC parameter
 """
 
