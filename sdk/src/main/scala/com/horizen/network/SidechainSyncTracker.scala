@@ -38,28 +38,26 @@ class SidechainSyncTracker (nvsRef: ActorRef,
         olderStatusesMap += peer -> syncStatus
       }
       log.info(s"updateSyncStatus : olderStatusesMap = ${olderStatusesMap.toSeq.toString()} ,size = ${olderStatusesMap.size}")
-      // DIRAC not sure if correct, just to have the best height we got through the sync phase
       betterNeighbourHeight =
         if (syncStatus.otherNodeDeclaredHeight > betterNeighbourHeight)
           syncStatus.otherNodeDeclaredHeight
         else betterNeighbourHeight
       myHeight = syncStatus.myOwnHeight
     }else{
-      // DIRAC TODO update to tell that's not older anymore
+      if(olderStatusesMap.contains(peer)){
+        olderStatusesMap.remove(peer)
+      }
     }
-
   }
 
-  // DIRAC TODO what if We don't have a peer on the other side....
   def updateForFailing(peer: ConnectedPeer, sidechainFailedSync: SidechainFailedSync):Unit ={
     failedStatusesMap += peer -> sidechainFailedSync
   }
 
-
   def updateStatusWithLastSyncTime(peer:ConnectedPeer, time: Time): Unit = {
-    // DIRAC TODO at the beginning have to check if it exist, if not u have to put @ASKSasha
-    // try to do with catching exception java.util.NoSuchElementException: @ASKSasha
-    olderStatusesMap(peer).lastTipSyncTime = time
+    if(olderStatusesMap.contains(peer)){
+      olderStatusesMap(peer).lastTipSyncTime = time
+    }
     log.info(s"updateStatusWithLastSyncTime peer = $peer  -  olderStatusesMap(peer) = ${olderStatusesMap(peer)} ")
   }
 

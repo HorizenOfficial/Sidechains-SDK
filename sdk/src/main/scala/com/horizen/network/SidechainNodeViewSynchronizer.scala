@@ -11,13 +11,12 @@ import com.horizen.validation.{BlockInFutureException, InconsistentDataException
 import scorex.core.consensus.History.{Fork, Nonsense, Unknown, Younger}
 import scorex.core.consensus.SyncInfo
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
-import scorex.core.network.NodeViewSynchronizer.Events
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier, SyntacticallyFailedModification}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
 import scorex.core.network.{ConnectedPeer, NodeViewSynchronizer}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.NetworkSettings
-import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier, idsToString}
+import scorex.core.utils.{NetworkTimeProvider}
+import scorex.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier}
 import scorex.util.ModifierId
 
 import scala.concurrent.ExecutionContext
@@ -61,30 +60,30 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
           // Ban both mod.id and peer
           deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
       }
-      val aPeer = thePeerAskedFor(mod)
+      val aPeer = thePeerThatHasSent(mod)
       aPeer match {
         case Some(peer) =>
           chainIsOnSync=false
           statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
-        case None => // DIRAC TODO what if no peer promised that???
+        case None =>
       }
   }
 
   private val onSemanticallyFailedModifier: Receive = {
     case SemanticallyFailedModification(mod, exception) =>
-      val aPeer = thePeerAskedFor(mod)
+      val aPeer = thePeerThatHasSent(mod)
       aPeer match {
         case Some(peer) =>
           chainIsOnSync=false
           statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
-        case None => // DIRAC TODO what if no peer promised that???
+        case None =>
       }
   }
 
   private val onSemanticallySuccessfulModifier: Receive = {
     case SemanticallySuccessfulModifier(pmod) =>
       if(statusTracker.betterNeighbourHeight>statusTracker.myHeight+1){  // we're not still synced
-        val aPeer = thePeerAskedFor(pmod)
+        val aPeer = thePeerThatHasSent(pmod)
         aPeer match {
           case Some(peer) =>
             chainIsOnSync=true
@@ -97,6 +96,11 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
       }
       broadcastModifierInv(pmod)
   }
+
+  private val onSyntacticallySuccessfulModifier: Receive ={
+      case SyntacticallySuccessfulModifier(pmod) =>
+          deliveryTracker.setBlockHeld(pmod.id)
+   }
 
   override def receive: Receive = {
     onDownloadRequest orElse
@@ -116,42 +120,26 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     }
   }
 
-  override def preStart(): Unit = {
-    super.preStart()
-    context.system.eventStream.subscribe(self, classOf[Events.NodeViewSynchronizerEvent])
-    context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[PersistentNodeViewModifier]])
-  }
-
-  // Uses SidechainSyncStatus instead of status (ComparisonResult) that parent class does
+  // Uses SidechainSyncStatus instead of status (ComparisonResult) as parent class does
   override   protected def processSync: Receive = {
     case DataFromPeer(spec, syncInfo: SidechainSyncInfo@unchecked, remote)
       if spec.messageCode == syncInfoSpec.messageCode =>
-      log.info(s"  syncInfoSpec,   processSync: syncInfo = $syncInfo")
-      log.info(s"historyReaderOpt = ${historyReaderOpt.toSeq.toString()}")
       historyReaderOpt match {
         case Some(historyReader) =>
           val ext = historyReader.continuationIds(syncInfo, networkSettings.desiredInvObjects)
           val comparison = historyReader.compare(syncInfo)
-          log.info(s"Comparison with $remote having starting points ${idsToString(syncInfo.startingPoints)}. " +
-            s"Comparison result is $comparison. Sending extension of length ${ext.length}")
-          log.info(s"Extension ids: ${idsToString(ext)}")
-
           if (!(ext.nonEmpty || comparison != Younger))
             log.warn("Extension is empty while comparison is younger")
-          log.info(s"calling OtherNodeSyncStatus, on myself ${self.toString()}")
-
           self ! OtherNodeSyncStatus(remote, SidechainSyncStatus(comparison,syncInfo.chainHeight,historyReader.storage.height), ext )
         case _ =>
       }
   }
 
   //view holder is telling other node status
-  // Uses SidechainSyncStatus instead of status (ComparisonResult) that parent class does
+  // Uses SidechainSyncStatus instead of status (ComparisonResult) as parent class does
   override protected def processSyncStatus: Receive = {
     case OtherNodeSyncStatus(remote, status, ext) =>
-      log.info("*********************** called processSyncStatus")
       statusTracker.updateSyncStatus(remote, status)
-
       status.historyCompare match {
         case Unknown =>
           //todo: should we ban peer if its status is unknown after getting info from it?
@@ -166,11 +154,11 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
       }
   }
 
-  def thePeerAskedFor(pmod: PersistentNodeViewModifier): Option[ConnectedPeer] = {
-    val peerToWhichIRequested= deliveryTracker.modHadBeenRequestedFromPeer(pmod.id,pmod.modifierTypeId)
+
+  def thePeerThatHasSent(pmod: PersistentNodeViewModifier): Option[ConnectedPeer] = {
     val peerFromWhichIReceived = deliveryTracker.modHadBeenReceivedFromPeer(pmod.id,pmod.modifierTypeId)
-    if (peerToWhichIRequested.isDefined && peerFromWhichIReceived.isDefined && peerToWhichIRequested == peerFromWhichIReceived )
-      peerToWhichIRequested
+    if(peerFromWhichIReceived.isDefined)
+      peerFromWhichIReceived
     else
       None
   }
@@ -198,7 +186,6 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     chainIsOnSync=false
     log.info("I stop Syncing . . . ")
   }
-
 
   protected def processGetSyncInfo: Receive = {
     case GetSyncInfo =>
@@ -228,11 +215,10 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     onSemanticallySuccessfulModifier orElse
     onSemanticallyFailedModifier orElse
     onSyntacticallyFailedModifier orElse
+    onSyntacticallySuccessfulModifier orElse
     super.viewHolderEvents
   }
 }
-
-
 
 object SidechainNodeViewSynchronizer {
   def props(networkControllerRef: ActorRef,
