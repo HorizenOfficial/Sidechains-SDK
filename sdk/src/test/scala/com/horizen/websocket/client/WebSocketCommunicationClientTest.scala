@@ -7,6 +7,7 @@ import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
+import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.util.{Failure, Success, Try}
@@ -221,7 +222,7 @@ class WebSocketCommunicationClientTest extends JUnitSuite with MockitoSugar {
   @Test
   def sendWellFormedRequestReceiveMalformedErrorResponse() : Unit = {
 
-    val webSocketClient = new WebSocketCommunicationClient()
+    val webSocketClient = new WebSocketCommunicationClient(200 milliseconds)
 
     val mockedChannel = mock[WebSocketChannel]
     val mockedConnector : WebSocketConnector = mock[WebSocketConnector]
