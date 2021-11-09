@@ -1,7 +1,6 @@
 package com.horizen.consensus
 
 import java.util.Random
-
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -10,13 +9,15 @@ import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, Genera
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
 import com.horizen.validation.ConsensusValidator
+import scorex.core.utils.TimeProvider
+import scorex.core.utils.TimeProvider.Time
 import scorex.util.ModifierId
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
-trait HistoryConsensusChecker extends CompanionsFixture {
+trait HistoryConsensusChecker extends CompanionsFixture with TimeProviderFixture {
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
     val companion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -28,7 +29,7 @@ trait HistoryConsensusChecker extends CompanionsFixture {
         params,
         genesisBlock,
         Seq(),
-        Seq(new ConsensusValidator()),
+        Seq(new ConsensusValidator(timeProvider)),
         finishedEpochInfo.stakeConsensusEpochInfo)
       .get
   }
