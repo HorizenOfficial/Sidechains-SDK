@@ -1,8 +1,6 @@
 package com.horizen.forge
 
-import java.time.Instant
 import java.util.{Timer, TimerTask}
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -15,6 +13,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
 import scorex.core.NodeViewHolder.ReceivableMessages
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,6 +25,7 @@ class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
+             timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
@@ -104,7 +104,7 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def tryToCreateBlockNow(): Unit = {
-    val currentTime: Long = Instant.now.getEpochSecond
+    val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
@@ -181,20 +181,23 @@ object ForgerRef {
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
-            params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, params))
+            timeProvider: NetworkTimeProvider,
+            params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
 
   def apply(settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
+            timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params))
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
 
   def apply(name: String,
             settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
+            timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params), name)
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)
 }

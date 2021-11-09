@@ -58,7 +58,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
     new MainchainBlockReferenceValidator(params),
-    new ConsensusValidator()
+    new ConsensusValidator(timeProvider)
   )
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {

@@ -1,6 +1,4 @@
 package com.horizen.validation
-import java.time.Instant
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
@@ -9,11 +7,12 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
+import scorex.core.utils.TimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try
 
-class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
+class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidator with ScorexLogging {
   override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {
       validateGenesisBlock(block, history)
@@ -69,7 +68,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
-    if(TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, verifiedBlockTimestamp) > TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, Instant.now.getEpochSecond))
+    if(TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, verifiedBlockTimestamp) > TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, timeProvider.time() / 1000))
       throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
