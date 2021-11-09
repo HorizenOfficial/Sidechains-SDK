@@ -133,18 +133,23 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     val backwardTransfers: Seq[BackwardTransfer] = certificateRequest.backwardTransfers.map(bt =>
       BackwardTransfer(bt.address, bt.amount))
 
-    val requestPayload: SendCertificateRequestPayload = SendCertificateRequestPayload(
-      BytesUtils.toHexString(certificateRequest.sidechainId),
-      certificateRequest.epochNumber,
-      certificateRequest.quality,
-      BytesUtils.toHexString(certificateRequest.endEpochCumCommTreeHash),
-      BytesUtils.toHexString(certificateRequest.proofBytes),
-      backwardTransfers,
-      certificateRequest.ftrMinAmount,
-      certificateRequest.btrMinFee,
-      certificateRequest.fee,
-      certificateRequest.fieldElementCertificateFields,
-      certificateRequest.bitVectorCertificateFields)
+    val fee: String = certificateRequest.fee match {
+      case Some(fee) => fee
+      case None => "-1"
+    }
+
+    val requestPayload:SendCertificateRequestPayload = SendCertificateRequestPayload(
+        BytesUtils.toHexString(certificateRequest.sidechainId),
+        certificateRequest.epochNumber,
+        certificateRequest.quality,
+        BytesUtils.toHexString(certificateRequest.endEpochCumCommTreeHash),
+        BytesUtils.toHexString(certificateRequest.proofBytes),
+        backwardTransfers,
+        certificateRequest.ftrMinAmount,
+        certificateRequest.btrMinFee,
+        fee,
+        certificateRequest.fieldElementCertificateFields,
+        certificateRequest.bitVectorCertificateFields)
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 

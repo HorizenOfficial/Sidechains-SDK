@@ -34,7 +34,7 @@ case class SendCertificateRequest
    bitVectorCertificateFields: Seq[String],
    ftrMinAmount: String,
    btrMinFee: String,
-   fee: String = "0.00001")
+   fee: Option[String])
 {
   require(sidechainId.length == 32, "SidechainId MUST has length 32 bytes.")
   require(endEpochCumCommTreeHash != null, "End epoch cumulative Sc Tx CommTree root hash MUST be NOT NULL.")
@@ -62,6 +62,7 @@ object CertificateRequestCreator {
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
              btrFee: Long,
+             fee: Option[String],
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
       // Note: we should send uint256 types in BE.
@@ -78,7 +79,8 @@ object CertificateRequestCreator {
       Seq(), // No custom field elements support for Threshold signature proof
       Seq(), // No bitvectors support for Threshold signature proofs
       new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,
-      new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString
+      new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString,
+      fee
     )
   }
 }

@@ -20,6 +20,7 @@ from sc_bootstrap import SCBootstrap
 from sc_forward_transfer import SCForwardTransfer
 from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
+from sc_cert_fee_conf import CertFeeConfiguration
 
 
 def run_test(test):
@@ -86,6 +87,9 @@ def run_tests(log_file):
 
     result = run_test(SCCertNoCoinRecord())
     assert_equal(0, result, "sc_cert_no_coin_record test failed!")
+
+    result = run_test(CertFeeConfiguration())
+    assert_equal(0, result, "sc_cert_fee_conf test failed!")
 
 
 if __name__ == "__main__":

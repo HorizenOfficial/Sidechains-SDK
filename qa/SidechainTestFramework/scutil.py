@@ -282,7 +282,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "PROVING_KEY_PATH": bootstrap_info.keys_paths.proving_key_path,
-        "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path
+        "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path,
+        "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
+        "CERTIFICATE_FEE": sc_node_config.certificate_fee
     }
 
     configsData.append({
