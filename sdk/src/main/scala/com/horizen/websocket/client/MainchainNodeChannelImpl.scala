@@ -148,8 +148,8 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
         certificateRequest.ftrMinAmount,
         certificateRequest.btrMinFee,
         fee,
-        certificateRequest.fieldElementCertificateFields,
-        certificateRequest.bitVectorCertificateFields)
+        certificateRequest.fieldElementCertificateFields.map(BytesUtils.toHexString),
+        certificateRequest.bitVectorCertificateFields.map(BytesUtils.toHexString))
 
     val future: Future[CertificateResponsePayload] = client.sendRequest(SEND_CERTIFICATE_REQUEST_TYPE, requestPayload, classOf[CertificateResponsePayload])
 

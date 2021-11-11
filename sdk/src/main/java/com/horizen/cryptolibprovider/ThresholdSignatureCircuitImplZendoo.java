@@ -32,13 +32,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             int epochNumber,
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
-                                            long ftMinAmount) {
+                                            long ftMinAmount,
+                                            byte[] utxoMerkleTreeRoot) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-
+        // TODO: include custom field elements into the createMsgToSign
         FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, sidechainIdFe,
                 epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount);
         byte[] messageAsBytes = messageToSign.serializeFieldElement();
@@ -57,6 +58,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                           byte[] endCumulativeScTxCommTreeRoot,
                                           long btrFee,
                                           long ftMinAmount,
+                                          byte[] utxoMerkleTreeRoot,
                                           List<Optional<byte[]>> schnorrSignatureBytesList,
                                           List<byte[]> schnorrPublicKeysBytesList,
                                           long threshold,
@@ -76,7 +78,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-
+        // TODO: include custom field elements into the createProof
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
                 backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
                 signatures, publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
@@ -97,6 +99,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
+                               byte[] utxoMerkleTreeRoot,
                                byte[] constant,
                                long quality,
                                byte[] proof,
@@ -109,7 +112,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-
+        // TODO: include custom field elements into the verifyProof
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
                 endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, proof, checkProof,
                 verificationKeyPath, checkVerificationKey);

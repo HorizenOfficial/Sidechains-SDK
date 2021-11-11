@@ -103,6 +103,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(epoch)
   }
 
+  def utxoMerkleTreeRoot(epoch: Int): Option[Array[Byte]] = {
+    // TODO:
+    None
+  }
+
   def certificateTopQuality(epoch: Int): Long = {
     stateStorage.getTopQualityCertificate(epoch) match {
       case Some(cert) => cert.quality
