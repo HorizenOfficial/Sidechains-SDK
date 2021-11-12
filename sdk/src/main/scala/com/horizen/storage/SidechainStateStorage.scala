@@ -55,6 +55,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
+  private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+  }
+
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
@@ -176,7 +180,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              consensusEpoch: ConsensusEpochNumber,
              topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
-             blockFeeInfo: BlockFeeInfo): Try[SidechainStateStorage] = Try {
+             blockFeeInfo: BlockFeeInfo,
+             utxoMerkleTreeRootOpt: Option[Array[Byte]]): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -212,21 +217,31 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
     }
 
+    // Store utxo tree merkle root if present
+    utxoMerkleTreeRootOpt.foreach(merkleRoot => {
+      updateList.add(new JPair(getUtxoMerkleTreeRootKey(withdrawalEpochInfo.epoch), new ByteArrayWrapper(merkleRoot)))
+    })
+
     // If withdrawal epoch switched to the next one, then:
     // 1) remove outdated withdrawal related records and counters (2 epochs before);
-    // 2) remove outdated topQualityCertificate retrieved in the previous epoch and referenced to the 2 epochs before.
-    // 3) remove outdated BlockFeeInfo records
+    // 2) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
+    //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
+    // 3) remove outdated utxo merkle tree root record (4 epochs before).
+    // 4) remove outdated BlockFeeInfo records
     val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfo.epoch
       case _ => false
     }
     if (isWithdrawalEpochSwitched) {
-      val withdrawalEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
-      for (counter <- 0 to getWithdrawalEpochCounter(withdrawalEpochNumberToRemove)) {
-        removeList.add(getWithdrawalRequestsKey(withdrawalEpochNumberToRemove, counter))
+      val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
+      for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+        removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
       }
-      removeList.add(getWithdrawalEpochCounterKey(withdrawalEpochNumberToRemove))
-      removeList.add(getTopQualityCertificateKey(withdrawalEpochNumberToRemove))
+      removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+
+      val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
+      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+      removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
 
       val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
       for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {

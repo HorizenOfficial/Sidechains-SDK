@@ -1,10 +1,10 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
+
 import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
-
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
@@ -12,15 +12,15 @@ import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
-import java.math.{BigDecimal, MathContext}
 
+import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
 
 import scala.collection.JavaConverters._
@@ -30,6 +30,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                       utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
@@ -108,8 +109,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     None
   }
 
-  def certificateTopQuality(epoch: Int): Long = {
-    stateStorage.getTopQualityCertificate(epoch) match {
+  def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
+    stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
       case Some(cert) => cert.quality
       case None => 0 // there are no certificates for epoch
     }
@@ -265,7 +266,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
 
 
-    if(WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)) {
+    val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
+    if(isWithdrawalEpochFinished) {
       // Calculate and append fee payment boxes to the boxesToAppend
       // Note: that current block id and fee info are still not in the state storage, so consider them during result calculation.
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some((versionToId(newVersion), blockFeeInfo)))
@@ -280,17 +282,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         otherBoxesToAppend.append(box)
     })
 
+    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
+        val updatedUtxoMerkleTreeStorage = utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxIdsToRemoveSet).get
+        val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
+          Some(updatedUtxoMerkleTreeStorage.getMerkleTreeRoot)
+        } else {
+          None
+        }
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
+          updatedUtxoMerkleTreeStorage,
           params,
           newVersion,
           appState
@@ -314,6 +325,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       case Success(appState) => new SidechainState(
         stateStorage.rollback(new ByteArrayWrapper(version)).get,
         forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
+        utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
         params,
         to,
         appState)
@@ -450,23 +462,26 @@ object SidechainState
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage,
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                    utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                     params: NetworkParams,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, forgerBoxStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     else
       None
   }
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                          utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")

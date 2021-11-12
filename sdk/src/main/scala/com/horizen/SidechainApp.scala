@@ -60,6 +60,7 @@ class SidechainApp @Inject()
    @Named("WalletTransactionStorage") val walletTransactionStorage: Storage,
    @Named("StateStorage") val stateStorage: Storage,
    @Named("StateForgerBoxStorage") val forgerBoxStorage: Storage,
+   @Named("StateUtxoMerkleTreeStorage") val utxoMerkleTreeStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
@@ -201,6 +202,7 @@ class SidechainApp @Inject()
     registerStorage(stateStorage),
     sidechainBoxesCompanion)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
+  protected val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(registerStorage(utxoMerkleTreeStorage))
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
@@ -225,6 +227,7 @@ class SidechainApp @Inject()
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
+    sidechainStateUtxoMerkleTreeStorage,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,

@@ -25,6 +25,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               consensusDataStorage: ConsensusDataStorage,
                               stateStorage: SidechainStateStorage,
                               forgerBoxStorage: SidechainStateForgerBoxStorage,
+                              utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                               walletBoxStorage: SidechainWalletBoxStorage,
                               secretStorage: SidechainSecretStorage,
                               walletTransactionStorage: SidechainWalletTransactionStorage,
@@ -63,7 +64,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, params, applicationState)
+    state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
     wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes,
       walletBoxStorage, secretStorage, walletTransactionStorage, forgingBoxesInfoStorage, applicationWallet)
     pool <- Some(SidechainMemoryPool.emptyPool)
@@ -71,7 +72,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, params, applicationState, genesisBlock)
+      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState, genesisBlock)
 
       (modId: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
@@ -296,6 +297,7 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
+            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
@@ -305,7 +307,7 @@ object SidechainNodeViewHolderRef {
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
-    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
+    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
       walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
@@ -313,6 +315,7 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
+            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
@@ -323,7 +326,7 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
       walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
 
   def apply(name: String,
@@ -332,6 +335,7 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
+            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
@@ -342,6 +346,6 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
       walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }

@@ -44,7 +44,10 @@ class DummySparseMerkleTree {
     }
 
     public byte[] root(){
-        return (byte[])Blake2b256.hash(Ints.toByteArray(Arrays.hashCode(leaves)));
+        FieldElement root = FieldElement.createFromLong(Arrays.hashCode(leaves));
+        byte[] rootBytes = root.serializeFieldElement();
+        root.freeFieldElement();
+        return rootBytes;
     }
 
     public byte[] merklePath(int pos) {
@@ -91,7 +94,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // returns false if leaf is not a FE, or pos was occupied before
-    boolean addLeaves(List<Pair<FieldElement, Integer>> leaves) {
+    public boolean addLeaves(List<Pair<FieldElement, Integer>> leaves) {
         // check that all leaves refer to empty positions in the merkle tree.
         for(Pair<FieldElement, Integer> leaf : leaves) {
             if(!emptyLeaves.contains(leaf.getValue()))
@@ -108,7 +111,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // remove the leaves at given positions if were present
-    boolean removeLeaves(List<Integer> positions) {
+    public boolean removeLeaves(List<Integer> positions) {
         // check positions range
         for(int pos: positions) {
             if(pos < 0 || pos >= leavesNumber())
@@ -127,12 +130,12 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // returns the root of the merkle tree
-    byte[] calculateRoot() {
+    public byte[] calculateRoot() {
         return merkleTree.root();
     }
 
     // return byte representation of merkle path or null if there is no leaf at given pos.
-    byte[] merklePath(int pos) {
+    public byte[] merklePath(int pos) {
         return merkleTree.merklePath(pos);
     }
 
