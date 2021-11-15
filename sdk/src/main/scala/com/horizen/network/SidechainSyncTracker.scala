@@ -21,15 +21,15 @@ class SidechainSyncTracker (nvsRef: ActorRef,
 
 
 
-  private var olderStatusesMap = mutable.Map[ConnectedPeer, SidechainSyncStatus]()
-  private var failedStatusesMap = mutable.Map[ConnectedPeer, SidechainFailedSync]()
+  private[network] var olderStatusesMap = mutable.Map[ConnectedPeer, SidechainSyncStatus]()
+  private[network] var failedStatusesMap = mutable.Map[ConnectedPeer, SidechainFailedSync]()
   var betterNeighbourHeight = -1
   var myHeight = -1 // DIRAC TODO update first on processSync after every succesfulModifier applied
 
   def updateSyncStatus(peer: ConnectedPeer, syncStatus: SidechainSyncStatus): Unit = {
     updateStatus(peer,syncStatus.historyCompare)
     if (syncStatus.historyCompare == Older){
-      log.info(s"updating syncStatus , height = ${syncStatus.otherNodeDeclaredHeight}")
+      log.info(s"heythere,updating syncStatus , height = ${syncStatus.otherNodeDeclaredHeight}")
       if(olderStatusesMap.contains(peer)){ // update only the heights
         olderStatusesMap(peer).otherNodeDeclaredHeight = syncStatus.otherNodeDeclaredHeight
         olderStatusesMap(peer).myOwnHeight = syncStatus.myOwnHeight
@@ -37,7 +37,6 @@ class SidechainSyncTracker (nvsRef: ActorRef,
       else{
         olderStatusesMap += peer -> syncStatus
       }
-      log.info(s"updateSyncStatus : olderStatusesMap = ${olderStatusesMap.toSeq.toString()} ,size = ${olderStatusesMap.size}")
       betterNeighbourHeight =
         if (syncStatus.otherNodeDeclaredHeight > betterNeighbourHeight)
           syncStatus.otherNodeDeclaredHeight
@@ -65,4 +64,13 @@ class SidechainSyncTracker (nvsRef: ActorRef,
     olderStatusesMap(peer).myOwnHeight += 1
     myHeight+=1
   }
+
+  def getOlderStatus():  mutable.Map[ConnectedPeer, SidechainSyncStatus] = olderStatusesMap
+  def getFailedStatus():  mutable.Map[ConnectedPeer, SidechainSyncStatus] = olderStatusesMap
+
+}
+
+
+object SidechainSyncTracker {
+
 }

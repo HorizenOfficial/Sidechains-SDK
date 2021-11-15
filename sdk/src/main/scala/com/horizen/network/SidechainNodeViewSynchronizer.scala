@@ -82,15 +82,18 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   private val onSemanticallySuccessfulModifier: Receive = {
     case SemanticallySuccessfulModifier(pmod) =>
+      log.info(s"statusTracker.betterNeighbourHeight=${statusTracker.betterNeighbourHeight}")
+      log.info(s"statusTracker.myHeight=${statusTracker.myHeight}")
       if(statusTracker.betterNeighbourHeight>statusTracker.myHeight+1){  // we're not still synced
         val aPeer = thePeerThatHasSent(pmod)
+        log.info(s"hereeeeeeeeeee  the peeer ${aPeer}")
         aPeer match {
           case Some(peer) =>
             chainIsOnSync=true
             statusTracker.updateStatusWithLastSyncTime(peer,timeProvider.time())
             statusTracker.updateStatusWithMyHeight(peer)
             restartTimer()
-         case None =>
+         case None =>  log.info(" ******************  PEER IS NONE ************")
 
         }
       }
@@ -99,6 +102,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   private val onSyntacticallySuccessfulModifier: Receive ={
       case SyntacticallySuccessfulModifier(pmod) =>
+        log.info(s"pmodid = ${pmod.id}")
           deliveryTracker.setBlockHeld(pmod.id)
    }
 
@@ -136,7 +140,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   //view holder is telling other node status
-  // Uses SidechainSyncStatus instead of status (ComparisonResult) as parent class does
+  // Uses SidechainSyncStatus instead of [status (ComparisonResult) as parent class does]
   override protected def processSyncStatus: Receive = {
     case OtherNodeSyncStatus(remote, status, ext) =>
       statusTracker.updateSyncStatus(remote, status)
@@ -157,7 +161,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   def thePeerThatHasSent(pmod: PersistentNodeViewModifier): Option[ConnectedPeer] = {
     val peerFromWhichIReceived = deliveryTracker.modHadBeenReceivedFromPeer(pmod.id,pmod.modifierTypeId)
-    if(peerFromWhichIReceived.isDefined)
+    if(peerFromWhichIReceived!= null  && peerFromWhichIReceived.isDefined)
       peerFromWhichIReceived
     else
       None
@@ -194,6 +198,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
           historyReader.storage.height
         case None => -1 // @ASKSasha
       }
+      log.info("°°°°°°° received Request ")
       val chainHeight = statusTracker.betterNeighbourHeight
       val status = if (chainIsOnSync) "Synchronizing"
                     else

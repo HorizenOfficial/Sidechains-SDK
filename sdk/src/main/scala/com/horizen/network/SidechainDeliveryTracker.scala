@@ -3,9 +3,12 @@ package com.horizen.network
 import akka.actor.{ActorRef, ActorSystem}
 import scorex.core.ModifierTypeId
 import scorex.core.network.ModifiersStatus.{Received, Requested}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.CheckDelivery
 import scorex.core.network.{ConnectedPeer, DeliveryTracker, ModifiersStatus}
 import scorex.util.ModifierId
+
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class SidechainDeliveryTracker(system: ActorSystem,
@@ -41,9 +44,10 @@ class SidechainDeliveryTracker(system: ActorSystem,
       case Some(peer) =>
         log.info(s"moving to my receivedFrom before to setHeld.. $id from peer: ${peerFromWhichIReceived.get}")
         beenReceivedFrom.put(id, peer)
-      case None =>
+      case None => // It's been forged Locally,
     }
     super.setHeld(id)
   }
+
 
 }

@@ -1,7 +1,8 @@
 package com.horizen
 
-import java.io._
+import akka.actor.ActorContext
 
+import java.io._
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.BytesUtils
 import org.scalatest.junit.JUnitSuite
@@ -71,4 +72,5 @@ class SidechainSyncInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     for(i <- modifiers.indices)
       assertEquals("SidechainSyncInfo known block %d is different".format(i), modifiers(i), serializedInfoTry.get.knownBlockIds(i))
   }
+
 }

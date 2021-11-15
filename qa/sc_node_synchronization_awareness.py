@@ -2,7 +2,8 @@ import time
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    sc_create_multiple_nodes_network_unconnected, generate_next_blocks, connect_sc_nodes, disconnect_sc_nodes
+    sc_create_multiple_nodes_network_unconnected, generate_next_blocks, connect_sc_nodes, disconnect_sc_nodes, \
+    assert_equal
 from test_framework.util import initialize_chain_clean, start_nodes, separator
 
 
@@ -38,60 +39,37 @@ class SCNodeSynchronizationAwareness(SidechainTestFramework):
             self.number_of_sidechain_nodes))
 
         separator("generate blocks node 0")
-        generate_next_blocks(sc_nodes[0], "sc_node_0", 3)
+        generate_next_blocks(sc_nodes[0], "sc_node_0", 350)
 
-        separator("connecting node 1 to node 0")
+        # time.sleep(25)
+
+        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
+        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
+        print "status:" + status
+        print "height:" + str(height)
+        time.sleep(2)
+
+        separator("CONNECTING node 1 to node 0")
         connect_sc_nodes(sc_nodes[1], 0)
-
-        time.sleep(10)
+        time.sleep(5)
 
         separator("first call to api")
         status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
         height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
+
         print "status:" + status
         print "height:" + str(height)
-        separator()
+        assert_equal(status, "Synchronizing", "status is not Synchronizing, but it should be")
 
-        separator("disconnecting from 1 to node 0")
-        disconnect_sc_nodes(sc_nodes[1], 0)
-
-        separator("node 0 going to generate 150 blocks" )
-        generate_next_blocks(sc_nodes[0], "sc_node_0", 150)
-        separator("node 0 generated 150 blocks...")
+        separator("Sleeping to make it finish")
+        time.sleep(35)
 
         status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
         height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
+
         print "status:" + status
         print "height:" + str(height)
-
-        time.sleep(1)
-
-        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
-        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
-        print "status:" + status
-        print "height:" + str(height)
-
-        time.sleep(1)
-
-        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
-        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
-        print "status:" + status
-        print "height:" + str(height)
-
-        time.sleep(10)
-
-        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
-        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
-        print "status:" + status
-        print "height:" + str(height)
-
-        stay = True
-        while stay:
-            typed = input("come on...")
-            if str(typed) == "stop":
-                stay = False
-            else:
-                stay = True
+        assert_equal(status, "Synchronized", "status is not Synchronized, but it should be")
 
 
 if __name__ == "__main__":

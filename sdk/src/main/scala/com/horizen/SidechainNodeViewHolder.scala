@@ -11,8 +11,9 @@ import com.horizen.storage._
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
+import scorex.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote
 import scorex.core.consensus.History.ProgressInfo
-import scorex.core.idToVersion
+import scorex.core.{PersistentNodeViewModifier, idToVersion}
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
