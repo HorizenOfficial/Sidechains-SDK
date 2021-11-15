@@ -6,6 +6,7 @@ import math
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
@@ -171,6 +172,19 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
 
+        # Try to withdraw coins from SC to MC: amount belowe the dust threshold
+        mc_address3 = self.nodes[0].getnewaddress()
+        sc_bt_amount3 = 53
+        withdrawal_request = {"outputs": [ \
+                               { "mainchainAddress": mc_address3,
+                                 "value": sc_bt_amount3 }
+                              ]
+                             }
+        try:
+            sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+            assert_true(False, "It shouldn't be possible to send less than dust threshold coins(54 satoshi)")
+        except SCAPIException as e:
+            print("Expected SCAPIException: " + e.error)
 
         # Try to withdraw coins from SC to MC: 2 withdrawals with the same amount
         mc_address1 = mc_node.getnewaddress()

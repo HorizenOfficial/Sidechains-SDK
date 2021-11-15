@@ -77,6 +77,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
 
         // Check output boxes nonce correctness and coin box values.
         long coinsCumulatedValue = 0;
+        long withdravalThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE);
         List<B> boxes = newBoxes();
         for(int i = 0; i < boxes.size(); i++) {
             B box = boxes.get(i);
@@ -86,6 +87,11 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
             }
             // check coins box value
             if(box instanceof CoinsBox || box instanceof WithdrawalRequestBox) {
+                if (box instanceof WithdrawalRequestBox
+                        && box.value() < withdravalThreshold) {
+                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "Withdrawal request box [%d] value is belove the threshhold[%d].", id(), i, withdravalThreshold));
+                }
                 if(!ZenCoinsUtils.isValidMoneyRange(box.value()))
                     throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                             "output coin box [%d] value is out of range.", id(), i));

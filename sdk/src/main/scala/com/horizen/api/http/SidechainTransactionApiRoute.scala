@@ -22,7 +22,7 @@ import com.horizen.proof.Proof
 import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -302,6 +302,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         val withdrawalOutputsList = body.outputs
         val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
+
+        withdrawalOutputsList.foreach(output => {
+          if (output.value < ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)) {
+            throw new IllegalArgumentException("Withdrawal transaction amount is below the MC dust threshold value.")
+          }
+        })
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
