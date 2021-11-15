@@ -134,26 +134,26 @@ class SidechainStateStorageTest
 
   @Test
   def testExceptions() : Unit = {
-    var exceptionTrown = false
+    var exceptionThrown = false
 
     try {
       val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion)
     } catch {
-      case e : IllegalArgumentException => exceptionTrown = true
+      case e : IllegalArgumentException => exceptionThrown = true
     }
 
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if storage is not specified.",
-      exceptionTrown)
+      exceptionThrown)
 
-    exceptionTrown = false
+    exceptionThrown = false
     try {
       val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null)
     } catch {
-      case e : IllegalArgumentException => exceptionTrown = true
+      case e : IllegalArgumentException => exceptionThrown = true
     }
 
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if boxesCompation is not specified.",
-      exceptionTrown)
+      exceptionThrown)
 
     val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
 

@@ -4,7 +4,6 @@ import com.google.common.collect.*;
 import com.google.common.primitives.Ints;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.utils.Pair;
-import scorex.crypto.hash.Blake2b256;
 
 import java.io.Closeable;
 import java.io.IOException;

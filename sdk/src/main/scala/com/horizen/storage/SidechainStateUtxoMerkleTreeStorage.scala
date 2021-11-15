@@ -1,7 +1,7 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.cryptolibprovider.InMemorySparseMerkleTreeWrapper
+import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
 import scorex.crypto.hash.Blake2b256
@@ -10,7 +10,7 @@ import scorex.util.ScorexLogging
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{List => JList}
 import com.horizen.utils.{Pair => JPair}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
@@ -24,8 +24,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
   require(storage != null, "Storage must be NOT NULL.")
 
   private def loadMerkleTree(): InMemorySparseMerkleTreeWrapper = {
-    // TODO: choose proper merkle tree height compatible with the CSW circuit.
-    val treeHeight = 12
+    val treeHeight: Int = CryptoLibProvider.cswCircuitFunctions.utxoMerkleTreeHeight()
     val merkleTree = new InMemorySparseMerkleTreeWrapper(treeHeight)
 
     val newLeaves: Seq[JPair[FieldElement, Integer]] = getAllLeavesInfo.map(leafInfo => {
@@ -38,14 +37,14 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
   }
 
   private def calculateLeaf(box: SidechainTypes#SCB): FieldElement = {
-    FieldElement.createRandom()
+    CryptoLibProvider.cswCircuitFunctions.getUtxoMerkleTreeLeaf(box)
   }
 
   def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def getLeafInfo(boxId: Array[Byte]) : Option[UtxoMerkleTreeLeafInfo] = {
+  def getLeafInfo(boxId: Array[Byte]): Option[UtxoMerkleTreeLeafInfo] = {
     storage.get(calculateKey(boxId)) match {
       case v if v.isPresent =>
         UtxoMerkleTreeLeafInfoSerializer.parseBytesTry(v.get().data) match {
@@ -58,7 +57,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     }
   }
 
-  def getAllLeavesInfo: Seq[UtxoMerkleTreeLeafInfo] = {
+  private def getAllLeavesInfo: Seq[UtxoMerkleTreeLeafInfo] = {
     storage.getAll
       .asScala
       .map(pair => UtxoMerkleTreeLeafInfoSerializer.parseBytes(pair.getValue.data))
@@ -103,22 +102,22 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     storage.update(version, updateList, removeSeq.toList.asJava)
 
     this
-  }.recoverWith{
+  }.recoverWith {
     case exception =>
       // Reload merkle tree in case of any exception to restore the proper state.
       merkleTreeWrapper = loadMerkleTree()
       Failure(exception)
   }
 
-  def lastVersionId : Option[ByteArrayWrapper] = {
+  def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions : Seq[ByteArrayWrapper] = {
+  def rollbackVersions: Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
   }
 
-  def rollback (version : ByteArrayWrapper) : Try[SidechainStateUtxoMerkleTreeStorage] = Try {
+  def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     // Reload merkle tree
