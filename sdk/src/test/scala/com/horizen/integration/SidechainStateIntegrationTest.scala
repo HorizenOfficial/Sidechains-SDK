@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class SidechainStateTestTestsExtension
+class SidechainStateIntegrationTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture

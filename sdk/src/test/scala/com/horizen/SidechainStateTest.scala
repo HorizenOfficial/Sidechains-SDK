@@ -28,7 +28,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success}
 
 
-class SidechainStateTestTestsExtension
+class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
