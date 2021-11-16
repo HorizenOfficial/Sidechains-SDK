@@ -10,6 +10,17 @@ case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Int) extends Byte
   override type M = UtxoMerkleTreeLeafInfo
 
   override def serializer: ScorexSerializer[UtxoMerkleTreeLeafInfo] = UtxoMerkleTreeLeafInfoSerializer
+
+  override def hashCode(): Int = java.util.Arrays.hashCode(leaf) + position
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case info: UtxoMerkleTreeLeafInfo =>
+        info.position == this.position &&
+          info.leaf.sameElements(this.leaf)
+      case _ => false
+    }
+  }
 }
 
 

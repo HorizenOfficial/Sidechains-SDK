@@ -125,12 +125,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     blockFees
   }
 
-  def getWithdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
+  def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
     // Aggregate withdrawal requests until reaching the counter, where the key is not present in the storage.
     val withdrawalRequests: ListBuffer[WithdrawalRequestBox] = ListBuffer()
-    val lastCounter: Int = getWithdrawalEpochCounter(epoch)
+    val lastCounter: Int = getWithdrawalEpochCounter(withdrawalEpoch)
     for(counter <- 0 to lastCounter) {
-      storage.get(getWithdrawalRequestsKey(epoch, counter)).asScala match {
+      storage.get(getWithdrawalRequestsKey(withdrawalEpoch, counter)).asScala match {
         case Some(baw) =>
           withdrawalRequestSerializer.parseBytesTry(baw.data) match {
             case Success(wr) =>
@@ -156,6 +156,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         }
       case _ => Option.empty
     }
+  }
+
+  def getUtxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {

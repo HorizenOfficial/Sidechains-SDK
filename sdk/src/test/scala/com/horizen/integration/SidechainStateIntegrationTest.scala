@@ -246,6 +246,7 @@ class SidechainStateIntegrationTest
 
     // Mock 1 MCBlockRefData entry to simulate the last withdrawal epoch SidechainBlock
     // to check that fee payment boxes were created and appended to closed boxes.
+    // to check that utxo merkle tree root was stored for the given epoch
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
 
@@ -253,6 +254,10 @@ class SidechainStateIntegrationTest
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
+
+    // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
+    assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     assertTrue("ApplyChanges for block must be successful.",
@@ -276,6 +281,9 @@ class SidechainStateIntegrationTest
         sidechainState.closedBox(b).isEmpty)
     }
 
+    // Test that utxo merkle tree root was stored
+    assertTrue("Utxo merkle tree root expected to be found after finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isDefined)
 
     // Test that currentConsensusEpochInfo was changed
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo

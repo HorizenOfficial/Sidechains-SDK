@@ -26,4 +26,18 @@ public class FieldElementUtils {
         }
         return FieldElement.deserialize(Arrays.copyOf(hashBytes, maximumFieldElementLength()));
     }
+
+    public static byte[] randomFieldElementBytes() {
+        FieldElement fe = FieldElement.createRandom();
+        byte[] feBytes = fe.serializeFieldElement();
+        fe.freeFieldElement();
+        return feBytes;
+    }
+
+    public static byte[] randomFieldElementBytes(long seed) {
+        FieldElement fe = FieldElement.createRandom(seed);
+        byte[] feBytes = fe.serializeFieldElement();
+        fe.freeFieldElement();
+        return feBytes;
+    }
 }

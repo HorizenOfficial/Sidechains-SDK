@@ -100,13 +100,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def withdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch)
+  def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def utxoMerkleTreeRoot(epoch: Int): Option[Array[Byte]] = {
-    // TODO:
-    None
+  def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    stateStorage.getUtxoMerkleTreeRoot(withdrawalEpoch)
   }
 
   def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {

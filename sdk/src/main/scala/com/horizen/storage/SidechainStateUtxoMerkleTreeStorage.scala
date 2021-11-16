@@ -36,11 +36,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     merkleTree
   }
 
-  private def calculateLeaf(box: SidechainTypes#SCB): FieldElement = {
+  private[horizen] def calculateLeaf(box: SidechainTypes#SCB): FieldElement = {
     CryptoLibProvider.cswCircuitFunctions.getUtxoMerkleTreeLeaf(box)
   }
 
-  def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
+  private[horizen] def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
@@ -57,7 +57,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     }
   }
 
-  private def getAllLeavesInfo: Seq[UtxoMerkleTreeLeafInfo] = {
+  private[horizen] def getAllLeavesInfo: Seq[UtxoMerkleTreeLeafInfo] = {
     storage.getAll
       .asScala
       .map(pair => UtxoMerkleTreeLeafInfoSerializer.parseBytes(pair.getValue.data))
@@ -71,10 +71,10 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     require(boxesToAppend != null, "List of boxes to add must be NOT NULL. Use empty List instead.")
     require(boxesToRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
 
-    val removeSeq: Set[ByteArrayWrapper] = boxesToRemoveSet.map(id => calculateKey(id.data))
+    val removeList: JList[ByteArrayWrapper] = boxesToRemoveSet.map(id => calculateKey(id.data)).toList.asJava
 
     // Remove leaves from inmemory tree
-    require(merkleTreeWrapper.removeLeaves(removeSeq.flatMap(id => {
+    require(merkleTreeWrapper.removeLeaves(boxesToRemoveSet.flatMap(id => {
       getLeafInfo(id.data).map(leafInfo => Integer.valueOf(leafInfo.position))
     }).toList.asJava), "Failed to remove leaves from UtxoMerkleTree")
 
@@ -84,22 +84,25 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
       throw new IllegalStateException("Not enough empty leaves in the UTXOMerkleTree.")
     }
 
-    val leavesToAppend = boxesToAppend.map(box => (box.id(), calculateLeaf(box))).zip(newLeavesPositions)
+    val leavesToAppend = boxesToAppend.map(box => (calculateKey(box.id()), calculateLeaf(box))).zip(newLeavesPositions)
 
     // Add leaves to inmemory tree
     require(merkleTreeWrapper.addLeaves(leavesToAppend.map {
       case ((_, leaf: FieldElement), position: Integer) => new JPair[FieldElement, Integer](leaf, position)
-    }.asJava), "Failed to add leaves to UtxoMekrleTree")
+    }.asJava), "Failed to add leaves to UtxoMerkleTree")
 
     val updateList: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = leavesToAppend.map {
-      case ((boxId: Array[Byte], leaf: FieldElement), position: Integer) =>
+      case ((key: ByteArrayWrapper, leaf: FieldElement), position: Integer) =>
+        val leafBytes = leaf.serializeFieldElement()
+        leaf.freeFieldElement()
+
         new JPair[ByteArrayWrapper, ByteArrayWrapper](
-          new ByteArrayWrapper(boxId),
-          new ByteArrayWrapper(UtxoMerkleTreeLeafInfo(leaf.serializeFieldElement(), position).bytes)
+          key,
+          new ByteArrayWrapper(UtxoMerkleTreeLeafInfo(leafBytes, position).bytes)
         )
     }.asJava
 
-    storage.update(version, updateList, removeSeq.toList.asJava)
+    storage.update(version, updateList, removeList)
 
     this
   }.recoverWith {
