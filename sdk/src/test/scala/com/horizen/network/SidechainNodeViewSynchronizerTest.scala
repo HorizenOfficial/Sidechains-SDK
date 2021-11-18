@@ -1,8 +1,7 @@
 package com.horizen.network
 
 import java.net.InetSocketAddress
-
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorContext, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import com.horizen._
 import com.horizen.block.SidechainBlock
@@ -12,11 +11,12 @@ import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
-import scorex.core.settings.ScorexSettings
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{HandshakedPeer, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
+import scorex.core.settings.{NetworkSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
 import org.junit.Assert.{assertEquals, assertTrue}
+import org.mockito.Mockito.spy
 import scorex.core.network.{ConnectedPeer, ConnectionId, Incoming}
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
 
@@ -31,10 +31,10 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvhs_mocked")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
 
-  val (nodeViewSynchronizerRef, deliveryTracker, block, peer, networkControllerProbe) = prepareData()
+  val (nodeViewSynchronizerRef, deliveryTracker, block, peer, networkControllerProbe,syncTracker) = prepareData()
 
   @Test
-  def onSyntacticallyFailedModification(): Unit = {
+  def onSyntacticallyFailedModificationTest(): Unit = {
     var setUnknownExecuted: Boolean = false
 
 
@@ -123,6 +123,24 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   }
 
 
+  @Test
+  def onSemanticallySuccessfulModifierTest(): Unit = {
+
+    nodeViewSynchronizerRef ! SyntacticallySuccessfulModifier(block)
+    networkControllerProbe.expectNoMessage()
+
+  }
+
+
+  @Test
+  def onPeerManagerEventsTest(): Unit = {
+
+    nodeViewSynchronizerRef ! HandshakedPeer(peer)
+    networkControllerProbe.expectNoMessage()
+    viewHolderProbe
+
+  }
+
 
   @After
   def afterAll(): Unit = {
@@ -130,7 +148,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   }
 
 
-  protected def prepareData(): (ActorRef, SidechainDeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe) = {
+  protected def prepareData(): (ActorRef, SidechainDeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe, SidechainSyncTracker) = {
     val networkControllerProbe = TestProbe()
     val viewHolderProbe = TestProbe()
     val scorexSettings: ScorexSettings = ScorexSettings.read(Some(getClass.getClassLoader.getResource("sc_node_holder_fixter_settings.conf").getFile))
@@ -147,10 +165,17 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
 
+    val actorCtx = mock[ActorContext]
+    Mockito.when(actorCtx.system).thenReturn(actorSystem)
+
+
+    val syncTracker = new SidechainSyncTracker(nodeViewSynchronizerRef, actorCtx, mock[NetworkSettings], mock[NetworkTimeProvider])
+    //val spySync = spy(syncTracker)
+
     val modifierId: ModifierId = getRandomModifier()
     val block = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(modifierId)
 
-    (nodeViewSynchronizerRef, tracker, block, peer, networkControllerProbe)
+    (nodeViewSynchronizerRef, tracker, block, peer, networkControllerProbe,syncTracker)
   }
 }

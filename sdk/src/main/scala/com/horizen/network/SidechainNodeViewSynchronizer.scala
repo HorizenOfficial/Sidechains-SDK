@@ -5,20 +5,26 @@ import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.network.SidechainNodeViewSynchronizer.InternalReceivableMessages.SetSyncAsDone
 import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.GetSyncInfo
-import com.horizen.network.SidechainNodeViewSynchronizer.SidechainNodeSyncInfo
+import com.horizen.network.SidechainNodeViewSynchronizer.{OtherNodeSyncStatus, SidechainNodeSyncInfo}
 import com.horizen.network.SidechainNodeViewSynchronizer.Timers.SyncIsDoneTimer
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
 import scorex.core.consensus.History.{Fork, Nonsense, Unknown, Younger}
 import scorex.core.consensus.SyncInfo
+import scorex.core.network.NetworkController.ReceivableMessages.SendToNetwork
 import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
-import scorex.core.network.{ConnectedPeer, NodeViewSynchronizer}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{DisconnectedPeer, HandshakedPeer, SemanticallyFailedModification, SemanticallySuccessfulModifier, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
+import scorex.core.network.message.{InvData, InvSpec, Message}
+import scorex.core.network.{ConnectedPeer, ModifiersStatus, NodeViewSynchronizer, SendToPeer, SendToPeers, SyncTracker}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.NetworkSettings
-import scorex.core.utils.{NetworkTimeProvider}
+import scorex.core.transaction.Transaction
+import scorex.core.utils.TimeProvider.Time
+import scorex.core.utils.{NetworkTimeProvider, TimeProvider}
 import scorex.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier}
 import scorex.util.ModifierId
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
@@ -38,11 +44,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   override protected val statusTracker = new SidechainSyncTracker(self, context, networkSettings, timeProvider)
 
   protected var chainIsOnSync = false
-  protected val delay: Int = calculateDelayForTimer(12)
-
-  case class OtherNodeSyncStatus[SI <: SyncInfo](remote: ConnectedPeer,
-                                                 status: SidechainSyncStatus, // CHANGE THIS
-                                                 extension: Seq[(ModifierTypeId, ModifierId)])
+  protected val delay: Int = calculateDelayForTimer(5)
 
   private val onSyntacticallyFailedModifier: Receive = {
     case SyntacticallyFailedModification(mod, exception) =>
@@ -60,49 +62,53 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
           // Ban both mod.id and peer
           deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
       }
+      chainIsOnSync=false
       val aPeer = thePeerThatHasSent(mod)
       aPeer match {
-        case Some(peer) =>
-          chainIsOnSync=false
-          statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
-        case None =>
+        case Some(peer) => statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
+        case None => // I would like to keep the information even in this case, maybe by providing a phantom Peer, maybe it is only myself...  a ver
       }
   }
 
   private val onSemanticallyFailedModifier: Receive = {
     case SemanticallyFailedModification(mod, exception) =>
+      chainIsOnSync=false
       val aPeer = thePeerThatHasSent(mod)
       aPeer match {
-        case Some(peer) =>
-          chainIsOnSync=false
-          statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
-        case None =>
+        case Some(peer) => statusTracker.updateForFailing(peer,SidechainFailedSync(exception,timeProvider.time()))
+        case None => // I would like to keep the information even in this case, maybe by providing a phantom Peer, maybe it is only myself...  a ver
       }
+  }
+
+  def thePeerJustSent(peer: ConnectedPeer): Boolean ={
+    val now = timeProvider.time()
+    val lastTime = statusTracker.lastTipTimeOfThe(peer)
+    val sinceLastTimeHasPassed = now-lastTime
+    if(lastTime>0 && sinceLastTimeHasPassed<5000)
+       true
+    else
+      false
   }
 
   private val onSemanticallySuccessfulModifier: Receive = {
     case SemanticallySuccessfulModifier(pmod) =>
-      log.info(s"statusTracker.betterNeighbourHeight=${statusTracker.betterNeighbourHeight}")
-      log.info(s"statusTracker.myHeight=${statusTracker.myHeight}")
-      if(statusTracker.betterNeighbourHeight>statusTracker.myHeight+1){  // we're not still synced
-        val aPeer = thePeerThatHasSent(pmod)
-        log.info(s"hereeeeeeeeeee  the peeer ${aPeer}")
-        aPeer match {
-          case Some(peer) =>
+      val myHeight = getMyHeight
+      log.info(s"myHeight=${myHeight}")
+      val aPeer = thePeerThatHasSent(pmod)
+      aPeer match {
+        case Some(peer) =>
+          if (thePeerJustSent(peer)){
             chainIsOnSync=true
-            statusTracker.updateStatusWithLastSyncTime(peer,timeProvider.time())
-            statusTracker.updateStatusWithMyHeight(peer)
-            restartTimer()
-         case None =>  log.info(" ******************  PEER IS NONE ************")
-
-        }
+          }
+          statusTracker.updateStatusWithLastSyncTime(peer,timeProvider.time())
+          restartTimer()
+        case None =>  log.info(" {-- SemanticallySuccess, Forging Myself --} ")
       }
       broadcastModifierInv(pmod)
   }
 
   private val onSyntacticallySuccessfulModifier: Receive ={
       case SyntacticallySuccessfulModifier(pmod) =>
-        log.info(s"pmodid = ${pmod.id}")
           deliveryTracker.setBlockHeld(pmod.id)
    }
 
@@ -124,6 +130,24 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     }
   }
 
+  def sendSyncOnce(remote: ConnectedPeer): Unit = {
+    historyReaderOpt.foreach(sendSyncToSinglePeer(remote,_))
+  }
+
+  private def sendSyncToSinglePeer( remote:ConnectedPeer,history: SidechainHistory) :Unit = {
+    networkControllerRef ! SendToNetwork(Message(syncInfoSpec,Right(history.syncInfo), None), SendToPeer(remote))
+  }
+
+  override   protected def peerManagerEvents: Receive = {
+    case HandshakedPeer(remote) =>
+      statusTracker.updateStatus(remote, Unknown)
+      sendSyncOnce(remote)
+      statusTracker.updateLastSyncSentTime(remote)
+
+    case DisconnectedPeer(remote) =>
+      statusTracker.clearStatus(remote)
+  }
+
   // Uses SidechainSyncStatus instead of status (ComparisonResult) as parent class does
   override   protected def processSync: Receive = {
     case DataFromPeer(spec, syncInfo: SidechainSyncInfo@unchecked, remote)
@@ -132,10 +156,13 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
         case Some(historyReader) =>
           val ext = historyReader.continuationIds(syncInfo, networkSettings.desiredInvObjects)
           val comparison = historyReader.compare(syncInfo)
-          if (!(ext.nonEmpty || comparison != Younger))
+          if (!(ext.nonEmpty || comparison != Younger)) {
             log.warn("Extension is empty while comparison is younger")
-          self ! OtherNodeSyncStatus(remote, SidechainSyncStatus(comparison,syncInfo.chainHeight,historyReader.storage.height), ext )
-        case _ =>
+          }
+          //@todo check if it is better to call the method directly, instead that with a message
+          val otherNodeStatus = SidechainSyncStatus(comparison,syncInfo.chainHeight,historyReader.storage.height)
+          self ! OtherNodeSyncStatus(remote, otherNodeStatus, ext )
+          case _ =>
       }
   }
 
@@ -154,14 +181,12 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
           log.info(s"I'm AHEAD, I'm Sending Extensions : $ext and Status = $status")
           sendExtension(remote, status.historyCompare, ext)
         case _ => // does nothing for `Equal` and `Older`
-          log.info("case _   SENDER is equal or older ")
       }
   }
 
-
   def thePeerThatHasSent(pmod: PersistentNodeViewModifier): Option[ConnectedPeer] = {
     val peerFromWhichIReceived = deliveryTracker.modHadBeenReceivedFromPeer(pmod.id,pmod.modifierTypeId)
-    if(peerFromWhichIReceived!= null  && peerFromWhichIReceived.isDefined)
+    if(peerFromWhichIReceived != null  && peerFromWhichIReceived.isDefined)
       peerFromWhichIReceived
     else
       None
@@ -182,39 +207,36 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   protected def cancelTimerForSyncIsDone(): Unit={
        timers.cancel(SyncIsDoneTimer)
-       log.info(s"I'm Syncing . . . neighbour Height=${statusTracker.betterNeighbourHeight}, my Height=${statusTracker.myHeight}")
   }
 
   protected def setSyncAsDone:Receive  ={
     case SetSyncAsDone =>
     chainIsOnSync=false
-    log.info("I stop Syncing . . . ")
   }
 
   protected def processGetSyncInfo: Receive = {
     case GetSyncInfo =>
-      val myHeight = historyReaderOpt match {
-        case Some(historyReader) =>
-          historyReader.storage.height
-        case None => -1 // @ASKSasha
-      }
-      log.info("°°°°°°° received Request ")
-      val chainHeight = statusTracker.betterNeighbourHeight
-      val status = if (chainIsOnSync) "Synchronizing"
+      val myHeight = getMyHeight
+      val maxActiveDeclaredChainHeight =  statusTracker.getMaxHeightFromBetterNeighbours
+      val status =  if (chainIsOnSync && myHeight+1<maxActiveDeclaredChainHeight) "Synchronizing"
                     else
-                      if (chainHeight<0)  "Not yet connected"
-                        else if(myHeight==chainHeight || myHeight==chainHeight-1) "Synchronized"
-                      else "Not Synchronizing"
-      val syncError = ""
-      val nodeType = "Standard"
-
-      val percent = if (chainHeight>myHeight+1) (myHeight.toFloat/chainHeight.toFloat*100).toInt
-                    else if(chainHeight==myHeight+1) 100
-                    else -1
-      val response = SidechainNodeSyncInfo(status, chainHeight, percent, myHeight, syncError, nodeType)
+                      if (maxActiveDeclaredChainHeight<0)  "Not yet connected"
+                      else "Synchronized"
+      val syncError = statusTracker.failedStatusesMap
+      val percent = if (maxActiveDeclaredChainHeight>myHeight+1) (myHeight.toFloat/maxActiveDeclaredChainHeight.toFloat*100).toInt
+                    else if(status=="Synchronized") 100
+                    else statusTracker.NO_VALUE
+      val response = SidechainNodeSyncInfo(statusTracker.olderStatusesMap,status, maxActiveDeclaredChainHeight, percent, myHeight, syncError)
       sender() !  response
   }
 
+  def getMyHeight: Int = {
+    historyReaderOpt match {
+      case Some(historyReader) =>
+        historyReader.storage.height
+      case None => statusTracker.NO_VALUE
+    }
+  }
 
   override protected def viewHolderEvents: Receive = {
     onSemanticallySuccessfulModifier orElse
@@ -234,7 +256,7 @@ object SidechainNodeViewSynchronizer {
             modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]])
            (implicit ex: ExecutionContext): Props =
     Props(new SidechainNodeViewSynchronizer(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings,
-      timeProvider, modifierSerializers))
+      timeProvider, modifierSerializers)).withMailbox("akka.actor.deployment.prio-view-sync-mailbox")
 
   def apply(networkControllerRef: ActorRef,
             viewHolderRef: ActorRef,
@@ -243,7 +265,7 @@ object SidechainNodeViewSynchronizer {
             timeProvider: NetworkTimeProvider,
             modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]])
            (implicit context: ActorRefFactory, ex: ExecutionContext): ActorRef =
-    context.actorOf(props(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers))
+    context.actorOf(props(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers).withMailbox("akka.actor.deployment.prio-view-sync-mailbox"))
 
   def apply(networkControllerRef: ActorRef,
             viewHolderRef: ActorRef,
@@ -253,7 +275,7 @@ object SidechainNodeViewSynchronizer {
             modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]],
             name: String)
            (implicit context: ActorRefFactory, ex: ExecutionContext): ActorRef =
-    context.actorOf(props(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers), name)
+    context.actorOf(props(networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers).withMailbox("akka.actor.deployment.prio-view-sync-mailbox"), name)
 
   // Internal interface
   // this is only for test to reach the interface
@@ -269,7 +291,11 @@ object SidechainNodeViewSynchronizer {
     case object GetSyncInfo
   }
 
-  case class SidechainNodeSyncInfo(status: String, blockChainHeight: Long,  syncPercentage: Int,   nodeHeight: Long, error: String, nodeType :String)
+  case class OtherNodeSyncStatus[SI <: SyncInfo](remote: ConnectedPeer,
+                                                 status: SidechainSyncStatus, // CHANGE THIS
+                                                 extension: Seq[(ModifierTypeId, ModifierId)])
+
+  case class SidechainNodeSyncInfo(currentSyncMap: mutable.Map[ConnectedPeer, SidechainSyncStatus], status: String, blockChainHeight: Long,  syncPercentage: Int,   nodeHeight: Long, error: mutable.Map[ConnectedPeer, ListBuffer[SidechainFailedSync]])
 
 }
 

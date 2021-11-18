@@ -8,8 +8,11 @@ object CustomAkkaConfiguration {
 
    ConfigFactory.parseString("""
         akka.actor.deployment {
-            prio-mailbox {
-                mailbox-type = "com.horizen.mailbox.PrioritizedMailbox"
+            prio-view-holder-mailbox {
+                mailbox-type = "com.horizen.mailbox.PrioritizedViewHolderMailbox"
+            }
+            prio-view-sync-mailbox {
+                mailbox-type = "com.horizen.network.PrioritizedViewSyncMailbox"
             }
         }
       """)

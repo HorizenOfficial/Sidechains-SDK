@@ -3,7 +3,7 @@ import time
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     sc_create_multiple_nodes_network_unconnected, generate_next_blocks, connect_sc_nodes, disconnect_sc_nodes, \
-    assert_equal
+    assert_equal, assert_true
 from test_framework.util import initialize_chain_clean, start_nodes, separator
 
 
@@ -45,31 +45,42 @@ class SCNodeSynchronizationAwareness(SidechainTestFramework):
 
         status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
         height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
+        percent = sc_nodes[1].node_syncStatus()['result']['syncStatus']['syncPercentage']
         print "status:" + status
-        print "height:" + str(height)
-        time.sleep(2)
+        print "myheight:" + str(height)
+        print str(percent) + "%"
+        time.sleep(4)
 
         separator("CONNECTING node 1 to node 0")
-        connect_sc_nodes(sc_nodes[1], 0)
-        time.sleep(5)
+        #connect_sc_nodes(sc_nodes[1], 0) tryng to invert
+        connect_sc_nodes(sc_nodes[0], 1)
+        #time.sleep(1)
 
+        separator("gonna call api")
+        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
+        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
+        percent = sc_nodes[1].node_syncStatus()['result']['syncStatus']['syncPercentage']
         separator("first call to api")
-        status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
-        height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
-
         print "status:" + status
-        print "height:" + str(height)
+        print "myheight:" + str(height)
+        print str(percent) + "%"
+        assert_true(height <= 349, "my height should be less that 349 , but it is " + str(height))
         assert_equal(status, "Synchronizing", "status is not Synchronizing, but it should be")
-
         separator("Sleeping to make it finish")
-        time.sleep(35)
+        time.sleep(10)
 
+        separator("should be SYNCHRONIZED now")
         status = sc_nodes[1].node_syncStatus()['result']['syncStatus']['status']
         height = sc_nodes[1].node_syncStatus()['result']['syncStatus']['nodeHeight']
-
+        percent = sc_nodes[1].node_syncStatus()['result']['syncStatus']['syncPercentage']
         print "status:" + status
         print "height:" + str(height)
+        print str(percent) + "%"
+        separator()
+
         assert_equal(status, "Synchronized", "status is not Synchronized, but it should be")
+        assert_equal(percent, 100, "percentage should be 100%")
+
 
 
 if __name__ == "__main__":

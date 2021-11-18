@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 
 
-class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStablePriorityMailbox (
+class PrioritizedViewHolderMailbox (settings: Settings, cfg: Config) extends UnboundedStablePriorityMailbox (
   PriorityGenerator {
     case scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView => 0 // internal calls must go first
     case com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView => 1 // api calls

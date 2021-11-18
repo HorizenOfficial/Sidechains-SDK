@@ -23,11 +23,8 @@ class SidechainDeliveryTrackerTest extends JUnitSuite
   protected val deliveryTimeout: FiniteDuration = new FiniteDuration(3,SECONDS)
   protected val maxDeliveryChecks = 2
   var dlvTracker = new SidechainDeliveryTracker(actorSystem , deliveryTimeout,maxDeliveryChecks,mock[ActorRef])
-
   val (peer,pmod,wrongPmod) = prepareData()
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
-
-
 
   @Test
   def testSetBlockHeldWithValidModAndPeer() {
@@ -57,8 +54,5 @@ class SidechainDeliveryTrackerTest extends JUnitSuite
 
     (peer,pmod,wrongPmod)
   }
-
-
-
 
 }

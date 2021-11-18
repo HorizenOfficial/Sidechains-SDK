@@ -142,7 +142,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     if (!history().contains(pmod.id)) {
       context.system.eventStream.publish(StartingPersistentModifierApplication(pmod))
 
-      log.info(s"Apply modifier ${pmod.encodedId} of type ${pmod.modifierTypeId} to nodeViewHolder")
+      //log.info(s"Apply modifier ${pmod.encodedId} of type ${pmod.modifierTypeId} to nodeViewHolder")
       history().append(pmod) match {
         case Success((historyBeforeStUpdate, progressInfo)) =>
           log.debug(s"Going to apply modifications to the state: $progressInfo")
@@ -150,9 +150,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           context.system.eventStream.publish(NewOpenSurface(historyBeforeStUpdate.openSurfaceIds()))
 
           if (progressInfo.toApply.nonEmpty) {
-
-            log.info("case that progressInfo.toApply.nonEmpty = TRUE")
-
             val (newHistory, newStateTry, newWallet, blocksApplied) =
               updateStateAndWallet(historyBeforeStUpdate, minimalState(), vault(), progressInfo, IndexedSeq())
 
@@ -171,7 +168,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 context.system.eventStream.publish(SemanticallyFailedModification(pmod, e))
             }
           } else {
-            log.info("case that progressInfo.toApply.nonEmpty = TRUE")
+            log.info("case that progressInfo.toApply.nonEmpty = FALSE")
             requestDownloads(progressInfo)
             updateNodeView(updatedHistory = Some(historyBeforeStUpdate))
           }
@@ -216,9 +213,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) =>
-        log.info("case (Success(stateToApply), Success(walletToApply))")
         val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo)
-
         nodeUpdateInfo.failedMod match {
           case Some(_) =>
             @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
@@ -271,7 +266,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         updateInfo.state.applyModifier(modToApply) match {
           case Success(stateAfterApply) =>
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
-            log.info("going to publish SemanticallySuccessfulModifier")
+            //log.info("going to publish SemanticallySuccessfulModifier")
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
             val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
               newWallet.scanPersistent(modToApply, stateAfterApply.getFeePayments(stateAfterApply.getWithdrawalEpochInfo.epoch))
@@ -314,7 +309,7 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-view-holder-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -332,7 +327,7 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-view-holder-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -351,4 +346,4 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)}
+      walletTransactionStorage, forgingBoxesInfoStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-view-holder-mailbox"), name)}

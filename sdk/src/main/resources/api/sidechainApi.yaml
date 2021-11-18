@@ -1672,5 +1672,3 @@ components:
           format: int64
         error:
           type: string
-        nodeType:
-          type: string

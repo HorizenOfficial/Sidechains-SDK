@@ -1,26 +1,28 @@
 package com.horizen.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.api.http.SidechainNodeRestSchema._
-import scorex.core.settings.RESTApiSettings
-
-import scala.concurrent.{Await, ExecutionContext}
+import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.GetSyncInfo
+import com.horizen.network.SidechainNodeViewSynchronizer.SidechainNodeSyncInfo
+import com.horizen.network.{SidechainFailedSync, SidechainSyncStatus}
+import com.horizen.serialization.{SerializationUtil, Views}
+import scorex.core.network.ConnectedPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
+import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.NetworkTimeProvider
-import JacksonSupport._
-import akka.actor.TypedActor.self
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
-import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.network.SidechainNodeViewSynchronizer.ReceivableMessages.GetSyncInfo
-import com.horizen.network.SidechainNodeViewSynchronizer.SidechainNodeSyncInfo
-import com.horizen.serialization.Views
 
+import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
+import scala.::
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{Await, ExecutionContext}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
@@ -120,24 +122,40 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
-  def nodeSyncStatus: Route = (path("syncStatus") & post) {
 
-    //val result = sidechainNodeViewSynchronizerRef ! GetSyncInfo
-    val asked = askActor[SidechainNodeSyncInfo](sidechainNodeViewSynchronizerRef,GetSyncInfo)
-      .map(info => NodeSyncInfo(
+  def createSCPeerNode(peer: ConnectedPeer): SidechainPeerNode = {
+    SidechainPeerNode(peer.connectionId.remoteAddress.toString,
+                      peer.peerInfo.get.lastSeen,
+                      peer.peerInfo.get.peerSpec.nodeName,
+                      Option(peer.peerInfo.get.connectionType.toString))
+  }
+
+  def convertToPeerSyncStatus(currentSyncMap: mutable.Map[ConnectedPeer, SidechainSyncStatus]): List[PeerSyncStatus] = {
+    currentSyncMap.map(elem =>  PeerSyncStatus(createSCPeerNode(elem._1),elem._2.lastTipSyncTime,elem._2.otherNodeDeclaredHeight)).toList
+  }
+
+  def createHisOwnFailList(peer: ConnectedPeer, failedList: ListBuffer[SidechainFailedSync]): SidechainPeersNodeFailList= {
+    SidechainPeersNodeFailList(createSCPeerNode(peer),failedList)
+  }
+
+  def convertToPeerSyncFailedStatus(error: mutable.Map[ConnectedPeer, ListBuffer[SidechainFailedSync]]): List[SidechainPeersNodeFailList] = {
+    error.map(elem => createHisOwnFailList(elem._1,elem._2)).toList
+  }
+
+  def nodeSyncStatus: Route = (path("syncStatus") & post) {
+    val askResult = askActor[SidechainNodeSyncInfo](sidechainNodeViewSynchronizerRef,GetSyncInfo)
+    val asked = askResult.map(info => NodeSyncInfo(
+        convertToPeerSyncStatus(info.currentSyncMap),
         info.status,
         info.blockChainHeight,
         info.syncPercentage,
         info.nodeHeight,
-        info.error,
-        info.nodeType
-      ))
+        convertToPeerSyncFailedStatus(info.error)
+    ))
 
     val result = Await.result(asked, settings.timeout)
-    ApiResponseUtil.toResponse( RespSyncInfo(result))
+    ApiResponseUtil.toResponse(RespSyncInfo(result))
   }
-
-
 
 }
 
@@ -149,6 +167,8 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class SidechainPeerNode(address: String, lastSeen: Long, name: String, connectionType: Option[String])
+
+
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
@@ -169,7 +189,21 @@ object SidechainNodeRestSchema {
   private[api] case class RespSyncInfo(syncStatus: NodeSyncInfo) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class NodeSyncInfo(status: String, blockChainHeight: Long,  syncPercentage: Int,   nodeHeight: Long, error: String, nodeType: String)
+  private[api] case class PeerSyncStatus(peer: SidechainPeerNode, lastTipTime: Long, declaredHeight:Int)
+
+  //@JsonView(Array(classOf[Views.Default]))
+ // private[api] case class PeerFailedSyncStatus(peer: SidechainPeerNode, failedSyncTime: Long, reasonToFail: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class SidechainPeersNodeFailList(peer:SidechainPeerNode, failList:Seq[SidechainFailedSync])
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class NodeSyncInfo(peersSyncStatus: List[PeerSyncStatus],
+                                       status: String,
+                                       blockChainHeight: Long,
+                                       syncPercentage: Int,
+                                       nodeHeight: Long,
+                                       peersFailedSyncStatus: List[SidechainPeersNodeFailList])
 
 }
 
