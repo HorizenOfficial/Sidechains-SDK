@@ -98,7 +98,7 @@ public final class SidechainCoreTransaction
     }
 
     @Override
-    public List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
+    protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
         return outputsData;
     }
 

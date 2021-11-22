@@ -16,7 +16,7 @@ abstract public class SidechainNoncedTransaction<P extends Proposition, B extend
     private List<P> newBoxesPropositions;
 
     // Returns a full output data list, from which the output boxes should be constructed
-    public abstract List<D> getOutputData();
+    protected abstract List<D> getOutputData();
 
     // Returns a list of propositions for all output boxes which should be created from output data in a current transaction
     @Override

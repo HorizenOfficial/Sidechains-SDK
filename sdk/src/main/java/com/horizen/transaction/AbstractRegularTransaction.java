@@ -57,7 +57,7 @@ public abstract class AbstractRegularTransaction
     abstract protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getCustomOutputData();
 
     @Override
-    final public List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
+    final protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
         if(allBoxesData == null){
             allBoxesData = new ArrayList<>();
             // Add own zen boxes data
