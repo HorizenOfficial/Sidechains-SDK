@@ -9,7 +9,7 @@ public final class ZenCoinsUtils {
                                                   // Value stored in satoshi per kilobyte.
 
     /**
-      * This function calculates the minimum value of Backward Transfer Transaction that Mainchain would accept.
+      * This function calculates the minimum value of Backward Transfer output that Mainchain would accept.
       * It based on minimum bytes required for transaction(minimum length of MC transaction plus Backward Transfer Output
       * length) multiplied by the fee rate(it shows how much transaction would cost) and multiplied by 3(the constant
       * from Bitcoin sourcecode to make transaction reasonable).

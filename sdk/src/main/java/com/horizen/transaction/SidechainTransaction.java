@@ -90,7 +90,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Nonc
                 if (box instanceof WithdrawalRequestBox
                         && box.value() < withdrawalThreshold) {
                     throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                            "Withdrawal request box [%d] value is belove the threshhold[%d].", id(), i, withdrawalThreshold));
+                            "Withdrawal request box [%d] value is below the threshhold[%d].", id(), i, withdrawalThreshold));
                 }
                 if(!ZenCoinsUtils.isValidMoneyRange(box.value()))
                     throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +

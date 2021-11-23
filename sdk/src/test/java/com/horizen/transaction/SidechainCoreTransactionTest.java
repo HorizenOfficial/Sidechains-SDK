@@ -183,7 +183,7 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
         }
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
 
-        // Test 8: create semantically invalid transaction - bwt amount belowe dust treshold
+        // Test 8: create semantically invalid transaction - bwt amount below the dust threshold
         outputsData.add((NoncedBoxData)getLowWithdrawalRequestBoxData());
         tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION);
         try {
