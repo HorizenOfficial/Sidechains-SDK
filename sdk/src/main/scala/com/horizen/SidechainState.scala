@@ -40,6 +40,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with SidechainTypes
     with NodeState
     with ScorexLogging
+    with UtxoMerkleTreeView
 {
 
   checkVersion()
@@ -78,7 +79,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         case None => true
       }
     },
-      s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+      s"Specif0ied version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+
+    require({
+      utxoMerkleTreeStorage.lastVersionId match {
+        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
+        case None => true
+      }
+    },
+      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
   }
 
   // Note: emit tx.semanticValidity for each tx
@@ -104,8 +113,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+  override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     stateStorage.getUtxoMerkleTreeRoot(withdrawalEpoch)
+  }
+
+  override def utxoMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
+    utxoMerkleTreeStorage.getMerklePath(boxId)
   }
 
   def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {

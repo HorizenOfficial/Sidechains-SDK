@@ -1,7 +1,6 @@
 package com.horizen
 
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
@@ -9,7 +8,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.MerkleTree
+import com.horizen.utils.{MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -64,7 +63,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
     // Mock wallet to apply incoming block successfully
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenReturn(wallet)
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock], ArgumentMatchers.any[Int](), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(wallet)
 
 
     var stateNotificationExecuted: Boolean = false
@@ -131,7 +130,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(state)
     })
     // Wallet apply
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any())).thenAnswer( answer => {
       val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("Wallet received different block to apply.", block.id, blockToApply.id)
       wallet
@@ -192,6 +194,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock current version of the State
     Mockito.when(state.version).thenReturn(idToVersion(firstBlockInActiveChain.id))
+    // Mock state withdrawal epoch methods
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
+
     // State rollback check
     Mockito.when(state.rollbackTo(ArgumentMatchers.any[VersionTag])).thenAnswer(answer => {
       val rollbackPoint: VersionTag = answer.getArgument(0).asInstanceOf[VersionTag]
@@ -218,16 +224,19 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(wallet)
     })
     // Wallet apply - one by one for fork chain.
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock]))
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any()))
       .thenAnswer( answer => {
-      val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      assertEquals("Wallet received different block to apply. First fork block expected.", firstBlockInFork.id, blockToApply.id)
-      wallet
+        val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        assertEquals("Wallet received different block to apply. First fork block expected.", firstBlockInFork.id, blockToApply.id)
+        wallet
       })
       .thenAnswer( answer => {
-      val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      assertEquals("Wallet received different block to apply. Second fork block expected.", secondBlockInFork.id, blockToApply.id)
-      wallet
+        val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        assertEquals("Wallet received different block to apply. Second fork block expected.", secondBlockInFork.id, blockToApply.id)
+        wallet
       })
 
 
@@ -276,7 +285,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(state)
     })
     // Wallet apply
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any())).thenAnswer( _ => {
       fail("Wallet should NOT receive block to apply.")
       wallet
     })

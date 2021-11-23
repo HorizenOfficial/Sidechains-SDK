@@ -111,6 +111,50 @@ class SidechainCommitmentTree {
     }
   }
 
+  def getScCrCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScCrCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getFtCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getFwtCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getBtrCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getBtrCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getCertCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getCertCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
   def getCertLeafs(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
     val certLeafsOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
     certLeafsOpt match {
@@ -141,6 +185,20 @@ class SidechainCommitmentTree {
       }
       case None => None
     }
+  }
+
+  def getSidechainCommitmentMerklePath(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
+    None
+  }
+
+  def getForwardTransferMerklePath(sidechainId: Array[Byte], ftLeaf: Int): Option[Array[Byte]] = {
+    // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
+    None
+  }
+
+  def free(): Unit = {
+    commitmentTree.freeCommitmentTree()
   }
 }
 

@@ -41,6 +41,11 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     public final long nonce() { return nonce; }
 
     @Override
+    public final byte[] customFieldsHash() {
+        return boxData.customFieldsHash();
+    }
+
+    @Override
     public final byte[] id() {
         if(id == null) {
             id = Blake2b256.hash(Bytes.concat(
@@ -48,7 +53,7 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
                     Longs.toByteArray(value()),
                     proposition().bytes(),
                     Longs.toByteArray(nonce()),
-                    boxData.customFieldsHash()));
+                    customFieldsHash()));
         }
         return id;
     }

@@ -63,6 +63,7 @@ class SidechainApp @Inject()
    @Named("StateUtxoMerkleTreeStorage") val utxoMerkleTreeStorage: Storage,
    @Named("HistoryStorage") val historyStorage: Storage,
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
+   @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
@@ -211,6 +212,7 @@ class SidechainApp @Inject()
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
   protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
+  protected val sidechainWalletCswDataStorage = new SidechainWalletCswDataStorage(registerStorage(walletCswDataStorage))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -232,7 +234,9 @@ class SidechainApp @Inject()
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    params, timeProvider,
+    sidechainWalletCswDataStorage,
+    params,
+    timeProvider,
     applicationWallet,
     applicationState,
     genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure

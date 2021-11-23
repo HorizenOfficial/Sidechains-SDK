@@ -57,6 +57,10 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     }
   }
 
+  def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
+    getLeafInfo(boxId).map(leafInfo => merkleTreeWrapper.merklePath(leafInfo.position))
+  }
+
   private[horizen] def getAllLeavesInfo: Seq[UtxoMerkleTreeLeafInfo] = {
     storage.getAll
       .asScala

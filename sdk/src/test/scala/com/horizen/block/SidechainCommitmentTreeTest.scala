@@ -11,7 +11,7 @@ import org.scalatest.mockito.MockitoSugar
 
 import scala.util.Random
 
-class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with SecretFixture {
+class SidechainCommitmentTreeTest extends JUnitSuite with MockitoSugar with SecretFixture {
 
   def getWithPadding(bytes: Array[Byte]): Array[Byte] =
     Bytes.concat(new Array[Byte](32 - bytes.length), bytes)
@@ -93,6 +93,8 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
     assertTrue("Absence proof must exist.", absenceProof3.isDefined)
     assertTrue("Absence proof must be valid.",
       SidechainCommitmentTree.verifyAbsenceProof(afterRightmostSidechainId.data, absenceProof3.get, commitmentBE))
+
+    commitmentTree.free()
   }
 
   @Test
@@ -124,5 +126,7 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
       assertTrue("Absence proof must be valid.",
         SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, existenceProof.get, commitmentBE))
     })
+
+    commitmentTree.free()
   }
 }
