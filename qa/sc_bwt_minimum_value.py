@@ -5,7 +5,7 @@ import time
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_equal, assert_false, start_nodes, \
+from test_framework.util import fail, assert_false, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, generate_next_block
@@ -25,17 +25,19 @@ Test:
         - verify that all keys/boxes/balances are coherent with the default initialization
         - verify the MC block is included
         - create new forward transfer to sidechain
-        - verify that all keys/boxes/balances are changed
         - generate MC and SC blocks to reach the end of the Withdrawal epoch 0
         - generate one more MC and SC block accordingly and await for certificate submission to MC node mempool
         - check epoch 0 certificate with not backward transfers in the MC mempool
         - mine 1 more MC block and forge 1 more SC block, check Certificate inclusion into SC block
-        - make 2 different withdrawals from SC
+        - create backward transfer with 53(must fail) and 54 Satoshi with
+           - withdrawCoins
+           - createCoreTransactionSimplified
+           - createCoreTransaction
         - reach next withdrawal epoch and verify that certificate for epoch 1 was added to MC mempool
           and then to MC/SC blocks.
         - verify epoch 1 certificate, verify backward transfers list    
 """
-class SCBackwardTransfer(SidechainTestFramework):
+class SCBwtMinValue(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
@@ -169,11 +171,26 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(0, len(we0_sc_cert["backwardTransferOutputs"]), "Backward transfer amount in certificate is wrong.")
         assert_equal(we0_certHash, we0_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        # Try to withdraw coins from SC to MC: 2 withdrawals with the same amount
-        mc_address1 = mc_node.getnewaddress()
+
+        # Checking withdrawCoins
+        # Try to withdraw coins from SC to MC: amount below the dust threshold
+        mc_address1 = self.nodes[0].getnewaddress()
         print("First BT MC public key address is {}".format(mc_address1))
-        bt_amount1 = ft_amount - 3
-        sc_bt_amount1 = bt_amount1 * 100000000 # in Satoshi
+        sc_bt_amount0 = 53
+        withdrawal_request = {"outputs": [ \
+                               { "mainchainAddress": mc_address1,
+                                 "value": sc_bt_amount0 }
+                              ]
+                             }
+
+        withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        if "result" in withdrawCoinsJson:
+            fail("It shouldn't be possible to send less than dust threshold coins(54 satoshi)")
+        else:
+            print("Expected Coins withdrawn fail: " + json.dumps(withdrawCoinsJson))
+
+        # Try to withdraw coins from SC to MC: minimum amount to send
+        sc_bt_amount1 = 54 # in Satoshi
         withdrawal_request = {"outputs": [ \
                                { "mainchainAddress": mc_address1,
                                  "value": sc_bt_amount1 }
@@ -188,23 +205,95 @@ class SCBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
+        # Checking createCoreTransactionSimplified
         mc_address2 = self.nodes[0].getnewaddress()
         print("Second BT MC public key address is {}".format(mc_address2))
-        bt_amount2 = ft_amount - bt_amount1
-        sc_bt_amount2 = bt_amount2 * 100000000  # in Satoshi
-        withdrawal_request = {"outputs": [ \
-                               { "mainchainAddress": mc_address2,
+        withdrawal_requests = [{ "mainchainAddress": mc_address2,
+                                 "value": sc_bt_amount0 }
+                              ]
+
+
+        # Try to withdraw coins from SC to MC: amount below the dust threshold
+        core_transaction_request = {
+            "regularOutputs": [],
+            "withdrawalRequests": withdrawal_requests,
+            "forgerOutputs": [],
+            "fee": 5
+        }
+
+        coreTransactionJson = sc_node.transaction_createCoreTransactionSimplified(json.dumps(core_transaction_request))
+
+        if "result" in coreTransactionJson:
+            fail("Coins withdraw should have failed: " + json.dumps(coreTransactionJson))
+        else:
+            print("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
+
+        sc_bt_amount2 = 54  # in Satoshi
+        withdrawal_requests = [{ "mainchainAddress": mc_address2,
                                  "value": sc_bt_amount2 }
                               ]
-                             }
 
-        withdrawCoinsJson = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
-        if "result" not in withdrawCoinsJson:
-            fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
+        core_transaction_request = {
+            "regularOutputs":[],
+            "withdrawalRequests": withdrawal_requests,
+            "forgerOutputs": [],
+            "fee": 5
+        }
+
+        coreTransactionJson = sc_node.transaction_createCoreTransactionSimplified(json.dumps(core_transaction_request))
+        if "result" not in coreTransactionJson:
+            fail("Coins withdraw failed: " + json.dumps(coreTransactionJson))
         else:
-            print("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
+            print("Core transaction bytes: " + json.dumps(coreTransactionJson))
 
-        sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+        transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
+        if not "result" in transactionJson:
+            fail("Withdraw coins failed: " + json.dumps(transactionJson))
+        else:
+            print("Coins withdrawal transaction: " + json.dumps(transactionJson))
+
+        # Generate SC block
+        generate_next_blocks(sc_node, "first node", 1)
+
+        # Checking createCoreTransaction
+        mc_address3 = self.nodes[0].getnewaddress()
+        forger_box_id = sc_node.wallet_allBoxes()["result"]["boxes"][0]["id"]
+
+        # Try to withdraw coins from SC to MC: amount below the dust threshold
+        core_transaction_request = {
+            "transactionInputs": [{"boxId": forger_box_id}],
+            "regularOutputs": [],
+            "withdrawalRequests":  [{ "mainchainAddress": mc_address3,
+                                      "value": sc_bt_amount0 }],
+            "forgerOutputs": []
+        }
+
+        coreTransactionJson = sc_node.transaction_createCoreTransaction(json.dumps(core_transaction_request))
+        if "result" in coreTransactionJson:
+            fail("Coins withdraw should have failed: " + json.dumps(coreTransactionJson))
+        else:
+            print("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
+
+        sc_bt_amount3 = 54  # in Satoshi
+        core_transaction_request = {
+            "transactionInputs": [{"boxId": forger_box_id}],
+            "regularOutputs": [],
+            "withdrawalRequests":  [{ "mainchainAddress": mc_address3,
+                                      "value": sc_bt_amount3 }],
+            "forgerOutputs": []
+        }
+
+        coreTransactionJson = sc_node.transaction_createCoreTransaction(json.dumps(core_transaction_request))
+        if "result" not in withdrawCoinsJson:
+            fail("Coins withdraw failed: " + json.dumps(withdrawCoinsJson))
+        else:
+            print("Coins withdrawal transaction: " + json.dumps(withdrawCoinsJson))
+
+        transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
+        if not "result" in transactionJson:
+            fail("Coins withdraw failed: " + json.dumps(transactionJson))
+        else:
+            print("Coins withdrawal transaction: " + json.dumps(transactionJson))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
@@ -247,8 +336,6 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_cert["cert"]["endEpochCumScTxCommTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
-        assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
-
 
         # Generate MC block and verify that certificate is present
         we2_2_mcblock_hash = mc_node.generate(1)[0]
@@ -261,14 +348,12 @@ class SCBackwardTransfer(SidechainTestFramework):
         print("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
             str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
-        # Check certificate BT entries
-        assert_equal(bt_amount1, we1_cert["vout"][1]["value"], "First BT amount is wrong.")
-        assert_equal(bt_amount2, we1_cert["vout"][2]["value"], "Second BT amount is wrong.")
-
         cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]["addresses"][0]
         assert_equal(mc_address1, cert_address_1, "First BT standard address is wrong.")
         cert_address_2 = we1_cert["vout"][2]["scriptPubKey"]["addresses"][0]
         assert_equal(mc_address2, cert_address_2, "Second BT standard address is wrong.")
+        cert_address_3 = we1_cert["vout"][3]["scriptPubKey"]["addresses"][0]
+        assert_equal(mc_address3, cert_address_3, "Third BT standard address is wrong.")
 
         # Generate SC block and verify that certificate is synced back
         scblock_id5 = generate_next_blocks(sc_node, "first node", 1)[0]
@@ -287,20 +372,22 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(1, we1_sc_cert["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_sc_cert["endCumulativeScTxCommitmentTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
-        assert_equal(2, len(we1_sc_cert["backwardTransferOutputs"]),
+        assert_equal(3, len(we1_sc_cert["backwardTransferOutputs"]),
                      "Backward transfer amount in certificate is wrong.")
 
         sc_pub_key_1 = we1_sc_cert["backwardTransferOutputs"][0]["address"]
         assert_equal(mc_address1, sc_pub_key_1, "First BT address is wrong.")
         assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
-
+        #
         sc_pub_key_2 = we1_sc_cert["backwardTransferOutputs"][1]["address"]
         assert_equal(mc_address2, sc_pub_key_2, "Second BT address is wrong.")
         assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
+        #
+        sc_pub_key_3 = we1_sc_cert["backwardTransferOutputs"][1]["address"]
+        assert_equal(mc_address2, sc_pub_key_3, "Second BT address is wrong.")
+        assert_equal(sc_bt_amount3, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        # TODO: continue the flow and test ceased Sidechain case.
-
 if __name__ == "__main__":
-    SCBackwardTransfer().main()
+    SCBwtMinValue().main()
