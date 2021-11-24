@@ -2,7 +2,7 @@ package com.horizen
 
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, SidechainCommitmentTree}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, NoncedBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
@@ -113,8 +113,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 3) update CSW FT metadata for all FT related to current wallet.
   def scanPersistent(modifier: SidechainBlock,
                      withdrawalEpoch: Int,
-                     feePaymentBoxes: Seq[SidechainTypes#SCB] = Seq(),
-                     utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView] = None): SidechainWallet = {
+                     feePaymentBoxes: Seq[SidechainTypes#SCB],
+                     utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): SidechainWallet = {
     //require(modifier != null, "SidechainBlock must be NOT NULL.")
     val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
@@ -135,7 +135,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
           val boxTransaction = txBoxes(box.id())
           new WalletBox(box, ModifierId @@ boxTransaction.id, modifier.timestamp)
         } else { // For fee payment boxes which have no containing transaction.
-          new WalletBox(box)
+          new WalletBox(box, modifier.timestamp)
         }
       })
 
@@ -165,7 +165,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     this
   }
 
-  private def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
+  private[horizen] def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
     boxes().filter(wb => wb.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(wb => {
       val box = wb.box.asInstanceOf[NoncedBox[_ <: Proposition]]
       UtxoCswData(box.id(), box.proposition().bytes, box.value(), box.nonce(),
@@ -173,7 +173,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     })
   }
 
-  private def calculateForwardTransferCswData(mcBlockRefDataSeq: Seq[MainchainBlockReferenceData], pubKeys: Set[SidechainTypes#SCP]): Seq[CswData] = {
+  private[horizen] def calculateForwardTransferCswData(mcBlockRefDataSeq: Seq[MainchainBlockReferenceData], pubKeys: Set[SidechainTypes#SCP]): Seq[CswData] = {
     val ftCswDataList = ListBuffer[CswData]()
 
     mcBlockRefDataSeq.foreach(mcBlockRefData => {
@@ -342,7 +342,7 @@ object SidechainWallet
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
         forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber).applyConsensusEpochInfo(consensusEpochInfo)
+      genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else
       throw new RuntimeException("WalletBox storage is not empty!")

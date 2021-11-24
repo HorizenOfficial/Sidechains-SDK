@@ -38,6 +38,10 @@ trait BoxFixture
     new ZenBox(new ZenBoxData(privateKey.publicImage(), value), nonce)
   }
 
+  def getZenBox(proposition: PublicKey25519Proposition): ZenBox = {
+    new ZenBox(new ZenBoxData(proposition, Random.nextInt(100)), Random.nextInt(100))
+  }
+
   def getZenBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): ZenBox = {
     new ZenBox(new ZenBoxData(proposition, value), nonce)
   }

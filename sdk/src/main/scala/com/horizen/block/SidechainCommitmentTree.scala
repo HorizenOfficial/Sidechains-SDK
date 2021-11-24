@@ -189,12 +189,12 @@ class SidechainCommitmentTree {
 
   def getSidechainCommitmentMerklePath(sidechainId: Array[Byte]): Option[Array[Byte]] = {
     // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
-    None
+    Some(new Array[Byte](100))
   }
 
   def getForwardTransferMerklePath(sidechainId: Array[Byte], ftLeaf: Int): Option[Array[Byte]] = {
     // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
-    None
+    Some(new Array[Byte](50))
   }
 
   def free(): Unit = {

@@ -20,6 +20,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
+
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               historyStorage: SidechainHistoryStorage,
                               consensusDataStorage: ConsensusDataStorage,
@@ -273,8 +274,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
             val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
               newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, stateAfterApply.getFeePayments(stateWithdrawalEpochNumber), Some(stateAfterApply))
-            } else
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber)
+            } else {
+              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
+            }
 
             SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
