@@ -277,7 +277,8 @@ class SidechainStateTest
       ArgumentMatchers.any[ConsensusEpochNumber](),
       ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
       ArgumentMatchers.any[BlockFeeInfo](),
-      ArgumentMatchers.any[Option[Array[Byte]]]()))
+      ArgumentMatchers.any[Option[Array[Byte]]](),
+      ArgumentMatchers.any[Boolean]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -288,6 +289,7 @@ class SidechainStateTest
         val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
         val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
         val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
+        val scHasCeased = answer.getArgument[Boolean](9)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
@@ -299,6 +301,7 @@ class SidechainStateTest
         assertEquals("blockFeeInfo expected to be different.", modBlockFeeInfo, blockFeeInfo)
         // Verify utxoMerkleTreeRoot
         assertTrue("utxoMerkleTreeRoot expected to be empty.", utxoMerkleTreeRootOpt.isEmpty)
+        assertFalse("sc not ceased.", scHasCeased)
 
 
         stateVersion += version
@@ -517,5 +520,30 @@ class SidechainStateTest
     val rootOpt2 = sidechainState.utxoMerkleTreeRoot(0)
     assertTrue(s"Root expected to be found for given epoch.", rootOpt2.isDefined)
     assertArrayEquals("Different root value found.", expectedRoot, rootOpt2.get)
+  }
+
+  @Test
+  def ceased(): Unit = {
+    val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+    val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
+    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val applicationState: ApplicationState = mock[ApplicationState]
+
+    val version = getVersion
+    Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+      params, bytesToVersion(version.data), applicationState)
+
+
+    // Test 1: Sidechain is alive
+    Mockito.when(stateStorage.hasCeased).thenReturn(false)
+    assertFalse(s"Sidechain must be alive.", sidechainState.hasCeased)
+
+    // Test 1: Sidechain has ceased
+    Mockito.when(stateStorage.hasCeased).thenReturn(true)
+    assertTrue(s"Sidechain must be ceased.", sidechainState.hasCeased)
   }
 }
