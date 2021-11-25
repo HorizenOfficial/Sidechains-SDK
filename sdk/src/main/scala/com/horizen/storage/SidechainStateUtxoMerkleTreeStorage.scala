@@ -3,6 +3,7 @@ package com.horizen.storage
 import com.horizen.SidechainTypes
 import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
 import com.horizen.librustsidechains.FieldElement
+import com.horizen.merkletreenative.PositionLeaf
 import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
@@ -27,11 +28,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     val treeHeight: Int = CryptoLibProvider.cswCircuitFunctions.utxoMerkleTreeHeight()
     val merkleTree = new InMemorySparseMerkleTreeWrapper(treeHeight)
 
-    val newLeaves: Seq[JPair[FieldElement, Integer]] = getAllLeavesInfo.map(leafInfo => {
-      new JPair(FieldElement.deserialize(leafInfo.leaf), Integer.valueOf(leafInfo.position))
+    val newLeaves: Seq[PositionLeaf] = getAllLeavesInfo.map(leafInfo => {
+      new PositionLeaf(leafInfo.position, FieldElement.deserialize(leafInfo.leaf))
     })
     merkleTree.addLeaves(newLeaves.asJava)
-    newLeaves.foreach(pair => pair.getKey.freeFieldElement())
+    newLeaves.foreach(_.close())
 
     merkleTree
   }
@@ -79,11 +80,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
 
     // Remove leaves from inmemory tree
     require(merkleTreeWrapper.removeLeaves(boxesToRemoveSet.flatMap(id => {
-      getLeafInfo(id.data).map(leafInfo => Integer.valueOf(leafInfo.position))
-    }).toList.asJava), "Failed to remove leaves from UtxoMerkleTree")
+      getLeafInfo(id.data).map(leafInfo => leafInfo.position)
+    }).toArray), "Failed to remove leaves from UtxoMerkleTree")
 
     // Collect positions for the new leaves and check that there is enough empty space in the tree
-    val newLeavesPositions = merkleTreeWrapper.leftmostEmptyPositions(boxesToAppend.size).asScala
+    val newLeavesPositions: Seq[Long] = merkleTreeWrapper.leftmostEmptyPositions(boxesToAppend.size).asScala.map(Long2long)
     if (newLeavesPositions.size != boxesToAppend.size) {
       throw new IllegalStateException("Not enough empty leaves in the UTXOMerkleTree.")
     }
@@ -92,11 +93,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
 
     // Add leaves to inmemory tree
     require(merkleTreeWrapper.addLeaves(leavesToAppend.map {
-      case ((_, leaf: FieldElement), position: Integer) => new JPair[FieldElement, Integer](leaf, position)
+      case ((_, leaf: FieldElement), position: Long) => new PositionLeaf(position, leaf)
     }.asJava), "Failed to add leaves to UtxoMerkleTree")
 
     val updateList: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = leavesToAppend.map {
-      case ((key: ByteArrayWrapper, leaf: FieldElement), position: Integer) =>
+      case ((key: ByteArrayWrapper, leaf: FieldElement), position: Long) =>
         val leafBytes = leaf.serializeFieldElement()
         leaf.freeFieldElement()
 
