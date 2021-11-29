@@ -377,7 +377,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if binary is None:
         binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
-    bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    '''
+    Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
+    This illegal reflective access will be disabled in a future release of the JDK.
+    Currently, it is permitted by default and a warning is issued.
+    The --add-opens VM option remove this warning
+    '''
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED -cp ' + binary + " " + (datadir + ('/node%s.conf' % i)) + " " + (datadir + "/sc_app_debug_log.txt")
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
