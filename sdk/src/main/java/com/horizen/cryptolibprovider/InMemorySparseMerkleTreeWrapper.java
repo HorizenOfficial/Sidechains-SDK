@@ -66,10 +66,10 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // returns N leftmost empty positions in the tree
-    // or null if there are not enough empty positions
+    // or less than N if there are not enough empty positions
     public List<Integer> leftmostEmptyPositions(int count) {
         if(count <= 0)
-            return null;
+            return new ArrayList<>();
         List<Integer> emptyPositions = new ArrayList<>();
 
         for(Range<Integer> range : emptyLeaves.asRanges()) {
@@ -79,7 +79,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
                     return emptyPositions;
             }
         }
-        return null;
+        return emptyPositions;
     }
 
     // Check position

@@ -172,7 +172,7 @@ class SidechainApp @Inject()
 
   // Generate Coboundary Marlin Proving System dlog keys
   log.info(s"Generating Coboundary Marlin Proving System dlog keys. It may take some time.")
-  if(!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+  if(!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
     throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem dlog keys.")
   }
 

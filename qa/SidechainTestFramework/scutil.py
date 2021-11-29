@@ -197,7 +197,7 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path
     }
-    output = launch_bootstrap_tool("generateProofInfo", json_parameters)
+    output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
 
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
@@ -213,6 +213,25 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
 
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
     return certificate_proof_info
+
+"""
+Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
+Parameters:
+ - withdrawalEpochLen
+ - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin dlog key and snark pk&vk
+
+Output: Verification key
+"""
+def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
+    json_parameters = {
+        "withdrawalEpochLen": withdrawal_epoch_len,
+        "provingKeyPath": keys_paths.proving_key_path,
+        "verificationKeyPath": keys_paths.verification_key_path
+    }
+    output = launch_bootstrap_tool("generateCswProofInfo", json_parameters)
+
+    verification_key = output["verificationKey"]
+    return verification_key
 
 """
 Create directories for each node and configuration files inside them.
@@ -281,10 +300,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "PROVING_KEY_PATH": bootstrap_info.keys_paths.proving_key_path,
-        "VERIFICATION_KEY_PATH": bootstrap_info.keys_paths.verification_key_path,
+        "PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
+        "VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
-        "CERTIFICATE_FEE": sc_node_config.certificate_fee
+        "CERTIFICATE_FEE": sc_node_config.certificate_fee,
+        "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path,
+        "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path,
     }
 
     configsData.append({
@@ -312,7 +333,8 @@ def initialize_default_sc_datadir(dirname, n):
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    keys_paths = proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = proof_keys_paths(ps_keys_dir)
+    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
@@ -327,8 +349,10 @@ def initialize_default_sc_datadir(dirname, n):
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
         "CERTIFICATE_SIGNING": "false",
-        "PROVING_KEY_PATH": keys_paths.proving_key_path,
-        "VERIFICATION_KEY_PATH": keys_paths.verification_key_path
+        "PROVING_KEY_PATH": cert_keys_paths.proving_key_path,
+        "VERIFICATION_KEY_PATH": cert_keys_paths.verification_key_path,
+        "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
+        "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path
     }
 
     configsData.append({
@@ -649,8 +673,12 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    keys_paths = proof_keys_paths(ps_keys_dir)
-    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths)
+    cert_keys_paths = proof_keys_paths(ps_keys_dir)
+    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)
+    sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
+                                               block_timestamp_rewind,
+                                               cert_keys_paths,
+                                               csw_keys_paths)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -662,7 +690,8 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
                                                             sc_nodes_bootstrap_info.genesis_vrf_account,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
-                                                            keys_paths)
+                                                            cert_keys_paths,
+                                                            csw_keys_paths)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -678,6 +707,13 @@ def proof_keys_paths(dirname):
     return ProofKeysPaths(os.path.join(dirname, "marlin_snark_pk").replace("\\", "/"),
                           os.path.join(dirname, "marlin_snark_vk").replace("\\", "/"))
 
+
+def csw_proof_keys_paths(dirname):
+    # use replace for Windows OS to be able to parse the path to the keys in the config file
+    return ProofKeysPaths(os.path.join(dirname, "marlin_csw_pk").replace("\\", "/"),
+                          os.path.join(dirname, "marlin_csw_vk").replace("\\", "/"))
+
+
 """
 Create a sidechain transaction inside a mainchain node.
 
@@ -687,12 +723,13 @@ Parameters:
  Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
-def create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_key_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
+    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+    generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_key_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
@@ -709,7 +746,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, keys_paths):
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_key_paths)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
