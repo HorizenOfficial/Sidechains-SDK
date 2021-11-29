@@ -7,8 +7,8 @@ import com.google.inject.Injector;
 
 import java.io.File;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.logging.*;
 
@@ -31,11 +31,7 @@ public class SimpleApp {
             logFileName = args[1];
         }
 
-        // init log4j2 logger
-        System.setProperty("logFilename", logFileName);
-        Logger logger = LoggerFactory.getLogger(SimpleApp.class);
-
-        // filter external noisy libraries log traces that are redirected to console, just keep warnings
+        // filter noisy external libraries traces that are redirected to console, just keep warnings
         java.util.logging.Logger rootLogger = java.util.logging.LogManager.getLogManager().getLogger("");
         Handler[] handlers = rootLogger.getHandlers();
         for (Handler h : rootLogger.getHandlers()) {
@@ -43,6 +39,10 @@ public class SimpleApp {
                 h.setLevel(Level.WARNING);
             }
         }
+
+        // init log4j2 logger
+        System.setProperty("logFilename", logFileName);
+        Logger logger = LogManager.getLogger(com.horizen.examples.SimpleApp.class);
 
         Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName));
         SidechainApp sidechainApp = injector.getInstance(SidechainApp.class);
