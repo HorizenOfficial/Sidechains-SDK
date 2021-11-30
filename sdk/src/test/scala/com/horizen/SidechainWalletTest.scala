@@ -918,7 +918,7 @@ class SidechainWalletTest
     val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
     val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
 
-    ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.propositionBytes, ft.getFtOutput.mcReturnAddress,
+    ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes, ft.getFtOutput.mcReturnAddress,
       ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath, btrCommitment,
       certCommitment, scCrCommitment, ftMerklePath)
   }

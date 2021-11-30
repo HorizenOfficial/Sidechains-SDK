@@ -51,6 +51,7 @@ trait CswDataFixture extends BoxFixture {
 
     ForwardTransferCswData(
       getRandomBoxId(seed),
+      random.nextLong() % 1000L,
       receivedPubKey,
       mcReturnAddress,
       mcTxHash,

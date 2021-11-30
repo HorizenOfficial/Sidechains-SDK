@@ -1,5 +1,6 @@
 package com.horizen.utils
 
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.librustsidechains.FieldElement
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -7,7 +8,10 @@ import scorex.util.serialization.{Reader, Writer}
 import java.util
 
 
-sealed trait CswData extends BytesSerializable
+sealed trait CswData extends BytesSerializable {
+  val amount: Long
+  def getNullifier: Array[Byte]
+}
 
 case class UtxoCswData(boxId: Array[Byte],
                        spendingPubKey: Array[Byte],
@@ -18,6 +22,9 @@ case class UtxoCswData(boxId: Array[Byte],
   override type M = UtxoCswData
 
   override def serializer: ScorexSerializer[UtxoCswData] = UtxoCswDataSerializer
+
+  // TODO: use box to nullifier method of sc-cryptolib
+  override def getNullifier: Array[Byte] = FieldElementUtils.randomFieldElementBytes()
 
   override def hashCode(): Int = {
     var result = util.Arrays.hashCode(boxId)
@@ -42,6 +49,7 @@ case class UtxoCswData(boxId: Array[Byte],
 }
 
 case class ForwardTransferCswData(boxId: Array[Byte],
+                                  amount: Long,
                                   receivedPubKey: Array[Byte],
                                   mcReturnAddress: Array[Byte],
                                   mcTxHash: Array[Byte],
@@ -55,8 +63,12 @@ case class ForwardTransferCswData(boxId: Array[Byte],
 
   override def serializer: ScorexSerializer[ForwardTransferCswData] = ForwardTransferCswDataSerializer
 
+  // TODO: use box to nullifier method of sc-cryptolib
+  override def getNullifier: Array[Byte] = FieldElementUtils.randomFieldElementBytes()
+
   override def hashCode(): Int = {
     var result = util.Arrays.hashCode(boxId)
+    result = 31 * result + amount.hashCode()
     result = 31 * result + util.Arrays.hashCode(receivedPubKey)
     result = 31 * result + util.Arrays.hashCode(mcReturnAddress)
     result = 31 * result + util.Arrays.hashCode(mcTxHash)
@@ -71,9 +83,9 @@ case class ForwardTransferCswData(boxId: Array[Byte],
 
   override def equals(obj: Any): Boolean = {
     obj match {
-      case other: ForwardTransferCswData => boxId.sameElements(other.boxId) && receivedPubKey.sameElements(other.receivedPubKey) &&
-        mcReturnAddress.sameElements(other.mcReturnAddress) && mcTxHash.sameElements(other.mcTxHash) &&
-        outIdx == other.outIdx && scCommitmentMerklePath.sameElements(other.scCommitmentMerklePath) &&
+      case other: ForwardTransferCswData => boxId.sameElements(other.boxId) && amount == other.amount &&
+        receivedPubKey.sameElements(other.receivedPubKey) && mcReturnAddress.sameElements(other.mcReturnAddress) &&
+        mcTxHash.sameElements(other.mcTxHash) && outIdx == other.outIdx && scCommitmentMerklePath.sameElements(other.scCommitmentMerklePath) &&
         btrCommitment.sameElements(other.btrCommitment) && certCommitment.sameElements(other.certCommitment) &&
         scCrCommitment.sameElements(other.scCrCommitment) && ftMerklePath.sameElements(other.ftMerklePath)
       case _ => false
@@ -140,6 +152,7 @@ object UtxoCswDataSerializer extends ScorexSerializer[UtxoCswData] {
 object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransferCswData] {
   override def serialize(obj: ForwardTransferCswData, w: Writer): Unit = {
     w.putBytes(obj.boxId)
+    w.putLong(obj.amount)
     w.putInt(obj.receivedPubKey.length)
     w.putBytes(obj.receivedPubKey)
     w.putBytes(obj.mcReturnAddress)
@@ -156,6 +169,8 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
 
   override def parse(r: Reader): ForwardTransferCswData = {
     val boxId = r.getBytes(32)
+
+    val amount = r.getLong()
 
     val receivedPubKeyLength = r.getInt()
     val receivedPubKey = r.getBytes(receivedPubKeyLength)
@@ -174,7 +189,7 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
     val ftMerklePathLength = r.getInt()
     val ftMerklePath = r.getBytes(ftMerklePathLength)
 
-    ForwardTransferCswData(boxId, receivedPubKey, mcReturnAddress, mcTxHash, outIdx,
+    ForwardTransferCswData(boxId, amount, receivedPubKey, mcReturnAddress, mcTxHash, outIdx,
       scCommitmentMerklePath, btrCommitment, certCommitment, scCrCommitment, ftMerklePath)
   }
 }

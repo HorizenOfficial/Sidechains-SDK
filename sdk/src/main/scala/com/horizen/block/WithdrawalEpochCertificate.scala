@@ -62,6 +62,9 @@ case class WithdrawalEpochCertificate
       Some(customFields.toArray)
     }
   }
+
+  //TODO: use method from sc-cryptolib
+  lazy val certDataHash: Array[Byte] = new Array[Byte](32)
 }
 
 object WithdrawalEpochCertificate {

@@ -200,9 +200,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
             val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
 
             ftCswDataList.append(
-              ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.propositionBytes, ft.getFtOutput.mcReturnAddress,
-                ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath, btrCommitment,
-                certCommitment, scCrCommitment, ftMerklePath)
+              ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes,
+                ft.getFtOutput.mcReturnAddress, ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath,
+                btrCommitment, certCommitment, scCrCommitment, ftMerklePath)
             )
           }
           commitmentTree.free()
@@ -306,6 +306,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     forgingBoxesInfoStorage.getForgingStakeMerklePathInfoForEpoch(storedConsensusEpochNumber)
   }
 
+  def getCswData(withdrawalEpochNumber: Int): Seq[CswData] = {
+    cswDataStorage.getCswData(withdrawalEpochNumber)
+  }
 }
 
 object SidechainWallet

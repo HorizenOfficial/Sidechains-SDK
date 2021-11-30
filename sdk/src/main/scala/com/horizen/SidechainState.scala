@@ -123,6 +123,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def hasCeased: Boolean = stateStorage.hasCeased
 
+  def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
+  }
+
   def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
     stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
       case Some(cert) => cert.quality
