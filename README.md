@@ -3,7 +3,7 @@
 
 The "Blaze" Sidechain SDK development is in progress, and the release is coming soon!
 
-The version on master is outdated. The most recent version can be found in the "dev" branch, and can be tested by early adopters on our official testnet.
+The current version can be tested by early adopters on our official testnet.
 
 Please note: the current version is experimental and a work in progress. Use at your own risk.
 
