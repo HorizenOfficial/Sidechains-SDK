@@ -1,13 +1,14 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.librustsidechains.FieldElement;
+import com.horizen.librustsidechains.Constants;
 import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
 public class FieldElementUtils {
     public static int maximumFieldElementLength() {
-        return FieldElement.FIELD_ELEMENT_LENGTH;
+        return Constants.FIELD_ELEMENT_LENGTH();
     }
 
     static FieldElement messageToFieldElement(byte[] message) {

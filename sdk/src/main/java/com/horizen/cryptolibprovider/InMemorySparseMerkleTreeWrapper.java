@@ -4,13 +4,10 @@ import com.google.common.collect.*;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.InMemorySparseMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
-import com.horizen.merkletreenative.PositionLeaf;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class InMemorySparseMerkleTreeWrapper implements Closeable {
     private final InMemorySparseMerkleTree merkleTree;
@@ -24,10 +21,10 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // returns N leftmost empty positions in the tree
-    // or null if there are not enough empty positions
-    public List<Long> leftmostEmptyPositions(int count) {
+    // or less than N if there are not enough empty positions
+    public List<Long> leftmostEmptyPositions(long count) {
         if(count <= 0)
-            return null;
+            return new ArrayList<>();
         List<Long> emptyPositions = new ArrayList<>();
 
         for(Range<Long> range : emptyLeaves.asRanges()) {
@@ -37,7 +34,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
                     return emptyPositions;
             }
         }
-        return null;
+        return emptyPositions;
     }
 
     // Check position
@@ -56,10 +53,10 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     }
 
     // returns false if leaf is not a FE, or pos was occupied before
-    public boolean addLeaves(List<PositionLeaf> leaves) {
+    public boolean addLeaves(Map<Long, FieldElement> leaves) {
         // check that all leaves refer to empty positions in the merkle tree.
-        for(PositionLeaf leaf : leaves) {
-            if(!emptyLeaves.contains(leaf.getPosition()))
+        for(Long pos : leaves.keySet()) {
+            if(!emptyLeaves.contains(pos))
                 return false;
         }
         // try to update merkle tree
@@ -69,23 +66,26 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
             return false;
         }
 
-        for(PositionLeaf leaf : leaves) {
-            emptyLeaves.remove(Range.singleton(leaf.getPosition()));
+        for(Long pos : leaves.keySet()) {
+            emptyLeaves.remove(Range.singleton(pos));
         }
         return true;
     }
 
     // remove the leaves at given positions if were present
     public boolean removeLeaves(long[] positions) {
+        Set<Long> positionSet = new HashSet<>();
         // check positions range
         for(long pos: positions) {
             if(pos < 0 || pos >= leavesNumber() || isLeafEmpty(pos))
                 return false;
+            else
+                positionSet.add(pos);
         }
 
         // update merkle tree
         try {
-            merkleTree.removeLeaves(positions);
+            merkleTree.removeLeaves(positionSet);
         } catch (Exception e) {
             return false;
         }

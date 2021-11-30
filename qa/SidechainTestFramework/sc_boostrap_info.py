@@ -161,14 +161,15 @@ SCBootstrapInfo: {
     "genesis_vrf_account": an instance of VrfAccount
     "certificate_proof_info": an instance of CertificateProofInfo
     "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
-    "keys_paths": an instance of ProofKeysPaths
+    "cert_keys_paths": an instance of ProofKeysPaths for certificate
+    "csw_keys_paths": an instance of ProofKeysPaths for ceased sidechain withdrawal
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
                  sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
-                 certificate_proof_info, initial_cumulative_comm_tree_hash, keys_paths):
+                 certificate_proof_info, initial_cumulative_comm_tree_hash, cert_keys_paths, csw_keys_paths):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -180,7 +181,8 @@ class SCBootstrapInfo(object):
         self.genesis_vrf_account = genesis_vrf_account
         self.certificate_proof_info = certificate_proof_info
         self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
-        self.keys_paths = keys_paths
+        self.cert_keys_paths = cert_keys_paths
+        self.csw_keys_paths = csw_keys_paths
 
 
 class ProofKeysPaths(object):

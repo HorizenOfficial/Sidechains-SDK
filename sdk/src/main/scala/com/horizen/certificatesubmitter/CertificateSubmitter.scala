@@ -3,6 +3,7 @@ package com.horizen.certificatesubmitter
 
 import java.io.File
 import java.util.Optional
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -10,8 +11,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -24,8 +24,8 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
-
 import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
@@ -557,7 +557,7 @@ object CertificateSubmitter {
 
   case class CertificateSignatureFromRemoteInfo(pubKeyIndex: Int, messageToSign: Array[Byte], signature: SchnorrProof) {
     require(pubKeyIndex >= 0, "pubKeyIndex can't be negative value.")
-    require(messageToSign.length == FieldElement.FIELD_ELEMENT_LENGTH, "messageToSign has invalid length")
+    require(messageToSign.length == FieldElementUtils.maximumFieldElementLength(), "messageToSign has invalid length")
   }
 
   // Internal interface

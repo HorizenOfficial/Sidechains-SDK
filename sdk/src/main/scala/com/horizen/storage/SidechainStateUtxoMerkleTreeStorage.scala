@@ -3,7 +3,6 @@ package com.horizen.storage
 import com.horizen.SidechainTypes
 import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.merkletreenative.PositionLeaf
 import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
@@ -28,11 +27,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     val treeHeight: Int = CryptoLibProvider.cswCircuitFunctions.utxoMerkleTreeHeight()
     val merkleTree = new InMemorySparseMerkleTreeWrapper(treeHeight)
 
-    val newLeaves: Seq[PositionLeaf] = getAllLeavesInfo.map(leafInfo => {
-      new PositionLeaf(leafInfo.position, FieldElement.deserialize(leafInfo.leaf))
-    })
+    val newLeaves: Map[java.lang.Long, FieldElement] = getAllLeavesInfo.map(leafInfo => {
+      long2Long(leafInfo.position) -> FieldElement.deserialize(leafInfo.leaf)
+    }).toMap
     merkleTree.addLeaves(newLeaves.asJava)
-    newLeaves.foreach(_.close())
+    newLeaves.foreach(_._2.close())
 
     merkleTree
   }
@@ -93,8 +92,8 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
 
     // Add leaves to inmemory tree
     require(merkleTreeWrapper.addLeaves(leavesToAppend.map {
-      case ((_, leaf: FieldElement), position: Long) => new PositionLeaf(position, leaf)
-    }.asJava), "Failed to add leaves to UtxoMerkleTree")
+      case ((_, leaf: FieldElement), position: Long) => long2Long(position) -> leaf
+    }.toMap.asJava), "Failed to add leaves to UtxoMerkleTree")
 
     val updateList: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = leavesToAppend.map {
       case ((key: ByteArrayWrapper, leaf: FieldElement), position: Long) =>

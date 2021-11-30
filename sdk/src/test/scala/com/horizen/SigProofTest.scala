@@ -95,7 +95,7 @@ class SigProofTest {
 
     // Setup proving system keys
     println(s"Generating Marlin dlog key.")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
+    if (!CryptoLibProvider.commonCircuitFunctions.generateCoboundaryMarlinDLogKeys()) {
       fail("Error occurred during dlog key generation.")
     }
 

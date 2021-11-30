@@ -1,9 +1,9 @@
 package com.horizen.block
 
 import com.horizen.utils.BytesUtils
-import com.horizen.commitmenttree.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
+import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.sigproofnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._

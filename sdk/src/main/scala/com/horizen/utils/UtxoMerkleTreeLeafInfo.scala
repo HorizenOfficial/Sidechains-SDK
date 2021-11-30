@@ -1,11 +1,12 @@
 package com.horizen.utils
 
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.librustsidechains.FieldElement
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends BytesSerializable {
-  require(leaf.length == FieldElement.FIELD_ELEMENT_LENGTH, "Storage must be NOT NULL.")
+  require(leaf.length == FieldElementUtils.maximumFieldElementLength(), "Storage must be NOT NULL.")
 
   override type M = UtxoMerkleTreeLeafInfo
 
@@ -31,7 +32,7 @@ object UtxoMerkleTreeLeafInfoSerializer extends ScorexSerializer[UtxoMerkleTreeL
   }
 
   override def parse(r: Reader): UtxoMerkleTreeLeafInfo = {
-    val leaf = r.getBytes(FieldElement.FIELD_ELEMENT_LENGTH)
+    val leaf = r.getBytes(FieldElementUtils.maximumFieldElementLength())
     val position = r.getLong()
     UtxoMerkleTreeLeafInfo(leaf, position)
   }

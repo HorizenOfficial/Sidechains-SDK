@@ -50,6 +50,7 @@ public class SimpleAppModule extends SidechainAppModule
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
         File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
         File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
+        File walletCswDataStorage = new File(dataDirAbsolutePath + "/walletCswDataStorage");
         File stateStore = new File(dataDirAbsolutePath + "/state");
         File stateForgerBoxStore = new File(dataDirAbsolutePath + "/stateForgerBox");
         File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
@@ -103,6 +104,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
+        bind(Storage.class)
+                .annotatedWith(Names.named("WalletCswDataStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(stateStore));

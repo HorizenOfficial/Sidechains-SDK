@@ -8,4 +8,6 @@ public interface CswCircuit {
     int utxoMerkleTreeHeight();
 
     FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box);
+
+    boolean generateCoboundaryMarlinKeys(int withdrawalEpochLen, String provingKeyPath, String verificationKeyPath);
 }

@@ -1,7 +1,7 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.commitmenttree.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
+import com.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import com.horizen.serialization.{ReverseBytesOptSerializer, ReverseBytesSerializer}

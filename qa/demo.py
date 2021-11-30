@@ -10,7 +10,8 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
-    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, proof_keys_paths
+    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, proof_keys_paths, \
+    csw_proof_keys_paths, generate_csw_proof_info
 
 """
 Demo flow of how to bootstrap SC network and start SC nodes.
@@ -81,8 +82,11 @@ class Demo(SidechainTestFramework):
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
 
-        keys_paths = proof_keys_paths(ps_keys_dir)
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
+        cert_keys_paths = proof_keys_paths(ps_keys_dir)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+
+        csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)
+        csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
 
         custom_data = vrf_key.publicKey
         cmdInput = {
@@ -148,7 +152,7 @@ class Demo(SidechainTestFramework):
         sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                                genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                                sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                               genesis_data["initialCumulativeCommTreeHash"], keys_paths)
+                               genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
 
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)

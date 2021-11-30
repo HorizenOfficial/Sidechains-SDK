@@ -44,7 +44,11 @@ object WithdrawalEpochUtils {
   }
 
   def certificateSubmissionWindowLength(params: NetworkParams): Int = {
+    certificateSubmissionWindowLength(params.withdrawalEpochLength)
+  }
+
+  def certificateSubmissionWindowLength(withdrawalEpochLength: Int): Int = {
     // MC consensus cert submission window length is 1/5 of the withdrawal epoch length, but at least 2 mc blocks
-    Math.max(2, params.withdrawalEpochLength / 5)
+    Math.max(2, withdrawalEpochLength / 5)
   }
 }
