@@ -2,19 +2,15 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.librustsidechains.FieldElement;
-import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.sigproofnative.BackwardTransfer;
-import com.horizen.sigproofnative.CreateProofResult;
-import com.horizen.sigproofnative.NaiveThresholdSigProof;
-import com.horizen.utils.BytesUtils;
+import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.NaiveThresholdSigProof;
+import com.horizen.provingsystemnative.CreateProofResult;
 import com.horizen.utils.Pair;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -39,13 +35,16 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        // TODO: include custom field elements into the createMsgToSign
+        List<FieldElement> customFe = new ArrayList<>();
+        customFe.add(FieldElement.deserialize(utxoMerkleTreeRoot));
+
         FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, sidechainIdFe,
-                epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount);
+                epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, customFe);
         byte[] messageAsBytes = messageToSign.serializeFieldElement();
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
+        customFe.forEach(fe -> fe.freeFieldElement());
         messageToSign.freeFieldElement();
 
         return messageAsBytes;
@@ -78,16 +77,19 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        // TODO: include custom field elements into the createProof
+        List<FieldElement> customFe = new ArrayList<>();
+        customFe.add(FieldElement.deserialize(utxoMerkleTreeRoot));
+
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
                 backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
-                signatures, publicKeys, threshold, provingKeyPath, checkProvingKey, zk);
+                signatures, publicKeys, threshold, customFe, provingKeyPath, checkProvingKey, zk);
 
         // TODO: actually it will be more efficient to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
+        customFe.forEach(fe -> fe.freeFieldElement());
 
         return new Pair<>(proofAndQuality.getProof(), proofAndQuality.getQuality());
     }
@@ -101,8 +103,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                long ftMinAmount,
                                byte[] utxoMerkleTreeRoot,
                                byte[] constant,
-                               long quality,
-                               byte[] proof,
+                               long quality, byte[] proof,
                                boolean checkProof,
                                String verificationKeyPath,
                                boolean checkVerificationKey) {
@@ -112,14 +113,17 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        // TODO: include custom field elements into the verifyProof
+        List<FieldElement> customFe = new ArrayList<>();
+        customFe.add(FieldElement.deserialize(utxoMerkleTreeRoot));
+
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
-                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, proof, checkProof,
+                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, customFe, proof, checkProof,
                 verificationKeyPath, checkVerificationKey);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
         constantFe.freeFieldElement();
+        customFe.forEach(fe -> fe.freeFieldElement());
 
         return verificationResult;
     }
@@ -140,11 +144,11 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Result data max size values are the same as in MC
-    private static final int maxProofSize = 9 * 1024;
-    private static final int maxVkSize = 9 * 1024;
+    private static final int maxProofPlusVkSize = 9 * 1024;
+    private static final int thresholdSignatureCustomFieldsNum = 1;
 
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, provingKeyPath, verificationKeyPath, maxProofSize, maxVkSize);
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, thresholdSignatureCustomFieldsNum, provingKeyPath, verificationKeyPath, maxProofPlusVkSize);
     }
 }

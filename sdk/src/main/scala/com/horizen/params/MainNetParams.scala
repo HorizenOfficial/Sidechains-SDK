@@ -1,7 +1,7 @@
 package com.horizen.params
 import java.math.BigInteger
 
-import com.horizen.commitmenttree.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block

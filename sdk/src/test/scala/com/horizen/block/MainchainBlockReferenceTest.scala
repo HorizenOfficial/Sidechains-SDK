@@ -1,7 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.Ints
-import com.horizen.commitmenttree.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.{Ignore, Test}

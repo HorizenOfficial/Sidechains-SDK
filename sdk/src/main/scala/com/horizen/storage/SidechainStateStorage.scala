@@ -2,7 +2,6 @@ package com.horizen.storage
 
 
 import java.util.{ArrayList => JArrayList}
-
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
@@ -13,6 +12,7 @@ import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo,
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -32,6 +32,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
+
+  private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
@@ -162,6 +164,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }
 
+  def hasCeased: Boolean = {
+    storage.get(ceasingStateKey).isPresent
+  }
+
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
     storage.get(consensusEpochKey).asScala match {
       case Some(baw) =>
@@ -185,7 +191,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              consensusEpoch: ConsensusEpochNumber,
              topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
              blockFeeInfo: BlockFeeInfo,
-             utxoMerkleTreeRootOpt: Option[Array[Byte]]): Try[SidechainStateStorage] = Try {
+             utxoMerkleTreeRootOpt: Option[Array[Byte]],
+             scHasCeased: Boolean): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -271,6 +278,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
     }
+
+    // If sidechain has ceased set the flag
+    if(scHasCeased)
+      updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     storage.update(version, updateList, removeList)
 

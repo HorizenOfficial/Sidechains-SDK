@@ -9,7 +9,7 @@ import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
 import com.horizen.box.{ForgerBox, NoncedBox}
-import com.horizen.commitmenttree.CustomBitvectorElementsConfig
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures._

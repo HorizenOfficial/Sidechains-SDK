@@ -128,7 +128,8 @@ class SidechainStateIntegrationTest
       initialConsensusEpoch,
       None,
       initialBlockFeeInfo,
-      None
+      None,
+      scHasCeased = false
     )
 
     // Init SidechainStateForgerBoxStorage with forger boxes
@@ -258,6 +259,9 @@ class SidechainStateIntegrationTest
     // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
     assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
       sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
+
+    // Check that SC is alive
+    assertFalse("SC must be alive", sidechainState.hasCeased)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     assertTrue("ApplyChanges for block must be successful.",

@@ -5,6 +5,7 @@ import com.horizen.schnorrnative.SchnorrKeyPair;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSecretKey;
 import com.horizen.schnorrnative.SchnorrSignature;
+import com.horizen.librustsidechains.Constants;
 
 import java.util.EnumMap;
 
@@ -65,16 +66,16 @@ public class SchnorrFunctionsImplZendoo implements SchnorrFunctions {
 
     @Override
     public int schnorrSecretKeyLength() {
-        return SchnorrSecretKey.SECRET_KEY_LENGTH;
+        return Constants.SCHNORR_SK_LENGTH();
     }
 
     @Override
     public int schnorrPublicKeyLength(){
-        return SchnorrPublicKey.PUBLIC_KEY_LENGTH;
+        return Constants.SCHNORR_PK_LENGTH();
     }
 
     @Override
     public int schnorrSignatureLength() {
-        return SchnorrSignature.SIGNATURE_LENGTH;
+        return Constants.SCHNORR_SIGNATURE_LENGTH();
     }
 }

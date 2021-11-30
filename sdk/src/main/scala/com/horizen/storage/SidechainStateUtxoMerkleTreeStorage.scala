@@ -27,11 +27,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     val treeHeight: Int = CryptoLibProvider.cswCircuitFunctions.utxoMerkleTreeHeight()
     val merkleTree = new InMemorySparseMerkleTreeWrapper(treeHeight)
 
-    val newLeaves: Seq[JPair[FieldElement, Integer]] = getAllLeavesInfo.map(leafInfo => {
-      new JPair(FieldElement.deserialize(leafInfo.leaf), Integer.valueOf(leafInfo.position))
-    })
+    val newLeaves: Map[java.lang.Long, FieldElement] = getAllLeavesInfo.map(leafInfo => {
+      long2Long(leafInfo.position) -> FieldElement.deserialize(leafInfo.leaf)
+    }).toMap
     merkleTree.addLeaves(newLeaves.asJava)
-    newLeaves.foreach(pair => pair.getKey.freeFieldElement())
+    newLeaves.foreach(_._2.close())
 
     merkleTree
   }
@@ -79,11 +79,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
 
     // Remove leaves from inmemory tree
     require(merkleTreeWrapper.removeLeaves(boxesToRemoveSet.flatMap(id => {
-      getLeafInfo(id.data).map(leafInfo => Integer.valueOf(leafInfo.position))
-    }).toList.asJava), "Failed to remove leaves from UtxoMerkleTree")
+      getLeafInfo(id.data).map(leafInfo => leafInfo.position)
+    }).toArray), "Failed to remove leaves from UtxoMerkleTree")
 
     // Collect positions for the new leaves and check that there is enough empty space in the tree
-    val newLeavesPositions = merkleTreeWrapper.leftmostEmptyPositions(boxesToAppend.size).asScala
+    val newLeavesPositions: Seq[Long] = merkleTreeWrapper.leftmostEmptyPositions(boxesToAppend.size).asScala.map(Long2long)
     if (newLeavesPositions.size != boxesToAppend.size) {
       throw new IllegalStateException("Not enough empty leaves in the UTXOMerkleTree.")
     }
@@ -92,11 +92,11 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
 
     // Add leaves to inmemory tree
     require(merkleTreeWrapper.addLeaves(leavesToAppend.map {
-      case ((_, leaf: FieldElement), position: Integer) => new JPair[FieldElement, Integer](leaf, position)
-    }.asJava), "Failed to add leaves to UtxoMerkleTree")
+      case ((_, leaf: FieldElement), position: Long) => long2Long(position) -> leaf
+    }.toMap.asJava), "Failed to add leaves to UtxoMerkleTree")
 
     val updateList: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = leavesToAppend.map {
-      case ((key: ByteArrayWrapper, leaf: FieldElement), position: Integer) =>
+      case ((key: ByteArrayWrapper, leaf: FieldElement), position: Long) =>
         val leafBytes = leaf.serializeFieldElement()
         leaf.freeFieldElement()
 

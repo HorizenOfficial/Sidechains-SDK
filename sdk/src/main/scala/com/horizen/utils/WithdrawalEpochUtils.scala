@@ -23,16 +23,15 @@ object WithdrawalEpochUtils {
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
 
-  def inReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    if (block.mainchainBlockReferencesData.nonEmpty && inSubmitCertificateWindow(parentEpochInfo, params)) {
-      val mcBlocksLeft = certificateSubmissionWindowLength(params) - parentEpochInfo.lastEpochIndex
-      // It can be no blocks left if parent reached exactly the end of the window.
-      // SC block may have multiple MCBlockRefData entries that reach or even exceed the CertificateSubmissionWindowEnd
-      mcBlocksLeft > 0 && block.mainchainBlockReferencesData.size >= mcBlocksLeft
-    } else {
-      // SC block has no MCBlockRefData or parent is not inside the window at all
-      false
-    }
+  def hasReachedCertificateSubmissionWindowEnd(newEpochInfo: WithdrawalEpochInfo, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    inSubmitCertificateWindow(parentEpochInfo, params) && // parent was in the submission window
+      newEpochInfo != parentEpochInfo && // new block should increase epoch index (corner case: parent in the end odf the window)
+      newEpochInfo.lastEpochIndex >= certificateSubmissionWindowLength(params) // new block may have multiple ref data so may pass over the window
+  }
+
+  def hasReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    val newEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentEpochInfo, params)
+    hasReachedCertificateSubmissionWindowEnd(newEpochInfo, parentEpochInfo, params)
   }
 
   def isEpochLastIndex(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {

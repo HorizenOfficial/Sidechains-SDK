@@ -1,9 +1,9 @@
 package com.horizen.block
 
 import com.horizen.utils.BytesUtils
-import com.horizen.commitmenttree.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
+import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.sigproofnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
@@ -188,13 +188,25 @@ class SidechainCommitmentTree {
   }
 
   def getSidechainCommitmentMerklePath(sidechainId: Array[Byte]): Option[Array[Byte]] = {
-    // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
-    Some(new Array[Byte](100))
+    commitmentTree.getScCommitmentMerklePath(sidechainId).asScala match {
+      case Some(merklePath) => {
+        val merklePathBytes = merklePath.serialize()
+        merklePath.freeMerklePath()
+        Some(merklePathBytes)
+      }
+      case None => None
+    }
   }
 
-  def getForwardTransferMerklePath(sidechainId: Array[Byte], ftLeaf: Int): Option[Array[Byte]] = {
-    // TODO: implement in CCTP lib and provide an interface in sc-cryptolib
-    Some(new Array[Byte](50))
+  def getForwardTransferMerklePath(sidechainId: Array[Byte], ftLeafIndex: Int): Option[Array[Byte]] = {
+    commitmentTree.getFwtMerklePath(sidechainId, ftLeafIndex).asScala match {
+      case Some(merklePath) => {
+        val merklePathBytes = merklePath.serialize()
+        merklePath.freeMerklePath()
+        Some(merklePathBytes)
+      }
+      case None => None
+    }
   }
 
   def free(): Unit = {

@@ -1,10 +1,10 @@
 package com.horizen.utils
 
-import com.horizen.librustsidechains.FieldElement
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-
 import java.util
+
+import com.horizen.cryptolibprovider.FieldElementUtils
 
 
 sealed trait CswData extends BytesSerializable
@@ -167,9 +167,9 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
     val scCommitmentMerklePathLength = r.getInt()
     val scCommitmentMerklePath = r.getBytes(scCommitmentMerklePathLength)
 
-    val btrCommitment = r.getBytes(FieldElement.FIELD_ELEMENT_LENGTH)
-    val certCommitment = r.getBytes(FieldElement.FIELD_ELEMENT_LENGTH)
-    val scCrCommitment = r.getBytes(FieldElement.FIELD_ELEMENT_LENGTH)
+    val btrCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
+    val certCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
+    val scCrCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
 
     val ftMerklePathLength = r.getInt()
     val ftMerklePath = r.getBytes(ftMerklePathLength)
