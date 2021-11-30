@@ -370,8 +370,17 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     }
 
 
-    // Test 2: sidechain is ceased, but not box id entry found
+    // Test 2: sidecahin is ceased, but no WitnessHolder defined
     cswManager.hasSidechainCeased = true
+    cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
+    cswInfoTry match {
+      case Success(_) => Assert.fail("Failure expected since sc is ceased, but there is no witnesses defined.")
+      case Failure(_: IllegalStateException) => // expected case
+      case Failure(_) => Assert.fail("Different exception found.")
+    }
+
+
+    // Test 3: sidechain is ceased, but no box id entry found
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(Map(), Map(), None, new Array[Byte](32), Seq(), new Array[Byte](32)))
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
@@ -382,7 +391,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     }
 
 
-    // Test 3: sidechain is ceased, box id record exists
+    // Test 4: sidechain is ceased, box id record exists
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
     cswInfoTry match {
@@ -400,7 +409,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     }
 
 
-    // Test 4: Add proof info in the queue info
+    // Test 5: Add proof info in the queue info
     cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
@@ -412,7 +421,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     }
 
 
-    // Test 5: Add proof info to in process
+    // Test 6: Add proof info to in process
     cswManager.proofsInQueue.clear()
     cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
 
@@ -425,7 +434,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     }
 
 
-    // Test 6: Add generated proof
+    // Test 7: Add generated proof
     cswManager.proofInProcessOpt = None
     val expectedProofInfo = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(senderAddress))
     cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = expectedProofInfo
