@@ -2,14 +2,16 @@ package com.horizen.utils
 
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-import java.util
 
+import java.util
 import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.fwtnative.ForwardTransferOutput
+import com.horizen.scutxonative.ScUtxoOutput
 
 
 sealed trait CswData extends BytesSerializable {
   val amount: Long
-  def getNullifier: Array[Byte]
+  val getNullifier: Array[Byte]
 }
 
 case class UtxoCswData(boxId: Array[Byte],
@@ -22,8 +24,13 @@ case class UtxoCswData(boxId: Array[Byte],
 
   override def serializer: ScorexSerializer[UtxoCswData] = UtxoCswDataSerializer
 
-  // TODO: use box to nullifier method of sc-cryptolib
-  override def getNullifier: Array[Byte] = FieldElementUtils.randomFieldElementBytes()
+  override lazy val getNullifier: Array[Byte] = {
+    val utxo: ScUtxoOutput = new ScUtxoOutput(spendingPubKey, amount, nonce, customHash)
+    val nullifierFe = utxo.getNullifier
+    val nullifier = nullifierFe.serializeFieldElement()
+    nullifierFe.freeFieldElement()
+    nullifier
+  }
 
   override def hashCode(): Int = {
     var result = util.Arrays.hashCode(boxId)
@@ -49,9 +56,9 @@ case class UtxoCswData(boxId: Array[Byte],
 
 case class ForwardTransferCswData(boxId: Array[Byte],
                                   amount: Long,
-                                  receivedPubKey: Array[Byte],
-                                  mcReturnAddress: Array[Byte],
-                                  mcTxHash: Array[Byte],
+                                  receiverPubKey: Array[Byte],
+                                  paybackAddrDataHash: Array[Byte],
+                                  txHash: Array[Byte],
                                   outIdx: Int,
                                   scCommitmentMerklePath: Array[Byte],
                                   btrCommitment: Array[Byte],
@@ -62,15 +69,20 @@ case class ForwardTransferCswData(boxId: Array[Byte],
 
   override def serializer: ScorexSerializer[ForwardTransferCswData] = ForwardTransferCswDataSerializer
 
-  // TODO: use box to nullifier method of sc-cryptolib
-  override def getNullifier: Array[Byte] = FieldElementUtils.randomFieldElementBytes()
+  override lazy val getNullifier: Array[Byte] = {
+    val ft: ForwardTransferOutput = new ForwardTransferOutput(amount, receiverPubKey, paybackAddrDataHash, txHash, outIdx)
+    val nullifierFe = ft.getNullifier
+    val nullifier = nullifierFe.serializeFieldElement()
+    nullifierFe.freeFieldElement()
+    nullifier
+  }
 
   override def hashCode(): Int = {
     var result = util.Arrays.hashCode(boxId)
     result = 31 * result + amount.hashCode()
-    result = 31 * result + util.Arrays.hashCode(receivedPubKey)
-    result = 31 * result + util.Arrays.hashCode(mcReturnAddress)
-    result = 31 * result + util.Arrays.hashCode(mcTxHash)
+    result = 31 * result + util.Arrays.hashCode(receiverPubKey)
+    result = 31 * result + util.Arrays.hashCode(paybackAddrDataHash)
+    result = 31 * result + util.Arrays.hashCode(txHash)
     result = 31 * result + outIdx
     result = 31 * result + util.Arrays.hashCode(scCommitmentMerklePath)
     result = 31 * result + util.Arrays.hashCode(btrCommitment)
@@ -83,8 +95,8 @@ case class ForwardTransferCswData(boxId: Array[Byte],
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: ForwardTransferCswData => boxId.sameElements(other.boxId) && amount == other.amount &&
-        receivedPubKey.sameElements(other.receivedPubKey) && mcReturnAddress.sameElements(other.mcReturnAddress) &&
-        mcTxHash.sameElements(other.mcTxHash) && outIdx == other.outIdx && scCommitmentMerklePath.sameElements(other.scCommitmentMerklePath) &&
+        receiverPubKey.sameElements(other.receiverPubKey) && paybackAddrDataHash.sameElements(other.paybackAddrDataHash) &&
+        txHash.sameElements(other.txHash) && outIdx == other.outIdx && scCommitmentMerklePath.sameElements(other.scCommitmentMerklePath) &&
         btrCommitment.sameElements(other.btrCommitment) && certCommitment.sameElements(other.certCommitment) &&
         scCrCommitment.sameElements(other.scCrCommitment) && ftMerklePath.sameElements(other.ftMerklePath)
       case _ => false
@@ -152,10 +164,10 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
   override def serialize(obj: ForwardTransferCswData, w: Writer): Unit = {
     w.putBytes(obj.boxId)
     w.putLong(obj.amount)
-    w.putInt(obj.receivedPubKey.length)
-    w.putBytes(obj.receivedPubKey)
-    w.putBytes(obj.mcReturnAddress)
-    w.putBytes(obj.mcTxHash)
+    w.putInt(obj.receiverPubKey.length)
+    w.putBytes(obj.receiverPubKey)
+    w.putBytes(obj.paybackAddrDataHash)
+    w.putBytes(obj.txHash)
     w.putInt(obj.outIdx)
     w.putInt(obj.scCommitmentMerklePath.length)
     w.putBytes(obj.scCommitmentMerklePath)
@@ -171,11 +183,11 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
 
     val amount = r.getLong()
 
-    val receivedPubKeyLength = r.getInt()
-    val receivedPubKey = r.getBytes(receivedPubKeyLength)
+    val receiverPubKeyLength = r.getInt()
+    val receiverPubKey = r.getBytes(receiverPubKeyLength)
 
-    val mcReturnAddress = r.getBytes(20)
-    val mcTxHash = r.getBytes(32)
+    val paybackAddrDataHash = r.getBytes(20)
+    val txHash = r.getBytes(32)
     val outIdx = r.getInt()
 
     val scCommitmentMerklePathLength = r.getInt()
@@ -188,7 +200,7 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
     val ftMerklePathLength = r.getInt()
     val ftMerklePath = r.getBytes(ftMerklePathLength)
 
-    ForwardTransferCswData(boxId, amount, receivedPubKey, mcReturnAddress, mcTxHash, outIdx,
+    ForwardTransferCswData(boxId, amount, receiverPubKey, paybackAddrDataHash, txHash, outIdx,
       scCommitmentMerklePath, btrCommitment, certCommitment, scCrCommitment, ftMerklePath)
   }
 }

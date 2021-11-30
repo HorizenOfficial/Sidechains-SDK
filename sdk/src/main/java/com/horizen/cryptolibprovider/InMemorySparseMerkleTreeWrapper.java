@@ -113,6 +113,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
     // return byte representation of merkle path or null if there is no leaf at given pos.
     public byte[] merklePath(long pos) {
         try {
+            merkleTree.finalizeInPlace();
             MerklePath mp = merkleTree.getMerklePath(pos);
             byte[] mpBytes = mp.serialize();
             mp.freeMerklePath();

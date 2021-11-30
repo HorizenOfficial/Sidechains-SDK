@@ -15,7 +15,6 @@ public class InMemorySparseMerkleTreeWrapperTest {
     final int treeHeight = 10;
     long totalLeavesNumber = 1 << treeHeight;
 
-    @Ignore
     @Test
     public void checkEmptyPositions() {
         InMemorySparseMerkleTreeWrapper merkleTreeWrapper = new InMemorySparseMerkleTreeWrapper(treeHeight);
@@ -31,9 +30,9 @@ public class InMemorySparseMerkleTreeWrapperTest {
         assertEquals("Different empty position retrieved.", totalLeavesNumber - 1, allEmptyPositions.get(allEmptyPositions.size() - 1).intValue());
 
         // Test out of range empty positions for empty tree
-        assertNull("No positions expected.", merkleTreeWrapper.leftmostEmptyPositions(totalLeavesNumber + 1));
-        assertNull("No positions expected.", merkleTreeWrapper.leftmostEmptyPositions(0));
-        assertNull("No positions expected.", merkleTreeWrapper.leftmostEmptyPositions(-1));
+        assertEquals("No positions expected.", totalLeavesNumber, merkleTreeWrapper.leftmostEmptyPositions(totalLeavesNumber + 1).size());
+        assertEquals("No positions expected.", 0, merkleTreeWrapper.leftmostEmptyPositions(0).size());
+        assertEquals("No positions expected.", 0, merkleTreeWrapper.leftmostEmptyPositions(-1).size());
     }
 
     @Test

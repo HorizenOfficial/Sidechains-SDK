@@ -52,7 +52,7 @@ class CswManager(settings: SidechainSettings,
       reportStrangeInput
   }
 
-  private def workingCycle: Receive = {
+  private[csw] def workingCycle: Receive = {
     onChangedState orElse
       onGetCeasedStatus orElse
       onGetBoxNullifier orElse
@@ -247,8 +247,8 @@ class CswManager(settings: SidechainSettings,
 
   private def findCswData(boxId: Array[Byte]): Option[CswData] = {
     val id = new ByteArrayWrapper(boxId)
-    cswWitnessHolderOpt.map(cswWitnessHolder => {
-      cswWitnessHolder.ftCswDataMap.get(id).orElse(cswWitnessHolder.utxoCswDataMap.get(id)).asInstanceOf[CswData]
+    cswWitnessHolderOpt.flatMap(cswWitnessHolder => {
+      cswWitnessHolder.ftCswDataMap.get(id).orElse(cswWitnessHolder.utxoCswDataMap.get(id)).map(_.asInstanceOf[CswData])
     })
   }
 
