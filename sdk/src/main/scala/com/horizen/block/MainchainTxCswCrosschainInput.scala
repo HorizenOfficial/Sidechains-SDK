@@ -40,9 +40,9 @@ object MainchainTxCswCrosschainInput {
 
     val nullifierSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
     currentOffset += nullifierSize.size()
-    if(nullifierSize.value() != FieldElementUtils.maximumFieldElementLength())
+    if(nullifierSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: nullifier size ${nullifierSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElementUtils.maximumFieldElementLength()}")
+        s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
     val nullifier: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + nullifierSize.value().intValue())
     currentOffset += nullifierSize.value().intValue()
 
@@ -63,9 +63,9 @@ object MainchainTxCswCrosschainInput {
     val actCertDataHashOpt: Option[Array[Byte]] = if(actCertDataHashSize.value() == 0) {
       None
     } else {
-      if (actCertDataHashSize.value() != FieldElementUtils.maximumFieldElementLength())
+      if (actCertDataHashSize.value() != FieldElementUtils.fieldElementLength())
         throw new IllegalArgumentException(s"Input data corrupted: actCertDataHash size ${actCertDataHashSize.value()} " +
-          s"is expected to be FieldElement size ${FieldElementUtils.maximumFieldElementLength()}")
+          s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
 
       val actCertDataHash: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + actCertDataHashSize.value().intValue())
       currentOffset += actCertDataHashSize.value().intValue()
@@ -76,9 +76,9 @@ object MainchainTxCswCrosschainInput {
     val ceasingCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.size()
 
-    if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.maximumFieldElementLength())
+    if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: ceasingCumulativeScTxCommitmentTreeRoot size ${ceasingCumulativeScTxCommitmentTreeRootSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElementUtils.maximumFieldElementLength()}")
+        s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
     val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue())
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()
 

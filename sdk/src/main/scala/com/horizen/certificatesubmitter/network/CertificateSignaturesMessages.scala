@@ -63,7 +63,7 @@ class CertificateSignaturesSpec(signaturesLimit: Int) extends MessageSpecV1[Know
   override val messageName: String = CertificateSignaturesSpec.messageName
 
   override def serialize(inv: KnownSignatures, w: Writer): Unit = {
-    require(inv.messageToSign.length == FieldElementUtils.maximumFieldElementLength(), "messageToSign has invalid length")
+    require(inv.messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
     require(inv.signaturesInfo.nonEmpty, "empty signaturesInfo list")
     require(inv.signaturesInfo.size <= signaturesLimit, s"more signatures info entries than max allowed $signaturesLimit in a message")
 
@@ -78,7 +78,7 @@ class CertificateSignaturesSpec(signaturesLimit: Int) extends MessageSpecV1[Know
   }
 
   override def parse(r: Reader): KnownSignatures = {
-    val messageToSign = r.getBytes(FieldElementUtils.maximumFieldElementLength())
+    val messageToSign = r.getBytes(FieldElementUtils.fieldElementLength())
 
     val length = r.getUInt().toInt
     require(length <= signaturesLimit, s"Too many signatures info entries. $length exceeds limit $signaturesLimit")

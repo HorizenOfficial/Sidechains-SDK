@@ -14,7 +14,7 @@ import scala.util.Try
 
 case class FieldElementCertificateField(rawData: Array[Byte]) {
   lazy val fieldElementBytes: Array[Byte] = {
-    Bytes.concat(new Array[Byte](FieldElementUtils.maximumFieldElementLength() - rawData.length), rawData)
+    Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {
@@ -86,9 +86,9 @@ object WithdrawalEpochCertificate {
 
     val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
-    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.maximumFieldElementLength())
+    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: endCumulativeScTxCommitmentTreeRoot size ${endCumulativeScTxCommitmentTreeRootSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElementUtils.maximumFieldElementLength()}")
+        s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
 
     val endCumulativeScTxCommitmentTreeRoot: Array[Byte] = certificateBytes.slice(
       currentOffset, currentOffset + endCumulativeScTxCommitmentTreeRootSize.value().intValue())

@@ -34,7 +34,7 @@ class VrfFunctionsTest {
     val rnd = new Random()
 
     for (i <- 1 to 10) {
-      val messageLen = rnd.nextInt(128) % FieldElementUtils.maximumFieldElementLength()
+      val messageLen = rnd.nextInt(128) % FieldElementUtils.fieldElementLength()
       val newMessage = rnd.nextString(rnd.nextInt(128)).getBytes.take(messageLen)
       val firstVrfProofBytes = CryptoLibProvider.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)
       val secondVrfProofBytes = CryptoLibProvider.vrfFunctions.createProof(secretBytes, publicBytes, newMessage).get(ProofType.VRF_PROOF)

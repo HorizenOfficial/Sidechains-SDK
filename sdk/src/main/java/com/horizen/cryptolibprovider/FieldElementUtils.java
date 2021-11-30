@@ -7,25 +7,25 @@ import com.horizen.utils.BytesUtils;
 import java.util.Arrays;
 
 public class FieldElementUtils {
-    public static int maximumFieldElementLength() {
+    public static int fieldElementLength() {
         return Constants.FIELD_ELEMENT_LENGTH();
     }
 
     static FieldElement messageToFieldElement(byte[] message) {
-        if (message.length > maximumFieldElementLength()) {
+        if (message.length > fieldElementLength()) {
             throw new IllegalArgumentException("Message length is exceed allowed message len. Message len " +
-                    message.length + " but it shall be less than " + maximumFieldElementLength());
+                    message.length + " but it shall be less than " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(message, maximumFieldElementLength()));
+        return FieldElement.deserialize(Arrays.copyOf(message, fieldElementLength()));
     }
 
     public static FieldElement hashToFieldElement(String hexByte) {
         byte[] hashBytes = BytesUtils.fromHexString(hexByte);
-        if (hashBytes.length > maximumFieldElementLength()) {
+        if (hashBytes.length > fieldElementLength()) {
             throw new IllegalArgumentException("Hash length is exceed Poseidon hash len. Hash len " +
-                    hashBytes.length + " but it shall be " + maximumFieldElementLength());
+                    hashBytes.length + " but it shall be " + fieldElementLength());
         }
-        return FieldElement.deserialize(Arrays.copyOf(hashBytes, maximumFieldElementLength()));
+        return FieldElement.deserialize(Arrays.copyOf(hashBytes, fieldElementLength()));
     }
 
     public static byte[] randomFieldElementBytes() {

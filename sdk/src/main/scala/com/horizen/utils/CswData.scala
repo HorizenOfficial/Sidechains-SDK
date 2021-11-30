@@ -181,9 +181,9 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
     val scCommitmentMerklePathLength = r.getInt()
     val scCommitmentMerklePath = r.getBytes(scCommitmentMerklePathLength)
 
-    val btrCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
-    val certCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
-    val scCrCommitment = r.getBytes(FieldElementUtils.maximumFieldElementLength())
+    val btrCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
+    val certCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
+    val scCrCommitment = r.getBytes(FieldElementUtils.fieldElementLength())
 
     val ftMerklePathLength = r.getInt()
     val ftMerklePath = r.getBytes(ftMerklePathLength)

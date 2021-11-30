@@ -557,7 +557,7 @@ object CertificateSubmitter {
 
   case class CertificateSignatureFromRemoteInfo(pubKeyIndex: Int, messageToSign: Array[Byte], signature: SchnorrProof) {
     require(pubKeyIndex >= 0, "pubKeyIndex can't be negative value.")
-    require(messageToSign.length == FieldElementUtils.maximumFieldElementLength(), "messageToSign has invalid length")
+    require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
   }
 
   // Internal interface

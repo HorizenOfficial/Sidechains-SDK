@@ -300,8 +300,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "SIGNER_PUBLIC_KEY": json.dumps(bootstrap_info.certificate_proof_info.schnorr_public_keys),
         "SIGNER_PRIVATE_KEY": json.dumps(signer_private_keys),
         "MAX_PKS": len(bootstrap_info.certificate_proof_info.schnorr_public_keys),
-        "PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
-        "VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
+        "CERT_PROVING_KEY_PATH": bootstrap_info.cert_keys_paths.proving_key_path,
+        "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path,
@@ -349,8 +349,8 @@ def initialize_default_sc_datadir(dirname, n):
         'OFFLINE_GENERATION': "false",
         "SUBMITTER_CERTIFICATE": "false",
         "CERTIFICATE_SIGNING": "false",
-        "PROVING_KEY_PATH": cert_keys_paths.proving_key_path,
-        "VERIFICATION_KEY_PATH": cert_keys_paths.verification_key_path,
+        "CERT_PROVING_KEY_PATH": cert_keys_paths.proving_key_path,
+        "CERT_VERIFICATION_KEY_PATH": cert_keys_paths.verification_key_path,
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path
     }
@@ -704,14 +704,14 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
 
 def proof_keys_paths(dirname):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "marlin_snark_pk").replace("\\", "/"),
-                          os.path.join(dirname, "marlin_snark_vk").replace("\\", "/"))
+    return ProofKeysPaths(os.path.join(dirname, "cert_marlin_snark_pk").replace("\\", "/"),
+                          os.path.join(dirname, "cert_marlin_snark_vk").replace("\\", "/"))
 
 
 def csw_proof_keys_paths(dirname):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "marlin_csw_pk").replace("\\", "/"),
-                          os.path.join(dirname, "marlin_csw_vk").replace("\\", "/"))
+    return ProofKeysPaths(os.path.join(dirname, "csw_marlin_csw_pk").replace("\\", "/"),
+                          os.path.join(dirname, "csw_marlin_csw_vk").replace("\\", "/"))
 
 
 """

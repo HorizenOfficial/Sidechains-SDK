@@ -121,7 +121,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
     }
 
     val lowerCertificateLeavesSize: Int = r.getInt()
-    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.maximumFieldElementLength()))
+    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.fieldElementLength()))
 
     val topQualityCertificateSize: Int = r.getInt()
     val topQualityCertificate: Option[WithdrawalEpochCertificate] = {

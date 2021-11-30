@@ -6,7 +6,7 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends BytesSerializable {
-  require(leaf.length == FieldElementUtils.maximumFieldElementLength(), "Storage must be NOT NULL.")
+  require(leaf.length == FieldElementUtils.fieldElementLength(), "Storage must be NOT NULL.")
 
   override type M = UtxoMerkleTreeLeafInfo
 
@@ -32,7 +32,7 @@ object UtxoMerkleTreeLeafInfoSerializer extends ScorexSerializer[UtxoMerkleTreeL
   }
 
   override def parse(r: Reader): UtxoMerkleTreeLeafInfo = {
-    val leaf = r.getBytes(FieldElementUtils.maximumFieldElementLength())
+    val leaf = r.getBytes(FieldElementUtils.fieldElementLength())
     val position = r.getLong()
     UtxoMerkleTreeLeafInfo(leaf, position)
   }

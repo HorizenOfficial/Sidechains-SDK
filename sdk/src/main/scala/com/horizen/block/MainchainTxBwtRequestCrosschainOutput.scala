@@ -36,9 +36,9 @@ object MainchainTxBwtRequestCrosschainOutput {
       val dataSize = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
       currentOffset += dataSize.size()
 
-      if(dataSize.value() != FieldElementUtils.maximumFieldElementLength())
+      if(dataSize.value() != FieldElementUtils.fieldElementLength())
         throw new IllegalArgumentException(s"Input data corrupted: scRequestData[$idx] size ${dataSize.value()} " +
-          s"is expected to be FieldElement size ${FieldElementUtils.maximumFieldElementLength()}")
+          s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
 
       val scRequestData: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + dataSize.value().intValue())
       currentOffset += dataSize.value().intValue()
