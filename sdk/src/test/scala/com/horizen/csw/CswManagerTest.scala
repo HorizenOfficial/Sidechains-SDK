@@ -6,12 +6,11 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
-import com.horizen.csw.CswManager.ReceivableMessages.{GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
-import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, Generated, InProcess, InQueue}
-import com.horizen.cswnative.CswProof
+import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
+import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, GenerateCswProofStatus, Generated, InProcess, InQueue, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
 import com.horizen.fixtures.CswDataFixture
 import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
-import com.horizen.params.NetworkParams
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit.{Assert, Test}
@@ -31,6 +30,21 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
+
+  val senderAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK" // mainnet
+
+  val utxoData1: UtxoCswData = getUtxoCswData(1000L)
+  val utxoData2: UtxoCswData = getUtxoCswData(2000L)
+  val utxoMap = Map(
+    new ByteArrayWrapper(utxoData1.boxId) -> utxoData1,
+    new ByteArrayWrapper(utxoData2.boxId) -> utxoData2
+  )
+  val ftData1: ForwardTransferCswData = getForwardTransferCswData(3000L)
+  val ftData2: ForwardTransferCswData = getForwardTransferCswData(4000L)
+  val ftMap = Map(
+    new ByteArrayWrapper(ftData1.boxId) -> ftData1,
+    new ByteArrayWrapper(ftData2.boxId) -> ftData2
+  )
 
   private def getMockedSettings(timeoutDuration: FiniteDuration): SidechainSettings = {
     val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
@@ -245,20 +259,6 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     // skip initialization
     cswManager.context.become(cswManager.workingCycle)
 
-
-    val utxoData1: UtxoCswData = getUtxoCswData(1000L)
-    val utxoData2: UtxoCswData = getUtxoCswData(2000L)
-    val utxoMap = Map(
-      new ByteArrayWrapper(utxoData1.boxId) -> utxoData1,
-      new ByteArrayWrapper(utxoData2.boxId) -> utxoData2
-    )
-    val ftData1: ForwardTransferCswData = getForwardTransferCswData(3000L)
-    val ftData2: ForwardTransferCswData = getForwardTransferCswData(4000L)
-    val ftMap = Map(
-      new ByteArrayWrapper(ftData1.boxId) -> ftData1,
-      new ByteArrayWrapper(ftData2.boxId) -> ftData2
-    )
-
     // Test 1: sidechain is alive -> failure expected
     cswManager.hasSidechainCeased = false
 
@@ -333,19 +333,6 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
 
 
     // Test 3: sidechain has ceased, box ids exist
-    // Set witness holder with ft and utxo csw data entries
-    val utxoData1: UtxoCswData = getUtxoCswData(1000L)
-    val utxoData2: UtxoCswData = getUtxoCswData(2000L)
-    val utxoMap = Map(
-      new ByteArrayWrapper(utxoData1.boxId) -> utxoData1,
-      new ByteArrayWrapper(utxoData2.boxId) -> utxoData2
-    )
-    val ftData1: ForwardTransferCswData = getForwardTransferCswData(3000L)
-    val ftData2: ForwardTransferCswData = getForwardTransferCswData(4000L)
-    val ftMap = Map(
-      new ByteArrayWrapper(ftData1.boxId) -> ftData1,
-      new ByteArrayWrapper(ftData2.boxId) -> ftData2
-    )
     val expectedBoxIds = Seq(utxoData1.boxId, utxoData2.boxId, ftData1.boxId, ftData2.boxId).map(new ByteArrayWrapper(_))
 
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
@@ -370,20 +357,6 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
 
     // skip initialization
     cswManager.context.become(cswManager.workingCycle)
-
-
-    val utxoData1: UtxoCswData = getUtxoCswData(1000L)
-    val utxoData2: UtxoCswData = getUtxoCswData(2000L)
-    val utxoMap = Map(
-      new ByteArrayWrapper(utxoData1.boxId) -> utxoData1,
-      new ByteArrayWrapper(utxoData2.boxId) -> utxoData2
-    )
-    val ftData1: ForwardTransferCswData = getForwardTransferCswData(3000L)
-    val ftData2: ForwardTransferCswData = getForwardTransferCswData(4000L)
-    val ftMap = Map(
-      new ByteArrayWrapper(ftData1.boxId) -> ftData1,
-      new ByteArrayWrapper(ftData2.boxId) -> ftData2
-    )
 
 
     // Test 1: sidechain is alive -> failure expected
@@ -428,7 +401,6 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
 
 
     // Test 4: Add proof info in the queue info
-    val senderAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK" // mainnet
     cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
@@ -464,5 +436,147 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
       case Failure(_) => Assert.fail("Exception found.")
     }
+  }
+
+  @Test
+  def generateCswProofStates(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration)
+    val params: MainNetParams = MainNetParams()
+
+    val mockedSidechainNodeViewHolder = TestProbe()
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+
+    val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
+      Props(new CswManager(mockedSettings, params, mockedSidechainNodeViewHolderRef)))
+    val cswManager: CswManager = cswManagerRef.underlyingActor
+
+    // skip initialization
+    cswManager.context.become(cswManager.workingCycle)
+
+
+    // Test 1: sidechain is alive
+    var status: GenerateCswProofStatus = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", SidechainIsAlive, status)
+
+
+    // Make sidechain ceased and define witnesses
+    cswManager.hasSidechainCeased = true
+    cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
+
+    // Test 2: invalid address
+    val invalidAddress = "invalid address string"
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, invalidAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", InvalidAddress, status)
+
+
+    // Test 3: no box id found
+    status = Await.result(cswManagerRef ? GenerateCswProof(getRandomBoxId(123L), senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", NoProofData, status)
+
+
+    // Test 4: proof in queue
+    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationInProcess, status)
+
+
+    // Test 5: proof in process
+    cswManager.proofsInQueue.clear()
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationInProcess, status)
+
+
+    // Test 6: generated proof
+    cswManager.proofInProcessOpt = None
+    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(senderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofCreationFinished, status)
+
+
+    // Test 7: start add new proof to queue:
+    cswManager.generatedProofsMap.clear()
+    // set something in process to prevent new proof generation attempt
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData2.boxId), senderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationStarted, status)
+    assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+
+
+    // Test 8: proof was in queue with different senderAddress
+    val otherSenderAddress: String = "other"
+    cswManager.proofsInQueue.clear()
+    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), otherSenderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationStarted, status)
+    assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+
+
+    // Test 9: proof was generated with different senderAddress
+    cswManager.proofsInQueue.clear()
+    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(otherSenderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationStarted, status)
+    assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertEquals("No generated proofs expected to be found.", 0, cswManager.generatedProofsMap.size)
+
+
+    // Test 10: proof was in process with different senderAddress
+    cswManager.proofsInQueue.clear()
+    cswManager.generatedProofsMap.clear()
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), otherSenderAddress))
+
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationStarted, status)
+    assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
+    assertEquals("Different proof in queue entry found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertTrue("Previous proof should be marked as cancelled.", cswManager.proofInProcessOpt.get.isCancelled)
+  }
+
+
+  @Test
+  def generateCswProof(): Unit = {
+    val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration)
+    val params: MainNetParams = MainNetParams()
+
+    val mockedSidechainNodeViewHolder = TestProbe()
+    val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+
+    val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
+      Props(new CswManager(mockedSettings, params, mockedSidechainNodeViewHolderRef)))
+    val cswManager: CswManager = cswManagerRef.underlyingActor
+
+    // skip initialization
+    cswManager.context.become(cswManager.workingCycle)
+
+    // Make sidechain ceased and define witnesses
+    cswManager.hasSidechainCeased = true
+    cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
+
+    // Test 2: invalid address
+    val status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    assertEquals("Different status expected.", ProofGenerationStarted, status)
+
+    // wait
+    val watch = TestProbe()
+    watch.watch(cswManagerRef)
+    watch.expectNoMessage(timeout.duration)
+
+    // check proof in process
+    assertEquals("Different proof queue size.", 0, cswManager.proofsInQueue.size)
+    assertTrue("Proof in process must be found.", cswManager.proofInProcessOpt.isDefined)
+    assertEquals("Proof in process is different.", new ByteArrayWrapper(utxoData1.boxId), cswManager.proofInProcessOpt.get.boxId)
+    assertEquals("Proof in process is different.", senderAddress, cswManager.proofInProcessOpt.get.senderAddress)
   }
 }
