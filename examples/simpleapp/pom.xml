@@ -17,27 +17,6 @@
 			<groupId>io.horizen</groupId>
 			<artifactId>sidechains-sdk</artifactId>
 			<version>0.2.7</version>
-
-			<!-- exclude the default simple-sl4j library and include the bridge to log4j -->
-			<exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-simple</artifactId>
-				</exclusion>
-			</exclusions>
-
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.logging.log4j</groupId>
-			<artifactId>log4j-slf4j-impl</artifactId>
-			<version>2.14.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.logging.log4j</groupId>
-			<artifactId>log4j-core</artifactId>
-			<version>2.14.0</version>
 		</dependency>
 
 		<dependency>
