@@ -3,7 +3,7 @@ package com.horizen
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.{Box, CoinsBox, ForgerBox, NoncedBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
@@ -167,7 +167,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   private[horizen] def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
     boxes().filter(wb => wb.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(wb => {
-      val box = wb.box.asInstanceOf[NoncedBox[_ <: Proposition]]
+      val box = wb.box
       UtxoCswData(box.id(), box.proposition().bytes, box.value(), box.nonce(),
         box.customFieldsHash(), view.utxoMerklePath(box.id()).get)
     })

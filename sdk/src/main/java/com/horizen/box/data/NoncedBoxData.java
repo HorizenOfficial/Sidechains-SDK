@@ -1,10 +1,9 @@
 package com.horizen.box.data;
 
-import com.horizen.box.NoncedBox;
 import com.horizen.proposition.Proposition;
 import scorex.core.serialization.BytesSerializable;
 
-public interface NoncedBoxData<P extends Proposition, B extends NoncedBox<P>> extends BytesSerializable {
+public interface NoncedBoxData<P extends Proposition, B extends com.horizen.box.Box<P>> extends BytesSerializable {
 
     long value();
 

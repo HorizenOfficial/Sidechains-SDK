@@ -25,22 +25,22 @@ import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
 
 public final class RegularTransaction
-    extends SidechainTransaction<Proposition, NoncedBox<Proposition>>
+    extends SidechainTransaction<Proposition, Box<Proposition>>
 {
     private List<ZenBox> inputs;
-    private List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs;
+    private List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs;
     private List<Signature25519> signatures;
 
     private long fee;
 
     private List<Proposition> newBoxesPropositions;
-    private List<NoncedBox<Proposition>> newBoxes;
+    private List<Box<Proposition>> newBoxes;
     private List<BoxUnlocker<Proposition>> unlockers;
 
     // Serializers definition
     private static ListSerializer<ZenBox> boxListSerializer =
             new ListSerializer<>(ZenBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-    private static ListSerializer<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataListSerializer =
+    private static ListSerializer<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> boxDataListSerializer =
             new ListSerializer<>(new DynamicTypedSerializer<>(
                     new HashMap<Byte, NoncedBoxDataSerializer>() {{
                         put(ZenBoxId.id(), ZenBoxDataSerializer.getSerializer());
@@ -52,7 +52,7 @@ public final class RegularTransaction
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 
     private RegularTransaction(List<ZenBox> inputs,
-                               List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
+                               List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
                                long fee) {
         if(inputs.size() != signatures.size())
@@ -101,18 +101,18 @@ public final class RegularTransaction
     }
 
     @Override
-    public synchronized List<NoncedBox<Proposition>> newBoxes() {
+    public synchronized List<Box<Proposition>> newBoxes() {
         if(newBoxes == null) {
             newBoxes = new ArrayList<>();
             for (int i = 0; i < outputs.size(); i++) {
                 long nonce = getNewBoxNonce(outputs.get(i).proposition(), i);
                 NoncedBoxData boxData = outputs.get(i);
                 if(boxData instanceof ZenBoxData) {
-                    newBoxes.add((NoncedBox)new ZenBox((ZenBoxData) boxData, nonce));
+                    newBoxes.add((Box)new ZenBox((ZenBoxData) boxData, nonce));
                 } else if(boxData instanceof WithdrawalRequestBoxData) {
-                    newBoxes.add((NoncedBox)new WithdrawalRequestBox((WithdrawalRequestBoxData) boxData, nonce));
+                    newBoxes.add((Box)new WithdrawalRequestBox((WithdrawalRequestBoxData) boxData, nonce));
                 } else if(boxData instanceof ForgerBoxData) {
-                    newBoxes.add((NoncedBox)new ForgerBox((ForgerBoxData) boxData, nonce));
+                    newBoxes.add((Box)new ForgerBox((ForgerBoxData) boxData, nonce));
                 } else // Never should happen.
                     throw new IllegalArgumentException(String.format("Unexpected BoxData type: %s", boxData.getClass().toString()));
             }
@@ -215,7 +215,7 @@ public final class RegularTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs = boxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs = boxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
@@ -228,7 +228,7 @@ public final class RegularTransaction
         return new RegularTransaction(inputs, outputs, signatures, fee);
     }
 
-    private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> boxDataList) {
+    private static Boolean checkSupportedBoxDataTypes(List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> boxDataList) {
         for(NoncedBoxData boxData: boxDataList) {
             if (!(boxData instanceof ZenBoxData)
                     && !(boxData instanceof WithdrawalRequestBoxData)
@@ -240,7 +240,7 @@ public final class RegularTransaction
     }
 
     public static RegularTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
-                                            List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> outputs,
+                                            List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs,
                                             long fee) {
         if(from == null || outputs == null)
             throw new IllegalArgumentException("Parameters can't be null.");

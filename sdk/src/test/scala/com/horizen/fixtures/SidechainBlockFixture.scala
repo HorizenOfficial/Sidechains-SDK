@@ -6,7 +6,7 @@ import java.util.{HashMap => JHashMap}
 
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{ForgerBox, Box}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
@@ -41,7 +41,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
            parentId: Block.BlockId = null,
            timestamp: Block.Timestamp = -1,
            mainchainBlocksReferencesData: Seq[MainchainBlockReferenceData] = null,
-           sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
+           sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = null,
            mainchainHeaders: Seq[MainchainHeader] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VrfProof = null,
@@ -219,8 +219,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + 10,
-      sidechainTransactions = Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]](
-        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
+      sidechainTransactions = Seq[SidechainTransaction[Proposition, Box[Proposition]]](
+        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       companion = companion,
       params = params,
       basicSeed = basicSeed)

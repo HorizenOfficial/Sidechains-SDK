@@ -28,7 +28,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
     long fee;
     ArrayList<Pair<ZenBox, PrivateKey25519>> from;
-    ArrayList<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to;
+    ArrayList<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to;
 
     ArrayList<Long> expectedNonces;
 
@@ -66,11 +66,11 @@ public class RegularTransactionTest extends BoxFixtureClass {
         RegularTransaction transaction = RegularTransaction.create(from, to, fee);
         assertEquals("Exception during RegularTransaction creation: fee is different!", fee, transaction.fee());
 
-        List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
+        List<Box<Proposition>> newBoxes = transaction.newBoxes();
         assertEquals("Exception during RegularTransaction creation: new boxes count is different!", to.size(), newBoxes.size());
         for(int i = 0; i < to.size(); i++) {
             NoncedBoxData expected = to.get(i);
-            NoncedBox actual = newBoxes.get(i);
+            Box actual = newBoxes.get(i);
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d proposition is different!", i), expected.proposition(), actual.proposition());
             assertEquals(String.format("Exception during RegularTransaction creation: new box %d value is different!", i), expected.value(), actual.value());
         }
@@ -101,7 +101,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
     @Test
     public void newBoxesNonceEnforcingAlgorithmRegressionTest() {
         RegularTransaction transaction = RegularTransaction.create(from, to, fee);
-        List<NoncedBox<Proposition>> newBoxes = transaction.newBoxes();
+        List<Box<Proposition>> newBoxes = transaction.newBoxes();
         for(int i = 0; i < newBoxes.size(); i++){
             assertEquals(String.format("Transaction new box %d has different nonce. Nonce enforcing algorithm is different(%x, %x).", i, expectedNonces.get(i).longValue(), newBoxes.get(i).nonce()),
                     expectedNonces.get(i).longValue(), newBoxes.get(i).nonce());
@@ -152,7 +152,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee);
 
-        List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
+        List<Box<Proposition>> tx1NewBoxes = tx1.newBoxes();
 
         boolean isValid = true;
         try {
@@ -167,7 +167,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         assertEquals("Count of new boxes must be the same as count of withdrawal requests.",
                 to.size(), tx1NewBoxes.size());
-        for(NoncedBox box : tx1NewBoxes ) {
+        for(Box box : tx1NewBoxes ) {
             assertTrue("Box must be WithdrawalRequestBox", box instanceof WithdrawalRequestBox);
             assertTrue("Transaction must contain new box for specified withdrawal requests data.",
                     to.contains(new WithdrawalRequestBoxData((MCPublicKeyHashProposition)box.proposition(), box.value())));
@@ -183,7 +183,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee);
 
-        List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
+        List<Box<Proposition>> tx2NewBoxes = tx2.newBoxes();
 
         try {
             tx2.semanticValidity();
@@ -197,7 +197,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         assertEquals("Count of new boxes must be the same as count of zen boxes and withdrawal requests.",
                 to.size(), tx2NewBoxes.size());
-        for(NoncedBox box : tx2NewBoxes ) {
+        for(Box box : tx2NewBoxes ) {
             if (box instanceof ZenBox)
                 assertTrue("Transaction must contain new box for specified zen boxes data.",
                         to.contains(new ZenBoxData((PublicKey25519Proposition)box.proposition(), box.value())));
@@ -219,7 +219,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee);
 
-        List<NoncedBox<Proposition>> tx1NewBoxes = tx1.newBoxes();
+        List<Box<Proposition>> tx1NewBoxes = tx1.newBoxes();
 
         boolean isValid = true;
         try {
@@ -234,7 +234,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         assertEquals("Count of new boxes must be the same as count of forger boxes.",
                 to.size(), tx1NewBoxes.size());
-        for(NoncedBox box : tx1NewBoxes ) {
+        for(Box box : tx1NewBoxes ) {
             assertTrue("Box must be ForgerBox", box instanceof ForgerBox);
             ForgerBox forgerBox = (ForgerBox)box;
             assertTrue("Transaction must contain new box for specified forger boxes data.",
@@ -251,7 +251,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee);
 
-        List<NoncedBox<Proposition>> tx2NewBoxes = tx2.newBoxes();
+        List<Box<Proposition>> tx2NewBoxes = tx2.newBoxes();
 
         try {
             tx2.semanticValidity();
@@ -265,7 +265,7 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         assertEquals("Count of new boxes must be the same as count of zen boxes and forger boxes.",
                 to.size(), tx2NewBoxes.size());
-        for(NoncedBox box : tx2NewBoxes ) {
+        for(Box box : tx2NewBoxes ) {
             if (box instanceof ZenBox)
                 assertTrue("Transaction must contain new box for specified zen boxes data.",
                         to.contains(new ZenBoxData((PublicKey25519Proposition)box.proposition(), box.value())));

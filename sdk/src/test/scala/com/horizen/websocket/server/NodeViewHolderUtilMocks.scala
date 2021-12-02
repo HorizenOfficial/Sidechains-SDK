@@ -8,7 +8,7 @@ import java.util.{Optional, ArrayList => JArrayList, List => JList}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
-import com.horizen.box.{Box, ForgerBox, NoncedBox, ZenBox}
+import com.horizen.box.{Box, ForgerBox, ZenBox}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
@@ -224,7 +224,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
   private def getTransaction(fee: Long = 1L): RegularTransaction = {
     val from: util.List[Pair[ZenBox, PrivateKey25519]] = new util.ArrayList[Pair[ZenBox, PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     from.add(new Pair(box_1, secret1))
     from.add(new Pair(box_2, secret2))

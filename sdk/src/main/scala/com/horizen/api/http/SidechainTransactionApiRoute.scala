@@ -14,7 +14,7 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.box.{Box, NoncedBox, ZenBox}
+import com.horizen.box.{Box, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
@@ -180,17 +180,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         if (inputBoxes.length < body.transactionInputs.size) {
           ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty()))
         } else {
-          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          val outputs: JList[NoncedBoxData[Proposition, Box[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new ZenBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+              element.value).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
           )
 
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
               MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.mainchainAddress)),
-              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+              element.value).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
           )
 
           body.forgerOutputs.foreach{element =>
@@ -201,7 +201,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
 
-            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
           }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
@@ -352,11 +352,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         if (inputBoxes.length < body.transactionInputs.size) {
           Left(ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty())))
         } else {
-          val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+          val outputs: JList[NoncedBoxData[Proposition, Box[Proposition]]] = new JArrayList()
           body.regularOutputs.foreach(element =>
             outputs.add(new ZenBoxData(
               PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-              element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]]
+              element.value).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]]
             )
           )
           body.forgerOutputs.foreach{element =>
@@ -367,7 +367,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
             )
 
-            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+            outputs.add(forgerBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
           }
 
           val inputsTotalAmount: Long = inputBoxes.map(_.value()).sum
@@ -466,11 +466,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       for(id <- transaction.boxIdsToOpen().asScala)
         boxIdsToExclude.add(id.data)
 
-    val outputs: JList[NoncedBoxData[Proposition, NoncedBox[Proposition]]] = new JArrayList()
+    val outputs: JList[NoncedBoxData[Proposition, Box[Proposition]]] = new JArrayList()
     zenBoxDataList.foreach(element =>
       outputs.add(new ZenBoxData(
         PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-        element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+        element.value).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
     )
 
     withdrawalRequestBoxDataList.foreach(element =>
@@ -478,7 +478,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
         MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
-        element.value).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+        element.value).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
     )
 
     forgerBoxDataList.foreach{element =>
@@ -489,7 +489,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.vrfPubKey))
       )
 
-      outputs.add(forgingBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+      outputs.add(forgingBoxToAdd.asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
     }
 
 
@@ -513,7 +513,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     // Add change if need.
     if(inputsTotalAmount > inputsMinimumExpectedAmount)
-      outputs.add(new ZenBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, NoncedBox[Proposition]]])
+      outputs.add(new ZenBoxData(changeAddress, inputsTotalAmount - inputsMinimumExpectedAmount).asInstanceOf[NoncedBoxData[Proposition, Box[Proposition]]])
 
     // Create unsigned tx
     val boxIds = boxes.map(_.id()).asJava

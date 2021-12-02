@@ -483,7 +483,7 @@ class SidechainWalletTest
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
     val from : JList[Pair[ZenBox, PrivateKey25519]] = new JArrayList()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     Random.nextBytes(blockId)
 
@@ -924,7 +924,7 @@ class SidechainWalletTest
   }
 
   def walletBoxToCswData(box: SidechainTypes#SCB, view: UtxoMerkleTreeView): CswData = {
-    val noncedBox = box.asInstanceOf[NoncedBox[_ <: Proposition]]
+    val noncedBox = box.asInstanceOf[Box[_ <: Proposition]]
     UtxoCswData(box.id(), box.proposition().bytes, box.value(), noncedBox.nonce(),
       box.customFieldsHash(), view.utxoMerklePath(box.id()).get)
   }

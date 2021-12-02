@@ -2,7 +2,7 @@ package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
+import com.horizen.box.{Box, BoxUnlocker}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
@@ -100,7 +100,7 @@ class SidechainJSONBOChecker {
     assertTrue(publicKey.get("publicKey").isTextual)
     if (json.elements().asScala.length > 4) {
       assertTrue(json.get("nonce").isNumber)
-      assertEquals(box.asInstanceOf[NoncedBox[_]].nonce(), json.get("nonce").asLong())
+      assertEquals(box.asInstanceOf[Box[_]].nonce(), json.get("nonce").asLong())
     }
   }
 

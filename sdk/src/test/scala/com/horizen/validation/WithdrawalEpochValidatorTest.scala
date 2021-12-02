@@ -4,7 +4,7 @@ import java.time.Instant
 
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.NoncedBox
+import com.horizen.box.Box
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{VrfGenerator, _}
@@ -297,7 +297,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data), // 2 MainchainBlockReferenceData
-      Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
+      Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]), // 1 SC Transaction
       Seq(),
       Seq(),
       forgerMeta8.blockSignSecret,

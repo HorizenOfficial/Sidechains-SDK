@@ -17,7 +17,7 @@ import java.util.List;
 // This class can spent ZenBoxes and create new ZenBoxes.
 // It also support fee payment logic.
 public abstract class AbstractRegularTransaction
-        extends SidechainNoncedTransaction<Proposition, NoncedBox<Proposition>, NoncedBoxData<Proposition, NoncedBox<Proposition>>> {
+        extends SidechainNoncedTransaction<Proposition, Box<Proposition>, NoncedBoxData<Proposition, Box<Proposition>>> {
 
     protected final List<byte[]> inputZenBoxIds;
     protected final List<Signature25519> inputZenBoxProofs;
@@ -25,7 +25,7 @@ public abstract class AbstractRegularTransaction
 
     protected final long fee;
 
-    List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> allBoxesData;
+    List<NoncedBoxData<Proposition, Box<Proposition>>> allBoxesData;
 
     protected static ListSerializer<Signature25519> zenBoxProofsSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
@@ -54,10 +54,10 @@ public abstract class AbstractRegularTransaction
         this.fee = fee;
     }
 
-    abstract protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getCustomOutputData();
+    abstract protected List<NoncedBoxData<Proposition, Box<Proposition>>> getCustomOutputData();
 
     @Override
-    final protected List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> getOutputData(){
+    final protected List<NoncedBoxData<Proposition, Box<Proposition>>> getOutputData(){
         if(allBoxesData == null){
             allBoxesData = new ArrayList<>();
             // Add own zen boxes data

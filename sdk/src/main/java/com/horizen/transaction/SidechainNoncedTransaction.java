@@ -1,6 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.box.NoncedBox;
+import com.horizen.box.Box;
 import com.horizen.box.data.NoncedBoxData;
 import com.horizen.proposition.Proposition;
 
@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-abstract public class SidechainNoncedTransaction<P extends Proposition, B extends NoncedBox<P>, D extends NoncedBoxData<P, B>>
+abstract public class SidechainNoncedTransaction<P extends Proposition, B extends Box<P>, D extends NoncedBoxData<P, B>>
         extends SidechainTransaction<P, B> {
 
     private List<B> newBoxes;

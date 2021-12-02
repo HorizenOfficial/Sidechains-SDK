@@ -8,7 +8,7 @@ import java.util.Random
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{ForgerBox, Box}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
@@ -193,7 +193,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val vrfProofInBlock: VrfProof = generationRules.corruption.forcedVrfProof.getOrElse(vrfProof)
 
-    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(
+    val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1)
     )
 

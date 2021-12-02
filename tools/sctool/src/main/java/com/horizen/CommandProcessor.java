@@ -10,8 +10,8 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
+import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
-import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
@@ -509,7 +509,7 @@ public class CommandProcessor {
                     SidechainBlock.BLOCK_VERSION(),
                     timestamp,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,

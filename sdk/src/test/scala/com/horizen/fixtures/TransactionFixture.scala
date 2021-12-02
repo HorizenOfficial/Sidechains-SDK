@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.box.{NoncedBox, ZenBox}
+import com.horizen.box.{Box, ZenBox}
 import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData, WithdrawalRequestBoxData}
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
@@ -29,7 +29,7 @@ trait TransactionFixture extends BoxFixture {
                             transactionBaseTimeStamp: Long = System.currentTimeMillis,
                            ): RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
     for(secret <- inputsSecrets) {
@@ -55,7 +55,7 @@ trait TransactionFixture extends BoxFixture {
 
   def getRegularTransaction(inputBoxes: Seq[ZenBox], inputSecrets: Seq[PrivateKey25519], outputPropositions: Seq[PublicKey25519Proposition]): RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
     for(box <- inputBoxes) {
@@ -80,7 +80,7 @@ trait TransactionFixture extends BoxFixture {
 
   def getRegularTransaction: RegularTransaction = {
     val from : JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     from.add(new JPair(getZenBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(getZenBox(pk2.publicImage(), 1, 20), pk2))
@@ -92,7 +92,7 @@ trait TransactionFixture extends BoxFixture {
 
   def getCompatibleTransaction: RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     from.add(new JPair(getZenBox(pk3.publicImage(), 1, 10), pk3))
     from.add(new JPair(getZenBox(pk4.publicImage(), 1, 10), pk4))
@@ -104,7 +104,7 @@ trait TransactionFixture extends BoxFixture {
 
   def getIncompatibleTransaction: RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     from.add(new JPair(getZenBox(pk1.publicImage(), 1, 10), pk1))
     from.add(new JPair(getZenBox(pk6.publicImage(), 1, 10), pk6))
@@ -139,7 +139,7 @@ trait TransactionFixture extends BoxFixture {
                             withdrawalOutputsPropositions: Seq[MCPublicKeyHashProposition],
                             forgerOutputsPropositions: Seq[PublicKey25519Proposition]) : RegularTransaction = {
     val from = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
     for(box <- inputBoxList) {

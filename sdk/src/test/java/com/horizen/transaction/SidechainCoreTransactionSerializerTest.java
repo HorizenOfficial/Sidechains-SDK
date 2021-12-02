@@ -1,6 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.box.NoncedBox;
+import com.horizen.box.Box;
 import com.horizen.box.data.*;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
@@ -27,7 +27,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void serializeCoreData() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
         outputsData.add((NoncedBoxData) getZenBoxData());
         outputsData.add((NoncedBoxData)getForgerBoxData());
         outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
@@ -55,7 +55,7 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void regressionTest() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));
 
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
+        List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
         outputsData.add((NoncedBoxData)new ZenBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
         outputsData.add((NoncedBoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
 

@@ -11,8 +11,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractNoncedBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
-        extends ScorexEncoding implements NoncedBox<P>
-{
+        extends ScorexEncoding implements Box<P> {
     protected final BD boxData;
     protected final long nonce;
 

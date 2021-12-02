@@ -3,7 +3,7 @@ package com.horizen.block
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.box.NoncedBox
+import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -855,7 +855,7 @@ class SidechainBlockTest
   private def createBlock(parent: ModifierId = parentId,
                           blockVersion:Byte = SidechainBlock.BLOCK_VERSION,
                           timestamp: Long = 122444L,
-                          sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(),
+                          sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
                           mainchainHeaders: Seq[MainchainHeader] = Seq(),
                           ommers: Seq[Ommer] = Seq(),
@@ -879,7 +879,7 @@ class SidechainBlockTest
 
   private def invalidateBlock(block: SidechainBlock,
                               headerOpt: Option[SidechainBlockHeader] = None,
-                              sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]]] = None,
+                              sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, Box[Proposition]]]] = None,
                               mainchainBlockReferencesDataOpt: Option[Seq[MainchainBlockReferenceData]] = None,
                               mainchainHeadersOpt: Option[Seq[MainchainHeader]] = None,
                               ommersOpt: Option[Seq[Ommer]] = None): SidechainBlock = {

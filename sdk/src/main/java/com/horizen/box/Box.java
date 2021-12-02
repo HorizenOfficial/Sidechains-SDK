@@ -40,6 +40,9 @@ public interface Box<P extends Proposition>
     @Override
     byte[] id();
 
+    @JsonProperty("nonce")
+    long nonce();
+
     byte[] customFieldsHash();
 
     @Override

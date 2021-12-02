@@ -5,9 +5,8 @@ import com.horizen.librustsidechains.FieldElement;
 import com.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.certnative.NaiveThresholdSigProof;
+import com.horizen.scutxonative.ScUtxoOutput;
 import com.horizen.utils.WithdrawalEpochUtils;
-
-import java.util.Arrays;
 
 public class CswCircuitImplZendoo implements CswCircuit {
 
@@ -19,8 +18,8 @@ public class CswCircuitImplZendoo implements CswCircuit {
 
     @Override
     public FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box) {
-        // TODO: use method from sc-cryptolib
-        return FieldElement.createFromLong(Arrays.hashCode(box.bytes()));
+        ScUtxoOutput utxo = new ScUtxoOutput(box.proposition().bytes(), box.value(), box.nonce(), box.customFieldsHash());
+        return utxo.getNullifier();
     }
 
     private long rangeSize(int withdrawalEpochLength) {
