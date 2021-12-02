@@ -23,14 +23,15 @@ public class CswCircuitImplZendoo implements CswCircuit {
         return FieldElement.createFromLong(Arrays.hashCode(box.bytes()));
     }
 
-    private static final int maxProofPlusdVkSize = 9 * 1024;
-    private static final int thresholdSignatureCustomFieldsNum = 1;
+    private long rangeSize(int withdrawalEpochLength) {
+        int submissionWindowLength = WithdrawalEpochUtils.certificateSubmissionWindowLength(withdrawalEpochLength);
+        return 2L * withdrawalEpochLength + submissionWindowLength;
+    }
 
-    public boolean generateCoboundaryMarlinKeys(int withdrawalEpochLen, String provingKeyPath, String verificationKeyPath) {
-        long withdrawalWindowLen = WithdrawalEpochUtils.certificateSubmissionWindowLength(withdrawalEpochLen);
-        long rangeSize = 2 * withdrawalEpochLen + withdrawalWindowLen; // TODO Use it in future implementation of CSW circuit
+    public boolean generateCoboundaryMarlinKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
+        long rangeSize = rangeSize(withdrawalEpochLength); // TODO Use it in future implementation of CSW circuit
 
         // TODO Replace with corresponding method for CSW keypair.
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, 1, thresholdSignatureCustomFieldsNum, provingKeyPath, verificationKeyPath, maxProofPlusdVkSize);
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, 1, 2, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }

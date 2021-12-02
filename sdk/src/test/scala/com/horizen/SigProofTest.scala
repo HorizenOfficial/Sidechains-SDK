@@ -3,7 +3,6 @@ package com.horizen
 import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter}
 import java.util.Optional
 import java.{lang, util}
-
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
@@ -11,11 +10,11 @@ import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZen
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertEquals, assertNotNull, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
 import com.google.common.io.Files
-
 import com.horizen.fixtures.FieldElementFixture
+import com.horizen.librustsidechains.FieldElement
 
 import scala.collection.JavaConverters._
 import scala.util.Random
@@ -60,6 +59,29 @@ class SigProofTest {
     }
 
     SchnorrSecretKey.deserialize(bytes)
+  }
+
+  @Test
+  def testFE(): Unit = {
+
+    // 0111 1111
+    val hex1 = "0000000000000000000000000000000000000000000000000000000000000080"
+    val bytes1 = BytesUtils.fromHexString(hex1)
+    val fe1 = FieldElement.deserialize(bytes1)
+
+    val hex2 = "000000000000000000000000000000000000000000000000000000000000002f"
+    val bytes2 = BytesUtils.fromHexString(hex2)
+    val fe2 = FieldElement.deserialize(bytes2)
+    assertNotNull(fe1)
+  }
+  @Test
+  def xz(): Unit = {
+    val xz2 = FieldElement.createFromLong(1L)
+    val bytes2 = xz2.serializeFieldElement()
+    val xz = "38eb0c41f803496f7317f74a1e38daa4711645940005d83b8d868d6304288ae2"
+    val bytes = BytesUtils.reverseBytes(BytesUtils.fromHexString(xz))
+    val fe = FieldElement.deserialize(bytes)
+    assertTrue(fe != null)
   }
 
   //Test will take around 2 minutes, enable for sanity checking of ThresholdSignatureCircuit

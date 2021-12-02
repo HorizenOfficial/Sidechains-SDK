@@ -44,7 +44,7 @@ class SCBackwardTransfer(SidechainTestFramework):
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws',  '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -303,7 +303,6 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        # TODO: continue the flow and test ceased Sidechain case.
 
 if __name__ == "__main__":
     SCBackwardTransfer().main()

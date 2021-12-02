@@ -22,6 +22,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
+import com.horizen.cryptolibprovider.CryptoLibProvider
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -220,12 +221,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     }
 
-    if(topQualityCertificate.fieldElementCertificateFields.size != 1)
-      throw new IllegalArgumentException(s"Top quality certificate should contain only one custom field.")
+    if(topQualityCertificate.fieldElementCertificateFields.size != 2)
+      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
 
     utxoMerkleTreeRoot(certReferencedEpochNumber) match {
       case Some(expectedMerkleTreeRoot) =>
-        if(!expectedMerkleTreeRoot.sameElements(topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes))
+        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
+          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
+          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
+        )
+        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
       case None =>

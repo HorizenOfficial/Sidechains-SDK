@@ -48,4 +48,8 @@ public interface ThresholdSignatureCircuit {
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath);
+
+    List<byte[]> splitUtxoMerkleTreeRoot(byte[] utxoMerkleTreeRoot);
+
+    byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
 }

@@ -13,6 +13,9 @@ public class CommonCircuit {
     private static final int maxSegmentSize = (1 << 18);
     private static final int supportedSegmentSize = (1 << 17);
 
+    // Keys total max size values are the same as in MC
+    public static final int maxProofPlusVkSize = 9 * 1024;
+
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
                 ProvingSystemType.COBOUNDARY_MARLIN,
