@@ -8,7 +8,7 @@ import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.NaiveThresholdSigProof;
-import com.horizen.provingsystemnative.CreateProofResult;
+import com.horizen.certnative.CreateProofResult;
 import com.horizen.utils.Pair;
 
 import java.util.ArrayList;
