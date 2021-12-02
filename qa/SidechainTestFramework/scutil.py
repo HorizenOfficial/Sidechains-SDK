@@ -333,7 +333,7 @@ def initialize_default_sc_datadir(dirname, n):
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
@@ -673,7 +673,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
@@ -702,7 +702,7 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def proof_keys_paths(dirname):
+def cert_proof_keys_paths(dirname):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     return ProofKeysPaths(os.path.join(dirname, "cert_marlin_snark_pk").replace("\\", "/"),
                           os.path.join(dirname, "cert_marlin_snark_vk").replace("\\", "/"))
@@ -729,7 +729,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
-    generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_key_paths)
+    csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_key_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
@@ -738,6 +738,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
                                     vrf_key.publicKey,
                                     certificate_proof_info.genSysConstant,
                                     certificate_proof_info.verificationKey,
+                                    csw_verification_key,
                                     sc_creation_info.btr_data_length)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret, block_timestamp_rewind)

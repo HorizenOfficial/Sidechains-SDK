@@ -177,11 +177,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     // Utxo merkle root that split into 2 FEs
-    private static final int thresholdSignatureCustomFieldsNum = 2;
+    @Override
+    public int circuitCustomFieldsNumber() {
+        return 2;
+    }
 
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, thresholdSignatureCustomFieldsNum,
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, circuitCustomFieldsNumber(),
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }

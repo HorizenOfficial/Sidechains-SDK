@@ -10,7 +10,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
-    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, proof_keys_paths, \
+    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, cert_proof_keys_paths, \
     csw_proof_keys_paths, generate_csw_proof_info
 
 """
@@ -82,7 +82,7 @@ class Demo(SidechainTestFramework):
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
 
-        cert_keys_paths = proof_keys_paths(ps_keys_dir)
+        cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
         certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
 
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir)

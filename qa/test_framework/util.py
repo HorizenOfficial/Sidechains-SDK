@@ -475,7 +475,7 @@ Output: an array of two information:
 
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
-                                          vrf_public_key, gen_sys_constant, cert_vk, btr_data_length):
+                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length):
     number_of_blocks_to_enable_sc_logic = 419
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -483,7 +483,6 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         mainchain_node.generate(diff)
 
     custom_creation_data = vrf_public_key
-    ceased_vk = ""
     fe_certificate_field_configs = [255, 255]
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -496,7 +495,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         "wCertVk": cert_vk,
         "customData": custom_creation_data,
         "constant": gen_sys_constant,
-        "wCeasedVk": ceased_vk,
+        "wCeasedVk": csw_vk,
         "vFieldElementCertificateFieldConfig": fe_certificate_field_configs,
         "vBitVectorCertificateFieldConfig": bitvector_certificate_field_configs,
         "forwardTransferScFee": ft_min_amount,

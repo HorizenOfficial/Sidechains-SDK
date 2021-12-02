@@ -1,14 +1,14 @@
 #!/usr/bin/env python2
 import json
 import os
+import time
 from decimal import Decimal
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths, \
-    generate_random_field_element_hex
-from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
+from test_framework.util import start_nodes
+from SidechainTestFramework.scutil import create_sidechain, cert_proof_keys_paths, \
+    generate_random_field_element_hex, csw_proof_keys_paths
+from SidechainTestFramework.sc_boostrap_info import SCCreationInfo
 
 """
 Generate MC transactions for Unit tests
@@ -61,7 +61,7 @@ class McTxsData(SidechainTestFramework):
         ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
-        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
+        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir), csw_proof_keys_paths(ps_keys_dir))
 
         sidechain_id = boot_info.sidechain_id
         sc_creation_tx_id = mc_node.getblock(mc_node.getbestblockhash())["tx"][-1]
@@ -89,6 +89,8 @@ class McTxsData(SidechainTestFramework):
               .format(str(ft_tx_id), len(ft_tx_hex) / 2, str(ft_tx_hex),
                       sidechain_id, forward_transfer_amount, boot_info.genesis_account.publicKey))
 
+        # Sleep for 1 second to prevent MC RPC failure because of double spend (lack of synchronization).
+        time.sleep(1)
 
         # Generate Tx with version -4 with multiple ForwardTransfer outputs
         send_many_params = [

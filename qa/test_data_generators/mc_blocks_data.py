@@ -6,8 +6,8 @@ from decimal import Decimal
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, proof_keys_paths, \
-    generate_random_field_element_hex
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, cert_proof_keys_paths, \
+    generate_random_field_element_hex, csw_proof_keys_paths
 from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
 
 """
@@ -55,7 +55,7 @@ class McTxsData(SidechainTestFramework):
 
         # Generate MC block with single sidechain mentioned - sidechain creation output
         sc_creation_info = SCCreationInfo(mc_node, 100, 1000, btr_data_length=2)
-        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
+        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir), csw_proof_keys_paths(ps_keys_dir))
         sidechain_id_1 = str(boot_info.sidechain_id)
 
         block_id = mc_node.getbestblockhash()
@@ -66,10 +66,10 @@ class McTxsData(SidechainTestFramework):
 
 
         # Declare 2 more sidechains
-        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
+        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir), csw_proof_keys_paths(ps_keys_dir))
         sidechain_id_2 = str(boot_info.sidechain_id)
 
-        boot_info = create_sidechain(sc_creation_info, 0, proof_keys_paths(ps_keys_dir))
+        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir), csw_proof_keys_paths(ps_keys_dir))
         sidechain_id_3 = str(boot_info.sidechain_id)
 
 
