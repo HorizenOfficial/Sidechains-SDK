@@ -523,11 +523,13 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
       override val signersThreshold: Int = params.signersThreshold
-      override val provingKeyFilePath: String = params.provingKeyFilePath
-      override val verificationKeyFilePath: String = params.verificationKeyFilePath
+      override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
+      override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32) //calculate if we need for some reason that data
       override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
       override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
+      override val cswProvingKeyFilePath: String = params.cswProvingKeyFilePath
+      override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
     }
   }
 

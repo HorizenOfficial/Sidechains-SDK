@@ -16,6 +16,9 @@ public class CommonCircuit {
     // Keys total max size values are the same as in MC
     public static final int maxProofPlusVkSize = 9 * 1024;
 
+    // 2 custom fields that represent UtxoMerkleTreeRoot
+    public static final int customFieldsNumber = 2;
+
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
                 ProvingSystemType.COBOUNDARY_MARLIN,

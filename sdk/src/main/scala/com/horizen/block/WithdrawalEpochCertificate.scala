@@ -3,15 +3,13 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
-import com.horizen.certnative.{BackwardTransfer, WithdrawalCertificate}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
-import com.horizen.librustsidechains.{FieldElement, Utils => ScCryptoUtils}
+import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 
-import scala.collection.JavaConverters._
 import scala.util.Try
 
 case class FieldElementCertificateField(rawData: Array[Byte]) {
@@ -63,27 +61,6 @@ case class WithdrawalEpochCertificate
       val customFields: Seq[Array[Byte]] = fieldElementCertificateFields.map(_.fieldElementBytes) ++ bitVectorCertificateFields.map(_.merkleRootBytes)
       Some(customFields.toArray)
     }
-  }
-
-  lazy val certDataHash: Array[Byte] = {
-    val we = new WithdrawalCertificate(
-      FieldElement.deserialize(sidechainId),
-      epochNumber,
-      backwardTransferOutputs.map(bto => new BackwardTransfer(bto.pubKeyHash, bto.amount)).asJava,
-      quality,
-      FieldElement.deserialize(endCumulativeScTxCommitmentTreeRoot),
-      ftMinAmount,
-      btrFee,
-      customFieldsOpt.getOrElse(new Array[Array[Byte]](0)).toSeq.map(fe => FieldElement.deserialize(fe)).asJava
-    )
-
-    val hashFe = we.getHash
-    val hashBytes = hashFe.serializeFieldElement()
-
-    hashFe.freeFieldElement()
-    we.close()
-
-    hashBytes
   }
 }
 

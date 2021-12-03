@@ -36,11 +36,13 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
     override val signersThreshold: Int = 0
-    override val provingKeyFilePath: String = ""
-    override val verificationKeyFilePath: String = ""
+    override val certProvingKeyFilePath: String = ""
+    override val certVerificationKeyFilePath: String = ""
     override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32)
     override val initialCumulativeCommTreeHash: Array[Byte] = Array()
     override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
+    override val cswProvingKeyFilePath: String = ""
+    override val cswVerificationKeyFilePath: String = ""
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

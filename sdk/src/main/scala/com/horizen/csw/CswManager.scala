@@ -3,20 +3,25 @@ package com.horizen.csw
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, Generated, InProcess, InQueue, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
 import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.params.NetworkParams
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData}
+import com.horizen.proposition.PublicKey25519Proposition
+import com.horizen.secret.PrivateKey25519
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
 import scorex.util.ScorexLogging
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class CswManager(settings: SidechainSettings,
@@ -189,7 +194,8 @@ class CswManager(settings: SidechainSettings,
             findCswData(boxId) match {
               case Some(data: CswData) =>
                 sender() ! Success(CswInfo(data.getClass.getSimpleName, data.amount, params.sidechainId, data.getNullifier,
-                  getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(_.certDataHash), cswWitnessHolder.mcbScTxsCumComEnd))
+                  getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash),
+                  cswWitnessHolder.mcbScTxsCumComEnd))
               case None =>
                 sender() ! Failure(new IllegalArgumentException("CSW info was not found for given box id."))
             }
@@ -204,22 +210,32 @@ class CswManager(settings: SidechainSettings,
     case TryToScheduleProofGeneration =>
       // Emit next proof generation only in case when no other one in process
       if(proofInProcessOpt.isEmpty && proofsInQueue.nonEmpty) {
+        val cswWitnessHolder = cswWitnessHolderOpt.get
         val inQueue = proofsInQueue.remove(0)
         findCswData(inQueue.boxId.data) match {
           case Some(data) =>
-            proofInProcessOpt = Some(ProofInProcess(inQueue.boxId, inQueue.senderAddress))
-            // Run the time consuming part of proof generation in a background
-            // to unlock the Actor message queue for another requests.
-            new Thread(new Runnable() {
-              override def run(): Unit = {
-                data match {
-                  case ft: ForwardTransferCswData => // TODO: execute FT specific proof generation
-                  case utxo: UtxoCswData => // TODO: execute utxo specific proof generation
+            val pkOpt = getCswOwner(data)
+            pkOpt.foreach(pk => {
+              proofInProcessOpt = Some(ProofInProcess(inQueue.boxId, inQueue.senderAddress))
+              val senderPubKeyHash = BytesUtils.fromHorizenPublicKeyAddress(inQueue.senderAddress, params)
+              // Run the time consuming part of proof generation in a background
+              // to unlock the Actor message queue for another requests.
+              new Thread(new Runnable() {
+                override def run(): Unit = {
+                  val proof: Array[Byte] = data match {
+                    case ft: ForwardTransferCswData =>
+                      CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
+                        cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
+                        cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                        params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                    case utxo: UtxoCswData =>
+                      CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
+                        cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                        params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                  }
+                  self ! CswProofSuccessfullyGenerated(proof)
                 }
-                // TODO: tmp code
-                Thread.sleep(10 * 1000)
-                self ! CswProofSuccessfullyGenerated(new Array[Byte](100))
-              }
+              })
             })
           case None =>
             log.error("CswManager: Can't find CSW witness for proof generation.")
@@ -337,9 +353,26 @@ class CswManager(settings: SidechainSettings,
 
     val lastActiveCertOpt = state.certificate(lastActiveCertReferencedEpoch)
 
-    val mcbScTxsCumComStart: Array[Byte] = new Array[Byte](0) // TODO: get cumulative com tree hash of the last mc block 3 epochs before
-    val scTxsComHashes: Seq[Array[Byte]] = Seq() // TODO: get up to RANGE_SIZE com tree hashes from the first mc block 2 epochs before to the ceased height block
-    val mcbScTxsCumComEnd: Array[Byte] = new Array[Byte](0) // TODO: get cumulative com tree hash of the last mc block before ceasing
+    val endBlockHeight = WithdrawalEpochUtils.ceasedAtMcBlockHeight(withdrawalEpochNumber, params)
+    val startBlockHeight: Int = endBlockHeight - CryptoLibProvider.cswCircuitFunctions.rangeSize(params.withdrawalEpochLength)
+
+    // In case SC has ceased during the first 3 epochs (numbers = {0, 1, 2})
+    // history has no info about mcbScTxsCumComStart, so the genesis value should be taken from params.
+    // Otherwise, get cumulative tree hash of the last mc block 3 epochs before.
+    val mcbScTxsCumComStart: Array[Byte] = history.getMainchainHeaderInfoByHeight(startBlockHeight) match {
+      case Some(info) => info.cumulativeCommTreeHash
+      case None => params.initialCumulativeCommTreeHash
+    }
+
+    // Get up to RANGE_SIZE commitment tree hashes from the first mc block 2 epochs before to the ceased height block
+    // Note 1: In case sidechain has ceased during first 2 epochs epochs we have less scTxsComHashes number than RANGE_SIZE
+    // Note 2: Getting `hashScTxsCommitment` operation is quite expensive due to look up into the storage for the header.
+    val scTxsComHashes: Seq[Array[Byte]] = (startBlockHeight + 1 to endBlockHeight).flatMap(height => history.getMainchainHeaderInfoByHeight(height)).map(info => {
+      history.getMainchainHeaderByHash(info.hash.data).get.hashScTxsCommitment
+    })
+
+    // Get cumulative tree hash of the end block.
+    val mcbScTxsCumComEnd: Array[Byte] = history.getMainchainHeaderInfoByHeight(endBlockHeight).get.cumulativeCommTreeHash
 
     CswWitnessHolder(utxoCswDataMap, ftCswDataMap, lastActiveCertOpt, mcbScTxsCumComStart, scTxsComHashes, mcbScTxsCumComEnd)
   }
@@ -349,10 +382,32 @@ class CswManager(settings: SidechainSettings,
       BytesUtils.fromHorizenPublicKeyAddress(senderAddress, params)
       true
     } catch {
-      case e: IllegalArgumentException =>
+      case _: IllegalArgumentException =>
         log.error(s"CswManager: Invalid sender address: $senderAddress")
         false
     }
+  }
+
+  private def getCswOwner(cswData: CswData): Option[PrivateKey25519] = {
+    val pubKeyBytes: Array[Byte] = cswData match {
+      case ft: ForwardTransferCswData => ft.receiverPubKey
+      case utxo: UtxoCswData => utxo.spendingPubKey
+    }
+
+    val publicKey25519Proposition: PublicKey25519Proposition = Try {
+      new PublicKey25519Proposition(pubKeyBytes)
+    } match {
+      case Success(prop) => prop
+      case Failure(ex) =>
+        log.error("CswManager: Failed to get parse CSW public key: " + ex)
+        return None
+    }
+
+    def getOwner(sidechainNodeView: View): Option[PrivateKey25519] = {
+      sidechainNodeView.vault.secretByPublicKey(publicKey25519Proposition).asScala.map(_.asInstanceOf[PrivateKey25519])
+    }
+
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getOwner), timeoutDuration).asInstanceOf[Option[PrivateKey25519]]
   }
 }
 

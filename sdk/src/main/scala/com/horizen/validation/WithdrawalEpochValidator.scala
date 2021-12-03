@@ -3,7 +3,7 @@ package com.horizen.validation
 import com.horizen.block.SidechainBlock
 import com.horizen.params.NetworkParams
 import com.horizen.SidechainHistory
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochUtils}
 import scorex.util.idToBytes
@@ -35,7 +35,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
     }
 
     // Check that sidechain declares proper number of custom fields
-    if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != CryptoLibProvider.sigProofThresholdCircuitFunctions.circuitCustomFieldsNumber()) {
+    if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != CommonCircuit.customFieldsNumber) {
       throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
         "genesis block declares sidechain with different number of custom field configs.")
     }

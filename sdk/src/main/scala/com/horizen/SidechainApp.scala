@@ -125,10 +125,12 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
   )
 
     case "testnet" => TestNetParams(
@@ -142,10 +144,12 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
     )
 
     case "mainnet" => MainNetParams(
@@ -159,10 +163,12 @@ class SidechainApp @Inject()
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,
-      provingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
-      verificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
+      certProvingKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.provingKeyFilePath,
+      certVerificationKeyFilePath = sidechainSettings.withdrawalEpochCertificateSettings.verificationKeyFilePath,
       calculatedSysDataConstant = calculatedSysDataConstant,
-      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
+      cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -177,10 +183,10 @@ class SidechainApp @Inject()
   }
 
   // Generate snark keys only if were not present before.
-  if (!Files.exists(Paths.get(params.verificationKeyFilePath)) || !Files.exists(Paths.get(params.provingKeyFilePath))) {
+  if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating snark keys. It may take some time.")
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.verificationKeyFilePath, params.provingKeyFilePath)) {
+        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certVerificationKeyFilePath, params.certProvingKeyFilePath)) {
       throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem snark keys.")
     }
   }

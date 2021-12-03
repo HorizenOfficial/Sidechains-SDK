@@ -51,4 +51,8 @@ object WithdrawalEpochUtils {
     // MC consensus cert submission window length is 1/5 of the withdrawal epoch length, but at least 2 mc blocks
     Math.max(2, withdrawalEpochLength / 5)
   }
+
+  def ceasedAtMcBlockHeight(withdrawalEpochNumber: Int, params: NetworkParams): Int = {
+    params.mainchainCreationBlockHeight + (withdrawalEpochNumber * params.withdrawalEpochLength) + certificateSubmissionWindowLength(params)
+  }
 }

@@ -21,11 +21,13 @@ case class RegTestParams(
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
-                          override val provingKeyFilePath: String = "",
-                          override val verificationKeyFilePath: String = "",
+                          override val certProvingKeyFilePath: String = "",
+                          override val certVerificationKeyFilePath: String = "",
                           override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
-                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
+                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
+                          override val cswProvingKeyFilePath: String = "",
+                          override val cswVerificationKeyFilePath: String = ""
 ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

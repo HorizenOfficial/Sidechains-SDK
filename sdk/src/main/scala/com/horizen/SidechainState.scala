@@ -49,11 +49,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   lazy val verificationKeyFullFilePath: String = {
-    if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
+    if (params.certVerificationKeyFilePath.equalsIgnoreCase("")) {
       throw new IllegalStateException(s"Verification key file name is not set")
     }
 
-    val verificationFile: File = new File(params.provingKeyFilePath)
+    val verificationFile: File = new File(params.certProvingKeyFilePath)
     if (!verificationFile.canRead) {
       throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} is not exist or can't be read")
     }

@@ -125,7 +125,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = ""
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -164,7 +164,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = ""
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -203,7 +203,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = "wrong_file_path"
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -243,7 +243,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = getClass.getClassLoader.getResource("mcblock473173_mainnet").getFile
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 

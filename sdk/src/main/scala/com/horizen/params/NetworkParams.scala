@@ -33,10 +33,12 @@ trait NetworkParams {
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
   val signersThreshold: Int
-  val provingKeyFilePath: String
-  val verificationKeyFilePath: String
+  val certProvingKeyFilePath: String
+  val certVerificationKeyFilePath: String
   val calculatedSysDataConstant: Array[Byte]
   val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
+  val cswProvingKeyFilePath: String
+  val cswVerificationKeyFilePath: String
 
   val maxHistoryRewritingLength: Int = 100
 

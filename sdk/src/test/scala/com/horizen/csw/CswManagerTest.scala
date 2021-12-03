@@ -4,13 +4,19 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
-import com.horizen.block.WithdrawalEpochCertificate
+import com.google.common.primitives.Longs
+import com.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
+import com.horizen.chain.{MainchainHeaderHash, MainchainHeaderInfo}
+import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, GenerateCswProofStatus, Generated, InProcess, InQueue, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
-import com.horizen.fixtures.CswDataFixture
+import com.horizen.fixtures.{CswDataFixture, MainchainBlockReferenceFixture, SidechainBlockFixture}
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.proposition.Proposition
+import com.horizen.secret.{PrivateKey25519Creator, Secret}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit.{Assert, Test}
@@ -26,8 +32,10 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
 
-class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
-  implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-actor-test")
+class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
+  with MainchainBlockReferenceFixture with SidechainBlockFixture {
+
+  implicit lazy val actorSystem: ActorSystem = ActorSystem("csw-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
 
@@ -118,7 +126,10 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
   @Test
   def initialization_Ceased(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration)
-    val params: NetworkParams = mock[NetworkParams]
+
+    val mcStartHeight = 100
+    val withdrawalEpochLength = 10
+    val params: NetworkParams = MainNetParams(mainchainCreationBlockHeight = mcStartHeight, withdrawalEpochLength = 10)
 
     val history: SidechainHistory = mock[SidechainHistory]
     val state: SidechainState = mock[SidechainState]
@@ -145,7 +156,22 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
       withdrawalEpochInfo.epoch - 3 -> Seq(getUtxoCswData(7L), getUtxoCswData(8L), getForwardTransferCswData(9L))
     )
     val certificate: WithdrawalEpochCertificate = mock[WithdrawalEpochCertificate]
+
     // Mock loadCswWitness() related methods
+
+    Mockito.when(history.getMainchainHeaderInfoByHeight(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+      val height: Int = args.getArgument(0)
+      Some(MainchainHeaderInfo(generateMainchainHeaderHash(height), generateMainchainHeaderHash(height-1), height,
+        getRandomBlockId(height), FieldElementUtils.randomFieldElementBytes(height)))
+    })
+
+    Mockito.when(history.getMainchainHeaderByHash(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
+      val headerHash: Array[Byte] = args.getArgument(0)
+      val header = mock[MainchainHeader]
+      Mockito.when(header.hashScTxsCommitment).thenReturn(FieldElementUtils.randomFieldElementBytes(Longs.fromByteArray(headerHash)))
+      java.util.Optional.of(header)
+    })
+
     Mockito.when(state.getWithdrawalEpochInfo).thenReturn(withdrawalEpochInfo)
     Mockito.when(state.certificate(ArgumentMatchers.any[Int]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
@@ -402,7 +428,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
         assertArrayEquals("Different CswInfo value: amount", params.sidechainId, cswInfo.scId)
         assertArrayEquals("Different CswInfo value: nullifier", utxoData1.getNullifier, cswInfo.nullifier)
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
-        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(_.certDataHash), cswInfo.activeCertData)
+        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash), cswInfo.activeCertData)
         assertArrayEquals("Different CswInfo value: nullifier", cswManager.cswWitnessHolderOpt.get.mcbScTxsCumComEnd, cswInfo.ceasingCumScTxCommTree)
 
       case Failure(_) => Assert.fail("Exception found.")
@@ -558,8 +584,23 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration)
     val params: MainNetParams = MainNetParams()
 
+    val history: SidechainHistory = mock[SidechainHistory]
+    val state: SidechainState = mock[SidechainState]
+    val wallet: SidechainWallet = mock[SidechainWallet]
+
     val mockedSidechainNodeViewHolder = TestProbe()
+    mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+      msg match {
+        case GetDataFromCurrentView(f) =>
+          sender ! f(CurrentView(history, state, wallet, mock[SidechainMemoryPool]))
+      }
+      TestActor.KeepRunning
+    })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
+
+    Mockito.when(wallet.secretByPublicKey(ArgumentMatchers.any[Proposition]())).thenAnswer(_ => {
+      java.util.Optional.of(PrivateKey25519Creator.getInstance().generateSecret("secret".getBytes).asInstanceOf[Secret])
+    })
 
 
     val cswManagerRef: TestActorRef[CswManager] = TestActorRef(
@@ -573,7 +614,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture {
     cswManager.hasSidechainCeased = true
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
 
-    // Test 2: invalid address
+    // Test 1: start proof generation
     val status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
 

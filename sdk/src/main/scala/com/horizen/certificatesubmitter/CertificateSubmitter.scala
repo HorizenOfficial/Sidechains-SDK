@@ -133,11 +133,11 @@ class CertificateSubmitter(settings: SidechainSettings,
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
-    if (params.provingKeyFilePath.isEmpty) {
+    if (params.certProvingKeyFilePath.isEmpty) {
       throw new IllegalStateException(s"Proving key file name is not set")
     }
 
-    val provingFile: File = new File(params.provingKeyFilePath)
+    val provingFile: File = new File(params.certProvingKeyFilePath)
     if (!provingFile.canRead) {
       throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
     }

@@ -52,6 +52,4 @@ public interface ThresholdSignatureCircuit {
     List<byte[]> splitUtxoMerkleTreeRoot(byte[] utxoMerkleTreeRoot);
 
     byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
-
-    int circuitCustomFieldsNumber();
 }
