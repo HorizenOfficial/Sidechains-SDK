@@ -28,7 +28,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
     }
 
     @Override
-    public byte[] transformPrivateKey25519(PrivateKey25519 pk) {
+    public byte[] privateKey25519ToScalar(PrivateKey25519 pk) {
         byte[] pkBytes = pk.privateKey();
 
         byte[] hash = null;
@@ -41,7 +41,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
         }
 
         // Only the lower 32 bytes are used
-        byte[] lowerBytes = Arrays.copyOfRange(hash, 32, 64);
+        byte[] lowerBytes = Arrays.copyOfRange(hash, 0, 32);
 
         // Pruning:
         // The lowest three bits of the first octet are cleared

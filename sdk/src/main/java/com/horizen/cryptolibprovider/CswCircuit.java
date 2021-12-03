@@ -12,5 +12,5 @@ public interface CswCircuit {
 
     boolean generateCoboundaryMarlinKeys(int withdrawalEpochLen, String provingKeyPath, String verificationKeyPath);
 
-    byte[] transformPrivateKey25519(PrivateKey25519 pk);
+    byte[] privateKey25519ToScalar(PrivateKey25519 pk);
 }
