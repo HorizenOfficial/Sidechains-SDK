@@ -81,30 +81,30 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         val history = sidechainNodeView.getNodeHistory
 
         def searchTransactionInMemoryPool(id: String): Option[SidechainTypes#SCBT] = {
-          var opt = memoryPool.getTransactionById(id)
+          val opt = memoryPool.getTransactionById(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
         def searchTransactionInBlock(id: String, blockHash: String): Option[SidechainTypes#SCBT] = {
-          var opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
+          val opt = history.searchTransactionInsideSidechainBlock(id, blockHash)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
         def searchTransactionInBlockchain(id: String): Option[SidechainTypes#SCBT] = {
-          var opt = history.searchTransactionInsideBlockchain(id)
+          val opt = history.searchTransactionInsideBlockchain(id)
           if (opt.isPresent)
             Option(opt.get())
           else None
         }
 
-        var txId = body.transactionId
-        var format = body.format.getOrElse(false)
-        var blockHash = body.blockHash.getOrElse("")
-        var txIndex = body.transactionIndex.getOrElse(false)
+        val txId = body.transactionId
+        val format = body.format.getOrElse(false)
+        val blockHash = body.blockHash.getOrElse("")
+        val txIndex = body.transactionIndex.getOrElse(false)
         var transaction: Option[SidechainTypes#SCBT] = None
         var error: String = ""
 
@@ -246,10 +246,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   def createCoreTransactionSimplified: Route = (post & path("createCoreTransactionSimplified")) {
     entity(as[ReqCreateCoreTransactionSimplified]) { body =>
       applyOnNodeView { sidechainNodeView =>
-        var outputList = body.regularOutputs
-        var withdrawalRequestList = body.withdrawalRequests
-        var forgerOutputList = body.forgerOutputs
-        var fee = body.fee
+        val outputList = body.regularOutputs
+        val withdrawalRequestList = body.withdrawalRequests
+        val forgerOutputList = body.forgerOutputs
+        val fee = body.fee
         val wallet = sidechainNodeView.getNodeWallet
 
         getChangeAddress(wallet) match {
