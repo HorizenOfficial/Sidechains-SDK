@@ -40,6 +40,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import akka.http.javadsl.marshallers.jackson.Jackson
+import com.horizen.csw.CswManager.ReceivableMessages.GetCeasedStatus
+
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
@@ -226,6 +228,19 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   })
   val mockedsidechainBlockActorRef: ActorRef = mockedSidechainBlockActor.ref
 
+  val mockedCswManagerActor = TestProbe()
+  mockedCswManagerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetCeasedStatus => {
+            sender ! true
+        }
+      }
+      TestActor.KeepRunning
+    }
+  })
+  val mockedCswManagerActorRef: ActorRef = mockedCswManagerActor.ref
+
   implicit def default() = RouteTestTimeout(3.second)
 
   val params = MainNetParams()
@@ -236,6 +251,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
+  val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 

@@ -312,7 +312,8 @@ class SidechainApp @Inject()
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
   )
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
