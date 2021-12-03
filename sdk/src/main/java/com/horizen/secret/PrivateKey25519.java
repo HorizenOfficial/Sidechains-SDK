@@ -86,6 +86,10 @@ public final class PrivateKey25519 implements Secret
         return new Signature25519(Ed25519.sign(_privateKeyBytes, message, _publicKeyBytes));
     }
 
+    public byte[] privateKey() {
+        return Arrays.copyOf(_privateKeyBytes, KEY_LENGTH);
+    }
+
     @Override
     public String toString() {
         return "PrivateKey25519{" +
