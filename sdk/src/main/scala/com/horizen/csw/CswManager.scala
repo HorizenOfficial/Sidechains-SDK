@@ -222,18 +222,25 @@ class CswManager(settings: SidechainSettings,
               // to unlock the Actor message queue for another requests.
               new Thread(new Runnable() {
                 override def run(): Unit = {
-                  val proof: Array[Byte] = data match {
-                    case ft: ForwardTransferCswData =>
-                      CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
-                        cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
-                        cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
-                        params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
-                    case utxo: UtxoCswData =>
-                      CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
-                        cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
-                        params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                  Try {
+                    data match {
+                      case ft: ForwardTransferCswData =>
+                        CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
+                          cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
+                          cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                          params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                      case utxo: UtxoCswData =>
+                        CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
+                          cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                          params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                    }
+                  } match {
+                    case Success(proof) => self ! CswProofSuccessfullyGenerated(proof)
+                    case Failure(ex) =>
+                      log.error(s"Csw proof generation failed for CSW $data, due to: ${ex.getMessage}")
+                      self ! CswProofFailed
                   }
-                  self ! CswProofSuccessfullyGenerated(proof)
+
                 }
               })
             })

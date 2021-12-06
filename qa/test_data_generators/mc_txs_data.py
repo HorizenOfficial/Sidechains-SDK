@@ -61,7 +61,8 @@ class McTxsData(SidechainTestFramework):
         ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
-        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir), csw_proof_keys_paths(ps_keys_dir))
+        boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir),
+                                     csw_proof_keys_paths(ps_keys_dir, withdrawal_epoch_length))
 
         sidechain_id = boot_info.sidechain_id
         sc_creation_tx_id = mc_node.getblock(mc_node.getbestblockhash())["tx"][-1]
