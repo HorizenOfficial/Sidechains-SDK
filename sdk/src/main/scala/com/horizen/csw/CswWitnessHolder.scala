@@ -7,5 +7,5 @@ case class CswWitnessHolder(utxoCswDataMap: Map[ByteArrayWrapper, UtxoCswData],
                             ftCswDataMap: Map[ByteArrayWrapper, ForwardTransferCswData],
                             lastActiveCertOpt: Option[WithdrawalEpochCertificate],
                             mcbScTxsCumComStart: Array[Byte],
-                            scTxsComHashes: Seq[Array[Byte]],
+                            scTxsComHashes: Seq[Array[Byte]], // from start + 1 to end
                             mcbScTxsCumComEnd: Array[Byte])

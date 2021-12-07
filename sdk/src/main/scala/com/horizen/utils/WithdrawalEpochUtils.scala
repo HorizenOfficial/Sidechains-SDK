@@ -53,6 +53,6 @@ object WithdrawalEpochUtils {
   }
 
   def ceasedAtMcBlockHeight(withdrawalEpochNumber: Int, params: NetworkParams): Int = {
-    params.mainchainCreationBlockHeight + (withdrawalEpochNumber * params.withdrawalEpochLength) + certificateSubmissionWindowLength(params)
+    params.mainchainCreationBlockHeight + (withdrawalEpochNumber * params.withdrawalEpochLength) + certificateSubmissionWindowLength(params) - 1
   }
 }

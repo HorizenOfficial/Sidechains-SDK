@@ -14,6 +14,7 @@ import com.horizen.box.Box
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -37,7 +38,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView { sidechainNodeView =>
         val optBoxTypeClass = body.boxTypeClass
         val wallet = sidechainNodeView.getNodeWallet
-        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
         if (optBoxTypeClass.isEmpty) {
           val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))

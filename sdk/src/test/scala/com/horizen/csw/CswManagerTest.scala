@@ -158,9 +158,16 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     val certificate: WithdrawalEpochCertificate = mock[WithdrawalEpochCertificate]
 
     // Mock loadCswWitness() related methods
+    val submissionWindowLength: Int = withdrawalEpochLength / 5
+    val endHeight = mcStartHeight + withdrawalEpochInfo.epoch * withdrawalEpochLength + submissionWindowLength - 1
+    val startHeight = mcStartHeight + (withdrawalEpochInfo.epoch - 2) * withdrawalEpochLength
+    var heights: Seq[Int] = (startHeight to endHeight).map(h => h)
+    heights = heights :+ endHeight
 
     Mockito.when(history.getMainchainHeaderInfoByHeight(ArgumentMatchers.any[Int]())).thenAnswer(args => {
       val height: Int = args.getArgument(0)
+      assertEquals("Different height expected.", heights.head, height)
+      heights = heights.tail
       Some(MainchainHeaderInfo(generateMainchainHeaderHash(height), generateMainchainHeaderHash(height-1), height,
         getRandomBlockId(height), FieldElementUtils.randomFieldElementBytes(height)))
     })
@@ -215,15 +222,6 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
 
     // Test ChangedState cases
-    actorSystem.eventStream.publish(ChangedState(state))
-    watch.expectNoMessage(timeout.duration)
-    assertTrue("Sidechain expected to be ceased.", cswManager.hasSidechainCeased)
-    assertTrue("CSW witness data expected to be defined.", cswManager.cswWitnessHolderOpt.isDefined)
-
-    // Make CswManager alive and emit event again
-    cswManager.hasSidechainCeased = false
-    cswManager.cswWitnessHolderOpt = None
-
     actorSystem.eventStream.publish(ChangedState(state))
     watch.expectNoMessage(timeout.duration)
     assertTrue("Sidechain expected to be ceased.", cswManager.hasSidechainCeased)
@@ -396,7 +394,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     }
 
 
-    // Test 2: sidecahin is ceased, but no WitnessHolder defined
+    // Test 2: sidechain is ceased, but no WitnessHolder defined
     cswManager.hasSidechainCeased = true
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
     cswInfoTry match {

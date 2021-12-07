@@ -26,13 +26,10 @@ Test:
     - generate SC blocks to sync with MC node.
     - generate 1 MC block to reach the end of the certificate submission window.
     - check with MC node that sidechain is ceased from MC perspective.
-    - try to generate SC block with 1 MC ref:
+    - generate SC block with 1 MC ref: check that SC has ceased from SC perspective.
+    - try to generate one more SC block:
         * check that it's not valid
-        * SC node can't grow SC chain, because sidechain is ceased.
-    - generate 1 more MC block
-    - try to generate SC block with 2 MC refs which exceed the submission window end:
-        * check that it's not valid
-        * SC node can't grow SC chain, because sidechain is ceased.
+        * SC node can't grow SC chain, because sidechain has ceased.
 """
 class SCCeased(SidechainTestFramework):
 
@@ -100,6 +97,8 @@ class SCCeased(SidechainTestFramework):
         # SC must become ceased right after block was applied
         sc_block_id = generate_next_block(sc_node, "first node")
         check_mcreference_presence(mcblock_hash, sc_block_id, sc_node)
+        has_ceased = sc_node.csw_hasCeased()["result"]["state"]
+        assert_true("Sidechain expected to be ceased.", has_ceased)
 
         # Try to generate 1 SC block after SC has ceased.
         # Node must fail on apply block, because of ceased SC.

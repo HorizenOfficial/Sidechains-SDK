@@ -528,7 +528,7 @@ Output: an array of two information:
 
 
 def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
-                                  public_key, forward_transfer_amount, mc_return_address):
+                                  public_key, forward_transfer_amount, mc_return_address, generate_block=True):
 
     ft_args = [{
         "toaddress": public_key,
@@ -537,7 +537,8 @@ def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
         "mcReturnAddress": mc_return_address
     }]
     transaction_id = mainchain_node.sc_send(ft_args)
-    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
+    print "FT transaction id: {0}".format(transaction_id)
 
-    mainchain_node.generate(1)
+    if generate_block:
+        mainchain_node.generate(1)
     return [mainchain_node.getscinfo(sidechain_id), mainchain_node.getblockcount()]

@@ -361,7 +361,9 @@ class CswManager(settings: SidechainSettings,
     val lastActiveCertOpt = state.certificate(lastActiveCertReferencedEpoch)
 
     val endBlockHeight = WithdrawalEpochUtils.ceasedAtMcBlockHeight(withdrawalEpochNumber, params)
-    val startBlockHeight: Int = endBlockHeight - CryptoLibProvider.cswCircuitFunctions.rangeSize(params.withdrawalEpochLength)
+    val startBlockHeight: Int = endBlockHeight - CryptoLibProvider.cswCircuitFunctions.rangeSize(params.withdrawalEpochLength) + 1
+
+    log.debug(s"CswManager: withdrawalEpochNumber = $withdrawalEpochNumber, endBlockHeight = $endBlockHeight, startBlockHeight = $startBlockHeight")
 
     // In case SC has ceased during the first 3 epochs (numbers = {0, 1, 2})
     // history has no info about mcbScTxsCumComStart, so the genesis value should be taken from params.

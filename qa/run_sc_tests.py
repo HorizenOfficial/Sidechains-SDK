@@ -5,6 +5,7 @@ from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
+from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
@@ -90,6 +91,9 @@ def run_tests(log_file):
 
     result = run_test(CertFeeConfiguration())
     assert_equal(0, result, "sc_cert_fee_conf test failed!")
+
+    result =run_test(SCCswCeasedAtEpoch1())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")
 
 
 if __name__ == "__main__":
