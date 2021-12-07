@@ -81,8 +81,8 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
            cswInfoTry match {
              case Success(cswInfo: CswInfo) => ApiResponseUtil.toResponse(RespCswInfo(cswInfo))
              case Failure(e) => {
-               log.error("Illegal state during retrieving CSW info.")
-               ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Illegal state during retrieving CSW info.", JOptional.of(e)))
+               log.error(e.getMessage)
+               ApiResponseUtil.toResponse(ErrorRetrievingCeasingState(e.getMessage, JOptional.of(e)))
              }
            }
          case Failure(e) => {
@@ -123,8 +123,8 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
           nullifierTry match {
             case Success(nullifier: Array[Byte]) => ApiResponseUtil.toResponse(RespNullifier(BytesUtils.toHexString(nullifier)))
             case Failure(e) =>
-              log.error("Illegal state. Nullifier is not found.")
-              ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Illegal state. Nullifier is not found.", JOptional.of(e)))
+              log.error(e.getMessage)
+              ApiResponseUtil.toResponse(ErrorRetrievingCeasingState(e.getMessage, JOptional.of(e)))
           }
         }
         case Failure(e) => {
