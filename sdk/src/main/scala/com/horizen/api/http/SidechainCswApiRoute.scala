@@ -50,7 +50,7 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
   def generateCswProof: Route = (post & path("generateCswProof")) {
     entity(as[ReqGenerationCswState]) { body =>
       Try {
-        Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.mcAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+        Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
       } match {
         case Success(res) =>
           res match {
@@ -141,9 +141,8 @@ object SidechainCswRestScheme {
   private[api] case class RespCswHasCeasedState(state: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGenerationCswState(boxId: String, mcAddress: String) {
+  private[api] case class ReqGenerationCswState(boxId: String, senderAddress: String) {
     require(boxId.length == 64, s"Invalid id $boxId. Id length must be 64")
-    require(mcAddress.length == 64, s"Invalid address $mcAddress. Address length must be 64")
   }
 
   @JsonView(Array(classOf[Views.Default]))

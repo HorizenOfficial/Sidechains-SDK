@@ -3,6 +3,7 @@ package com.horizen.csw
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
@@ -11,6 +12,7 @@ import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, S
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
+import com.horizen.serialization.Views
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -193,7 +195,8 @@ class CswManager(settings: SidechainSettings,
           case Some(cswWitnessHolder) => {
             findCswData(boxId) match {
               case Some(data: CswData) =>
-                sender() ! Success(CswInfo(data.getClass.getSimpleName, data.amount, params.sidechainId, data.getNullifier,
+                // Sidechain id in BigEndian as MC RPC expects.
+                sender() ! Success(CswInfo(data.getClass.getSimpleName, data.amount, BytesUtils.reverseBytes(params.sidechainId), data.getNullifier,
                   getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash),
                   cswWitnessHolder.mcbScTxsCumComEnd))
               case None =>
@@ -457,10 +460,12 @@ object CswManager {
       override def toString() = { this.getClass.getSimpleName}
     }
 
+    @JsonView(Array(classOf[Views.Default]))
     case class CswProofInfo(status: ProofStatus,
                             scProof: Option[Array[Byte]],
                             senderAddress: Option[String])
 
+    @JsonView(Array(classOf[Views.Default]))
     case class CswInfo(cswType: String, // pure class name
                        amount: Long,
                        scId: Array[Byte],

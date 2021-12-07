@@ -202,6 +202,61 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
             assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
                         "Opened box appeared in the wallet: " + opened_box_id)
 
+        # Check CSW available boxes on SC node
+        csw_boxes = [ft_box_1, ft_box_2, ft_box_3, ft_box_4]
+        actual_csw_box_ids = sc_node.csw_cswBoxIds()["result"]["cswBoxIds"]
+        assert_equal(len(csw_boxes), len(actual_csw_box_ids), "Different CSW box ids found.")
+
+        for box in csw_boxes:
+            assert_true(box["id"] in actual_csw_box_ids, "CSW box id not found: " + box["id"])
+
+        ceasing_cum_sc_tx_comm_tree = mc_node.getceasingcumsccommtreehash(self.sidechain_id)['ceasingCumScTxCommTree']
+
+        for box in csw_boxes:
+            # Check CSW nullifiers presence in MC
+            req = json.dumps({"boxId": box["id"]})
+            nullifier = sc_node.csw_nullifier(req)["result"]["nullifier"]
+            is_present = mc_node.checkcswnullifier(self.sidechain_id, nullifier)["data"]
+            assert_equal("false", is_present, "Nullifier must not be present in the MC.")
+
+            # Check CSW info
+            csw_info = sc_node.csw_cswInfo(req)["result"]["cswInfo"]
+            assert_equal("ForwardTransferCswData", csw_info["cswType"], "Type is different.")
+            assert_equal(box["value"], csw_info["amount"], "Amount is different.")
+            assert_equal(self.sidechain_id, csw_info["scId"], "Sidechain id is different.")
+            assert_equal(nullifier, csw_info["nullifier"], "Nullifier is different.")
+            assert_false("activeCertData" in csw_info, "ActiveCertData must not exist.")
+            assert_equal(ceasing_cum_sc_tx_comm_tree, csw_info["ceasingCumScTxCommTree"], "CeasingCumScTxCommTree is different.")
+            proof_info = csw_info["proofInfo"]
+            assert_false("scProof" in proof_info, "scProof must not exist.")
+            assert_false("senderAddress" in proof_info, "senderAddress must not exist.")
+            # TODO: restore
+            #assert_equal("Absent", proof_info["status"], "Proof must be absent.")
+
+        # TODO
+        # Generate CSW proofs for all FTs
+        sender_address = mc_node.getnewaddress()
+        req = json.dumps({"boxId": ft_box_1["id"], "senderAddress": sender_address})
+        state = sc_node.csw_generateCswProof(req)["result"]["state"]
+        # TODO: restore
+        #assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
+
+        # wait till the end of proof generation or max attempts reached
+        # get csw info and send CSW abd check proof info
+        # send CSW to MC node
+
+        # generate mc block
+        # mc_node.generate(1)
+
+        for box in csw_boxes:
+            # Check CSW nullifiers presence in MC
+            req = json.dumps({"boxId": box["id"]})
+            nullifier = sc_node.csw_nullifier(req)["result"]["nullifier"]
+            is_present = mc_node.checkcswnullifier(self.sidechain_id, nullifier)["data"]
+            assert_equal("true", is_present, "Nullifier must not be present in the MC.")
+
+        # check mc balance
+
 
 if __name__ == "__main__":
     SCCswCeasedAtEpoch1().main()
