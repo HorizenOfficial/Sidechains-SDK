@@ -442,10 +442,18 @@ object CswManager {
   // Responses interface
   object Responses {
     sealed trait ProofStatus
-    case object Absent extends ProofStatus
-    case object InQueue extends ProofStatus
-    case object InProcess extends ProofStatus
-    case object Generated extends ProofStatus
+    case object Absent extends ProofStatus {
+      override def toString() = { this.getClass.getSimpleName }
+    }
+    case object InQueue extends ProofStatus {
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object InProcess extends ProofStatus {
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object Generated extends ProofStatus {
+      override def toString() = { this.getClass.getSimpleName}
+    }
 
     case class CswProofInfo(status: ProofStatus,
                             scProof: Option[Array[Byte]],
@@ -460,12 +468,24 @@ object CswManager {
                        ceasingCumScTxCommTree: Array[Byte])
 
     sealed trait GenerateCswProofStatus
-    case object SidechainIsAlive extends GenerateCswProofStatus           // Sidechain is still alive
-    case object InvalidAddress extends GenerateCswProofStatus             // Sender address has invalid value: MC taddress expected.
-    case object NoProofData extends GenerateCswProofStatus                // Information for given box id is missed
-    case object ProofGenerationStarted extends GenerateCswProofStatus     // Started proof generation, was not started of present before
-    case object ProofGenerationInProcess extends GenerateCswProofStatus   // Proof generation was started before, still in process
-    case object ProofCreationFinished extends GenerateCswProofStatus      // Proof is ready
+    case object SidechainIsAlive extends GenerateCswProofStatus { // Sidechain is still alive
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object InvalidAddress extends GenerateCswProofStatus {           // Sender address has invalid value: MC taddress expected.
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object NoProofData extends GenerateCswProofStatus {              // Information for given box id is missed
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object ProofGenerationStarted extends GenerateCswProofStatus {   // Started proof generation, was not started of present before
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object ProofGenerationInProcess extends GenerateCswProofStatus { // Proof generation was started before, still in process
+      override def toString() = { this.getClass.getSimpleName}
+    }
+    case object ProofCreationFinished extends GenerateCswProofStatus {    // Proof is ready
+      override def toString() = { this.getClass.getSimpleName}
+    }
   }
 }
 

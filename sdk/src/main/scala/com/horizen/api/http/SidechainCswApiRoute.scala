@@ -36,9 +36,10 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
     } match {
       case Success(res) =>
         ApiResponseUtil.toResponse(RespCswHasCeasedState(res))
-      case Failure(e) =>
+      case Failure(e) => {
         log.error("Unable to retrieve ceasing status of the Sidechain.")
         ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unable to retrieve ceasing status of the Sidechain.", JOptional.of(e)))
+      }
     }
   }
 
@@ -53,16 +54,17 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
       } match {
         case Success(res) =>
           res match {
-            case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState("Sidechain is alive"))
-            case InvalidAddress  => ApiResponseUtil.toResponse(RespGenerationCswState("Invalid MC address"))
-            case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState("Sidechain is alive"))
-            case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState("CSW proof generation is started"))
-            case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState("CSW proof generation in process"))
-            case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState("CSW proof generation is finished"))
+            case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getSimpleName, "Sidechain is alive"))
+            case InvalidAddress  => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "Invalid MC address"))
+            case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "Sidechain is alive"))
+            case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation is started"))
+            case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation in process"))
+            case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation is finished"))
           }
-        case Failure(e) =>
+        case Failure(e) => {
           log.error("Unexpected error during CSW proof generation.")
           ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
+        }
       }
     }
   }
@@ -73,13 +75,20 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
   def cswInfo: Route = (post & path("cswInfo")) {
      entity(as[ReqCswInfo]) { body =>
        Try {
-         Await.result(cswManager ? GetCswInfo(BytesUtils.fromHexString(body.boxId)), timeout.duration).asInstanceOf[CswInfo]
+         Await.result(cswManager ? GetCswInfo(BytesUtils.fromHexString(body.boxId)), timeout.duration).asInstanceOf[Try[CswInfo]]
        } match {
-         case Success(cswInfo: CswInfo) =>
-           ApiResponseUtil.toResponse(RespCswInfo(cswInfo))
-         case Failure(e) =>
+         case Success(cswInfoTry: Try[CswInfo]) =>
+           cswInfoTry match {
+             case Success(cswInfo: CswInfo) => ApiResponseUtil.toResponse(RespCswInfo(cswInfo))
+             case Failure(e) => {
+               log.error("Illegal state during retrieving CSW info.")
+               ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Illegal state during retrieving CSW info.", JOptional.of(e)))
+             }
+           }
+         case Failure(e) => {
            log.error("Unexpected error during retrieving CSW info.")
            ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving CSW info.", JOptional.of(e)))
+         }
        }
      }
   }
@@ -95,9 +104,10 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
         val boxIdsStr = boxIds.map(id => BytesUtils.toHexString(id))
         ApiResponseUtil.toResponse(RespCswBoxIds(boxIdsStr))
       }
-      case Failure(e) =>
+      case Failure(e) => {
         log.error("Unexpected error during retrieving CSW Box Ids.")
         ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving CSW Box Ids.", JOptional.of(e)))
+      }
     }
   }
 
@@ -107,13 +117,20 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
   def nullifier: Route = (post & path("nullifier")) {
     entity(as[ReqNullifier]) { body =>
       Try {
-        Await.result(cswManager ? GetBoxNullifier(BytesUtils.fromHexString(body.boxId)), timeout.duration).asInstanceOf[Array[Byte]]
+        Await.result(cswManager ? GetBoxNullifier(BytesUtils.fromHexString(body.boxId)), timeout.duration).asInstanceOf[Try[Array[Byte]]]
       } match {
-        case Success(nullifier: Array[Byte]) =>
-          ApiResponseUtil.toResponse(RespNullifier(BytesUtils.toHexString(nullifier)))
-        case Failure(e) =>
+        case Success(nullifierTry: Try[Array[Byte]]) => {
+          nullifierTry match {
+            case Success(nullifier: Array[Byte]) => ApiResponseUtil.toResponse(RespNullifier(BytesUtils.toHexString(nullifier)))
+            case Failure(e) =>
+              log.error("Illegal state. Nullifier is not found.")
+              ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Illegal state. Nullifier is not found.", JOptional.of(e)))
+          }
+        }
+        case Failure(e) => {
           log.error("Unexpected error during retrieving the nullifier.")
           ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving the nullifier.", JOptional.of(e)))
+        }
       }
     }
   }
@@ -130,7 +147,7 @@ object SidechainCswRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGenerationCswState(state: String) extends SuccessResponse
+  private[api] case class RespGenerationCswState(state: String, description: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCswInfo(boxId: String) {
