@@ -369,7 +369,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
   @Test
   def cswInfo(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration)
-    val params: NetworkParams = mock[NetworkParams]
+    val params: NetworkParams = MainNetParams()
 
     val mockedSidechainNodeViewHolder = TestProbe()
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
