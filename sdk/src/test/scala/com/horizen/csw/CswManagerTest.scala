@@ -39,6 +39,8 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
 
+  case object WatchOk
+
   val senderAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK" // mainnet
 
   val utxoData1: UtxoCswData = getUtxoCswData(1000L)
@@ -95,10 +97,13 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     val state: SidechainState = mock[SidechainState]
     val wallet: SidechainWallet = mock[SidechainWallet]
 
+    val watch = TestProbe()
+
     val mockedSidechainNodeViewHolder = TestProbe()
     mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case GetDataFromCurrentView(f) =>
+          watch.testActor ! WatchOk
           sender ! f(CurrentView(history, state, wallet, mock[SidechainMemoryPool]))
       }
       TestActor.KeepRunning
@@ -113,10 +118,9 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     val cswManager: CswManager = cswManagerRef.underlyingActor
 
-    val watch = TestProbe()
-    watch.watch(cswManagerRef)
-
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
+    watch.expectMsg(timeout.duration, WatchOk)
     watch.expectNoMessage(timeout.duration)
 
     assertFalse("Sidechain expected to be alive.", cswManager.hasSidechainCeased)
@@ -135,10 +139,13 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     val state: SidechainState = mock[SidechainState]
     val wallet: SidechainWallet = mock[SidechainWallet]
 
+    val watch = TestProbe()
+
     val mockedSidechainNodeViewHolder = TestProbe()
     mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case GetDataFromCurrentView(f) =>
+          watch.testActor ! WatchOk
           sender ! f(CurrentView(history, state, wallet, mock[SidechainMemoryPool]))
       }
       TestActor.KeepRunning
@@ -196,10 +203,9 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     val cswManager: CswManager = cswManagerRef.underlyingActor
 
-    val watch = TestProbe()
-    watch.watch(cswManagerRef)
-
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+    watch.expectMsg(timeout.duration, WatchOk)
+    watch.expectMsg(timeout.duration, WatchOk)
     watch.expectNoMessage(timeout.duration)
 
     assertTrue("Sidechain expected to be ceased.", cswManager.hasSidechainCeased)
