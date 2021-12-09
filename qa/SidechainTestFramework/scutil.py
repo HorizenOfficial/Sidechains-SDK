@@ -185,7 +185,7 @@ Generate withdrawal certificate proof info calling ScBootstrappingTools with com
 Parameters:
  - seed
  - number_of_schnorr_keys: the number of schnorr keys to be generated
- - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin dlog key and snark pk&vk
+ - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
 
 Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
@@ -218,7 +218,7 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
 Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - withdrawalEpochLen
- - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin dlog key and snark pk&vk
+ - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
 
 Output: Verification key
 """
@@ -723,13 +723,13 @@ Parameters:
  Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_key_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
-    csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_key_paths)
+    csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
                                     sc_creation_info.mc_node,
                                     sc_creation_info.withdrawal_epoch_length,
@@ -747,7 +747,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_key_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.

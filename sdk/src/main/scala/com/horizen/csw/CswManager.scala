@@ -212,8 +212,8 @@ class CswManager(settings: SidechainSettings,
 
   private def tryScheduleProofGeneration: Receive = {
     case TryToScheduleProofGeneration =>
-      // Emit next proof generation only in case when no other one in process
-      if(proofInProcessOpt.isEmpty && proofsInQueue.nonEmpty) {
+      // Emit next proof generation only in case no other one in process
+      if(cswWitnessHolderOpt.nonEmpty && proofInProcessOpt.isEmpty && proofsInQueue.nonEmpty) {
         val cswWitnessHolder = cswWitnessHolderOpt.get
         val inQueue = proofsInQueue.remove(0)
         findCswData(inQueue.boxId.data) match {

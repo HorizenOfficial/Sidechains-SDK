@@ -80,7 +80,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         case None => true
       }
     },
-      s"Specif0ied version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+      s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
 
     require({
       utxoMerkleTreeStorage.lastVersionId match {

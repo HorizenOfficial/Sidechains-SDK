@@ -33,6 +33,10 @@ public class InMemorySparseMerkleTreeWrapperTest {
         assertEquals("No positions expected.", totalLeavesNumber, merkleTreeWrapper.leftmostEmptyPositions(totalLeavesNumber + 1).size());
         assertEquals("No positions expected.", 0, merkleTreeWrapper.leftmostEmptyPositions(0).size());
         assertEquals("No positions expected.", 0, merkleTreeWrapper.leftmostEmptyPositions(-1).size());
+
+        try {
+            merkleTreeWrapper.close();
+        } catch (Exception ignored) {}
     }
 
     @Test
@@ -41,6 +45,10 @@ public class InMemorySparseMerkleTreeWrapperTest {
         byte[] root = merkleTreeWrapper.calculateRoot();
         String rootHex = BytesUtils.toHexString(root);
         assertEquals("Root of empty tree is different.", "cae22c26168c9275bfa5ad7aa496e94450367a19be9a142e2c6a8d3f5afaaf26", rootHex);
+
+        try {
+            merkleTreeWrapper.close();
+        } catch (Exception ignored) {}
     }
 
     @Test
@@ -96,6 +104,10 @@ public class InMemorySparseMerkleTreeWrapperTest {
                 fail(e.getMessage());
             }
         });
+
+        try {
+            merkleTreeWrapper.close();
+        } catch (Exception ignored) {}
     }
 
     @Test
@@ -137,5 +149,9 @@ public class InMemorySparseMerkleTreeWrapperTest {
 
         byte[] root = merkleTreeWrapper.calculateRoot();
         assertNotNull("Root should exist.", root);
+
+        try {
+            merkleTreeWrapper.close();
+        } catch (Exception ignored) {}
     }
 }
