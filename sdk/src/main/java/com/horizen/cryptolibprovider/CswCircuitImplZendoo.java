@@ -90,7 +90,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
     }
 
     @Override
-    public boolean generateCoboundaryMarlinKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
+    public boolean generateCoboundaryMarlinSnarkKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
         int rangeSize = rangeSize(withdrawalEpochLength);
 
         return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.customFieldsNumber,

@@ -20,7 +20,7 @@ public interface CswCircuit {
 
     int rangeSize(int withdrawalEpochLength);
 
-    boolean generateCoboundaryMarlinKeys(int withdrawalEpochLen, String provingKeyPath, String verificationKeyPath);
+    boolean generateCoboundaryMarlinSnarkKeys(int withdrawalEpochLen, String provingKeyPath, String verificationKeyPath);
 
     byte[] privateKey25519ToScalar(PrivateKey25519 pk);
 

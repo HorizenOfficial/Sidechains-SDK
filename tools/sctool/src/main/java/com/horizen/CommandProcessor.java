@@ -334,7 +334,7 @@ public class CommandProcessor {
                 return;
             }
 
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(1, provingKeyPath, verificationKeyPath)) {
+            if (!CryptoLibProvider.cswCircuitFunctions().generateCoboundaryMarlinSnarkKeys(withdrawalEpochLen, provingKeyPath, verificationKeyPath)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
             }

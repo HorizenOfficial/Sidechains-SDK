@@ -35,7 +35,7 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 
 **Requirements**
 
-* Java 8 or newer (Java 11 recommended)
+* Java 11 or newer
 * Scala 2.12.10+
 * Python 2.7
 * Maven
