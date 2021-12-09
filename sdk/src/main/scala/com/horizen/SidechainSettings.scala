@@ -40,11 +40,14 @@ case class ForgerSettings(automaticForging: Boolean = false)
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])
 
+case class LogInfoSettings(logFileName: String, logFileLevel: String, logConsoleLevel: String)
+
 case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
                               wallet: WalletSettings,
-                              forger: ForgerSettings
+                              forger: ForgerSettings,
+                              logInfo: LogInfoSettings
                             )

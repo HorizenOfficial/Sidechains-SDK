@@ -42,9 +42,8 @@
         </Logger-->
 
         <Root level="all">
-            <AppenderRef ref="debugLog" />
-            <!-- Only errors are sent to console-->
-            <AppenderRef ref="Console" level="error"/>
+            <AppenderRef ref="debugLog" level="${sys:logFileLevel}"/>
+            <AppenderRef ref="Console" level="${sys:logConsoleLevel}"/>
         </Root>
 
     </Loggers>

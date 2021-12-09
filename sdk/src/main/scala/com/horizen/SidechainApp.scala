@@ -67,6 +67,7 @@ class SidechainApp @Inject()
   )
   extends Application  with ScorexLogging
 {
+  // cannot replace ScorexLogging with LazyLogging since Application already inherits from ScorexLogging
 
 
   override type TX = SidechainTypes#SCBT
