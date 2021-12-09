@@ -517,7 +517,7 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
   @Test
   def getMempoolTopQualityCertificates(): Unit = {
     val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
-    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+    val timeoutDuration: FiniteDuration = new FiniteDuration(200, MILLISECONDS)
 
     val scid = "3f78cb790f5e6f30440af7968a8a63ce3dc95913082cfb2476c572999997025b"
     val expectedReqType = GET_TOP_QUALITY_CERTIFICATES_TYPE
