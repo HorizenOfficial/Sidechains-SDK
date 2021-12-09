@@ -3,7 +3,8 @@ package com.horizen.csw
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.annotation.{JsonProperty, JsonView}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.csw.CswManager.{ProofInProcess, ProofInQueue}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
@@ -12,7 +13,7 @@ import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, S
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.serialization.Views
+import com.horizen.serialization.{CswProofStatusSerializer, Views}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -446,22 +447,17 @@ object CswManager {
 
   // Responses interface
   object Responses {
-    sealed trait ProofStatus
-    case object Absent extends ProofStatus {
-      override def toString() = { this.getClass.getSimpleName }
+    sealed trait ProofStatus{
+      override def toString() = {this.getClass.getName.split("\\$").last}
     }
-    case object InQueue extends ProofStatus {
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object InProcess extends ProofStatus {
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object Generated extends ProofStatus {
-      override def toString() = { this.getClass.getSimpleName}
-    }
+    case object Absent extends ProofStatus
+    case object InQueue extends ProofStatus
+    case object InProcess extends ProofStatus
+    case object Generated extends ProofStatus
+
 
     @JsonView(Array(classOf[Views.Default]))
-    case class CswProofInfo(status: ProofStatus,
+    case class CswProofInfo(@JsonSerialize(using = classOf[CswProofStatusSerializer]) status: ProofStatus,
                             scProof: Option[Array[Byte]],
                             senderAddress: Option[String])
 
@@ -474,25 +470,15 @@ object CswManager {
                        activeCertData: Option[Array[Byte]],
                        ceasingCumScTxCommTree: Array[Byte])
 
-    sealed trait GenerateCswProofStatus
-    case object SidechainIsAlive extends GenerateCswProofStatus { // Sidechain is still alive
-      override def toString() = { this.getClass.getSimpleName}
+    sealed trait GenerateCswProofStatus {
+      override def toString() = {this.getClass.getName.split("\\$").last}
     }
-    case object InvalidAddress extends GenerateCswProofStatus {           // Sender address has invalid value: MC taddress expected.
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object NoProofData extends GenerateCswProofStatus {              // Information for given box id is missed
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object ProofGenerationStarted extends GenerateCswProofStatus {   // Started proof generation, was not started of present before
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object ProofGenerationInProcess extends GenerateCswProofStatus { // Proof generation was started before, still in process
-      override def toString() = { this.getClass.getSimpleName}
-    }
-    case object ProofCreationFinished extends GenerateCswProofStatus {    // Proof is ready
-      override def toString() = { this.getClass.getSimpleName}
-    }
+    case object SidechainIsAlive extends GenerateCswProofStatus           // Sidechain is still alive
+    case object InvalidAddress extends GenerateCswProofStatus             // Sender address has invalid value: MC taddress expected.
+    case object NoProofData extends GenerateCswProofStatus                // Information for given box id is missed
+    case object ProofGenerationStarted extends GenerateCswProofStatus     // Started proof generation, was not started of present before
+    case object ProofGenerationInProcess extends GenerateCswProofStatus   // Proof generation was started before, still in process
+    case object ProofCreationFinished extends GenerateCswProofStatus      // Proof is ready
   }
 }
 

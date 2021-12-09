@@ -1287,6 +1287,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
       tags:
@@ -1432,6 +1433,196 @@ paths:
                         $ref: '#/components/schemas/MainchainBlock'
                       blockHex:
                         type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  #Certificate Submitter operations
+  # TODO
+
+  # Ceased Sidechain Withdrawal operations
+  /csw/hasCeased:
+    post:
+      tags:
+        - csw
+      summary: returns current status of the Sidechain
+      description: returns current status of the Sidechain
+      operationId: hasCeased
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: string
+                        description: True or False depending if Sidechain is ceased
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/generateCswProof:
+    post:
+      tags:
+        - csw
+      summary: generates csw proof
+      description: try to generate csw proof and return current status of this operation
+      operationId: generateCswProof
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: id of ZenBox
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: string
+                        description: short description of current proof generation state
+                      description:
+                        type: string
+                        description: full description of current proof generation state
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/cswInfo:
+    post:
+      tags:
+        - csw
+      summary: csw information
+      description: retrieves information about csw proof for given box id
+      operationId: cswInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: id of ZenBox
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswInfo:
+                        $ref: '#/components/schemas/CswInfo'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/cswBoxIds:
+    post:
+      tags:
+        - csw
+      summary: return list of available box ids for csw
+      description: return list of available box ids for csw
+      operationId: cswBoxIds
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswBoxIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/nullifier:
+    post:
+      tags:
+        - csw
+      summary: retrieves nullifier
+      description: retrieves nullifier for given box id
+      operationId: nullifier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: id of ZenBox
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      nullifier:
+                        type: String
+                        description: nullifier for given box id
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1620,3 +1811,31 @@ components:
           $ref: '#/components/schemas/Proposition'
         signature:
           $ref: '#/components/schemas/Signature25519'
+
+    CswInfo:
+      type: object
+      properties:
+        cswType:
+          type: string
+        amount:
+          type: integer
+        scId:
+          type: string
+        nullifier:
+          type: string
+        proofInfo:
+          $ref: '#/components/schemas/CswProofInfo'
+        activeCertData:
+          type: string
+        ceasingCumScTxCommTree:
+          type: string
+
+    CswProofInfo:
+      type: object
+      properties:
+        status:
+          type: string
+        scProof:
+          type: string
+        senderAddress:
+          type: string

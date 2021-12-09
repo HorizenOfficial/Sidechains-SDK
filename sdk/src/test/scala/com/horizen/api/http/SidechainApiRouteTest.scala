@@ -40,7 +40,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import akka.http.javadsl.marshallers.jackson.Jackson
-import com.horizen.csw.CswManager.ReceivableMessages.GetCeasedStatus
+import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
+import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 
 import scala.language.postfixOps
 
@@ -233,7 +235,40 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case GetCeasedStatus => {
-            sender ! true
+          sender ! true
+        }
+        case GetCswBoxIds => {
+          sender ! Seq(ByteUtils.fromHexString("1111"), ByteUtils.fromHexString("2222"), ByteUtils.fromHexString("3333"))
+        }
+        case GetCswInfo(boxId) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! Failure(new IllegalArgumentException("CSW info was not found for given box id."))
+          } else {
+            sender ! Success(CswInfo("UtxoCswData", // pure class name
+              42,
+              ByteUtils.fromHexString("ABCD"),
+              ByteUtils.fromHexString("FFFF"),
+              CswProofInfo(Absent, Some(ByteUtils.fromHexString("FBFB")), Some("SomeDestination")),
+              Some(ByteUtils.fromHexString("BBBB")),
+              ByteUtils.fromHexString("CCCC")))
+          }
+        }
+        case GetBoxNullifier(boxId) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! Failure(new IllegalArgumentException("Box was not found for given box id."))
+          } else {
+            sender ! Success(ByteUtils.fromHexString("FAFA"))
+          }
+        }
+        case GenerateCswProof(boxId, senderAddress) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! NoProofData
+          } else {
+            sender ! ProofCreationFinished
+          }
         }
       }
       TestActor.KeepRunning

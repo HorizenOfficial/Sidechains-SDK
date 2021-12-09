@@ -328,16 +328,14 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             proof_info = csw_info["proofInfo"]
             assert_false("scProof" in proof_info, "scProof must not exist.")
             assert_false("senderAddress" in proof_info, "senderAddress must not exist.")
-            # TODO: restore
-            #assert_equal("Absent", proof_info["status"], "Proof must be absent.")
+            assert_equal("Absent", proof_info["status"], "Proof must be absent.")
 
         # TODO
         # Generate CSW proofs for all FTs
         sender_address = mc_node.getnewaddress()
         req = json.dumps({"boxId": ft_box_1["id"], "senderAddress": sender_address})
         state = sc_node.csw_generateCswProof(req)["result"]["state"]
-        # TODO: restore
-        #assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
+        assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
 
         # wait till the end of proof generation or max attempts reached
         # get csw info and send CSW abd check proof info

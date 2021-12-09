@@ -54,12 +54,12 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
       } match {
         case Success(res) =>
           res match {
-            case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getSimpleName, "Sidechain is alive"))
-            case InvalidAddress  => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "Invalid MC address"))
-            case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "Sidechain is alive"))
-            case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation is started"))
-            case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation in process"))
-            case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.getClass.getName, "CSW proof generation is finished"))
+            case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+            case InvalidAddress  => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Invalid MC address"))
+            case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+            case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is started"))
+            case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
+            case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
           }
         case Failure(e) => {
           log.error("Unexpected error during CSW proof generation.")
