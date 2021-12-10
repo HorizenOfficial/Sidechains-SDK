@@ -21,6 +21,8 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
+from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_ALL
+
 '''
 The workflow is the following:
 1- add_options      (for MC nodes)
@@ -118,6 +120,10 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
+        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_ALL, action="store",
+                          help="log4j log level for application log file")
+        parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
+                          help="log4j log level for application console")
 
         self.add_options(parser)
         self.sc_add_options(parser)
