@@ -2,7 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.box.ZenBox;
-import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.BoxData;
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
@@ -169,7 +169,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
 
         to.add(new ZenBoxData(pk4.publicImage(), 20L));
         to.add(new ZenBoxData(pk5.publicImage(), 30L));
@@ -195,7 +195,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
@@ -251,7 +251,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
@@ -310,7 +310,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
 
         // Test 2: NOT empty 'to' list
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 10L));
         to.add(new ZenBoxData(pk5.publicImage(), 20L));
         fee = 30L;
@@ -330,7 +330,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk2.publicImage(), 50L));
 
         // Note: total 'from' value is 100, total 'to' value is 10
@@ -366,7 +366,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 10L));
         long fee = 0L;
 
@@ -377,7 +377,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_NullArgumentTest() {
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk4.publicImage(), 20L));
         to.add(new ZenBoxData(pk5.publicImage(), 30L));
 

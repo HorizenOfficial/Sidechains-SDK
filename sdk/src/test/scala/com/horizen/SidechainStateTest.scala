@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
+import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.cryptolibprovider.FieldElementUtils
@@ -61,7 +61,7 @@ class SidechainStateTest
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[ZenBox,PrivateKey25519](box, secret)}.asJava)
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
 
     for (b <- boxList) {

@@ -5,7 +5,7 @@ import java.util
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, SidechainCommitmentTree}
 import com.horizen.box._
-import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.companion._
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.customtypes._
@@ -483,7 +483,7 @@ class SidechainWalletTest
     val mockedBlock : SidechainBlock = mock[SidechainBlock]
     val blockId = Array[Byte](32)
     val from : JList[Pair[ZenBox, PrivateKey25519]] = new JArrayList()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     Random.nextBytes(blockId)
 
@@ -924,8 +924,7 @@ class SidechainWalletTest
   }
 
   def walletBoxToCswData(box: SidechainTypes#SCB, view: UtxoMerkleTreeView): CswData = {
-    val noncedBox = box.asInstanceOf[Box[_ <: Proposition]]
-    UtxoCswData(box.id(), box.proposition().bytes, box.value(), noncedBox.nonce(),
+    UtxoCswData(box.id(), box.proposition().bytes, box.value(), box.nonce(),
       box.customFieldsHash(), view.utxoMerklePath(box.id()).get)
   }
 }

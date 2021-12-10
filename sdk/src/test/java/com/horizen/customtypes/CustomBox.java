@@ -2,12 +2,12 @@ package com.horizen.customtypes;
 
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
-import com.horizen.box.AbstractNoncedBox;
+import com.horizen.box.AbstractBox;
 import com.horizen.box.BoxSerializer;
 
 import java.util.Arrays;
 
-public class CustomBox extends AbstractNoncedBox<CustomPublicKeyProposition, CustomBoxData, CustomBox>
+public class CustomBox extends AbstractBox<CustomPublicKeyProposition, CustomBoxData, CustomBox>
 {
     public static final byte BOX_TYPE_ID = 1;
 

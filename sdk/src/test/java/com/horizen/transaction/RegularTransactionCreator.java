@@ -2,7 +2,7 @@ package com.horizen.transaction;
 
 import com.horizen.box.Box;
 import com.horizen.box.ZenBox;
-import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.BoxData;
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.node.NodeWallet;
 import com.horizen.proposition.Proposition;
@@ -19,7 +19,7 @@ import java.util.Objects;
 public class RegularTransactionCreator {
 
     public static RegularTransaction create(NodeWallet wallet,
-                                            List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to,
+                                            List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to,
                                             PublicKey25519Proposition changeAddress,
                                             long fee,
                                             List<byte[]> boxIdsToExclude) {
@@ -36,7 +36,7 @@ public class RegularTransactionCreator {
         Objects.requireNonNull(boxIdsToExclude, "Box ids to exclude list can't be null");
 
         long toAmount = 0;
-        for(NoncedBoxData boxData : to) {
+        for(BoxData boxData : to) {
             if (boxData.value() < 0)
                 throw new IllegalArgumentException("Output values must be >= 0.");
             toAmount += boxData.value();
@@ -67,7 +67,7 @@ public class RegularTransactionCreator {
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");
 
         // add change to outputs
-        List<NoncedBoxData<? extends Proposition, ? extends Box<? extends Proposition>>> sendTo = new ArrayList<>(to);
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> sendTo = new ArrayList<>(to);
         if(currentAmount > toAmount) {
             sendTo.add(new ZenBoxData(changeAddress, currentAmount - toAmount));
         }

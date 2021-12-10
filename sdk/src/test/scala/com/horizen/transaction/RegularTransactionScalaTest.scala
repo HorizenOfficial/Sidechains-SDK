@@ -5,7 +5,7 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.box.{Box, ZenBox}
-import com.horizen.box.data.{NoncedBoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
@@ -23,7 +23,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     val fee = 10
 
     val from = new JArrayList[JPair[ZenBox, PrivateKey25519]]
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
 
     val creator = PrivateKey25519Creator.getInstance
     val pk1 = creator.generateSecret("test_seed1".getBytes)

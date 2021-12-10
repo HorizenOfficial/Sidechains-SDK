@@ -11,7 +11,7 @@ import java.util.Arrays;
 import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
 
 public final class ZenBox
-    extends AbstractNoncedBox<PublicKey25519Proposition, ZenBoxData, ZenBox>
+    extends AbstractBox<PublicKey25519Proposition, ZenBoxData, ZenBox>
     implements CoinsBox<PublicKey25519Proposition>
 {
 
