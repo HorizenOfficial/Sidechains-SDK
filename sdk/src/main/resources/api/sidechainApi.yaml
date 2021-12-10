@@ -484,7 +484,7 @@ paths:
                     properties:
                       boxId:
                         type: string
-                        description: id of ZenBox
+                        description: coin box id in hex
                 regularOutputs:
                   type: array
                   items:
@@ -1465,7 +1465,7 @@ paths:
                     type: object
                     properties:
                       state:
-                        type: string
+                        type: boolean
                         description: True or False depending if Sidechain is ceased
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -1493,7 +1493,10 @@ paths:
               properties:
                 boxId:
                   type: string
-                  description: id of ZenBox
+                  description: coin box id in hex
+                senderAddress:
+                  type: string
+                  description: Horizen transparent address
       responses:
         '200':
           description: successful operation
@@ -1537,7 +1540,7 @@ paths:
               properties:
                 boxId:
                   type: string
-                  description: id of ZenBox
+                  description: coin box id in hex
       responses:
         '200':
           description: successful operation
@@ -1608,7 +1611,7 @@ paths:
               properties:
                 boxId:
                   type: string
-                  description: id of ZenBox
+                  description: coin box id in hex
       responses:
         '200':
           description: successful operation

@@ -20,24 +20,24 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         emptyLeaves = TreeRangeSet.create(Arrays.asList(Range.closedOpen(0L, leavesNumber)));
     }
 
-    // returns N leftmost empty positions in the tree
-    // or less than N if there are not enough empty positions
-    public List<Long> leftmostEmptyPositions(long count) {
-        if(count <= 0)
+    // Returns up to N leftmost empty positions in the tree.
+    // Returns less than N if there are not enough empty positions.
+    public List<Long> leftmostEmptyPositions(long atMost) {
+        if(atMost <= 0)
             return new ArrayList<>();
         List<Long> emptyPositions = new ArrayList<>();
 
         for(Range<Long> range : emptyLeaves.asRanges()) {
             for(long emptyPos: ContiguousSet.create(range, DiscreteDomain.longs())) {
                 emptyPositions.add(emptyPos);
-                if(emptyPositions.size() == count)
+                if(emptyPositions.size() == atMost)
                     return emptyPositions;
             }
         }
         return emptyPositions;
     }
 
-    // Check position
+    // Check the leaf is empty on given position.
     public boolean isLeafEmpty(long pos) {
         try {
             return merkleTree.isPositionEmpty(pos);
@@ -47,12 +47,12 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         }
     }
 
-    // check max leaves number
+    // Check max leaves number.
     public long leavesNumber() {
         return leavesNumber;
     }
 
-    // returns false if leaf is not a FE, or pos was occupied before
+    // Returns false if one of the positions was occupied before.
     public boolean addLeaves(Map<Long, FieldElement> leaves) {
         // check that all leaves refer to empty positions in the merkle tree.
         for(Long pos : leaves.keySet()) {
@@ -72,7 +72,8 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         return true;
     }
 
-    // remove the leaves at given positions if were present
+    // Remove the leaves at given positions.
+    // Returns false if one of the positions is out of tree bounds or leaf is already empty.
     public boolean removeLeaves(long[] positions) {
         Set<Long> positionSet = new HashSet<>();
         // check positions range
@@ -97,7 +98,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         return true;
     }
 
-    // returns the root of the merkle tree or null if tree state was not finalized
+    // Returns the root of the merkle tree or null if tree state was not finalized
     public byte[] calculateRoot() {
         try {
             merkleTree.finalizeInPlace();
@@ -110,7 +111,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         }
     }
 
-    // return byte representation of merkle path or null if there is no leaf at given pos.
+    // Return byte representation of merkle path or null if there is no leaf at given pos.
     public byte[] merklePath(long pos) {
         try {
             merkleTree.finalizeInPlace();

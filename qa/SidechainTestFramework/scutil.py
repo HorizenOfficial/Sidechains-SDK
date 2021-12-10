@@ -710,8 +710,8 @@ def cert_proof_keys_paths(dirname):
 
 def csw_proof_keys_paths(dirname, withdrawal_epoch_length):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "csw_marlin_csw_pk_" + str(withdrawal_epoch_length)).replace("\\", "/"),
-                          os.path.join(dirname, "csw_marlin_csw_vk_" + str(withdrawal_epoch_length)).replace("\\", "/"))
+    return ProofKeysPaths(os.path.join(dirname, "csw_marlin_snark_pk_" + str(withdrawal_epoch_length)).replace("\\", "/"),
+                          os.path.join(dirname, "csw_marlin_snark_vk_" + str(withdrawal_epoch_length)).replace("\\", "/"))
 
 
 """

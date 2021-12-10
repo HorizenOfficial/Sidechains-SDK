@@ -184,10 +184,17 @@ class SidechainApp @Inject()
 
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
-    log.info("Generating snark keys. It may take some time.")
+    log.info("Generating Cert snark keys. It may take some time.")
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
         sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certVerificationKeyFilePath, params.certProvingKeyFilePath)) {
-      throw new IllegalArgumentException("Can't generate Coboundary Marlin ProvingSystem snark keys.")
+      throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
+    }
+  }
+  if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
+    log.info("Generating CSW snark keys. It may take some time.")
+    if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+      params.withdrawalEpochLength, params.certVerificationKeyFilePath, params.certProvingKeyFilePath)) {
+      throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
     }
   }
 

@@ -9,6 +9,7 @@ import com.horizen.cswnative.CswProof;
 import com.horizen.cswnative.CswSysData;
 import com.horizen.cswnative.CswUtxoProverData;
 import com.horizen.fwtnative.ForwardTransferOutput;
+import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
@@ -31,8 +32,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
 
     @Override
     public int utxoMerkleTreeHeight() {
-        // TODO: choose proper merkle tree height compatible with the CSW circuit.
-        return 12;
+        return Constants.SC_MST_HEIGHT();
     }
 
     @Override
@@ -93,8 +93,10 @@ public class CswCircuitImplZendoo implements CswCircuit {
     public boolean generateCoboundaryMarlinSnarkKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
         int rangeSize = rangeSize(withdrawalEpochLength);
 
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, 1, CommonCircuit.customFieldsNumber, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
+        /* TODO: uncomment when ready in sc-cryptolib
         return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.customFieldsNumber,
-                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
+                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);*/
     }
 
     private WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert) {

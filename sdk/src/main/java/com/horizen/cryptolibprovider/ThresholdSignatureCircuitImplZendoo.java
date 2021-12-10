@@ -32,28 +32,32 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return fesBytes;
     }
 
-    // TODO: replace with sc-cryptolib implementation
     private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[] utxoMerkleTreeRoot) {
-        byte[] fe1Bytes = new byte[32];
-        byte[] fe2Bytes = new byte[32];
+        FieldElement utxoMerkleTreeRootFe = FieldElement.deserialize(utxoMerkleTreeRoot);
+        List<FieldElement> split = utxoMerkleTreeRootFe.splitAt(16);
+        utxoMerkleTreeRootFe.freeFieldElement();
 
-        System.arraycopy(utxoMerkleTreeRoot, 0, fe1Bytes, 0, 16);
-        System.arraycopy(utxoMerkleTreeRoot, 16, fe2Bytes, 0, 16);
-
-        FieldElement fe1 = FieldElement.deserialize(fe1Bytes);
-        FieldElement fe2 = FieldElement.deserialize(fe2Bytes);
-
-        return Arrays.asList(fe1, fe2);
+        return split;
     }
 
     @Override
     public byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes) {
-        if(fe1Bytes.length != Constants.FIELD_ELEMENT_LENGTH() || fe2Bytes.length != Constants.FIELD_ELEMENT_LENGTH())
+        FieldElement fe1 = FieldElement.deserialize(fe1Bytes);
+        if(fe1 == null)
             return new byte[0];
-        // TODO: replace with sc-cryptolib implementation
-        byte[] utxoMerkleTreeRoot = new byte[32];
-        System.arraycopy(fe1Bytes, 0, utxoMerkleTreeRoot, 0, 16);
-        System.arraycopy(fe2Bytes, 0, utxoMerkleTreeRoot, 16, 16);
+        FieldElement fe2 = FieldElement.deserialize(fe2Bytes);
+        if(fe2 == null) {
+            fe1.freeFieldElement();
+            return new byte[0];
+        }
+
+        FieldElement utxoMerkleTreeRootFe = FieldElement.joinAt(fe1, 16, fe2, 16);
+        byte[] utxoMerkleTreeRoot = utxoMerkleTreeRootFe.serializeFieldElement();
+
+        fe1.freeFieldElement();
+        fe2.freeFieldElement();
+        utxoMerkleTreeRootFe.freeFieldElement();
+
         return utxoMerkleTreeRoot;
     }
 

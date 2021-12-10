@@ -113,6 +113,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
   }.recoverWith {
     case exception =>
       // Reload merkle tree in case of any exception to restore the proper state.
+      merkleTreeWrapper.close()
       merkleTreeWrapper = loadMerkleTree()
       Failure(exception)
   }
@@ -129,6 +130,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     // Reload merkle tree
+    merkleTreeWrapper.close()
     merkleTreeWrapper = loadMerkleTree()
     this
   }

@@ -5,14 +5,14 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainCswRestScheme.{ReqCswInfo, ReqGenerationCswState, ReqNullifier, RespCswBoxIds, RespCswHasCeasedState, RespCswInfo, RespGenerationCswState, RespNullifier}
 import com.horizen.serialization.Views
-import java.util.{Optional => JOptional}
 
+import java.util.{Optional => JOptional}
 import akka.pattern.ask
-import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState}
+import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState, ErrorRetrievingCswBoxIds, ErrorRetrievingCswInfo, ErrorRetrievingNullifier}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{CswInfo, GenerateCswProofStatus, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.utils.{BytesUtils, CswData}
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -44,8 +44,8 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create a request for generation of CSW proof for specified
-   * and informs about current status of this proof
+   * Create a request for generation of CSW proof for specified box id and sender
+   * Then inform about current status of this proof
    */
   def generateCswProof: Route = (post & path("generateCswProof")) {
     entity(as[ReqGenerationCswState]) { body =>
@@ -82,12 +82,12 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
              case Success(cswInfo: CswInfo) => ApiResponseUtil.toResponse(RespCswInfo(cswInfo))
              case Failure(e) => {
                log.error(e.getMessage)
-               ApiResponseUtil.toResponse(ErrorRetrievingCeasingState(e.getMessage, JOptional.of(e)))
+               ApiResponseUtil.toResponse(ErrorRetrievingCswInfo(e.getMessage, JOptional.of(e)))
              }
            }
          case Failure(e) => {
            log.error("Unexpected error during retrieving CSW info.")
-           ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving CSW info.", JOptional.of(e)))
+           ApiResponseUtil.toResponse(ErrorRetrievingCswInfo("Unexpected error during retrieving CSW info.", JOptional.of(e)))
          }
        }
      }
@@ -106,7 +106,7 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
       }
       case Failure(e) => {
         log.error("Unexpected error during retrieving CSW Box Ids.")
-        ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving CSW Box Ids.", JOptional.of(e)))
+        ApiResponseUtil.toResponse(ErrorRetrievingCswBoxIds("Unexpected error during retrieving CSW Box Ids.", JOptional.of(e)))
       }
     }
   }
@@ -124,12 +124,12 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
             case Success(nullifier: Array[Byte]) => ApiResponseUtil.toResponse(RespNullifier(BytesUtils.toHexString(nullifier)))
             case Failure(e) =>
               log.error(e.getMessage)
-              ApiResponseUtil.toResponse(ErrorRetrievingCeasingState(e.getMessage, JOptional.of(e)))
+              ApiResponseUtil.toResponse(ErrorRetrievingNullifier(e.getMessage, JOptional.of(e)))
           }
         }
         case Failure(e) => {
           log.error("Unexpected error during retrieving the nullifier.")
-          ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unexpected error during retrieving the nullifier.", JOptional.of(e)))
+          ApiResponseUtil.toResponse(ErrorRetrievingNullifier("Unexpected error during retrieving the nullifier.", JOptional.of(e)))
         }
       }
     }
@@ -175,5 +175,17 @@ object SidechainCswErrorResponse {
 
   case class ErrorCswGenerationState(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0702"
+  }
+
+  case class ErrorRetrievingCswInfo(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0703"
+  }
+
+  case class ErrorRetrievingCswBoxIds(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0704"
+  }
+
+  case class ErrorRetrievingNullifier(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0705"
   }
 }
