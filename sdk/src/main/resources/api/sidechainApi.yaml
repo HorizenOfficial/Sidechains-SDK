@@ -1443,7 +1443,199 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
   #Certificate Submitter operations
-  # TODO
+  /submitter/isCertGenerationActive:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate generation is in progress
+      description: returns if certificate generation is in progress
+      operationId: isCertGenerationActive
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: boolean
+                        description: True or False depending on generation status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/isCertificateSubmitterEnabled:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate submitter is enabled
+      description: returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
+      operationId: isCertificateSubmitterEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: True or False depends on submitter status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/enableCertificateSubmitter:
+    post:
+      tags:
+        - submitter
+      summary: enables automatic certificate submission
+      description: enables automatic certificate submission
+      operationId: enableCertificateSubmitter
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/disableCertificateSubmitter:
+    post:
+      tags:
+        - submitter
+      summary: disables automatic certificate submission
+      description: disables automatic certificate submission
+      operationId: disableCertificateSubmitter
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/isCertificateSignerEnabled:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate signing option is enabled
+      description: returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
+      operationId: isCertificateSignerEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: True or False depends on submitter status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/enableCertificateSigner:
+    post:
+      tags:
+        - submitter
+      summary: enables automatic certificate signing
+      description: enables automatic certificate signing
+      operationId: enableCertificateSigner
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/disableCertificateSigner:
+    post:
+      tags:
+        - submitter
+      summary: disables automatic certificate signing
+      description: disables automatic certificate signing
+      operationId: disableCertificateSigner
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   # Ceased Sidechain Withdrawal operations
   /csw/hasCeased:
