@@ -14,7 +14,7 @@ public class SettingsReader {
     public SettingsReader (String userConfigPath, Optional<String> applicationConfigPath) {
         this.config = SidechainSettingsReader.readConfigFromPath(userConfigPath, applicationConfigPath);
         this.sidechainSettings = SidechainSettingsReader.fromConfig(this.config);
-        // init logging system as soon as possible after having read the settings
+        // init log4j logging system as soon as possible after having read the settings
         LogInitializer.initLogManager(this.sidechainSettings);
     }
 

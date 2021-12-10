@@ -40,7 +40,7 @@ case class ForgerSettings(automaticForging: Boolean = false)
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])
 
-case class LogInfoSettings(logFileName: String, logFileLevel: String, logConsoleLevel: String)
+case class LogInfoSettings(logFileName: String = "debug.log", logFileLevel: String = "all", logConsoleLevel: String = "error")
 
 case class SidechainSettings(
                               scorexSettings: ScorexSettings,

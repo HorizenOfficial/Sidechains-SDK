@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 
+
 public class SimpleApp {
     public static void main(String[] args) {
         if (args.length == 0) {
@@ -30,7 +31,6 @@ public class SimpleApp {
         logger.info("...starting application...");
         
         sidechainApp.run();
-
         System.out.println("Simple Sidechain application successfully started...");
     }
 }
