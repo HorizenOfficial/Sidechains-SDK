@@ -3,14 +3,14 @@ package com.horizen.box;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import com.horizen.ScorexEncoding;
-import com.horizen.box.data.AbstractNoncedBoxData;
+import com.horizen.box.data.AbstractBoxData;
 import com.horizen.proposition.Proposition;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class AbstractNoncedBox<P extends Proposition, BD extends AbstractNoncedBoxData<P, B, BD>, B extends AbstractNoncedBox<P, BD, B>>
+public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxData<P, B, BD>, B extends AbstractBox<P, BD, B>>
         extends ScorexEncoding implements Box<P> {
     protected final BD boxData;
     protected final long nonce;
@@ -21,7 +21,7 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
     private final static byte[] coinsBoxFlag = { (byte)1 };
     private final static byte[] nonCoinsBoxFlag = { (byte)0 };
 
-    public AbstractNoncedBox(BD boxData, long nonce) {
+    public AbstractBox(BD boxData, long nonce) {
         Objects.requireNonNull(boxData, "boxData must be defined");
 
         this.boxData = boxData;
@@ -75,7 +75,7 @@ public abstract class AbstractNoncedBox<P extends Proposition, BD extends Abstra
             return true;
         if (!(this.getClass().equals(obj.getClass())))
             return false;
-        return Arrays.equals(id(), ((AbstractNoncedBox) obj).id());
+        return Arrays.equals(id(), ((AbstractBox) obj).id());
     }
 
     @Override

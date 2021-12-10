@@ -5,7 +5,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
+import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
 import com.horizen.box.{ForgerBox, Box, WithdrawalRequestBox, ZenBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
@@ -60,7 +60,7 @@ class SidechainStateIntegrationTest
     val outputsCount = zenOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 

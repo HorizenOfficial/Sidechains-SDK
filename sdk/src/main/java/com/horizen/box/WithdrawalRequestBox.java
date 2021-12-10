@@ -11,7 +11,7 @@ import java.util.Arrays;
 import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
 
 public final class WithdrawalRequestBox
-    extends AbstractNoncedBox<MCPublicKeyHashProposition, WithdrawalRequestBoxData, WithdrawalRequestBox>
+    extends AbstractBox<MCPublicKeyHashProposition, WithdrawalRequestBoxData, WithdrawalRequestBox>
 {
     public WithdrawalRequestBox(WithdrawalRequestBoxData boxData, long nonce) {
         super(boxData, nonce);

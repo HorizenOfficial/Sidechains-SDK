@@ -1,19 +1,19 @@
 package com.horizen.box.data;
 
-import com.horizen.box.AbstractNoncedBox;
+import com.horizen.box.AbstractBox;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.Utils;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class AbstractNoncedBoxData<P extends Proposition, B extends AbstractNoncedBox<P, BD, B>, BD extends AbstractNoncedBoxData<P, B, BD>>
-        implements NoncedBoxData<P, B> {
+public abstract class AbstractBoxData<P extends Proposition, B extends AbstractBox<P, BD, B>, BD extends AbstractBoxData<P, B, BD>>
+        implements BoxData<P, B> {
 
     private final P proposition;
     private final long value;
 
-    public AbstractNoncedBoxData(P proposition, long value) {
+    public AbstractBoxData(P proposition, long value) {
         Objects.requireNonNull(proposition, "proposition must be defined");
 
         this.proposition = proposition;
@@ -52,7 +52,7 @@ public abstract class AbstractNoncedBoxData<P extends Proposition, B extends Abs
             return true;
         if (!(this.getClass().equals(obj.getClass())))
             return false;
-        AbstractNoncedBoxData boxData = (AbstractNoncedBoxData) obj;
+        AbstractBoxData boxData = (AbstractBoxData) obj;
         return proposition().equals(boxData.proposition())
                 && value() == boxData.value()
                 && Arrays.equals(customFieldsHash(), boxData.customFieldsHash());

@@ -8,7 +8,7 @@ import com.horizen.proposition.PublicKey25519PropositionSerializer;
 
 import java.util.Arrays;
 
-public final class ZenBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ZenBox, ZenBoxData> {
+public final class ZenBoxData extends AbstractBoxData<PublicKey25519Proposition, ZenBox, ZenBoxData> {
     public ZenBoxData(PublicKey25519Proposition proposition, long value) {
         super(proposition, value);
     }
@@ -27,7 +27,7 @@ public final class ZenBoxData extends AbstractNoncedBoxData<PublicKey25519Propos
     }
 
     @Override
-    public NoncedBoxDataSerializer serializer() {
+    public BoxDataSerializer serializer() {
         return ZenBoxDataSerializer.getSerializer();
     }
 

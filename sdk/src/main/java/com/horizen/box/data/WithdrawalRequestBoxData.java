@@ -8,7 +8,7 @@ import com.horizen.proposition.MCPublicKeyHashPropositionSerializer;
 
 import java.util.Arrays;
 
-public final class WithdrawalRequestBoxData extends AbstractNoncedBoxData<MCPublicKeyHashProposition, WithdrawalRequestBox, WithdrawalRequestBoxData> {
+public final class WithdrawalRequestBoxData extends AbstractBoxData<MCPublicKeyHashProposition, WithdrawalRequestBox, WithdrawalRequestBoxData> {
     public WithdrawalRequestBoxData(MCPublicKeyHashProposition proposition, long value) {
         super(proposition, value);
     }
@@ -27,7 +27,7 @@ public final class WithdrawalRequestBoxData extends AbstractNoncedBoxData<MCPubl
     }
 
     @Override
-    public NoncedBoxDataSerializer serializer() {
+    public BoxDataSerializer serializer() {
         return WithdrawalRequestBoxDataSerializer.getSerializer();
     }
 

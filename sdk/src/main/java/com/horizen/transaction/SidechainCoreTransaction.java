@@ -23,17 +23,17 @@ import java.util.*;
 
 
 public final class SidechainCoreTransaction
-        extends SidechainNoncedTransaction<Proposition, Box<Proposition>, NoncedBoxData<Proposition, Box<Proposition>>>
+        extends SidechainNoncedTransaction<Proposition, Box<Proposition>, BoxData<Proposition, Box<Proposition>>>
 {
     public final static byte SIDECHAIN_CORE_TRANSACTION_VERSION = 1;
 
     private final List<byte[]> inputsIds;
-    private final List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData;
+    private final List<BoxData<Proposition, Box<Proposition>>> outputsData;
     private final List<Proof<Proposition>> proofs;
 
     // Serializers definition
-    private final static ListSerializer<NoncedBoxData<Proposition, Box<Proposition>>> boxesDataSerializer = new ListSerializer<>(
-            new DynamicTypedSerializer<>(new HashMap<Byte, NoncedBoxDataSerializer>() {{
+    private final static ListSerializer<BoxData<Proposition, Box<Proposition>>> boxesDataSerializer = new ListSerializer<>(
+            new DynamicTypedSerializer<>(new HashMap<Byte, BoxDataSerializer>() {{
                 put((byte)1, ZenBoxDataSerializer.getSerializer());
                 put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
                 put((byte)3, ForgerBoxDataSerializer.getSerializer());
@@ -52,7 +52,7 @@ public final class SidechainCoreTransaction
 
 
     public SidechainCoreTransaction(List<byte[]> inputsIds,
-                             List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData,
+                             List<BoxData<Proposition, Box<Proposition>>> outputsData,
                              List<Proof<Proposition>> proofs,
                              long fee,
                              byte version) {
@@ -98,7 +98,7 @@ public final class SidechainCoreTransaction
     }
 
     @Override
-    protected List<NoncedBoxData<Proposition, Box<Proposition>>> getOutputData(){
+    protected List<BoxData<Proposition, Box<Proposition>>> getOutputData(){
         return outputsData;
     }
 
@@ -201,7 +201,7 @@ public final class SidechainCoreTransaction
         batchSize = BytesUtils.getInt(bytes, offset);
         offset += 4;
 
-        List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
+        List<BoxData<Proposition, Box<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
         offset += batchSize;
 
         batchSize = BytesUtils.getInt(bytes, offset);
