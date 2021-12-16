@@ -215,7 +215,7 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     return certificate_proof_info
 
 """
-Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
+Generate ceased sidechain withdrawal proof info calling ScBootstrappingTools with command "generateCswProofInfo"
 Parameters:
  - withdrawalEpochLen
  - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
