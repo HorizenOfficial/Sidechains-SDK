@@ -135,7 +135,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
         zen_boxes_req = {"boxTypeClass": "ZenBox", "excludeBoxIds": [ft_box_2["id"]]}
         utxo_box_1 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
 
-        # Generate 7 more MC blocks to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
+        # Generate 8 more MC blocks to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
         print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
