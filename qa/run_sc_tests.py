@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation

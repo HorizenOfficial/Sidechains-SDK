@@ -59,12 +59,9 @@ class SidechainAuthServiceProxy(object):
             # Callables re-use the connection of the original proxy
             self.__conn = connection
         elif self.__url.scheme == 'https':
-            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port,
-                                                  None, None, False,
-                                                  timeout)
+            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port, None, None, timeout)
         else:
-            self.__conn = httplib.HTTPConnection(self.__url.hostname, port,
-                                                 False, timeout)
+            self.__conn = httplib.HTTPConnection(self.__url.hostname, port, timeout)
 
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
@@ -125,7 +122,7 @@ class SidechainAuthServiceProxy(object):
         if http_response is None:
             raise SCAPIException("missing HTTP response from server")
         responsedata = http_response.read().decode('utf8')
-        if http_response.status is not 200: #For the moment we check for errors in this way
+        if http_response.status != 200:  # For the moment we check for errors in this way
             raise SCAPIException(responsedata)
         response = json.loads(responsedata, parse_float=decimal.Decimal)
         return response

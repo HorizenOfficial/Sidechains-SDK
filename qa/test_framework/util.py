@@ -21,7 +21,7 @@ import subprocess
 import time
 import re
 
-from authproxy import AuthServiceProxy
+from test_framework.authproxy import AuthServiceProxy
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
@@ -108,11 +108,11 @@ def initialize_chain(test_dir):
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
             bitcoind_processes[i] = subprocess.Popen(args)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
+                print("initialize_chain: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
             subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir,
                                     "-rpcwait", "getblockcount"], stdout=devnull)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: bitcoin-cli -rpcwait getblockcount completed"
+                print("initialize_chain: bitcoin-cli -rpcwait getblockcount completed")
         devnull.close()
         rpcs = []
         for i in range(4):
@@ -192,12 +192,12 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
+        print("start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
     subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: calling bitcoin-cli -rpcwait getblockcount returned"
+        print("start_node: calling bitcoin-cli -rpcwait getblockcount returned")
     devnull.close()
     url = "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
     if timewait is not None:
@@ -505,8 +505,8 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     sc_create_res = mainchain_node.sc_create(sc_create_args)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
-    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
-    print "Sidechain created with Id: {0}".format(sidechain_id)
+    print("Id of the sidechain transaction creation: {0}".format(transaction_id))
+    print("Sidechain created with Id: {0}".format(sidechain_id))
 
     mainchain_node.generate(1)
     # For docs update
@@ -540,7 +540,7 @@ def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
         "mcReturnAddress": mc_return_address
     }]
     transaction_id = mainchain_node.sc_send(ft_args)
-    print "FT transaction id: {0}".format(transaction_id)
+    print("FT transaction id: {0}".format(transaction_id))
 
     if generate_block:
         mainchain_node.generate(1)
