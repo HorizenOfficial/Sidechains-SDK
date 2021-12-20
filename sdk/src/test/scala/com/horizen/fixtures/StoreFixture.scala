@@ -1,18 +1,13 @@
 package com.horizen.fixtures
 
-import java.io.File
-
-import com.horizen.utils.Pair
-import java.util.{ArrayList => JArrayList, List => JList}
-
+import com.horizen.storage.Storage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.storage.{IODBStoreAdapter, Storage}
-import io.iohk.iodb.LSMStore
-import io.iohk.iodb.Store
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, Pair}
 
-import scala.util.Random
+import java.io.File
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 trait StoreFixture {
 
@@ -48,18 +43,6 @@ trait StoreFixture {
     if (files != null)
       files.foreach(deleteRecur)
     dir.delete()
-  }
-
-  private def getLSMStore() : Store = {
-    val dir = tempDir()
-    val store = new LSMStore(dir, keySize)
-    store
-  }
-
-  def getLsmStorage(): Storage = {
-    val storage = new IODBStoreAdapter(getLSMStore())
-    storages.append(storage)
-    storage
   }
 
   def getStorage(): VersionedLevelDbStorageAdapter = {

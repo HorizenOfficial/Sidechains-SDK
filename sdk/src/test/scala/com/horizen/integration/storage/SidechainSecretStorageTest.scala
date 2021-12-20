@@ -8,7 +8,7 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes.{CustomPrivateKey, CustomPrivateKeySerializer}
 import com.horizen.fixtures._
 import com.horizen.secret.{VrfKeyGenerator, _}
-import com.horizen.storage.{IODBStoreAdapter, SidechainSecretStorage}
+import com.horizen.storage.SidechainSecretStorage
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite

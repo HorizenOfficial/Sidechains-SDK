@@ -16,6 +16,7 @@ import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
 import com.horizen.storage._
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, MerkleTree, Pair}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 import org.junit._
@@ -39,10 +40,11 @@ class SidechainWalletTest
     with StoreFixture
     with MockitoSugar
 {
-  val mockedBoxStorage : Storage = mock[IODBStoreAdapter]
-  val mockedSecretStorage : Storage = mock[IODBStoreAdapter]
-  val mockedTransactionStorage : Storage = mock[IODBStoreAdapter]
-  val mockedForgingBoxesMerklePathStorage: Storage = mock[IODBStoreAdapter]
+
+  val mockedBoxStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+  val mockedSecretStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+  val mockedTransactionStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+  val mockedForgingBoxesMerklePathStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
   val boxList = new ListBuffer[WalletBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
