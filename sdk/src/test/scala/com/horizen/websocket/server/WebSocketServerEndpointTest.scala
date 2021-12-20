@@ -1,7 +1,5 @@
 package com.horizen.websocket.server
 
-import java.net.URI
-import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
@@ -11,19 +9,20 @@ import com.horizen.SidechainMemoryPool
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.CountDownLatchController
-
-import javax.websocket.{ClientEndpointConfig, DeploymentException, Endpoint, EndpointConfig, MessageHandler, Session}
 import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{After, Assert, Before, Test}
+import org.junit.{After, Assert, Test}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
-import scala.concurrent.ExecutionContext
+import java.net.URI
+import java.util
+import javax.websocket._
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with BeforeAndAfterAll {
@@ -378,7 +377,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     blockByHashRequest.putObject("requestPayload").put("hash", "some_block_hash")
 
     session.getBasicRemote.sendText(blockByHashRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     // Add client 2
     val cec2 = ClientEndpointConfig.Builder.create.build
