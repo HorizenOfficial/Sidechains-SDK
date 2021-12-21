@@ -40,4 +40,7 @@ public final class ZenBox
 
         return new ZenBox(boxData, nonce);
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

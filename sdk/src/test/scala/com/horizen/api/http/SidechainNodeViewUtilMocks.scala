@@ -45,6 +45,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   val box_2 = getZenBox(secret2.publicImage(), 1, 20)
   val box_3 = getZenBox(secret3.publicImage(), 1, 30)
   val box_4 = getForgerBox(secret4.publicImage(), 2, 30, secret4.publicImage(), getVRFPublicKey(4L))
+  val box_5 = getCustomBox
 
   val allBoxes: util.List[Box[Proposition]] = walletAllBoxes()
   val transactionList: util.List[RegularTransaction] = getTransactionList
@@ -146,6 +147,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     list.add(box_2.asInstanceOf[Box[Proposition]])
     list.add(box_3.asInstanceOf[Box[Proposition]])
     list.add(box_4.asInstanceOf[Box[Proposition]])
+    list.add(box_5.asInstanceOf[Box[Proposition]])
     list
   }
 
