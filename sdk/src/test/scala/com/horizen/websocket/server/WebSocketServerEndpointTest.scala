@@ -321,7 +321,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     //Check SemanticallySuccessfulModifier event
     countDownController.reset(1)
     publishNewTipEvent()
-    assertTrue("No event message received.", countDownController.await(3000))
+    assertTrue("No event message received.", countDownController.await(5000))
     val tipJson = mapper.readTree(endpoint.receivedMessage.get(0))
 
     assertTrue(checkStaticResponseFields(tipJson, 0, -1, 0))
@@ -335,7 +335,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     //Check ChangedMempool event
     countDownController.reset(1)
     publishMempoolEvent()
-    assertTrue("No event message received.", countDownController.await(3000))
+    assertTrue("No event message received.", countDownController.await(5000))
     val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(1))
 
     assertTrue(checkStaticResponseFields(mempoolJson, 0, -1, 2))

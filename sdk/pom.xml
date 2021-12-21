@@ -84,13 +84,6 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.scorexfoundation/iodb -->
-    <dependency>
-      <groupId>org.scorexfoundation</groupId>
-      <artifactId>iodb_2.12</artifactId>
-      <version>0.3.2</version>
-      <scope>compile</scope>
-    </dependency>
     <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
     <dependency>
       <groupId>org.slf4j</groupId>
