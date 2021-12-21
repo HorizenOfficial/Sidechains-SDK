@@ -31,7 +31,7 @@ trait StoreFixture {
   }
 
   def tempFile(): File = {
-    val ret = new File(System.getProperty("java.io.tmpdir") + File.separator + "iodb" + Math.random())
+    val ret = new File(System.getProperty("java.io.tmpdir") + File.separator + "leveldb" + Math.random())
     tempFiles.append(ret)
     ret.deleteOnExit()
     ret
