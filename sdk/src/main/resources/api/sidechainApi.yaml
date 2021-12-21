@@ -1947,9 +1947,10 @@ components:
         activeFromWithdrawalEpoch:
           type: integer
           format: int64
-        typeId:
-          type: integer
-          format: int64
+        typeName:
+          type: string
+        isCustom:
+          type: boolean
 
     MainchainBlock:
       type: object
