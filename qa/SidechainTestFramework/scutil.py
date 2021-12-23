@@ -387,7 +387,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     enabling the debug agent which will act as a server listening on the specified port.
     '''
     dbg_agent_opt = ''
-    if ("-agentlib" in extra_args):
+    if (extra_args is not None) and ("-agentlib" in extra_args):
         dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
 
     bashcmd = 'java ' + dbg_agent_opt + ' -cp ' + binary + ' ' + (datadir + ('/node%s.conf' % i))
