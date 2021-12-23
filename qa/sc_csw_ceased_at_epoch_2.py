@@ -343,7 +343,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         attempts = 150
         while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
             print("Wait for CSW proofs creation completion...")
-            time.sleep(5)
+            time.sleep(10)
             attempts -= 1
 
         assert_true(if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False),
