@@ -56,7 +56,7 @@ case class UtxoCswData(boxId: Array[Byte],
 
 case class ForwardTransferCswData(boxId: Array[Byte],
                                   amount: Long,
-                                  receiverPubKey: Array[Byte],
+                                  receiverPubKeyReversed: Array[Byte], // PubKey bytes as they are stored and used in MC.
                                   paybackAddrDataHash: Array[Byte],
                                   txHash: Array[Byte],
                                   outIdx: Int,
@@ -70,7 +70,7 @@ case class ForwardTransferCswData(boxId: Array[Byte],
   override def serializer: ScorexSerializer[ForwardTransferCswData] = ForwardTransferCswDataSerializer
 
   override lazy val getNullifier: Array[Byte] = {
-    val ft: ForwardTransferOutput = new ForwardTransferOutput(amount, receiverPubKey, paybackAddrDataHash, txHash, outIdx)
+    val ft: ForwardTransferOutput = new ForwardTransferOutput(amount, BytesUtils.reverseBytes(receiverPubKeyReversed), paybackAddrDataHash, txHash, outIdx)
     val nullifierFe = ft.getNullifier
     val nullifier = nullifierFe.serializeFieldElement()
     nullifierFe.freeFieldElement()
@@ -80,7 +80,7 @@ case class ForwardTransferCswData(boxId: Array[Byte],
   override def hashCode(): Int = {
     var result = util.Arrays.hashCode(boxId)
     result = 31 * result + amount.hashCode()
-    result = 31 * result + util.Arrays.hashCode(receiverPubKey)
+    result = 31 * result + util.Arrays.hashCode(receiverPubKeyReversed)
     result = 31 * result + util.Arrays.hashCode(paybackAddrDataHash)
     result = 31 * result + util.Arrays.hashCode(txHash)
     result = 31 * result + outIdx
@@ -95,7 +95,7 @@ case class ForwardTransferCswData(boxId: Array[Byte],
   override def equals(obj: Any): Boolean = {
     obj match {
       case other: ForwardTransferCswData => boxId.sameElements(other.boxId) && amount == other.amount &&
-        receiverPubKey.sameElements(other.receiverPubKey) && paybackAddrDataHash.sameElements(other.paybackAddrDataHash) &&
+        receiverPubKeyReversed.sameElements(other.receiverPubKeyReversed) && paybackAddrDataHash.sameElements(other.paybackAddrDataHash) &&
         txHash.sameElements(other.txHash) && outIdx == other.outIdx && scCommitmentMerklePath.sameElements(other.scCommitmentMerklePath) &&
         btrCommitment.sameElements(other.btrCommitment) && certCommitment.sameElements(other.certCommitment) &&
         scCrCommitment.sameElements(other.scCrCommitment) && ftMerklePath.sameElements(other.ftMerklePath)
@@ -164,8 +164,8 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
   override def serialize(obj: ForwardTransferCswData, w: Writer): Unit = {
     w.putBytes(obj.boxId)
     w.putLong(obj.amount)
-    w.putInt(obj.receiverPubKey.length)
-    w.putBytes(obj.receiverPubKey)
+    w.putInt(obj.receiverPubKeyReversed.length)
+    w.putBytes(obj.receiverPubKeyReversed)
     w.putBytes(obj.paybackAddrDataHash)
     w.putBytes(obj.txHash)
     w.putInt(obj.outIdx)
@@ -183,8 +183,8 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
 
     val amount = r.getLong()
 
-    val receiverPubKeyLength = r.getInt()
-    val receiverPubKey = r.getBytes(receiverPubKeyLength)
+    val receiverPubKeyReversedLength = r.getInt()
+    val receiverPubKeyReversed = r.getBytes(receiverPubKeyReversedLength)
 
     val paybackAddrDataHash = r.getBytes(20)
     val txHash = r.getBytes(32)
@@ -200,7 +200,7 @@ object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransfer
     val ftMerklePathLength = r.getInt()
     val ftMerklePath = r.getBytes(ftMerklePathLength)
 
-    ForwardTransferCswData(boxId, amount, receiverPubKey, paybackAddrDataHash, txHash, outIdx,
+    ForwardTransferCswData(boxId, amount, receiverPubKeyReversed, paybackAddrDataHash, txHash, outIdx,
       scCommitmentMerklePath, btrCommitment, certCommitment, scCrCommitment, ftMerklePath)
   }
 }

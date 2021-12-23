@@ -9,7 +9,7 @@ import org.junit.Test
 
 import java.lang.reflect.Method
 
-class CswProofTest {
+class CswCircuitUtilsTest {
   val cswCircuit = new CswCircuitImplZendoo()
 
   @Test

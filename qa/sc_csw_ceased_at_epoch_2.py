@@ -7,8 +7,9 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block
+    start_sc_nodes, generate_next_blocks, generate_next_block, if_csws_were_generated
 from SidechainTestFramework.sc_forging_util import *
+from decimal import Decimal
 
 """
 Sidechain has ceased in 2 epochs (one certificate appeared in epoch 1) - no active certificates.
@@ -60,7 +61,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options.tmpdir, network).sidechain_id
 
     def sc_setup_nodes(self):
@@ -330,28 +331,72 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             assert_false("senderAddress" in proof_info, "senderAddress must not exist.")
             assert_equal("Absent", proof_info["status"], "Proof must be absent.")
 
-        # TODO
         # Generate CSW proofs for all FTs
-        sender_address = mc_node.getnewaddress()
-        req = json.dumps({"boxId": ft_box_1["id"], "senderAddress": sender_address})
-        state = sc_node.csw_generateCswProof(req)["result"]["state"]
-        assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
+        csw_box_ids = map(lambda box: box["id"], csw_boxes)
+        for box_id in csw_box_ids:
+            sender_address = mc_node.getnewaddress()
+            req = json.dumps({"boxId": box_id, "senderAddress": sender_address})
+            state = sc_node.csw_generateCswProof(req)["result"]["state"]
+            assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
 
-        # wait till the end of proof generation or max attempts reached
-        # get csw info and send CSW abd check proof info
-        # send CSW to MC node
+        # Wait for proofs generation completion.
+        attempts = 150
+        while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
+            print("Wait for CSW proofs creation completion...")
+            time.sleep(5)
+            attempts -= 1
 
-        # generate mc block
-        # mc_node.generate(1)
+        assert_true(if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False),
+                    "Some CSW proof was not generated.")
 
-        for box in csw_boxes:
-            # Check CSW nullifiers presence in MC
-            req = json.dumps({"boxId": box["id"]})
+        # Send CSWs to MC
+        mc_out_addr = mc_node.getnewaddress()
+        csw_txs = 0
+
+        for box_id in csw_box_ids:
+            req = json.dumps({"boxId": box_id})
+            csw_info = sc_node.csw_cswInfo(req)["result"]["cswInfo"]
+
+            csw_amount = Decimal(csw_info["amount"]) / 100000000
+            sc_csws = [{
+                "amount": str(csw_amount),
+                "senderAddress": csw_info["proofInfo"]["senderAddress"],
+                "scId": csw_info["scId"],
+                "nullifier": csw_info["nullifier"],
+                "activeCertData": "",
+                "ceasingCumScTxCommTree": csw_info["ceasingCumScTxCommTree"],
+                "scProof": csw_info["proofInfo"]["scProof"]
+            }]
+
+            # Recipient MC address
+            sc_csw_tx_outs = {mc_out_addr: str(csw_amount)}
+
+            # Sleep for 1 second to let MC synchronize wallet
+            time.sleep(1)
+            rawtx = mc_node.createrawtransaction([], sc_csw_tx_outs, sc_csws)
+            funded_tx = mc_node.fundrawtransaction(rawtx)
+            sigRawtx = mc_node.signrawtransaction(funded_tx['hex'], None, None, "NONE")
+            finalRawtx = mc_node.sendrawtransaction(sigRawtx['hex'])
+
+            print("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
+
+            print("Check csw is in mempool...")
+            assert_true(finalRawtx in mc_node.getrawmempool())
+
+            # MC has a limit per number of CSW in the mempool in regtest: ScMaxNumberOfCswInputsInMempool = 5
+            csw_txs += 1
+            if csw_txs % 5 == 0:
+                mc_node.generate(1)
+
+        # Generate mc block to include CSWs into the blockchain
+        mc_node.generate(1)
+
+        # Check CSW nullifiers presence in MC
+        for box_id in csw_box_ids:
+            req = json.dumps({"boxId": box_id})
             nullifier = sc_node.csw_nullifier(req)["result"]["nullifier"]
             is_present = mc_node.checkcswnullifier(self.sidechain_id, nullifier)["data"]
-            assert_equal("true", is_present, "Nullifier must not be present in the MC.")
-
-        # check mc balance
+            assert_equal("true", is_present, "Nullifier for box id = " + box_id + " must be present in the MC.")
 
 
 if __name__ == "__main__":

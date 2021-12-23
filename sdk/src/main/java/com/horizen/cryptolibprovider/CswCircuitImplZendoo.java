@@ -13,9 +13,9 @@ import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
-import com.horizen.certnative.NaiveThresholdSigProof;
 import com.horizen.scutxonative.ScUtxoOutput;
 import com.horizen.secret.PrivateKey25519;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.ForwardTransferCswData;
 import com.horizen.merkletreenative.MerklePath;
 import com.horizen.utils.UtxoCswData;
@@ -92,11 +92,9 @@ public class CswCircuitImplZendoo implements CswCircuit {
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
         int rangeSize = rangeSize(withdrawalEpochLength);
-
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, 1, CommonCircuit.customFieldsNumber, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
-        /* TODO: uncomment when ready in sc-cryptolib
+        boolean isConstantPresent = true;
         return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.customFieldsNumber,
-                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);*/
+                isConstantPresent, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
     private WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert) {
@@ -155,9 +153,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
             sysData.close();
             scIdFe.close();
             utxoProverData.close();
-        } catch (Exception e) {
-            // do nothing
-        }
+        } catch (Exception ignored) {}
 
         return proof;
     }
@@ -177,7 +173,6 @@ public class CswCircuitImplZendoo implements CswCircuit {
                                 boolean checkProvingKey,
                                 boolean zk){
         Optional<WithdrawalCertificate> weOpt = lastActiveCertOpt.map(this::createWithdrawalCertificate);
-
         CswSysData sysData = new CswSysData(
                 Optional.of(FieldElement.deserialize(constant)),
                 weOpt.map(WithdrawalCertificate::getHash),
@@ -188,10 +183,9 @@ public class CswCircuitImplZendoo implements CswCircuit {
 
         FieldElement scIdFe = FieldElement.deserialize(sidechainId);
 
-
         ForwardTransferOutput ftOutput = new ForwardTransferOutput(
                 ft.amount(),
-                ft.receiverPubKey(),
+                BytesUtils.reverseBytes(ft.receiverPubKeyReversed()), // Set receiver bytes in a PubKey255199 bytes original order
                 ft.paybackAddrDataHash(),
                 ft.txHash(),
                 ft.outIdx());
@@ -205,7 +199,6 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 FieldElement.deserialize(ft.scCrCommitment()),
                 FieldElement.deserialize(ft.btrCommitment()),
                 FieldElement.deserialize(ft.certCommitment()),
-                // TODO: append list to rangeSize with null or empty FE ??
                 scTxsComHashes.stream().map(FieldElement::deserialize).collect(Collectors.toList()));
 
         byte[] proof = CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
@@ -217,9 +210,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
             if(weOpt.isPresent())
                 weOpt.get().close();
             ftProverData.close();
-        } catch (Exception e) {
-            // do nothing
-        }
+        } catch (Exception ignored) {}
 
         return proof;
     }
