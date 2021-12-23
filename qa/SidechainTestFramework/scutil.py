@@ -17,6 +17,9 @@ from test_framework.util import initialize_new_sidechain_in_mainchain
 WAIT_CONST = 1
 
 
+# timeout in secs for rest api
+DEFAULT_REST_API_TIMEOUT = 5
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -224,7 +227,7 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(), restApiTimeout=DEFAULT_REST_API_TIMEOUT):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -260,6 +263,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_TIMEOUT':(str(restApiTimeout)+"s"),
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': sc_node_config.max_connections,
         'OFFLINE_GENERATION': "false",
@@ -322,6 +326,7 @@ def initialize_default_sc_datadir(dirname, n):
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': 100,
         'OFFLINE_GENERATION': "false",
@@ -377,7 +382,15 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if binary is None:
         binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
-    bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    '''
+    In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
+    enabling the debug agent which will act as a server listening on the specified port.
+    '''
+    dbg_agent_opt = ''
+    if ("-agentlib" in extra_args):
+        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+
+    bashcmd = 'java ' + dbg_agent_opt + ' -cp ' + binary + ' ' + (datadir + ('/node%s.conf' % i))
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
@@ -643,7 +656,8 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind,
+                              restApiTimeout=DEFAULT_REST_API_TIMEOUT):
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -666,9 +680,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf, restApiTimeout)
         else:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, restApiTimeout)
 
     return sc_nodes_bootstrap_info
 
@@ -720,8 +734,8 @@ Parameters:
  - sc_node_configuration: an instance of SCNodeConfiguration (see sc_boostrap_info.py)
  
 """
-def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
+def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration, restApiTimeout=DEFAULT_REST_API_TIMEOUT):
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, restApiTimeout)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})
