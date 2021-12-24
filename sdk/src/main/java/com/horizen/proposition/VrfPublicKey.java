@@ -15,6 +15,8 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
 public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
+    public final static int KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfPublicKeyLen();
+
     private final byte[] publicBytes;
 
     public VrfPublicKey(byte[] publicKey) {
@@ -38,11 +40,6 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     }
 
     @Override
-    public byte[] bytes() {
-        return pubKeyBytes();
-    }
-
-    @Override
     public PropositionSerializer serializer() {
         return VrfPublicKeySerializer.getSerializer();
     }
@@ -58,10 +55,6 @@ public class VrfPublicKey implements ProofOfKnowledgeProposition<VrfSecretKey> {
     @Override
     public int hashCode() {
         return Arrays.hashCode(publicBytes);
-    }
-
-    public static VrfPublicKey parseBytes(byte[] bytes) {
-        return new VrfPublicKey(bytes);
     }
 
     @Override

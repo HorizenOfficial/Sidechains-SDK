@@ -41,11 +41,6 @@ public final class PublicKey25519Proposition
     }
 
     @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
-    }
-
-    @Override
     public PropositionSerializer serializer() {
         return PublicKey25519PropositionSerializer.getSerializer();
     }
@@ -108,6 +103,8 @@ public final class PublicKey25519Proposition
             return new PublicKey25519Proposition(Arrays.copyOfRange(bytesWithVersion, 1,bytesWithVersion.length));
     }
 
+    // TODO Remove
+    @Deprecated
     public static PublicKey25519Proposition parseBytes(byte[] bytes) {
         return new PublicKey25519Proposition(bytes);
     }

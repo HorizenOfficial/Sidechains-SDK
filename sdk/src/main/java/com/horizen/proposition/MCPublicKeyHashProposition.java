@@ -20,7 +20,7 @@ public final class MCPublicKeyHashProposition implements Proposition {
 
     @JsonProperty("mainchainAddress")
     @JsonSerialize(using = JsonHorizenPublicKeyHashSerializer.class)
-    private byte[] pubKeyHashBytes;
+    byte[] pubKeyHashBytes;
 
     public MCPublicKeyHashProposition(byte[] bytes)
     {
@@ -28,11 +28,6 @@ public final class MCPublicKeyHashProposition implements Proposition {
             throw new IllegalArgumentException(String.format("Incorrect pubKeyHash length, %d expected, %d found", KEY_LENGTH, bytes.length));
 
         this.pubKeyHashBytes = Arrays.copyOf(bytes, KEY_LENGTH);
-    }
-
-    @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(this.pubKeyHashBytes, KEY_LENGTH);
     }
 
     @Override
@@ -61,6 +56,7 @@ public final class MCPublicKeyHashProposition implements Proposition {
         return BytesUtils.toHexString(pubKeyHashBytes);
     }
 
+    @Deprecated
     public static MCPublicKeyHashProposition parseBytes(byte[] bytes) {
         return new MCPublicKeyHashProposition(bytes);
     }
