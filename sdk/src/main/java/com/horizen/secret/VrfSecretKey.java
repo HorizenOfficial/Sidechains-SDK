@@ -19,8 +19,8 @@ import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
 import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
-    private final byte[] secretBytes;
-    private final byte[] publicBytes;
+    final byte[] secretBytes;
+    final byte[] publicBytes;
 
     public VrfSecretKey(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
@@ -54,12 +54,8 @@ public class VrfSecretKey implements Secret {
         return new VrfPublicKey(publicKey);
     }
 
-    @Override
-    public byte[] bytes() {
-        int secretLength = secretBytes.length;
-        return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
-    }
-
+    // TODO Remove
+    @Deprecated
     public static VrfSecretKey parse(byte[] bytes) {
         int secretKeyOffset = Ints.BYTES;
         int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));

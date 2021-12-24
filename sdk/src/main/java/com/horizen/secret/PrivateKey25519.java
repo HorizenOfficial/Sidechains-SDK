@@ -18,8 +18,8 @@ public final class PrivateKey25519 implements Secret
     public static final int KEY_LENGTH = Ed25519.keyLength();
     private static final byte privateKey25519SecretId = PrivateKey25519SecretId.id();
 
-    private byte[] _privateKeyBytes;
-    private byte[] _publicKeyBytes;
+    byte[] _privateKeyBytes;
+    byte[] _publicKeyBytes;
 
     public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
@@ -37,11 +37,6 @@ public final class PrivateKey25519 implements Secret
     @Override
     public byte secretTypeId() {
         return privateKey25519SecretId;
-    }
-
-    @Override
-    public byte[] bytes() {
-        return Bytes.concat(_privateKeyBytes, _publicKeyBytes);
     }
 
     @Override

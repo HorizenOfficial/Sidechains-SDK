@@ -14,8 +14,8 @@ import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
 //@TODO add JSON serialization
 public class SchnorrSecret implements Secret {
-    private final byte[] secretBytes;
-    private final byte[] publicBytes;
+    final byte[] secretBytes;
+    final byte[] publicBytes;
 
     public SchnorrSecret(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
@@ -42,12 +42,6 @@ public class SchnorrSecret implements Secret {
     public SchnorrProposition publicImage() {
         byte[] publicKey = Arrays.copyOf(publicBytes, publicBytes.length);
         return new SchnorrProposition(publicKey);
-    }
-
-    @Override
-    public byte[] bytes() {
-        int secretLength = secretBytes.length;
-        return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
     }
 
     public static SchnorrSecret parse(byte[] bytes) {

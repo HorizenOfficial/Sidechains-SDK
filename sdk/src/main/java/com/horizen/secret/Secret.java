@@ -14,7 +14,9 @@ public interface Secret
     ProofOfKnowledgeProposition publicImage();
 
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     SecretSerializer serializer();

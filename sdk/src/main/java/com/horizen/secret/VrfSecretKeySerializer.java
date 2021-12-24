@@ -21,11 +21,19 @@ public class VrfSecretKeySerializer implements SecretSerializer<VrfSecretKey> {
 
     @Override
     public void serialize(VrfSecretKey secret, Writer writer) {
-        writer.putBytes(secret.bytes());
+        writer.putInt(secret.secretBytes.length);
+        writer.putBytes(secret.secretBytes);
+        writer.putInt(secret.publicBytes.length);
+        writer.putBytes(secret.publicBytes);
     }
 
     @Override
     public VrfSecretKey parse(Reader reader) {
-        return VrfSecretKey.parse(reader.getBytes(reader.remaining()));
+        int secretKeyLength = reader.getInt();
+        byte[] secretKey = reader.getBytes(secretKeyLength);
+        int publicKeyLength = reader.getInt();
+        byte[] publicKey = reader.getBytes(publicKeyLength);
+
+        return new VrfSecretKey(secretKey, publicKey);
     }
 }
