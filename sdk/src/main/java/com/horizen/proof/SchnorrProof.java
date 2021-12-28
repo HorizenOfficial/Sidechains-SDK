@@ -27,13 +27,6 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
         return CryptoLibProvider.schnorrFunctions().verify(message, publicKey.pubKeyBytes(), signature);
     }
 
-    // TODO Remove
-    @Deprecated
-    @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(signature, signature.length);
-    }
-
     @Override
     public ProofSerializer serializer() {
         return SchnorrSignatureSerializer.getSerializer();

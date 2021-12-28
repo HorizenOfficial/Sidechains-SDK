@@ -485,8 +485,7 @@ class ConsensusValidatorOmmersTest
   }
 
   private def generateDummyVrfOutput(ommerBlockHeader: SidechainBlockHeader): VrfOutput = {
-    //VrfGenerator.generateVrfOutput(ommerBlockHeader.timestamp)
-    val outputBytes = new Array[Byte](192)
+    val outputBytes = new Array[Byte](VrfOutput.OUTPUT_LENGTH)
     val rnd = new Random(ommerBlockHeader.timestamp)
     rnd.nextBytes(outputBytes)
     new VrfOutput(outputBytes)

@@ -21,13 +21,11 @@ public class VrfOutputSerializer implements ScorexSerializer<VrfOutput> {
 
     @Override
     public void serialize(VrfOutput vrfOutput, Writer writer) {
-        writer.putInt(vrfOutput.bytes().length);
-        writer.putBytes(vrfOutput.bytes());
+        writer.putBytes(vrfOutput.vrfOutputBytes);
     }
 
     @Override
     public VrfOutput parse(Reader reader) {
-        int vrfOutputLen = reader.getInt();
-        return VrfOutput.parse(reader.getBytes(vrfOutputLen));
+        return new VrfOutput(reader.getBytes(VrfOutput.OUTPUT_LENGTH));
     }
 }

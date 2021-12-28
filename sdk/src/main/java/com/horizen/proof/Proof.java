@@ -20,6 +20,11 @@ public interface Proof<P extends Proposition>
     boolean isValid(P proposition, byte[] message);
 
     @Override
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
+    @Override
     ProofSerializer serializer();
 }
 
