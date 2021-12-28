@@ -90,7 +90,7 @@ case class TransactionStorageDataGenerator(inputTransactionsSizeRange: Range,
 
   override def expectedAverageDataLen: Int = {
     val inputTransactionAverageCount = (inputTransactionsSizeRange.size / 2) + inputTransactionsSizeRange.start
-    val inputTransactionAverageSize = inputTransactionAverageCount * (PrivateKey25519.KEY_LENGTH * 2)
+    val inputTransactionAverageSize = inputTransactionAverageCount * (PrivateKey25519.PRIVATE_KEY_LENGTH * 2)
 
     val outputTransactionAverageCount = (outputTransactionsSizeRange.size / 2) + outputTransactionsSizeRange.start
     val outputTransactionAverageSize = outputTransactionAverageCount * PublicKey25519Proposition.getLength

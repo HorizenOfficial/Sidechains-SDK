@@ -19,8 +19,6 @@ public interface Proof<P extends Proposition>
 {
     boolean isValid(P proposition, byte[] message);
 
-    byte[] bytes();
-
     @Override
     ProofSerializer serializer();
 }

@@ -1,19 +1,19 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-
 import java.util.Arrays;
 import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
-//@TODO add JSON serialization
 public class SchnorrSecret implements Secret {
+    public static final int SECRET_KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSecretKeyLength();
+    public static final int PUBLIC_KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength();
+
     final byte[] secretBytes;
     final byte[] publicBytes;
 

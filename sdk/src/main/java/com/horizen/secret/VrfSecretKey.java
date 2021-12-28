@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.utils.Pair;
@@ -19,6 +18,9 @@ import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
 import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
+    public static final int SECRET_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfSecretKeyLength();
+    public static final int PUBLIC_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfPublicKeyLen();
+
     final byte[] secretBytes;
     final byte[] publicBytes;
 

@@ -18,6 +18,7 @@ import scorex.util._
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 
 
@@ -30,7 +31,9 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   require(slotsPresentation.forall(_.size == params.consensusSlotsInEpoch))
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
-  private val genesisVrfProof = new VrfProof("genesis".getBytes())
+  val vrfProofBytes = generateRandomArray(VrfProof.SIGNATURE_LENGTH)
+  private val genesisVrfProof = new VrfProof(vrfProofBytes)
+  // TODO Change generation of output
   private val genesisVrfOutput = new VrfOutput("genesisHash".getBytes())
 
   private val vrfData = slotsPresentationToVrfData(slotsPresentation)
@@ -46,6 +49,12 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   val consensusDataStorage = new ConsensusDataStorage(new InMemoryStorageAdapter())
   epochIds.zipWithIndex.foreach{case (epochId, index) =>
     consensusDataStorage.addStakeConsensusEpochInfo(epochId, StakeConsensusEpochInfo(epochId.getBytes.take(merkleTreeHashLen), (index + 1) * 1000))}
+
+  private def generateRandomArray(length: Int): Array[Byte] = {
+    val arr = new Array[Byte](length)
+    Random.nextBytes(arr)
+    arr
+  }
 
   //vrfData -- contains data per epoch for filling SidechainBlockInfo, in case if VrfData contains None it means that slot shall be skipped
   private def generateBlockIdsAndInfos(genesisVrfProof: VrfProof,
@@ -101,7 +110,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
     slotsRepresentations.zipWithIndex.map{case (slotsRepresentationsForEpoch, epochIndex) =>
       slotsRepresentationsForEpoch.zipWithIndex.map{
         case (1, slotIndex) =>
-          Some(new VrfProof(s"${prefix}proof${epochIndex}${slotIndex}".getBytes), new VrfOutput(s"${prefix}vrfOutput${epochIndex}${slotIndex}".getBytes))
+          Some(new VrfProof(generateRandomArray(VrfProof.SIGNATURE_LENGTH)), new VrfOutput(s"${prefix}vrfOutput${epochIndex}${slotIndex}".getBytes))
         case (0, _) =>
           None
         case _ => throw new IllegalArgumentException

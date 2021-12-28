@@ -1,13 +1,10 @@
 package com.horizen.secret;
-
-import com.google.common.primitives.Bytes;
+// TODO Remove unused imports
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
-
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
-
 import java.util.Arrays;
 
 import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
@@ -15,23 +12,24 @@ import static com.horizen.secret.SecretsIdsEnum.PrivateKey25519SecretId;
 
 public final class PrivateKey25519 implements Secret
 {
-    public static final int KEY_LENGTH = Ed25519.keyLength();
+    public static final int PRIVATE_KEY_LENGTH = Ed25519.privateKeyLength();
+    public static final int PUBLIC_KEY_LENGTH = Ed25519.publicKeyLength();
     private static final byte privateKey25519SecretId = PrivateKey25519SecretId.id();
 
-    byte[] _privateKeyBytes;
-    byte[] _publicKeyBytes;
+    final byte[] privateKeyBytes;
+    final byte[] publicKeyBytes;
 
     public PrivateKey25519(byte[] privateKeyBytes, byte[] publicKeyBytes)
     {
-        if(privateKeyBytes.length != KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH,
+        if(privateKeyBytes.length != PRIVATE_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect private key length, %d expected, %d found", PRIVATE_KEY_LENGTH,
                     privateKeyBytes.length));
-        if(publicKeyBytes.length != KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH,
+        if(publicKeyBytes.length != PUBLIC_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", PUBLIC_KEY_LENGTH,
                     publicKeyBytes.length));
 
-        _privateKeyBytes = Arrays.copyOf(privateKeyBytes, KEY_LENGTH);
-        _publicKeyBytes = Arrays.copyOf(publicKeyBytes, KEY_LENGTH);
+        this.privateKeyBytes = Arrays.copyOf(privateKeyBytes, PRIVATE_KEY_LENGTH);
+        this.publicKeyBytes = Arrays.copyOf(publicKeyBytes, PUBLIC_KEY_LENGTH);
     }
 
     @Override
@@ -46,12 +44,12 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public PublicKey25519Proposition publicImage() {
-        return new PublicKey25519Proposition(_publicKeyBytes);
+        return new PublicKey25519Proposition(publicKeyBytes);
     }
 
     public static PrivateKey25519 parseBytes(byte[] bytes) {
-        byte[] privateKeyBytes = Arrays.copyOf(bytes, KEY_LENGTH);
-        byte[] publicKeyBytes = Arrays.copyOfRange(bytes, KEY_LENGTH, 2 * KEY_LENGTH);
+        byte[] privateKeyBytes = Arrays.copyOf(bytes, PRIVATE_KEY_LENGTH);
+        byte[] publicKeyBytes = Arrays.copyOfRange(bytes, PRIVATE_KEY_LENGTH, 2 * PUBLIC_KEY_LENGTH);
         return new PrivateKey25519(privateKeyBytes, publicKeyBytes);
     }
 
@@ -60,14 +58,14 @@ public final class PrivateKey25519 implements Secret
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PrivateKey25519 that = (PrivateKey25519) o;
-        return Arrays.equals(_privateKeyBytes, that._privateKeyBytes) &&
-                Arrays.equals(_publicKeyBytes, that._publicKeyBytes);
+        return Arrays.equals(privateKeyBytes, that.privateKeyBytes) &&
+                Arrays.equals(publicKeyBytes, that.publicKeyBytes);
     }
 
     @Override
     public int hashCode() {
-        int result = Arrays.hashCode(_privateKeyBytes);
-        result = 31 * result + Arrays.hashCode(_publicKeyBytes);
+        int result = Arrays.hashCode(privateKeyBytes);
+        result = 31 * result + Arrays.hashCode(publicKeyBytes);
         return result;
     }
 
@@ -78,18 +76,18 @@ public final class PrivateKey25519 implements Secret
 
     @Override
     public Signature25519 sign(byte[] message) {
-        return new Signature25519(Ed25519.sign(_privateKeyBytes, message, _publicKeyBytes));
+        return new Signature25519(Ed25519.sign(privateKeyBytes, message, publicKeyBytes));
     }
 
     public byte[] privateKey() {
-        return Arrays.copyOf(_privateKeyBytes, KEY_LENGTH);
+        return Arrays.copyOf(privateKeyBytes, PRIVATE_KEY_LENGTH);
     }
 
     @Override
     public String toString() {
         return "PrivateKey25519{" +
-                "_privateKeyBytes=" + BytesUtils.toHexString(_privateKeyBytes) +
-                ", _publicKeyBytes=" + BytesUtils.toHexString(_publicKeyBytes) +
+                "_privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
+                ", _publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
                 '}';
     }
 }

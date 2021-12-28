@@ -56,6 +56,7 @@ public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Propositi
     }
 
     public static ForgerBoxData parseBytes(byte[] bytes) {
+        // TODO Introduce Reader
         int valueOffset = PublicKey25519Proposition.getLength();
         int blockSignPropositionOffset = valueOffset + Longs.BYTES;
         int vrfPubKeyOffset = blockSignPropositionOffset + PublicKey25519Proposition.getLength();

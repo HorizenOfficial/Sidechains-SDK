@@ -21,12 +21,12 @@ public final class Signature25519Serializer implements ProofSerializer<Signature
 
     @Override
     public void serialize(Signature25519 signature, Writer writer) {
-        writer.putBytes(signature.bytes());
+        writer.putBytes(signature.signatureBytes);
     }
 
     @Override
     public Signature25519 parse(Reader reader) {
-        return Signature25519.parseBytes(reader.getBytes(reader.remaining()));
+        return new Signature25519(reader.getBytes(Signature25519.SIGNATURE_LENGTH));
     }
 
 }
