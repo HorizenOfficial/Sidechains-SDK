@@ -10,8 +10,8 @@ import java.util.Objects;
 public abstract class AbstractBoxData<P extends Proposition, B extends AbstractBox<P, BD, B>, BD extends AbstractBoxData<P, B, BD>>
         implements BoxData<P, B> {
 
-    private final P proposition;
-    private final long value;
+    final P proposition;
+    final long value;
 
     public AbstractBoxData(P proposition, long value) {
         Objects.requireNonNull(proposition, "proposition must be defined");
@@ -29,9 +29,6 @@ public abstract class AbstractBoxData<P extends Proposition, B extends AbstractB
     public final P proposition() {
         return proposition;
     }
-
-    @Override
-    public abstract byte[] bytes();
 
     @Override
     public byte[] customFieldsHash() {

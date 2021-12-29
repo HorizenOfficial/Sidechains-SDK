@@ -15,7 +15,9 @@ public interface BoxData<P extends Proposition, B extends Box<P>> extends BytesS
     byte[] customFieldsHash();
 
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     BoxDataSerializer serializer();
