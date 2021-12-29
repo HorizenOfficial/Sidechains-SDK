@@ -1,5 +1,7 @@
 package com.horizen.box;
 
+import com.horizen.box.data.WithdrawalRequestBoxData;
+import com.horizen.box.data.WithdrawalRequestBoxDataSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -24,12 +26,15 @@ public final class WithdrawalRequestBoxSerializer
 
     @Override
     public void serialize(WithdrawalRequestBox box, Writer writer) {
-        writer.putBytes(box.bytes());
+        writer.putLong(box.nonce);
+        box.boxData.serializer().serialize(box.boxData, writer);
     }
 
     @Override
     public WithdrawalRequestBox parse(Reader reader) {
-        return WithdrawalRequestBox.parseBytes(reader.getBytes(reader.remaining()));
-    }
+        Long nonce = reader.getLong();
+        WithdrawalRequestBoxData boxData = WithdrawalRequestBoxDataSerializer.getSerializer().parse(reader);
 
+        return new WithdrawalRequestBox(boxData, nonce);
+    }
 }

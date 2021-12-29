@@ -1,5 +1,7 @@
 package com.horizen.box;
 
+import com.horizen.box.data.ZenBoxData;
+import com.horizen.box.data.ZenBoxDataSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -24,12 +26,15 @@ public final class ZenBoxSerializer
 
     @Override
     public void serialize(ZenBox box, Writer writer) {
-        writer.putBytes(box.bytes());
+        writer.putLong(box.nonce);
+        box.boxData.serializer().serialize(box.boxData, writer);
     }
 
     @Override
     public ZenBox parse(Reader reader) {
-        return ZenBox.parseBytes(reader.getBytes(reader.remaining()));
-    }
+        Long nonce = reader.getLong();
+        ZenBoxData boxData = ZenBoxDataSerializer.getSerializer().parse(reader);
 
+        return new ZenBox(boxData, nonce);
+    }
 }

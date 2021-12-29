@@ -58,9 +58,6 @@ public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxD
     }
 
     @Override
-    public abstract byte[] bytes();
-
-    @Override
     public int hashCode() {
         if(hashcode == null)
             hashcode = Objects.hash(boxData, nonce);
