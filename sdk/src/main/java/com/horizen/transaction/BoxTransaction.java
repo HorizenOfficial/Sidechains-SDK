@@ -48,6 +48,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @Override
     public abstract byte version();
 
+    @Override
+    public byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
     // Transactions custom data to be considered during Transaction id calculation.

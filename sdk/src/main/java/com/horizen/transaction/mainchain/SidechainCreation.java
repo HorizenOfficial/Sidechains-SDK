@@ -6,6 +6,7 @@ import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
+import com.horizen.cryptolibprovider.FieldElementUtils;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
@@ -17,6 +18,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
+    public static final int TRANSACTION_HASH_LENGTH = FieldElementUtils.fieldElementLength();
 
     private MainchainTxSidechainCreationCrosschainOutput output;
     private byte[] containingTxHash;
@@ -81,21 +83,6 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
     public Optional<byte[]> getGenSysConstantOpt() {
         return OptionConverters.toJava(output.constantOpt());
-    }
-
-    public static SidechainCreation parseBytes(byte[] bytes) {
-        int offset = 0;
-
-        MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
-        offset += output.size();
-
-        byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
-        offset += 32;
-
-        int index = BytesUtils.getInt(bytes, offset);
-
-        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(txHash, index);
-        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, index);
     }
 
     @Override

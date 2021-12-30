@@ -1,24 +1,15 @@
 package com.horizen.transaction;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
 import com.horizen.proof.Proof;
-import com.horizen.proof.ProofSerializer;
-import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.DynamicTypedSerializer;
-import com.horizen.utils.ListSerializer;
 import scala.Array;
 import scorex.core.NodeViewModifier$;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
 
-import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 
@@ -27,22 +18,13 @@ public final class SidechainCoreTransaction
 {
     public final static byte SIDECHAIN_CORE_TRANSACTION_VERSION = 1;
 
-    private final List<byte[]> inputsIds;
+    public static int getInputIdLength() {
+        return NodeViewModifier$.MODULE$.ModifierIdSize();
+    }
+
+    final List<byte[]> inputsIds;
     private final List<BoxData<Proposition, Box<Proposition>>> outputsData;
-    private final List<Proof<Proposition>> proofs;
-
-    // Serializers definition
-    private final static ListSerializer<BoxData<Proposition, Box<Proposition>>> boxesDataSerializer = new ListSerializer<>(
-            new DynamicTypedSerializer<>(new HashMap<Byte, BoxDataSerializer>() {{
-                put((byte)1, ZenBoxDataSerializer.getSerializer());
-                put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
-                put((byte)3, ForgerBoxDataSerializer.getSerializer());
-            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
-
-    private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(
-            new DynamicTypedSerializer<>(new HashMap<Byte, ProofSerializer>() {{
-                put((byte)1, Signature25519Serializer.getSerializer());
-            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
+    final List<Proof<Proposition>> proofs;
 
     private final long fee;
 
@@ -142,75 +124,5 @@ public final class SidechainCoreTransaction
     @Override
     public byte[] customDataMessageToSign() {
         return Array.emptyByteArray();
-    }
-
-    @Override
-    public byte[] bytes() {
-        ByteArrayOutputStream inputsIdsStream = new ByteArrayOutputStream();
-        for(byte[] id: inputsIds)
-            inputsIdsStream.write(id, 0, id.length);
-
-        byte[] inputIdsBytes = inputsIdsStream.toByteArray();
-
-        byte[] outputBoxDataBytes = boxesDataSerializer.toBytes(outputsData);
-
-        byte[] proofsBytes = proofsSerializer.toBytes(proofs);
-
-        return Bytes.concat(                                        // minimum SidechainCoreTransaction length is 29 bytes
-                new byte[] {version()},                             // 1 byte
-                Longs.toByteArray(fee()),                           // 8 bytes
-                Ints.toByteArray(inputIdsBytes.length),             // 4 bytes
-                inputIdsBytes,                                      // depends in previous value(>=0 bytes)
-                Ints.toByteArray(outputBoxDataBytes.length),        // 4 bytes
-                outputBoxDataBytes,                                 // depends on previous value (>=4 bytes)
-                Ints.toByteArray(proofsBytes.length),               // 4 bytes
-                proofsBytes                                         // depends on previous value (>=4 bytes)
-        );
-    }
-
-    public static SidechainCoreTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 29)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        if(bytes.length > MAX_TRANSACTION_SIZE)
-            throw new IllegalArgumentException("Input data length is too large.");
-
-        int offset = 0;
-
-        byte version = bytes[offset];
-        offset += 1;
-
-        if (version != SIDECHAIN_CORE_TRANSACTION_VERSION) {
-            throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
-        }
-
-        long fee = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
-        int batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        ArrayList<byte[]> inputsIds = new ArrayList<>();
-        while(batchSize > 0) {
-            int idLength = NodeViewModifier$.MODULE$.ModifierIdSize();
-            inputsIds.add(Arrays.copyOfRange(bytes, offset, offset + idLength));
-            offset += idLength;
-            batchSize -= idLength;
-        }
-
-        batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        List<BoxData<Proposition, Box<Proposition>>> outputsData = boxesDataSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-        offset += batchSize;
-
-        batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-        if(bytes.length != offset + batchSize)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        List<Proof<Proposition>> proofs = proofsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-
-        return new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, version);
     }
 }
