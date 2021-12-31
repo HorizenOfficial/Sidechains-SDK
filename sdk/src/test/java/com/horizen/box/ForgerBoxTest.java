@@ -50,7 +50,7 @@ public class ForgerBoxTest extends BoxFixtureClass {
     private void checkSerialization(int seed) {
         ForgerBox initial = ForgerBoxFixture.generateForgerBox(seed)._1;
         byte[] serialized = initial.bytes();
-        ForgerBox parsed = ForgerBoxSerializer.getSerializer().parseBytesTry(serialized).get();
+        ForgerBox parsed = ForgerBoxSerializer.getSerializer().parseBytes(serialized);
 
         assertEquals(initial, parsed);
     }

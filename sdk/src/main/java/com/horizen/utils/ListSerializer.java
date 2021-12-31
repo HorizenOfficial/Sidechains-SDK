@@ -21,8 +21,8 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
 
     @Override
     public void serialize(List<T> objectsList, Writer writer) {
-//        if(maxListLength > 0 && objectsList.size() > maxListLength)
-//            throw new IllegalArgumentException("Serializable data contains to many elements - " + objectsList.size());
+        if(maxListLength > 0 && objectsList.size() > maxListLength)
+            throw new IllegalArgumentException("Serializable data contains to many elements - " + objectsList.size());
 
         writer.putInt(objectsList.size());
 

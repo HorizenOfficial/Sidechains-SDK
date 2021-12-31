@@ -62,15 +62,6 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public byte[] bytes() {
-        return Bytes.concat(
-                output.sidechainCreationOutputBytes(),
-                containingTxHash,
-                Ints.toByteArray(index)
-        );
-    }
-
-    @Override
     public int transactionIndex() {
         return index;
     }
