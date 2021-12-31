@@ -22,7 +22,7 @@ public final class ForgerBoxDataSerializer implements BoxDataSerializer<ForgerBo
 
     @Override
     public void serialize(ForgerBoxData boxData, Writer writer) {
-        boxData.proposition.serializer().serialize(boxData.proposition, writer);
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
         writer.putLong(boxData.value());
         boxData.blockSignProposition().serializer().serialize(boxData.blockSignProposition(), writer);
         boxData.vrfPublicKey().serializer().serialize(boxData.vrfPublicKey(), writer);

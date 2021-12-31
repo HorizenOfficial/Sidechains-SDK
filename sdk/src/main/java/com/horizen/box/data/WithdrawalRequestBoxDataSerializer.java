@@ -20,7 +20,7 @@ public final class WithdrawalRequestBoxDataSerializer implements BoxDataSerializ
 
     @Override
     public void serialize(WithdrawalRequestBoxData boxData, Writer writer) {
-        boxData.proposition.serializer().serialize(boxData.proposition, writer);
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
         writer.putLong(boxData.value());
     }
 

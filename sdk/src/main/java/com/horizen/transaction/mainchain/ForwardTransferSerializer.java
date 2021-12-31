@@ -1,5 +1,6 @@
 package com.horizen.transaction.mainchain;
 
+import com.horizen.CommonParams;
 import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
@@ -30,12 +31,12 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        if(reader.remaining() < 4 + ForwardTransfer.TRANSACTION_HASH_LENGTH + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
+        if(reader.remaining() < 4 + CommonParams.transactionHashLength() + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
             throw new IllegalArgumentException("Input data corrupted.");
 
         byte[] ftOutputBytes = reader.getBytes(MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE());
         MainchainTxForwardTransferCrosschainOutput output = MainchainTxForwardTransferCrosschainOutput.create(ftOutputBytes, 0).get();
-        byte[] transactionHash = reader.getBytes(ForwardTransfer.TRANSACTION_HASH_LENGTH);
+        byte[] transactionHash = reader.getBytes(CommonParams.transactionHashLength());
         int transactionIndex = reader.getInt();
 
         return new ForwardTransfer(output, transactionHash, transactionIndex);

@@ -112,6 +112,10 @@ public final class MC2SCAggregatedTransaction
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "unsupported version number.", id()));
         }
+
+        if (bytes().length > MAX_TRANSACTION_SIZE) {
+            throw new TransactionSemanticValidityException("Transaction is too large.");
+        }
     }
 
     @Override

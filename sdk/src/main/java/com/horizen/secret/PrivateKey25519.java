@@ -47,12 +47,6 @@ public final class PrivateKey25519 implements Secret
         return new PublicKey25519Proposition(publicKeyBytes);
     }
 
-    public static PrivateKey25519 parseBytes(byte[] bytes) {
-        byte[] privateKeyBytes = Arrays.copyOf(bytes, PRIVATE_KEY_LENGTH);
-        byte[] publicKeyBytes = Arrays.copyOfRange(bytes, PRIVATE_KEY_LENGTH, 2 * PUBLIC_KEY_LENGTH);
-        return new PrivateKey25519(privateKeyBytes, publicKeyBytes);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

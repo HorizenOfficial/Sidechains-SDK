@@ -6,7 +6,6 @@ import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import scala.Array;
-import scorex.core.NodeViewModifier$;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.SidechainCoreTransactionId;
 
@@ -17,10 +16,6 @@ public final class SidechainCoreTransaction
         extends SidechainNoncedTransaction<Proposition, Box<Proposition>, BoxData<Proposition, Box<Proposition>>>
 {
     public final static byte SIDECHAIN_CORE_TRANSACTION_VERSION = 1;
-
-    public static int getInputIdLength() {
-        return NodeViewModifier$.MODULE$.ModifierIdSize();
-    }
 
     final List<byte[]> inputsIds;
     private final List<BoxData<Proposition, Box<Proposition>>> outputsData;
@@ -96,12 +91,16 @@ public final class SidechainCoreTransaction
                     "unsupported version number.", id()));
         }
 
-        if(inputsIds.isEmpty() || outputsData.isEmpty())
+        if (bytes().length > MAX_TRANSACTION_SIZE) {
+            throw new TransactionSemanticValidityException("Transaction is too large.");
+        }
+
+        if (inputsIds.isEmpty() || outputsData.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input and output data present.", id()));
 
         // check that we have enough proofs and try to open each box only once.
-        if(inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
+        if (inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "inputs number is not consistent to proofs number.", id()));
     }

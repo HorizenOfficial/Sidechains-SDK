@@ -20,7 +20,7 @@ public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData>
 
     @Override
     public void serialize(ZenBoxData boxData, Writer writer) {
-        boxData.proposition.serializer().serialize(boxData.proposition, writer);
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
         writer.putLong(boxData.value());
     }
 

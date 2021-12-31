@@ -8,6 +8,7 @@ import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
+import scorex.core.NodeViewModifier$;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.horizen.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
 import static com.horizen.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
 import static com.horizen.transaction.SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION;
 
@@ -28,7 +30,7 @@ public final class SidechainCoreTransactionSerializer implements TransactionSeri
                 put((byte)1, ZenBoxDataSerializer.getSerializer());
                 put((byte)2, WithdrawalRequestBoxDataSerializer.getSerializer());
                 put((byte)3, ForgerBoxDataSerializer.getSerializer());
-            }}, new HashMap<>()), MAX_TRANSACTION_UNLOCKERS);
+            }}, new HashMap<>()), MAX_TRANSACTION_NEW_BOXES);
 
     private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(new HashMap<Byte, ProofSerializer>() {{
@@ -73,7 +75,7 @@ public final class SidechainCoreTransactionSerializer implements TransactionSeri
 
         ArrayList<byte[]> inputsIds = new ArrayList<>();
         for(int i = 0; i < inputsNum; i++) {
-            inputsIds.add(reader.getBytes(SidechainCoreTransaction.getInputIdLength()));
+            inputsIds.add(reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize()));
         }
 
         List<BoxData<Proposition, Box<Proposition>>> outputsData = boxesDataSerializer.parse(reader);

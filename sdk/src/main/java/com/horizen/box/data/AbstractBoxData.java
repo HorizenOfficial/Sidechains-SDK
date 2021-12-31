@@ -10,8 +10,8 @@ import java.util.Objects;
 public abstract class AbstractBoxData<P extends Proposition, B extends AbstractBox<P, BD, B>, BD extends AbstractBoxData<P, B, BD>>
         implements BoxData<P, B> {
 
-    final P proposition;
-    final long value;
+    private final P proposition;
+    private final long value;
 
     public AbstractBoxData(P proposition, long value) {
         Objects.requireNonNull(proposition, "proposition must be defined");

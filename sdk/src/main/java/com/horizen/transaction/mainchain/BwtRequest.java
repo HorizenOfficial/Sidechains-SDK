@@ -9,8 +9,6 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 
 public final class BwtRequest implements SidechainRelatedMainchainOutput<WithdrawalRequestBox> {
-    public static final int TRANSACTION_HASH_LENGTH = FieldElementUtils.fieldElementLength();
-
     private final MainchainTxBwtRequestCrosschainOutput output;
     private final byte[] containingTxHash;
     private final int index;

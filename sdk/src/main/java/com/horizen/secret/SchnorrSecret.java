@@ -44,17 +44,6 @@ public class SchnorrSecret implements Secret {
         return new SchnorrProposition(publicKey);
     }
 
-    public static SchnorrSecret parse(byte[] bytes) {
-        int secretKeyOffset = Ints.BYTES;
-        int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
-        int publicKeyOffset = secretKeyOffset + secretKeyLength;
-
-        byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
-        byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
-
-        return new SchnorrSecret(secretKey, publicKey);
-    }
-
     @Override
     public SecretSerializer serializer() {
         return SchnorrSecretSerializer.getSerializer();

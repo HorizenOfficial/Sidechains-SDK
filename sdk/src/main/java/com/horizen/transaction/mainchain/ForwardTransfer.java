@@ -13,8 +13,6 @@ import scorex.crypto.hash.Blake2b256;
 
 
 public final class ForwardTransfer implements SidechainRelatedMainchainOutput<ZenBox> {
-    public static final int TRANSACTION_HASH_LENGTH = FieldElementUtils.fieldElementLength();
-
     private MainchainTxForwardTransferCrosschainOutput output;
     private byte[] containingTxHash;
     private int index;

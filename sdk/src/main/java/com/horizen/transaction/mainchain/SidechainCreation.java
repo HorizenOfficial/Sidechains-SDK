@@ -18,8 +18,6 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
-    public static final int TRANSACTION_HASH_LENGTH = FieldElementUtils.fieldElementLength();
-
     private MainchainTxSidechainCreationCrosschainOutput output;
     private byte[] containingTxHash;
     private int index;
