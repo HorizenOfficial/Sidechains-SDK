@@ -121,7 +121,14 @@ object MainchainHeader {
 }
 
 object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
-  override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.mainchainHeaderBytes)
+  override def serialize(obj: MainchainHeader, w: Writer): Unit = {
+    val bytes: Array[Byte] = obj.mainchainHeaderBytes
+    w.putInt(bytes.length)
+    w.putBytes(bytes)
+  }
 
-  override def parse(r: Reader): MainchainHeader = MainchainHeader.create(r.getBytes(r.remaining), 0).get
+  override def parse(r: Reader): MainchainHeader = {
+    val length: Int = r.getInt()
+    MainchainHeader.create(r.getBytes(length), 0).get
+  }
 }
