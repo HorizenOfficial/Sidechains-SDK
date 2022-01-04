@@ -1,13 +1,12 @@
 package com.horizen.customtypes;
 
-import com.google.common.primitives.Ints;
 import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proposition.Proposition;
 
 public final class CustomProof implements Proof<Proposition> {
 
-    private int number;
+    int number;
 
     public CustomProof(int number) {
         this.number = number;
@@ -16,15 +15,6 @@ public final class CustomProof implements Proof<Proposition> {
     @Override
     public boolean isValid(Proposition proposition, byte[] message) {
         return true;
-    }
-
-    @Override
-    public byte[] bytes() {
-        return Ints.toByteArray(number);
-    }
-
-    public static CustomProof parseBytes(byte[] bytes) {
-        return new CustomProof(Ints.fromByteArray(bytes));
     }
 
     @Override

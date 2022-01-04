@@ -10,7 +10,7 @@ import java.util.Arrays;
 public class CustomPublicKeyProposition extends ScorexEncoding implements ProofOfKnowledgeProposition<CustomPrivateKey>
 {
 
-    private static final int KEY_LENGTH = 128;
+    public static final int KEY_LENGTH = 128;
     private byte[] _pubKeyBytes;
 
     public CustomPublicKeyProposition (byte[] pubKeyBytes) {
@@ -21,17 +21,8 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
     }
 
     @Override
-    public byte[] bytes() {
-        return _pubKeyBytes;
-    }
-
-    @Override
     public PropositionSerializer serializer() {
         return CustomPublicKeyPropositionSerializer.getSerializer();
-    }
-
-    public static CustomPublicKeyProposition parseBytes(byte[] bytes) {
-        return new CustomPublicKeyProposition(bytes);
     }
 
     @Override
