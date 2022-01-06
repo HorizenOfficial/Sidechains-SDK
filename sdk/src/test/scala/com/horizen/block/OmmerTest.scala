@@ -378,8 +378,6 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     assertTrue("OmmerSerializer expected to be not parsed due to broken data.", OmmerSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
   }
 
-  // TODO
-  @Ignore
   @Test
   def serializationRegression(): Unit = {
     var bytes: Array[Byte] = null

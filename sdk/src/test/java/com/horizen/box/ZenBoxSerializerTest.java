@@ -6,7 +6,6 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -48,8 +47,6 @@ public class ZenBoxSerializerTest extends BoxFixtureClass
 
     }
 
-    // TODO Update regression test
-    @Ignore
     @Test
     public void regressionTest() {
         byte[] bytes;

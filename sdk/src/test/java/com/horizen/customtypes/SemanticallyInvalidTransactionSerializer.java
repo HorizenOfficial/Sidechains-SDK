@@ -32,19 +32,17 @@ public class SemanticallyInvalidTransactionSerializer implements TransactionSeri
     @Override
     public Try<SemanticallyInvalidTransaction> parseBytesTry(byte[] bytes) {
         try {
-            return new Success<>(SemanticallyInvalidTransaction.parseBytes(bytes));
+            return new Success<>(new SemanticallyInvalidTransaction());
         } catch (Throwable e) {
             return new Failure<>(e);
         }
     }
 
     @Override
-    public void serialize(SemanticallyInvalidTransaction obj, Writer writer) {
-        writer.putBytes(obj.bytes());
-    }
+    public void serialize(SemanticallyInvalidTransaction obj, Writer writer) {}
 
     @Override
     public SemanticallyInvalidTransaction parse(Reader reader) {
-        return SemanticallyInvalidTransaction.parseBytes(reader.getBytes(reader.remaining()));
+        return new SemanticallyInvalidTransaction();
     }
 }

@@ -144,8 +144,6 @@ class SidechainBlockTest
     assertTrue("SidechainBlockSerializer expected to be not parsed due to broken data.", sidechainBlockSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
   }
 
-  // TODO Update regression test
-  @Ignore
   @Test
   def serializationRegression(): Unit = {
     var bytes: Array[Byte] = null

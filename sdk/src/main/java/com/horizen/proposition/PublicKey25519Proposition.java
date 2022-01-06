@@ -103,12 +103,6 @@ public final class PublicKey25519Proposition
             return new PublicKey25519Proposition(Arrays.copyOfRange(bytesWithVersion, 1,bytesWithVersion.length));
     }
 
-    // TODO Remove
-    @Deprecated
-    public static PublicKey25519Proposition parseBytes(byte[] bytes) {
-        return new PublicKey25519Proposition(bytes);
-    }
-
     public static int getLength() {
         return KEY_LENGTH;
     }

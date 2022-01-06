@@ -44,15 +44,4 @@ public final class ForgerBox
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, blockSignProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), blockSignProposition(), nonce());
     }
-
-    // TODO Remove
-    @Deprecated
-    public static ForgerBox parseBytes(byte[] bytes) {
-        long nonce = Longs.fromByteArray(Arrays.copyOf(bytes, Longs.BYTES));
-
-        int forgerBoxDataOffset = Longs.BYTES;
-        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parseBytes(Arrays.copyOfRange(bytes, forgerBoxDataOffset, bytes.length));
-
-        return boxData.getBox(nonce);
-    }
 }

@@ -15,7 +15,6 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -99,8 +98,6 @@ public class RegularTransactionSerializerTest extends BoxFixtureClass {
         assertTrue("Failure during parsing expected", failureExpected);
     }
 
-    // TODO Update regression test
-    @Ignore
     @Test
     public void regressionTest() {
         byte[] bytes;

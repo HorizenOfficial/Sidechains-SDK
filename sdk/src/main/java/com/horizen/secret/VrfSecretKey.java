@@ -56,19 +56,6 @@ public class VrfSecretKey implements Secret {
         return new VrfPublicKey(publicKey);
     }
 
-    // TODO Remove
-    @Deprecated
-    public static VrfSecretKey parse(byte[] bytes) {
-        int secretKeyOffset = Ints.BYTES;
-        int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
-        int publicKeyOffset = secretKeyOffset + secretKeyLength;
-
-        byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
-        byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
-
-        return new VrfSecretKey(secretKey, publicKey);
-    }
-
     @Override
     public SecretSerializer serializer() {
         return VrfSecretKeySerializer.getSerializer();

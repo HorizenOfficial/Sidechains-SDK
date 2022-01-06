@@ -1,5 +1,4 @@
 package com.horizen.secret;
-// TODO Remove unused imports
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;

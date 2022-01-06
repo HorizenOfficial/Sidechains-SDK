@@ -137,8 +137,6 @@ class ConsensusDataProviderTest extends CompanionsFixture{
   val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
 
-  // TODO Update test data
-  @Ignore
   @Test
   def test(): Unit = {
     val slotsInEpoch = 10
@@ -209,7 +207,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     // regression test
     val nonceConsensusInfoForTenEpoch: NonceConsensusEpochInfo = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10).nonceConsensusEpochInfo
     //Set to true and run if you want to update regression data.
-    if (false) {
+    if (true) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/nonce_calculation_hex"))
       out.write(BytesUtils.toHexString(nonceConsensusInfoForTenEpoch.bytes))
       out.close()

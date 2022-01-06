@@ -3,7 +3,6 @@ package com.horizen.chain
 import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
@@ -103,8 +102,6 @@ class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {
     assertTrue("SidechainBlockInfo expected to be not parsed due to broken data.", SidechainBlockInfoSerializer.parseBytesTry("broken bytes".getBytes).isFailure)
   }
 
-  // TODO Update test data
-  @Ignore
   @Test
   def serialization_regression(): Unit = {
     var bytes: Array[Byte] = null

@@ -54,12 +54,6 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
         return Arrays.hashCode(proofBytes);
     }
 
-    // TODO Remove
-    @Deprecated
-    public static VrfProof parse(byte[] bytes) {
-        return new VrfProof(bytes);
-    }
-
     @Override
     public String toString() {
         return "VrfProof{" +

@@ -182,10 +182,13 @@ object WithdrawalEpochCertificateSerializer
   extends ScorexSerializer[WithdrawalEpochCertificate]
 {
   override def serialize(certificate: WithdrawalEpochCertificate, w: Writer): Unit = {
-    w.putBytes(certificate.certificateBytes)
+    val certBytes:Array[Byte] = certificate.certificateBytes
+    w.putInt(certBytes.length)
+    w.putBytes(certBytes)
 }
 
   override def parse(r: Reader): WithdrawalEpochCertificate = {
-    WithdrawalEpochCertificate.parse(r.getBytes(r.remaining), 0)
+    val certLength: Int = r.getInt()
+    WithdrawalEpochCertificate.parse(r.getBytes(certLength), 0)
   }
 }

@@ -8,7 +8,6 @@ import com.horizen.proof.Signature25519;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.BytesUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -52,8 +51,6 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
         assertArrayEquals("Original and deserialized transactions expected to have equal byte representation.", bytes, serializer.toBytes(t.get()));
     }
 
-    // TODO Update regression test
-    @Ignore
     @Test
     public void regressionTest() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));

@@ -3,11 +3,9 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof}
+import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
@@ -97,8 +95,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     w.putInt(forgingStakeMerklePathBytes.length)
     w.putBytes(forgingStakeMerklePathBytes)
 
-    val vrfProofBytes = obj.vrfProof.bytes // TODO: replace with VRFProofSerializer... later
-    w.putBytes(vrfProofBytes)
+    VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
 
     w.putBytes(obj.sidechainTransactionsMerkleRootHash)
 
@@ -129,8 +126,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
     val forgingStakeMerklePathBytesLength: Int = r.getInt()
     val forgingStakeMerkle: MerklePath = MerklePath.parseBytes(r.getBytes(forgingStakeMerklePathBytesLength))
 
-    val vrfProofBytesLength: Int = CryptoLibProvider.vrfFunctions.vrfProofLen()
-    val vrfProof: VrfProof = VrfProof.parse(r.getBytes(vrfProofBytesLength))
+    val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
     val sidechainTransactionsMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 

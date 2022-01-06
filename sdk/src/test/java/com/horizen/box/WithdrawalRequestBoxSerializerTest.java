@@ -50,7 +50,6 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
     }
 
     // TODO Update regression test
-    @Ignore
     @Test
     public void regressionTest() {
         byte[] bytes;
