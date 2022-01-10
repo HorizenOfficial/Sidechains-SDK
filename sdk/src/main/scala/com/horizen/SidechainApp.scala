@@ -174,7 +174,7 @@ class SidechainApp @Inject()
   }
 
   // Generate snark keys only if were not present before.
-  if (!Files.exists(Paths.get(params.verificationKeyFilePath)) || !Files.exists(Paths.get(params.provingKeyFilePath))) {
+  if (!Files.exists(Paths.get(params.provingKeyFilePath)) || !Files.exists(Paths.get(params.verificationKeyFilePath))) {
     log.info("Generating snark keys. It may take some time.")
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
         sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.verificationKeyFilePath, params.provingKeyFilePath)) {
