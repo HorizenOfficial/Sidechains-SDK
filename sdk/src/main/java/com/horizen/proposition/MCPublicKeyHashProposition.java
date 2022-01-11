@@ -56,11 +56,6 @@ public final class MCPublicKeyHashProposition implements Proposition {
         return BytesUtils.toHexString(pubKeyHashBytes);
     }
 
-    @Deprecated
-    public static MCPublicKeyHashProposition parseBytes(byte[] bytes) {
-        return new MCPublicKeyHashProposition(bytes);
-    }
-
     public static int getLength() {
         return KEY_LENGTH;
     }

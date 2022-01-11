@@ -4,7 +4,6 @@ import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.MCPublicKeyHashProposition;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -49,7 +48,6 @@ public class WithdrawalRequestBoxSerializerTest extends BoxFixtureClass
 
     }
 
-    // TODO Update regression test
     @Test
     public void regressionTest() {
         byte[] bytes;

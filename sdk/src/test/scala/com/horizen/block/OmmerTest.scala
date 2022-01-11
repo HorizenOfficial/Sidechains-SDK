@@ -12,7 +12,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
-import org.junit.{Ignore, Test}
+import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.util.ModifierId
 

@@ -11,14 +11,13 @@ import com.horizen.utils
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
-import org.junit.{Ignore, Test}
+import org.junit.Test
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 
 
@@ -31,8 +30,8 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   require(slotsPresentation.forall(_.size == params.consensusSlotsInEpoch))
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
-  private val genesisVrfProof = new VrfProof(generateRandomArray(VrfProof.SIGNATURE_LENGTH))
-  private val genesisVrfOutput = new VrfOutput(generateRandomArray(VrfOutput.OUTPUT_LENGTH))
+  val genesisVrfProof = new VrfProof(BytesUtils.fromHexString("bf4d2892d7562e973ba8a60ef5f9262c088811cc3180c3389b1cef3a66dcfb390d9bb91cebab11bcae871d6a6bd203292264d1002ac70b539f7025a9a813637e1866b2d5c289f28646385549bac7681ef659f2d1d8ca1a21037b036c7925b692e8"))
+  val genesisVrfOutput = new VrfOutput(BytesUtils.fromHexString("c8fbb101cd3bd0fc7dc22133778529ce49ed94678a2c6532e3d6013efa91933f"))
 
   private val vrfData = slotsPresentationToVrfData(slotsPresentation)
   val blockIdAndInfosPerEpoch: Seq[Seq[(ModifierId, SidechainBlockInfo)]] =
@@ -47,12 +46,6 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
   val consensusDataStorage = new ConsensusDataStorage(new InMemoryStorageAdapter())
   epochIds.zipWithIndex.foreach{case (epochId, index) =>
     consensusDataStorage.addStakeConsensusEpochInfo(epochId, StakeConsensusEpochInfo(epochId.getBytes.take(merkleTreeHashLen), (index + 1) * 1000))}
-
-  private def generateRandomArray(length: Int): Array[Byte] = {
-    val arr = new Array[Byte](length)
-    Random.nextBytes(arr)
-    arr
-  }
 
   //vrfData -- contains data per epoch for filling SidechainBlockInfo, in case if VrfData contains None it means that slot shall be skipped
   private def generateBlockIdsAndInfos(genesisVrfProof: VrfProof,
@@ -108,7 +101,8 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
     slotsRepresentations.zipWithIndex.map{case (slotsRepresentationsForEpoch, epochIndex) =>
       slotsRepresentationsForEpoch.zipWithIndex.map{
         case (1, slotIndex) =>
-          Some(new VrfProof(generateRandomArray(VrfProof.SIGNATURE_LENGTH)), new VrfOutput(generateRandomArray(VrfOutput.OUTPUT_LENGTH)))
+          Some(new VrfProof(BytesUtils.fromHexString("bf4d2892d7562e973ba8a60ef5f9262c088811cc3180c3389b1cef3a66dcfb390d9bb91cebab11bcae871d6a6bd203292264d1002ac70b539f7025a9a813637e1866b2d5c289f28646385549bac7681ef659f2d1d8ca1a21037b036c7925b692e8")),
+            new VrfOutput(BytesUtils.fromHexString("c8fbb101cd3bd0fc7dc22133778529ce49ed94678a2c6532e3d6013efa91933f")))
         case (0, _) =>
           None
         case _ => throw new IllegalArgumentException
@@ -207,7 +201,7 @@ class ConsensusDataProviderTest extends CompanionsFixture{
     // regression test
     val nonceConsensusInfoForTenEpoch: NonceConsensusEpochInfo = firstDataProvider.getInfoForCheckingBlockInEpochNumber(10).nonceConsensusEpochInfo
     //Set to true and run if you want to update regression data.
-    if (true) {
+    if (false) {
       val out = new BufferedWriter(new FileWriter("src/test/resources/nonce_calculation_hex"))
       out.write(BytesUtils.toHexString(nonceConsensusInfoForTenEpoch.bytes))
       out.close()

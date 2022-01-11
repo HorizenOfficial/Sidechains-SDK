@@ -17,7 +17,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
-import org.junit.{Ignore, Test}
+import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 

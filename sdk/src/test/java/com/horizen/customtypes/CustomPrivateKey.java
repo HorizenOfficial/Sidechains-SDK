@@ -75,8 +75,8 @@ public class CustomPrivateKey implements Secret
     @Override
     public String toString() {
         return "CustomPrivateKey{" +
-                "_privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
-                ", _publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
+                "privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
+                ", publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
                 '}';
     }
 }

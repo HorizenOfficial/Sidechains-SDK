@@ -79,8 +79,8 @@ public final class PrivateKey25519 implements Secret
     @Override
     public String toString() {
         return "PrivateKey25519{" +
-                "_privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
-                ", _publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
+                "privateKeyBytes=" + BytesUtils.toHexString(privateKeyBytes) +
+                ", publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
                 '}';
     }
 }
