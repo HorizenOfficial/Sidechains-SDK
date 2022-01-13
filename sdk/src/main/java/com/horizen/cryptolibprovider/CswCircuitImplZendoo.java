@@ -29,6 +29,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class CswCircuitImplZendoo implements CswCircuit {
+    // Note: supportedSegmentSize should correlate with the snark circuit complexity,
+    // but is always less or equal the one defined in the MC network (maxSegmentSize).
+    private static final int supportedSegmentSize = (1 << 18);
 
     @Override
     public int utxoMerkleTreeHeight() {
@@ -146,7 +149,8 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 MerklePath.deserialize(utxo.utxoMerklePath()));
 
         byte[] proof = CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
-                Optional.of(we), Optional.of(utxoProverData), Optional.empty(), provingKeyPath, checkProvingKey, zk);
+                Optional.of(we), Optional.of(utxoProverData), Optional.empty(), Optional.of(supportedSegmentSize),
+                provingKeyPath, checkProvingKey, zk);
 
         try {
             we.close();
@@ -202,7 +206,8 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 scTxsComHashes.stream().map(FieldElement::deserialize).collect(Collectors.toList()));
 
         byte[] proof = CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
-                weOpt, Optional.empty(), Optional.of(ftProverData), provingKeyPath, checkProvingKey, zk);
+                weOpt, Optional.empty(), Optional.of(ftProverData), Optional.of(supportedSegmentSize),
+                provingKeyPath, checkProvingKey, zk);
 
         try {
             sysData.close();
