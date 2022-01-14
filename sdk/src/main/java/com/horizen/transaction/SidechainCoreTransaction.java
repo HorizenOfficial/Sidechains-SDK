@@ -1,5 +1,6 @@
 package com.horizen.transaction;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -133,6 +134,9 @@ public final class SidechainCoreTransaction
     public byte version() {
         return version;
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 
     @Override
     public byte[] customFieldsData() {
