@@ -62,12 +62,12 @@ class ConsensusValidatorOmmersTest
     val history = mockHistory()
 
     // Mock other data
-    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(currentEpochNonceBytes)
     val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
 
-    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(previousEpochNonceBytes)
     val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
@@ -139,12 +139,12 @@ class ConsensusValidatorOmmersTest
     val verifiedBlockId: ModifierId = getRandomBlockId(1000L)
 
     // Mock other data
-    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(currentEpochNonceBytes)
     val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
 
-    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(previousEpochNonceBytes)
     val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
@@ -207,17 +207,17 @@ class ConsensusValidatorOmmersTest
   @Test
   def switchingEpochOmmersValidation(): Unit = {
     // Mock Consensus epoch info data
-    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(currentEpochNonceBytes)
     val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
 
-    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(previousEpochNonceBytes)
     val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
 
-    val switchedOmmersCurrentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val switchedOmmersCurrentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(switchedOmmersCurrentEpochNonceBytes)
     val switchedOmmersFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo,
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(switchedOmmersCurrentEpochNonceBytes)))
@@ -364,17 +364,17 @@ class ConsensusValidatorOmmersTest
   @Test
   def switchingEpochOmmersWithSubOmmersValidation(): Unit = {
     // Mock Consensus epoch info data
-    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val currentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(currentEpochNonceBytes)
     val currentFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(currentEpochNonceBytes)))
 
-    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val previousEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(previousEpochNonceBytes)
     val previousFullConsensusEpochInfo = FullConsensusEpochInfo(mock[StakeConsensusEpochInfo],
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(previousEpochNonceBytes)))
 
-    val switchedOmmersCurrentEpochNonceBytes: Array[Byte] = new Array[Byte](32)
+    val switchedOmmersCurrentEpochNonceBytes: Array[Byte] = new Array[Byte](8)
     scala.util.Random.nextBytes(switchedOmmersCurrentEpochNonceBytes)
     val switchedOmmersFullConsensusEpochInfo = FullConsensusEpochInfo(currentFullConsensusEpochInfo.stakeConsensusEpochInfo,
       NonceConsensusEpochInfo(byteArrayToConsensusNonce(switchedOmmersCurrentEpochNonceBytes)))

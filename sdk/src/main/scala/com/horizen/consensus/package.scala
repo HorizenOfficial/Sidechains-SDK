@@ -2,7 +2,7 @@ package com.horizen
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId
 import supertagged.TaggedType
@@ -43,6 +43,8 @@ package object consensus {
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
   def byteArrayToConsensusNonce(bytes: Array[Byte]): ConsensusNonce = ConsensusNonce @@ bytes
+
+  val consensusNonceLength: Int = Longs.BYTES
 
   object VrfMessage extends TaggedType[Array[Byte]]
   type VrfMessage = VrfMessage.Type
