@@ -9,9 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class CommonCircuit {
-    // Note: supportedSegmentSize should correlate with the snark circuit complexity, but is always less or equal the one defined in the MC network (maxSegmentSize).
     private static final int maxSegmentSize = (1 << 18);
-    private static final int supportedSegmentSize = (1 << 17);
 
     // Keys total max size values are the same as in MC
     public static final int maxProofPlusVkSize = 9 * 1024;
@@ -22,8 +20,7 @@ public class CommonCircuit {
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
                 ProvingSystemType.COBOUNDARY_MARLIN,
-                maxSegmentSize,
-                supportedSegmentSize);
+                maxSegmentSize);
     }
 
     public String getCoboundaryMarlinSnarkVerificationKeyHex(String verificationKeyPath) {

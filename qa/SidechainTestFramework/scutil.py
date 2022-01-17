@@ -215,7 +215,7 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     return certificate_proof_info
 
 """
-Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
+Generate ceased sidechain withdrawal proof info calling ScBootstrappingTools with command "generateCswProofInfo"
 Parameters:
  - withdrawalEpochLen
  - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
@@ -812,3 +812,14 @@ SC_FIELD_SAFE_SIZE = 31
 
 def generate_random_field_element_hex():
     return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
+
+# Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
+def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
+    for box_id in csw_box_ids:
+        req = json.dumps({"boxId": box_id})
+        status = sc_node.csw_cswInfo(req)["result"]["cswInfo"]["proofInfo"]["status"]
+        if status == "Absent" and allow_absent:
+            continue
+        elif status != "Generated":
+            return False
+    return True

@@ -18,6 +18,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCircuit {
+    // Note: supportedSegmentSize should correlate with the snark circuit complexity,
+    // but is always less or equal the one defined in the MC network (maxSegmentSize).
+    private static final int supportedSegmentSize = (1 << 17);
+
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
     private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
@@ -119,7 +123,8 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
                 backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
-                signatures, publicKeys, threshold, customFe, provingKeyPath, checkProvingKey, zk);
+                signatures, publicKeys, threshold, customFe, Optional.of(supportedSegmentSize),
+                provingKeyPath, checkProvingKey, zk);
 
         // TODO: actually it will be more efficient to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
         endCumulativeScTxCommTreeRootFe.freeFieldElement();

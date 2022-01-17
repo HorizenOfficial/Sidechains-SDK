@@ -227,26 +227,35 @@ class CswManager(settings: SidechainSettings,
               new Thread(new Runnable() {
                 override def run(): Unit = {
                   Try {
+                    log.debug(s"CSW proof generation started for $data")
                     data match {
                       case ft: ForwardTransferCswData =>
                         CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
                           cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
                           cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
                       case utxo: UtxoCswData =>
                         CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
                           cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.certProvingKeyFilePath, true, true);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
                     }
                   } match {
-                    case Success(proof) => self ! CswProofSuccessfullyGenerated(proof)
+                    case Success(proof) =>
+                      if(proof != null) { // Note: proof creation may return null in case of error
+                        log.debug(s"CSW proof generation finished successfully for $data")
+                        self ! CswProofSuccessfullyGenerated(proof)
+                      }
+                      else {
+                        log.error(s"CSW proof generation failed for CSW $data, because of null proof.")
+                        self ! CswProofFailed
+                      }
                     case Failure(ex) =>
-                      log.error(s"Csw proof generation failed for CSW $data, due to: ${ex.getMessage}")
+                      log.error(s"Csw proof generation failed for CSW $data, due to: $ex")
                       self ! CswProofFailed
                   }
 
                 }
-              })
+              }).start()
             })
           case None =>
             log.error("CswManager: Can't find CSW witness for proof generation.")
@@ -365,24 +374,37 @@ class CswManager(settings: SidechainSettings,
     val lastActiveCertOpt = state.certificate(lastActiveCertReferencedEpoch)
 
     val endBlockHeight = WithdrawalEpochUtils.ceasedAtMcBlockHeight(withdrawalEpochNumber, params)
-    val startBlockHeight: Int = endBlockHeight - CryptoLibProvider.cswCircuitFunctions.rangeSize(params.withdrawalEpochLength) + 1
+    // Last MC block of the epoch to with last active cert was referenced (if exists).
+    val startBlockHeight: Int = endBlockHeight - CryptoLibProvider.cswCircuitFunctions.rangeSize(params.withdrawalEpochLength)
 
     log.debug(s"CswManager: withdrawalEpochNumber = $withdrawalEpochNumber, endBlockHeight = $endBlockHeight, startBlockHeight = $startBlockHeight")
 
+    // Get cumulative tree hash of the last mc block 3 epochs before.
     // In case SC has ceased during the first 3 epochs (numbers = {0, 1, 2})
     // history has no info about mcbScTxsCumComStart, so the genesis value should be taken from params.
-    // Otherwise, get cumulative tree hash of the last mc block 3 epochs before.
+    // Moreover, genesis value is a cumulativeCommTreeHash of genesis block, not a parent of genesis!
+    // So it is not possible to prove the presence of FT from the genesis block. See `excludeGenesisCommitment` usage.
+    var excludeGenesisCommTreeHash: Boolean = false
     val mcbScTxsCumComStart: Array[Byte] = history.getMainchainHeaderInfoByHeight(startBlockHeight) match {
       case Some(info) => info.cumulativeCommTreeHash
-      case None => params.initialCumulativeCommTreeHash
+      case None =>
+        excludeGenesisCommTreeHash = true
+        log.debug("Exclude genesis comm tree hash.")
+        params.initialCumulativeCommTreeHash
     }
 
     // Get up to RANGE_SIZE commitment tree hashes from the first mc block 2 epochs before to the ceased height block
     // Note 1: In case sidechain has ceased during first 2 epochs epochs we have less scTxsComHashes number than RANGE_SIZE
     // Note 2: Getting `hashScTxsCommitment` operation is quite expensive due to look up into the storage for the header.
-    val scTxsComHashes: Seq[Array[Byte]] = (startBlockHeight + 1 to endBlockHeight).flatMap(height => history.getMainchainHeaderInfoByHeight(height)).map(info => {
-      history.getMainchainHeaderByHash(info.hash.data).get.hashScTxsCommitment
+    // Note 3: Mainchain header keep `hashScTxsCommitment` in RPC friendly way - BE form of uint256.
+    var scTxsComHashes: Seq[Array[Byte]] = (startBlockHeight + 1 to endBlockHeight).flatMap(height => history.getMainchainHeaderInfoByHeight(height)).map(info => {
+      BytesUtils.reverseBytes(history.getMainchainHeaderByHash(info.hash.data).get.hashScTxsCommitment)
     })
+
+    if(excludeGenesisCommTreeHash) {
+      // Exclude the genesis comm hash to have a valid sequence of hashes leading to mcbScTxsCumComEnd
+      scTxsComHashes = scTxsComHashes.tail
+    }
 
     // Get cumulative tree hash of the end block.
     val mcbScTxsCumComEnd: Array[Byte] = history.getMainchainHeaderInfoByHeight(endBlockHeight).get.cumulativeCommTreeHash
@@ -403,7 +425,7 @@ class CswManager(settings: SidechainSettings,
 
   private def getCswOwner(cswData: CswData): Option[PrivateKey25519] = {
     val pubKeyBytes: Array[Byte] = cswData match {
-      case ft: ForwardTransferCswData => ft.receiverPubKey
+      case ft: ForwardTransferCswData => BytesUtils.reverseBytes(ft.receiverPubKeyReversed)
       case utxo: UtxoCswData => utxo.spendingPubKey
     }
 

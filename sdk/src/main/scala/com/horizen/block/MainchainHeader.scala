@@ -97,7 +97,7 @@ object MainchainHeader {
     val merkleRoot: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val hashSCMerkleRootsMap: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
+    val hashScTxsCommitment: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     val time: Int = BytesUtils.getReversedInt(headerBytes, currentOffset)
@@ -116,7 +116,7 @@ object MainchainHeader {
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
     currentOffset += solutionLength.value().intValue()
 
-    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashSCMerkleRootsMap, time, bits, nonce, solution)
+    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashScTxsCommitment, time, bits, nonce, solution)
   }
 }
 
