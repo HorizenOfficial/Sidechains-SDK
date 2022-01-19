@@ -155,11 +155,25 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getCertLeafs(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
-    val certLeafsOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
-    certLeafsOpt match {
+  def getFtLeaves(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
+    val fwtLeavesOpt: Option[java.util.List[FieldElement]] = commitmentTree.getFwtLeaves(sidechainId).asScala
+    fwtLeavesOpt match {
+      case Some(fwtList) => {
+        val fwtLeaves = fwtList.asScala.map(ft => ft.serializeFieldElement())
+        fwtList.asScala.foreach(_.freeFieldElement())
+        fwtLeaves
+      }
+      case None => Seq()
+    }
+  }
+
+  def getCertLeaves(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
+    val certLeavesOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
+    certLeavesOpt match {
       case Some(certList) => {
-        certList.asScala.map(cert => cert.serializeFieldElement())
+        val certLeaves = certList.asScala.map(cert => cert.serializeFieldElement())
+        certList.asScala.foreach(_.freeFieldElement())
+        certLeaves
       }
       case None => Seq()
     }

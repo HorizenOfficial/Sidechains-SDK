@@ -167,7 +167,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     // Mock loadCswWitness() related methods
     val submissionWindowLength: Int = withdrawalEpochLength / 5
     val endHeight = mcStartHeight + withdrawalEpochInfo.epoch * withdrawalEpochLength + submissionWindowLength - 1
-    val startHeight = mcStartHeight + (withdrawalEpochInfo.epoch - 2) * withdrawalEpochLength
+    val startHeight = mcStartHeight + (withdrawalEpochInfo.epoch - 2) * withdrawalEpochLength - 1
     var heights: Seq[Int] = (startHeight to endHeight).map(h => h)
     heights = heights :+ endHeight
 
@@ -619,7 +619,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
 
     // Test 1: start proof generation
-    val status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    val status = Await.result(cswManagerRef ? GenerateCswProof(ftData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
 
     // wait
@@ -627,10 +627,10 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     watch.watch(cswManagerRef)
     watch.expectNoMessage(timeout.duration)
 
-    // check proof in process
+    // Check that proof is not in the queue anymore
     assertEquals("Different proof queue size.", 0, cswManager.proofsInQueue.size)
-    assertTrue("Proof in process must be found.", cswManager.proofInProcessOpt.isDefined)
-    assertEquals("Proof in process is different.", new ByteArrayWrapper(utxoData1.boxId), cswManager.proofInProcessOpt.get.boxId)
-    assertEquals("Proof in process is different.", senderAddress, cswManager.proofInProcessOpt.get.senderAddress)
+    // Proof expected to be failed because of the invalid data.
+    assertFalse("No proof is process expected.", cswManager.proofInProcessOpt.isDefined)
+    assertTrue("No generated proofs expected.", cswManager.generatedProofsMap.isEmpty)
   }
 }

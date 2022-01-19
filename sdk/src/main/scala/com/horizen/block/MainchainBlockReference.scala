@@ -183,7 +183,7 @@ object MainchainBlockReference extends ScorexLogging {
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
-        val certLeaves = commitmentTree.getCertLeafs(sidechainId.data)
+        val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
