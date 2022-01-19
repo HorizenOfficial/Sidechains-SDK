@@ -109,12 +109,4 @@ public abstract class AbstractRegularTransaction
                     "inputs number is not consistent to proofs number.", id()));
         }
     }
-
-    @Override
-    public String typeName() {
-        return this.getClass().getSimpleName();
-    }
-
-    @Override
-    public Boolean isCustom() { return true; } // All transactions presume customs until it not defined otherwise
 }

@@ -8,12 +8,13 @@ import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.serialization.Views;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"secretTypeId", "publicImage", "serializer", "sign", "owns"})
+@JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns"})
 public interface Secret
     extends scorex.core.serialization.BytesSerializable
 {
     byte secretTypeId();
 
+    @JsonProperty("publicImage")
     ProofOfKnowledgeProposition publicImage();
 
     @Override

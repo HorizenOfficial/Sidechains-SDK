@@ -1930,6 +1930,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Box'
+        typeName:
+          type: string
+        isCustom:
+          type: boolean
 
     Box:
       type: object
