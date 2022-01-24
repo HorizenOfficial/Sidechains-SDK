@@ -59,9 +59,6 @@ public final class RegularTransactionSerializer implements TransactionSerializer
 
     @Override
     public RegularTransaction parse(Reader reader) {
-        if(reader.remaining() < 32)
-            throw new IllegalArgumentException("Input data corrupted.");
-
         long fee = reader.getLong();
         List<ZenBox> inputs = boxListSerializer.parse(reader);
         List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs = boxDataListSerializer.parse(reader);

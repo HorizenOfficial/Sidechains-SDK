@@ -1,6 +1,5 @@
 package com.horizen.utils;
 
-import com.google.common.primitives.Ints;
 import org.bouncycastle.util.Strings;
 import org.junit.Test;
 import scorex.core.serialization.BytesSerializable;

@@ -31,7 +31,8 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        if(reader.remaining() < 4 + CommonParams.transactionHashLength() + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
+        // Serialized transactionIndex can have length from 1 up to 4 bytes.
+        if(reader.remaining() < 1 + CommonParams.transactionHashLength() + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
             throw new IllegalArgumentException("Input data corrupted.");
 
         byte[] ftOutputBytes = reader.getBytes(MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE());

@@ -88,7 +88,17 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def blockById(blockId: ModifierId): Option[SidechainBlock] = {
     val blockIdBytes = new ByteArrayWrapper(idToBytes(blockId))
-    storage.get(blockIdBytes).asScala.flatMap(baw => sidechainBlockSerializer.parseBytesTry(baw.data).toOption)
+    val baw = storage.get(blockIdBytes).asScala
+    baw match {
+      case Some(value) => {
+        log.debug("blockById: serilized block : %s".format(BytesUtils.toHexString(value.data)))
+        sidechainBlockSerializer.parseBytesTry(value.data).toOption
+      }
+      case None => {
+        log.info("SidechainHistoryStorage:blockById: byte array is empty")
+        None
+      }
+    }
   }
 
   //Block info shall be in history storage, otherwise something going totally wrong

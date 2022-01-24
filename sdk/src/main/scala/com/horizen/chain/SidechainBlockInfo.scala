@@ -1,7 +1,6 @@
 package com.horizen.chain
 
 import com.horizen.block.SidechainBlock
-import com.horizen.cryptolibprovider.{CumulativeHashFunctions, FieldElementUtils}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import scorex.core.NodeViewModifier
@@ -10,9 +9,8 @@ import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
-
 import scala.collection.mutable.ArrayBuffer
-import com.horizen.librustsidechains.FieldElement
+
 
 case class SidechainBlockInfo(height: Int,
                               score: Long,
