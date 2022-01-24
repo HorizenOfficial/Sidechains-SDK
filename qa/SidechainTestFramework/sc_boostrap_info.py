@@ -12,7 +12,9 @@ SCCreationInfo: {
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000, btr_data_length=0):
+    # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
+    # because of too complex circuit from MC perspective.
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=900, btr_data_length=0):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length

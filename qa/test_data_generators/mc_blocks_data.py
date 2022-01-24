@@ -54,7 +54,7 @@ class McTxsData(SidechainTestFramework):
 
 
         # Generate MC block with single sidechain mentioned - sidechain creation output
-        sc_creation_info = SCCreationInfo(mc_node, 100, 1000, btr_data_length=2)
+        sc_creation_info = SCCreationInfo(mc_node, 100, 900, btr_data_length=2)
         boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir),
                                      csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length))
         sidechain_id_1 = str(boot_info.sidechain_id)
