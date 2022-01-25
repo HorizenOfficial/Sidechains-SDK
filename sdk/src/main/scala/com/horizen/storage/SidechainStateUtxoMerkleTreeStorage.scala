@@ -31,8 +31,12 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     val newLeaves: Map[java.lang.Long, FieldElement] = getAllLeavesInfo.map(leafInfo => {
       long2Long(leafInfo.position) -> FieldElement.deserialize(leafInfo.leaf)
     }).toMap
-    merkleTree.addLeaves(newLeaves.asJava)
-    newLeaves.foreach(_._2.close())
+
+    try {
+      merkleTree.addLeaves(newLeaves.asJava)
+    } finally {
+      newLeaves.foreach(_._2.close())
+    }
 
     merkleTree
   }

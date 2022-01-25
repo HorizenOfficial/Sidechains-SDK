@@ -110,7 +110,7 @@ class CswManager(settings: SidechainSettings,
           proofsInQueue.clear()
           generatedProofsMap.clear()
           proofInProcessOpt.foreach(inProcess => {
-            proofInProcessOpt = Some(ProofInProcess(inProcess.boxId, inProcess.senderAddress, isCancelled = true))
+            proofInProcessOpt = Some(ProofInProcess(inProcess.boxId, inProcess.receiverAddress, isCancelled = true))
           })
         }
       }
@@ -143,43 +143,43 @@ class CswManager(settings: SidechainSettings,
   }
 
   private def onGenerateCswProof: Receive = {
-    case GenerateCswProof(boxId: Array[Byte], senderAddress: String) =>
+    case GenerateCswProof(boxId: Array[Byte], receiverAddress: String) =>
       if (!hasSidechainCeased) {
         sender() ! SidechainIsAlive
-      } else if (!isValidSenderAddress(senderAddress)) {
+      } else if (!isValidReceiverAddress(receiverAddress)) {
         sender() ! InvalidAddress
       } else {
         val proofInfo: CswProofInfo = getProofInfo(boxId)
-        // Note: CSW proof result depends on the MC sender
-        val isSenderKnown = proofInfo.senderAddress.contains(senderAddress)
+        // Note: CSW proof result depends on the MC receiver
+        val isSameReceiver = proofInfo.receiverAddress.contains(receiverAddress)
         proofInfo.status match {
           case Absent =>
             // Check if we have box related CSW data
             if (findCswData(boxId).isDefined) {
-              addProofToQueue(boxId, senderAddress)
+              addProofToQueue(boxId, receiverAddress)
               self ! TryToScheduleProofGeneration
               sender() ! ProofGenerationStarted
             } else {
               sender() ! NoProofData
             }
           case InQueue | InProcess =>
-            if (isSenderKnown)
+            if (isSameReceiver)
               sender() ! ProofGenerationInProcess
             else {
-              // In case a new request arrived with different sender address -> reschedule proof generation.
+              // In case a new request arrived with different receiver address -> reschedule proof generation.
               removeProofInfo(boxId)
-              addProofToQueue(boxId, senderAddress)
+              addProofToQueue(boxId, receiverAddress)
               self ! TryToScheduleProofGeneration
               sender() ! ProofGenerationStarted
             }
           case Generated =>
-            if (isSenderKnown)
+            if (isSameReceiver)
               sender() ! ProofCreationFinished
             else {
-              // In case a new request arrived with different sender address ->
+              // In case a new request arrived with different receiver address ->
               // remove existing results and schedule proof generation.
               removeProofInfo(boxId)
-              addProofToQueue(boxId, senderAddress)
+              addProofToQueue(boxId, receiverAddress)
               self ! TryToScheduleProofGeneration
               sender() ! ProofGenerationStarted
             }
@@ -196,10 +196,13 @@ class CswManager(settings: SidechainSettings,
           case Some(cswWitnessHolder) => {
             findCswData(boxId) match {
               case Some(data: CswData) =>
-                // Sidechain id in BigEndian as MC RPC expects.
-                sender() ! Success(CswInfo(data.getClass.getSimpleName, data.amount, BytesUtils.reverseBytes(params.sidechainId), data.getNullifier,
-                  getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash),
-                  cswWitnessHolder.mcbScTxsCumComEnd))
+                val infoTry = Try {
+                  // Sidechain id in BigEndian as MC RPC expects.
+                  CswInfo(data.getClass.getSimpleName, data.amount, BytesUtils.reverseBytes(params.sidechainId), data.getNullifier,
+                    getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash),
+                    cswWitnessHolder.mcbScTxsCumComEnd)
+                }
+                sender() ! infoTry
               case None =>
                 sender() ! Failure(new IllegalArgumentException("CSW info was not found for given box id."))
             }
@@ -220,8 +223,8 @@ class CswManager(settings: SidechainSettings,
           case Some(data) =>
             val pkOpt = getCswOwner(data)
             pkOpt.foreach(pk => {
-              proofInProcessOpt = Some(ProofInProcess(inQueue.boxId, inQueue.senderAddress))
-              val senderPubKeyHash = BytesUtils.fromHorizenPublicKeyAddress(inQueue.senderAddress, params)
+              proofInProcessOpt = Some(ProofInProcess(inQueue.boxId, inQueue.receiverAddress))
+              val receiverPubKeyHash = BytesUtils.fromHorizenPublicKeyAddress(inQueue.receiverAddress, params)
               // Run the time consuming part of proof generation in a background
               // to unlock the Actor message queue for another requests.
               new Thread(new Runnable() {
@@ -232,11 +235,11 @@ class CswManager(settings: SidechainSettings,
                       case ft: ForwardTransferCswData =>
                         CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
                           cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
-                          cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                          cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
                           params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
                       case utxo: UtxoCswData =>
                         CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
-                          cswWitnessHolder.mcbScTxsCumComEnd, senderPubKeyHash, pk, params.withdrawalEpochLength,
+                          cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
                           params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
                     }
                   } match {
@@ -269,7 +272,7 @@ class CswManager(settings: SidechainSettings,
       proofInProcessOpt match {
         case Some(proofInProcess) =>
           if (!proofInProcess.isCancelled)
-            generatedProofsMap(new ByteArrayWrapper(proofInProcess.boxId)) = CswProofInfo(Generated, Some(proof), Some(proofInProcess.senderAddress))
+            generatedProofsMap(new ByteArrayWrapper(proofInProcess.boxId)) = CswProofInfo(Generated, Some(proof), Some(proofInProcess.receiverAddress))
           proofInProcessOpt = None
         case None =>
           log.error("CswManager: inconsistent proof in process state.")
@@ -294,12 +297,12 @@ class CswManager(settings: SidechainSettings,
     generatedProofsMap.get(id).foreach(info => return info)
 
     proofsInQueue.find(entry => id.equals(entry.boxId)).foreach(entry => {
-      return CswProofInfo(InQueue, None, Some(entry.senderAddress))
+      return CswProofInfo(InQueue, None, Some(entry.receiverAddress))
     })
 
     proofInProcessOpt.foreach(inProcess => {
       if (id.equals(inProcess.boxId))
-        return CswProofInfo(InProcess, None, Some(inProcess.senderAddress))
+        return CswProofInfo(InProcess, None, Some(inProcess.receiverAddress))
     })
 
     CswProofInfo(Absent, None, None)
@@ -316,12 +319,12 @@ class CswManager(settings: SidechainSettings,
     // Mark proof generation cancelled if boxId has matched.
     proofInProcessOpt.foreach(inProcess => {
       if(id.equals(inProcess.boxId))
-        proofInProcessOpt = Some(ProofInProcess(inProcess.boxId, inProcess.senderAddress, isCancelled = true))
+        proofInProcessOpt = Some(ProofInProcess(inProcess.boxId, inProcess.receiverAddress, isCancelled = true))
     })
   }
 
-  private def addProofToQueue(boxId: Array[Byte], senderAddress: String): Unit = {
-    proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(boxId), senderAddress))
+  private def addProofToQueue(boxId: Array[Byte], receiverAddress: String): Unit = {
+    proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(boxId), receiverAddress))
   }
 
   private def loadCswWitness(): Unit = {
@@ -412,13 +415,13 @@ class CswManager(settings: SidechainSettings,
     CswWitnessHolder(utxoCswDataMap, ftCswDataMap, lastActiveCertOpt, mcbScTxsCumComStart, scTxsComHashes, mcbScTxsCumComEnd)
   }
 
-  private def isValidSenderAddress(senderAddress: String): Boolean = {
+  private def isValidReceiverAddress(receiverAddress: String): Boolean = {
     try {
-      BytesUtils.fromHorizenPublicKeyAddress(senderAddress, params)
+      BytesUtils.fromHorizenPublicKeyAddress(receiverAddress, params)
       true
     } catch {
       case _: IllegalArgumentException =>
-        log.error(s"CswManager: Invalid sender address: $senderAddress")
+        log.error(s"CswManager: Invalid receiver address: $receiverAddress")
         false
     }
   }
@@ -448,15 +451,15 @@ class CswManager(settings: SidechainSettings,
 
 
 object CswManager {
-  case class ProofInQueue(boxId: ByteArrayWrapper, senderAddress: String)
-  case class ProofInProcess(boxId: ByteArrayWrapper, senderAddress: String, isCancelled: Boolean = false)
+  case class ProofInQueue(boxId: ByteArrayWrapper, receiverAddress: String)
+  case class ProofInProcess(boxId: ByteArrayWrapper, receiverAddress: String, isCancelled: Boolean = false)
 
   // Public interface
   object ReceivableMessages {
     case object GetCeasedStatus
     case object GetCswBoxIds
     case class GetBoxNullifier(boxId: Array[Byte])
-    case class GenerateCswProof(boxId: Array[Byte], senderAddress: String)
+    case class GenerateCswProof(boxId: Array[Byte], receiverAddress: String)
     case class GetCswInfo(boxId: Array[Byte])
   }
 
@@ -481,7 +484,7 @@ object CswManager {
     @JsonView(Array(classOf[Views.Default]))
     case class CswProofInfo(@JsonSerialize(using = classOf[CswProofStatusSerializer]) status: ProofStatus,
                             scProof: Option[Array[Byte]],
-                            senderAddress: Option[String])
+                            receiverAddress: Option[String])
 
     @JsonView(Array(classOf[Views.Default]))
     case class CswInfo(cswType: String, // pure class name
@@ -496,7 +499,7 @@ object CswManager {
       override def toString() = {this.getClass.getName.split("\\$").last}
     }
     case object SidechainIsAlive extends GenerateCswProofStatus           // Sidechain is still alive
-    case object InvalidAddress extends GenerateCswProofStatus             // Sender address has invalid value: MC taddress expected.
+    case object InvalidAddress extends GenerateCswProofStatus             // Receiver address has invalid value: MC taddress expected.
     case object NoProofData extends GenerateCswProofStatus                // Information for given box id is missed
     case object ProofGenerationStarted extends GenerateCswProofStatus     // Started proof generation, was not started of present before
     case object ProofGenerationInProcess extends GenerateCswProofStatus   // Proof generation was started before, still in process

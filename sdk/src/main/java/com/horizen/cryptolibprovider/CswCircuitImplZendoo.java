@@ -41,23 +41,14 @@ public class CswCircuitImplZendoo implements CswCircuit {
     @Override
     public FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box) {
         ScUtxoOutput utxo = new ScUtxoOutput(box.proposition().bytes(), box.value(), box.nonce(), box.customFieldsHash());
-        return utxo.getNullifier();
+        return utxo.getHash();
     }
 
     @Override
-    public byte[] getCertDataHash(WithdrawalEpochCertificate cert) {
-        WithdrawalCertificate we = createWithdrawalCertificate(cert);
-
-        FieldElement hashFe = we.getHash();
-        byte[] hashBytes = hashFe.serializeFieldElement();
-
-        hashFe.freeFieldElement();
-        try {
-            we.close();
-        } catch (Exception ignored) {
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert) throws Exception {
+        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert); FieldElement hashFe = wc.getHash()) {
+            return hashFe.serializeFieldElement();
         }
-
-        return hashBytes;
     }
 
     @Override
@@ -117,49 +108,33 @@ public class CswCircuitImplZendoo implements CswCircuit {
     public byte[] utxoCreateProof(UtxoCswData utxo,
                                   WithdrawalEpochCertificate lastActiveCert,
                                   byte[] mcbScTxsCumComEnd,
-                                  byte[] senderPubKeyHash,
+                                  byte[] receiverPubKeyHash,
                                   PrivateKey25519 pk,
                                   int withdrawalEpochLength,
                                   byte[] constant,
                                   byte[] sidechainId,
                                   String provingKeyPath,
                                   boolean checkProvingKey,
-                                  boolean zk) {
-        WithdrawalCertificate we = createWithdrawalCertificate(lastActiveCert);
-
-        CswSysData sysData = new CswSysData(
-                Optional.of(FieldElement.deserialize(constant)),
-                Optional.of(we.getHash()),
-                Optional.of(FieldElement.deserialize(mcbScTxsCumComEnd)),
-                utxo.amount(),
-                FieldElement.deserialize(utxo.getNullifier()),
-                senderPubKeyHash);
-
-        FieldElement scIdFe = FieldElement.deserialize(sidechainId);
-
-        ScUtxoOutput utxoOutput = new ScUtxoOutput(
-                utxo.spendingPubKey(),
-                utxo.amount(),
-                utxo.nonce(),
-                utxo.customHash());
-
-        CswUtxoProverData utxoProverData = new CswUtxoProverData(
-                utxoOutput,
-                privateKey25519ToScalar(pk),
-                MerklePath.deserialize(utxo.utxoMerklePath()));
-
-        byte[] proof = CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
-                Optional.of(we), Optional.of(utxoProverData), Optional.empty(), Optional.of(supportedSegmentSize),
-                provingKeyPath, checkProvingKey, zk);
-
-        try {
-            we.close();
-            sysData.close();
-            scIdFe.close();
-            utxoProverData.close();
-        } catch (Exception ignored) {}
-
-        return proof;
+                                  boolean zk) throws Exception {
+        try(
+                WithdrawalCertificate we = createWithdrawalCertificate(lastActiveCert);
+                CswSysData sysData = new CswSysData(
+                    Optional.of(FieldElement.deserialize(constant)),
+                    Optional.of(we.getHash()),
+                    Optional.of(FieldElement.deserialize(mcbScTxsCumComEnd)),
+                    utxo.amount(),
+                    FieldElement.deserialize(utxo.getNullifier()),
+                    receiverPubKeyHash);
+                FieldElement scIdFe = FieldElement.deserialize(sidechainId);
+                CswUtxoProverData utxoProverData = new CswUtxoProverData(
+                    new ScUtxoOutput(utxo.spendingPubKey(), utxo.amount(), utxo.nonce(), utxo.customHash()),
+                    privateKey25519ToScalar(pk),
+                    MerklePath.deserialize(utxo.utxoMerklePath()));
+        ) {
+            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
+                    Optional.of(we), Optional.of(utxoProverData), Optional.empty(), Optional.of(supportedSegmentSize),
+                    provingKeyPath, checkProvingKey, zk);
+        }
     }
 
     @Override
@@ -168,55 +143,48 @@ public class CswCircuitImplZendoo implements CswCircuit {
                                 byte[] mcbScTxsCumComStart,
                                 List<byte[]> scTxsComHashes,
                                 byte[] mcbScTxsCumComEnd,
-                                byte[] senderPubKeyHash,
+                                byte[] receiverPubKeyHash,
                                 PrivateKey25519 pk,
                                 int withdrawalEpochLength,
                                 byte[] constant,
                                 byte[] sidechainId,
                                 String provingKeyPath,
                                 boolean checkProvingKey,
-                                boolean zk){
+                                boolean zk) throws Exception {
         Optional<WithdrawalCertificate> weOpt = lastActiveCertOpt.map(this::createWithdrawalCertificate);
-        CswSysData sysData = new CswSysData(
-                Optional.of(FieldElement.deserialize(constant)),
-                weOpt.map(WithdrawalCertificate::getHash),
-                Optional.of(FieldElement.deserialize(mcbScTxsCumComEnd)),
-                ft.amount(),
-                FieldElement.deserialize(ft.getNullifier()),
-                senderPubKeyHash);
+        try(
+                CswSysData sysData = new CswSysData(
+                        Optional.of(FieldElement.deserialize(constant)),
+                        weOpt.map(WithdrawalCertificate::getHash),
+                        Optional.of(FieldElement.deserialize(mcbScTxsCumComEnd)),
+                        ft.amount(),
+                        FieldElement.deserialize(ft.getNullifier()),
+                        receiverPubKeyHash);
 
-        FieldElement scIdFe = FieldElement.deserialize(sidechainId);
+                FieldElement scIdFe = FieldElement.deserialize(sidechainId);
 
-        ForwardTransferOutput ftOutput = new ForwardTransferOutput(
-                ft.amount(),
-                BytesUtils.reverseBytes(ft.receiverPubKeyReversed()), // Set receiver bytes in a PubKey255199 bytes original order
-                ft.paybackAddrDataHash(),
-                ft.txHash(),
-                ft.outIdx());
-
-        CswFtProverData ftProverData = new CswFtProverData(
-                ftOutput,
-                privateKey25519ToScalar(pk),
-                FieldElement.deserialize(mcbScTxsCumComStart),
-                MerklePath.deserialize(ft.scCommitmentMerklePath()),
-                MerklePath.deserialize(ft.ftMerklePath()),
-                FieldElement.deserialize(ft.scCrCommitment()),
-                FieldElement.deserialize(ft.btrCommitment()),
-                FieldElement.deserialize(ft.certCommitment()),
-                scTxsComHashes.stream().map(FieldElement::deserialize).collect(Collectors.toList()));
-
-        byte[] proof = CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
-                weOpt, Optional.empty(), Optional.of(ftProverData), Optional.of(supportedSegmentSize),
-                provingKeyPath, checkProvingKey, zk);
-
-        try {
-            sysData.close();
-            scIdFe.close();
+                CswFtProverData ftProverData = new CswFtProverData(
+                        new ForwardTransferOutput(
+                                ft.amount(),
+                                BytesUtils.reverseBytes(ft.receiverPubKeyReversed()), // Set receiver bytes in a PubKey255199 bytes original order
+                                ft.paybackAddrDataHash(),
+                                ft.txHash(),
+                                ft.outIdx()),
+                        privateKey25519ToScalar(pk),
+                        FieldElement.deserialize(mcbScTxsCumComStart),
+                        MerklePath.deserialize(ft.scCommitmentMerklePath()),
+                        MerklePath.deserialize(ft.ftMerklePath()),
+                        FieldElement.deserialize(ft.scCrCommitment()),
+                        FieldElement.deserialize(ft.btrCommitment()),
+                        FieldElement.deserialize(ft.certCommitment()),
+                        scTxsComHashes.stream().map(FieldElement::deserialize).collect(Collectors.toList()))
+        ) {
+            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
+                    weOpt, Optional.empty(), Optional.of(ftProverData), Optional.of(supportedSegmentSize),
+                    provingKeyPath, checkProvingKey, zk);
+        } finally {
             if(weOpt.isPresent())
                 weOpt.get().close();
-            ftProverData.close();
-        } catch (Exception ignored) {}
-
-        return proof;
+        }
     }
 }

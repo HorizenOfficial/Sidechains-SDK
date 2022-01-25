@@ -54,7 +54,7 @@ class McTxsData(SidechainTestFramework):
         # Generate Tx with version -4 with single SidechainCreation output
         # Use the same amount and withdrawal epoch length as for unit test
         creation_amount = 50
-        withdrawal_epoch_length = 1000
+        withdrawal_epoch_length = 900
         btr_data_length = 2
 
         sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length, btr_data_length)
