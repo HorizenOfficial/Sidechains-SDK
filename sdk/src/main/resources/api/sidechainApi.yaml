@@ -1686,7 +1686,7 @@ paths:
                 boxId:
                   type: string
                   description: coin box id in hex
-                senderAddress:
+                receiverAddress:
                   type: string
                   description: Horizen transparent address
       responses:
@@ -2032,5 +2032,5 @@ components:
           type: string
         scProof:
           type: string
-        senderAddress:
+        receiverAddress:
           type: string

@@ -192,13 +192,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
         if(walletFTs.nonEmpty) {
           val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId)
-          for((ft: ForwardTransfer, leafIdx: Int) <- walletFTs) {
-            val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
-            val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
-            val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
-            val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
-            val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
+          val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
+          val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
+          val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
+          val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
 
+          for((ft: ForwardTransfer, leafIdx: Int) <- walletFTs) {
+            val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
             ftCswDataList.append(
               ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes,
                 ft.getFtOutput.mcReturnAddress, ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath,

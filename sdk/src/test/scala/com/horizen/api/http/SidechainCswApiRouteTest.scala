@@ -124,8 +124,8 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         assertEquals(proofInfo.get("status").asText(), "Absent")
         assertTrue(proofInfo.get("scProof").isTextual)
         assertEquals(proofInfo.get("scProof").asText().toUpperCase, "FBFB")
-        assertTrue(proofInfo.get("senderAddress").isTextual)
-        assertEquals(proofInfo.get("senderAddress").asText(), "SomeDestination")
+        assertTrue(proofInfo.get("receiverAddress").isTextual)
+        assertEquals(proofInfo.get("receiverAddress").asText(), "SomeDestination")
       }
     }
 
@@ -146,7 +146,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
 
     "reply at /generateCswProof" in {
       Post(basePath + "generateCswProof")
-        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"senderAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")

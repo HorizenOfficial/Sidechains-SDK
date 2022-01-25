@@ -334,7 +334,7 @@ def initialize_default_sc_datadir(dirname, n):
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, 1000)  # withdrawal epoch length taken from the config file.
+    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, 900)  # withdrawal epoch length taken from the config file.
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
@@ -632,7 +632,7 @@ network: {
             "mainchain_node": mc_node_1,
             "sc_id": "id_1"
             "forward_amout": 200
-            "withdrawal_epoch_length": 1000
+            "withdrawal_epoch_length": 100
         },
         [
             sidechain_1_configuration: {

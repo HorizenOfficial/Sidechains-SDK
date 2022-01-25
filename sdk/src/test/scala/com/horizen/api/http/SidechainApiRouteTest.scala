@@ -262,7 +262,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
             sender ! Success(ByteUtils.fromHexString("FAFA"))
           }
         }
-        case GenerateCswProof(boxId, senderAddress) => {
+        case GenerateCswProof(boxId, receiverAddress) => {
           val expectedBoxId: Array[Byte] = getRandomBoxId(0)
           if (boxId.deep != expectedBoxId.deep) {
             sender ! NoProofData

@@ -434,7 +434,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
             assert_equal(ceasing_cum_sc_tx_comm_tree, csw_info["ceasingCumScTxCommTree"], "CeasingCumScTxCommTree is different.")
             proof_info = csw_info["proofInfo"]
             assert_false("scProof" in proof_info, "scProof must not exist.")
-            assert_false("senderAddress" in proof_info, "senderAddress must not exist.")
+            assert_false("receiverAddress" in proof_info, "receiverAddress must not exist.")
             assert_equal("Absent", proof_info["status"], "Proof must be absent.")
 
         # Generate 3 more MC blocks to make SC coins mature
@@ -443,8 +443,8 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
         # Generate CSW proofs for all FTs and UTXOs
         csw_box_ids = map(lambda box: box["id"], csw_boxes)
         for box_id in csw_box_ids:
-            sender_address = mc_node.getnewaddress()
-            req = json.dumps({"boxId": box_id, "senderAddress": sender_address})
+            receiver_address = mc_node.getnewaddress()
+            req = json.dumps({"boxId": box_id, "receiverAddress": receiver_address})
             state = sc_node.csw_generateCswProof(req)["result"]["state"]
             assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
 
@@ -469,7 +469,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
             csw_amount = Decimal(csw_info["amount"]) / 100000000
             sc_csws = [{
                 "amount": str(csw_amount),
-                "senderAddress": csw_info["proofInfo"]["senderAddress"],
+                "senderAddress": csw_info["proofInfo"]["receiverAddress"],
                 "scId": csw_info["scId"],
                 "nullifier": csw_info["nullifier"],
                 "activeCertData": csw_info["activeCertData"],

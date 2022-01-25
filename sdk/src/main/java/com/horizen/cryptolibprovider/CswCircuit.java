@@ -16,7 +16,7 @@ public interface CswCircuit {
 
     FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box);
 
-    byte[] getCertDataHash(WithdrawalEpochCertificate cert);
+    byte[] getCertDataHash(WithdrawalEpochCertificate cert) throws Exception;
 
     int rangeSize(int withdrawalEpochLength);
 
@@ -27,26 +27,26 @@ public interface CswCircuit {
     byte[] utxoCreateProof(UtxoCswData utxo,
                            WithdrawalEpochCertificate lastActiveCert,
                            byte[] mcbScTxsCumComEnd,
-                           byte[] senderPubKeyHash,
+                           byte[] receiverPubKeyHash,
                            PrivateKey25519 pk,
                            int withdrawalEpochLength,
                            byte[] constant,
                            byte[] sidechainId,
                            String provingKeyPath,
                            boolean checkProvingKey,
-                           boolean zk);
+                           boolean zk) throws Exception;
 
     byte[] ftCreateProof(ForwardTransferCswData ft,
                          Optional<WithdrawalEpochCertificate> lastActiveCertOpt,
                          byte[] mcbScTxsCumComStart,
                          List<byte[]> scTxsComHashes,
                          byte[] mcbScTxsCumComEnd,
-                         byte[] senderPubKeyHash,
+                         byte[] receiverPubKeyHash,
                          PrivateKey25519 pk,
                          int withdrawalEpochLength,
                          byte[] constant,
                          byte[] sidechainId,
                          String provingKeyPath,
                          boolean checkProvingKey,
-                         boolean zk);
+                         boolean zk) throws Exception;
 }

@@ -5,11 +5,15 @@ import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.InMemorySparseMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.*;
 
-public class InMemorySparseMerkleTreeWrapper implements Closeable {
+// TODO: change the logger after 304 is merged
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class InMemorySparseMerkleTreeWrapper implements AutoCloseable {
+    private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
+
     private final InMemorySparseMerkleTree merkleTree;
     private final long leavesNumber;
     private final RangeSet<Long> emptyLeaves;
@@ -39,12 +43,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
 
     // Check the leaf is empty on given position.
     public boolean isLeafEmpty(long pos) {
-        try {
-            return merkleTree.isPositionEmpty(pos);
-        } catch (Exception e) {
-            // position is out of tree leaves range.
-            return false;
-        }
+        return emptyLeaves.contains(pos);
     }
 
     // Check max leaves number.
@@ -63,6 +62,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         try {
             merkleTree.addLeaves(leaves);
         } catch (Exception e) {
+            log.error("Failed to add leaves to InMemorySparseMerkleTree", e);
             return false;
         }
 
@@ -88,6 +88,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
         try {
             merkleTree.removeLeaves(positionSet);
         } catch (Exception e) {
+            log.error("Failed to remove leaves from InMemorySparseMerkleTree", e);
             return false;
         }
 
@@ -107,6 +108,7 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
             root.freeFieldElement();
             return rootBytes;
         } catch (Exception e) {
+            log.error("Failed to calculate root of InMemorySparseMerkleTree", e);
             return null;
         }
     }
@@ -120,12 +122,13 @@ public class InMemorySparseMerkleTreeWrapper implements Closeable {
             mp.freeMerklePath();
             return mpBytes;
         } catch (Exception e) {
+            log.error(String.format("Failed to calculate merkle path of InMemorySparseMerkleTree at pos %d", pos), e);
             return null;
         }
     }
 
     @Override
-    public void close() throws IOException {
-        merkleTree.freeInMemorySparseMerkleTree();
+    public void close() throws Exception {
+        merkleTree.close();
     }
 }

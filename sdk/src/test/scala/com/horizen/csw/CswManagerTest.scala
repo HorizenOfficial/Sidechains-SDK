@@ -41,7 +41,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
   case object WatchOk
 
-  val senderAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK" // mainnet
+  val receiverAddress = "znc3p7CFNTsz1s6CceskrTxKevQLPoDK4cK" // mainnet
 
   val utxoData1: UtxoCswData = getUtxoCswData(1000L)
   val utxoData2: UtxoCswData = getUtxoCswData(2000L)
@@ -440,12 +440,12 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
 
     // Test 5: Add proof info in the queue info
-    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress))
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
     cswInfoTry match {
       case Success(cswInfo) =>
-        val expectedProofInfo = CswProofInfo(InQueue, None, Some(senderAddress))
+        val expectedProofInfo = CswProofInfo(InQueue, None, Some(receiverAddress))
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
       case Failure(_) => Assert.fail("Exception found.")
     }
@@ -453,12 +453,12 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     // Test 6: Add proof info to in process
     cswManager.proofsInQueue.clear()
-    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), receiverAddress))
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
     cswInfoTry match {
       case Success(cswInfo) =>
-        val expectedProofInfo = CswProofInfo(InProcess, None, Some(senderAddress))
+        val expectedProofInfo = CswProofInfo(InProcess, None, Some(receiverAddress))
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
       case Failure(_) => Assert.fail("Exception found.")
     }
@@ -466,7 +466,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
     // Test 7: Add generated proof
     cswManager.proofInProcessOpt = None
-    val expectedProofInfo = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(senderAddress))
+    val expectedProofInfo = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(receiverAddress))
     cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = expectedProofInfo
 
     cswInfoTry = Await.result(cswManagerRef ? GetCswInfo(utxoData1.boxId), timeout.duration).asInstanceOf[Try[CswInfo]]
@@ -495,7 +495,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
 
     // Test 1: sidechain is alive
-    var status: GenerateCswProofStatus = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    var status: GenerateCswProofStatus = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", SidechainIsAlive, status)
 
 
@@ -510,75 +510,75 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
 
     // Test 3: no box id found
-    status = Await.result(cswManagerRef ? GenerateCswProof(getRandomBoxId(123L), senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(getRandomBoxId(123L), receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", NoProofData, status)
 
 
     // Test 4: proof in queue
-    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationInProcess, status)
 
 
     // Test 5: proof in process
     cswManager.proofsInQueue.clear()
-    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), senderAddress))
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), receiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationInProcess, status)
 
 
     // Test 6: generated proof
     cswManager.proofInProcessOpt = None
-    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(senderAddress))
+    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(receiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofCreationFinished, status)
 
 
     // Test 7: start add new proof to queue:
     cswManager.generatedProofsMap.clear()
     // set something in process to prevent new proof generation attempt
-    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData2.boxId), senderAddress))
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData2.boxId), receiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
     assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
-    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress), cswManager.proofsInQueue.head)
 
 
-    // Test 8: proof was in queue with different senderAddress
-    val otherSenderAddress: String = "other"
+    // Test 8: proof was in queue with different receiverAddress
+    val otherReceiverAddress: String = "other"
     cswManager.proofsInQueue.clear()
-    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), otherSenderAddress))
+    cswManager.proofsInQueue.append(ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), otherReceiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
     assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
-    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress), cswManager.proofsInQueue.head)
 
 
-    // Test 9: proof was generated with different senderAddress
+    // Test 9: proof was generated with different receiverAddress
     cswManager.proofsInQueue.clear()
-    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(otherSenderAddress))
+    cswManager.generatedProofsMap(new ByteArrayWrapper(utxoData1.boxId)) = CswProofInfo(Generated, Some(new Array[Byte](100)), Some(otherReceiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
     assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
-    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertEquals("Different proof in queue entre found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress), cswManager.proofsInQueue.head)
     assertEquals("No generated proofs expected to be found.", 0, cswManager.generatedProofsMap.size)
 
 
-    // Test 10: proof was in process with different senderAddress
+    // Test 10: proof was in process with different receiverAddress
     cswManager.proofsInQueue.clear()
     cswManager.generatedProofsMap.clear()
-    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), otherSenderAddress))
+    cswManager.proofInProcessOpt = Some(ProofInProcess(new ByteArrayWrapper(utxoData1.boxId), otherReceiverAddress))
 
-    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    status = Await.result(cswManagerRef ? GenerateCswProof(utxoData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
     assertEquals("Different proof queue size.", 1, cswManager.proofsInQueue.size)
-    assertEquals("Different proof in queue entry found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), senderAddress), cswManager.proofsInQueue.head)
+    assertEquals("Different proof in queue entry found.", ProofInQueue(new ByteArrayWrapper(utxoData1.boxId), receiverAddress), cswManager.proofsInQueue.head)
     assertTrue("Previous proof should be marked as cancelled.", cswManager.proofInProcessOpt.get.isCancelled)
   }
 
@@ -619,7 +619,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     cswManager.cswWitnessHolderOpt = Some(CswWitnessHolder(utxoMap, ftMap, None, new Array[Byte](32), Seq(), new Array[Byte](32)))
 
     // Test 1: start proof generation
-    val status = Await.result(cswManagerRef ? GenerateCswProof(ftData1.boxId, senderAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+    val status = Await.result(cswManagerRef ? GenerateCswProof(ftData1.boxId, receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
     assertEquals("Different status expected.", ProofGenerationStarted, status)
 
     // wait
