@@ -5,11 +5,12 @@ import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
+
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
-
 import org.junit.Assert._
 
 import scala.collection.mutable.ListBuffer
@@ -32,7 +33,7 @@ class SidechainWalletBoxStorageTest
   with SidechainTypes
 {
 
-  var mockedStorage: Storage = mock[IODBStoreAdapter]
+  var mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   var boxList = new ListBuffer[WalletBox]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
@@ -43,7 +44,7 @@ class SidechainWalletBoxStorageTest
 
   @Before
   def setUp() : Unit = {
-    mockedStorage= mock[IODBStoreAdapter]
+    mockedStorage= mock[VersionedLevelDbStorageAdapter]
     boxList = new ListBuffer[WalletBox]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 

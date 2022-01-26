@@ -2,7 +2,6 @@ package com.horizen.storage
 
 import java.lang.{Byte => JByte}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList, Optional => JOptional}
-
 import com.horizen.SidechainTypes
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderInfo, SidechainBlockInfo}
@@ -10,6 +9,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.utils.Pair
@@ -28,7 +28,7 @@ import scala.util.Try
 
 class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with SidechainBlockFixture with SidechainBlockInfoFixture with CompanionsFixture {
 
-  val mockedStorage: Storage = mock[IODBStoreAdapter]
+  val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   var params: NetworkParams = _

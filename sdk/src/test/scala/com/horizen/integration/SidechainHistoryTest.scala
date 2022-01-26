@@ -10,7 +10,7 @@ import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, Sta
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.storage.{IODBStoreAdapter, InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
+import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}

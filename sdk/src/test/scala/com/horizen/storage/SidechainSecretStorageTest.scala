@@ -6,10 +6,11 @@ import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
+
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
-
 import com.horizen.SidechainTypes
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import org.junit.Assert._
 import org.junit._
 import org.scalatest.junit.JUnitSuite
@@ -42,7 +43,7 @@ class SidechainSecretStorageTest
 
   @Before
   def setUp() : Unit = {
-    mockedStorage = mock[IODBStoreAdapter]
+    mockedStorage = mock[VersionedLevelDbStorageAdapter]
     secretList = new ListBuffer[Secret]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 

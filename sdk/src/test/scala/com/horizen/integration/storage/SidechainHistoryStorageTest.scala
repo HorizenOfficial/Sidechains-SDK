@@ -9,7 +9,7 @@ import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{CompanionsFixture, StoreFixture, SidechainBlockFixture, SidechainBlockInfoFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.storage.{IODBStoreAdapter, SidechainHistoryStorage}
+import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.TransactionSerializer
 import org.junit.Assert._
 import org.junit.Test
