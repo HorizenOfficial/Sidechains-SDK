@@ -37,7 +37,8 @@ class SCBootstrap(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, 1000), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network,
+            logFileLevel=self.options.logfilelevel, logConsoleLevel=self.options.logconsolelevel)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
