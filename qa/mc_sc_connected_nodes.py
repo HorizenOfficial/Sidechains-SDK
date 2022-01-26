@@ -97,7 +97,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
                 second_sc_mc_best_block_ref_info, first_mainchain_node_block),
             "The mainchain block is not included inside SC block reference info.")
 
-        check_box_balance(first_sidechain_node, genesis_account, 3, 1, wallet_balance)
+        check_box_balance(first_sidechain_node, genesis_account, "ForgerBox", 1, wallet_balance)
         check_wallet_coins_balance(first_sidechain_node, wallet_balance)
 
         # MC 1 mine a new block

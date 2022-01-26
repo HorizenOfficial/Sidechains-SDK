@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, connect_sc_nodes, sync_sc_mempools, sync_sc_blocks, \
                                           wait_for_next_sc_blocks
@@ -9,7 +10,7 @@ import shutil
 from decimal import Decimal
 
 """
-    Setup 3 MC Nodes and connect them togheter. Let Node0 transfer some coins to Node1 and Node2 mine the new block. 
+    Setup 3 MC Nodes and connect them together. Let Node0 transfer some coins to Node1 and Node2 mine the new block. 
     Check that everything is consistent. Do the same for 3 SC Nodes.
 """
 
@@ -55,12 +56,6 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
     def create_mc_tx(self, sender, receiver, amount):
         txid = sender.sendtoaddress(receiver, amount)
         print("--->MC Transaction ID: {0}".format(str(txid)))
-        return txid
-    
-    def create_sc_tx(self, sender, receiver, amount, fee):
-        j = {"amount": amount, "recipient": str(receiver), "fee": fee}
-        txid = sender.wallet_transfer(json.dumps(j))["id"]
-        print("--->SC Transaction ID: {0}".format(str(txid)))
         return txid
             
     def check_tx_in_mc_block(self, node, nodename, txid):
@@ -123,7 +118,7 @@ class MainchainSidechainNodeBlockGenerationTest(SidechainTestFramework):
         print("-->MC Node 0 sends to MC Node 1 address {0}, {1} coins...".format(str(mcnode1address), mc_amount))
         mctxid = self.create_mc_tx(self.nodes[0], mcnode1address, mc_amount)
         print("-->SC Node 0 sends to SC Node 1 address {0}, {1} coins with fee {2} coins...".format(str(scnode1address), sc_amount, sc_fee))
-        sctxid = self.create_sc_tx(self.sc_nodes[0], scnode1address, sc_amount, sc_fee)
+        sctxid = sendCoinsToAddress(self.sc_nodes[0], scnode1address, sc_amount, sc_fee)
         print("OK\n")
         
         #Synchronizing MC nodes mempools and checks that the new transaction is in all of them. Do the same for SC nodes

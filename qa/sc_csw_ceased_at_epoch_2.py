@@ -332,7 +332,8 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             assert_equal("Absent", proof_info["status"], "Proof must be absent.")
 
         # Generate CSW proofs for all FTs
-        csw_box_ids = map(lambda box: box["id"], csw_boxes)
+        csw_box_ids = list(map(lambda box: box["id"], csw_boxes))
+        assert_true(len(csw_box_ids) > 0, "csw box ids expected to be defined.")
         for box_id in csw_box_ids:
             receiver_address = mc_node.getnewaddress()
             req = json.dumps({"boxId": box_id, "receiverAddress": receiver_address})

@@ -62,7 +62,7 @@ class SCForwardTransfer(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         boot_info = self.sc_nodes_bootstrap_info
@@ -92,7 +92,7 @@ class SCForwardTransfer(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance * 2)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 0, 2,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, None, 2,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance*2)
 
 

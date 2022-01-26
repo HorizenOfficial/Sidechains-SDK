@@ -16,12 +16,28 @@ from test_framework.util import initialize_new_sidechain_in_mainchain
 
 WAIT_CONST = 1
 
+# log levels of the log4j trace system used by java applications
+LEVEL_OFF   = "off"
+LEVEL_FATAL = "fatal"
+LEVEL_ERROR = "error"
+LEVEL_WARN  = "warn"
+LEVEL_INFO  = "info"
+LEVEL_DEBUG = "debug"
+LEVEL_TRACE = "trace"
+LEVEL_ALL   = "all"
+
+# timeout in secs for rest api
+DEFAULT_REST_API_TIMEOUT = 5
 
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
         self.operation = operation
 
+class LogInfo(object):
+    def __init__(self, logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
+        self.logFileLevel = logFileLevel
+        self.logConsoleLevel = logConsoleLevel
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid() % 999
@@ -243,7 +259,8 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
+                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -276,9 +293,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
+        'LOG_FILE_LEVEL': log_info.logFileLevel,
+        'LOG_CONSOLE_LEVEL': log_info.logConsoleLevel,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': sc_node_config.max_connections,
         'OFFLINE_GENERATION': "false",
@@ -344,6 +364,7 @@ def initialize_default_sc_datadir(dirname, n):
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': 100,
         'OFFLINE_GENERATION': "false",
@@ -401,7 +422,22 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if binary is None:
         binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
-    bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    '''
+    In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
+    enabling the debug agent which will act as a server listening on the specified port.
+    '''
+    dbg_agent_opt = ''
+    if (extra_args is not None) and ("-agentlib" in extra_args):
+        dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+
+    '''
+    Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
+    This illegal reflective access will be disabled in a future release of the JDK.
+    Currently, it is permitted by default and a warning is issued.
+    The --add-opens VM option remove this warning.
+    '''
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
@@ -585,22 +621,23 @@ def check_wallet_coins_balance(sc_node, expected_wallet_balance):
 
 
 """
-For a given Account verify the number of related boxes by type and verify the sum of their balances.
+For a given Account verify the number of related boxes by type name (class name) and verify the sum of their balances.
 
 Parameters:
  - sc_node: a sidechain node
  - account: an instance of Account (see sc_bootstrap_info.py)
+ - box_class_name: class name of the box or None if want to check all boxes for given account
  - expected_boxes_count: the number of expected boxes for that account
  - expected_balance: expected balance for that account
 """
-def check_box_balance(sc_node, account, box_type, expected_boxes_count, expected_balance):
+def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
     boxes = response["result"]["boxes"]
     boxes_balance = 0
     boxes_count = 0
     pub_key = account.publicKey
     for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and (box["typeId"] == box_type or box_type == 0):
+        if box["proposition"]["publicKey"] == pub_key and (box_class_name is None or box["typeName"] == box_class_name):
             box_value = box["value"]
             assert_true(box_value > 0,
                         "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
@@ -667,7 +704,9 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind,
+                              logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR, restApiTimeout=DEFAULT_REST_API_TIMEOUT):
+    log_info = LogInfo(logFileLevel, logConsoleLevel)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -695,9 +734,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf, log_info, restApiTimeout)
         else:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info, restApiTimeout)
 
     return sc_nodes_bootstrap_info
 
@@ -756,10 +795,13 @@ Parameters:
  - n: sidechain node nth: used to create directory "sc_node_n"
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_boostrap_info.py)
  - sc_node_configuration: an instance of SCNodeConfiguration (see sc_boostrap_info.py)
+ - log_info: optional, an instance of LogInfo with log file name and levels for the log file and console
+ - rest_api_timeout: optional, SC node api timeout, 5 seconds by default.
  
 """
-def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
+def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
+                             log_info = LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})

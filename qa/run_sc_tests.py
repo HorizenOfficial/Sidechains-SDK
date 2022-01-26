@@ -24,6 +24,7 @@ from sc_forward_transfer import SCForwardTransfer
 from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
+from sc_bwt_minimum_value import SCBwtMinValue
 
 
 def run_test(test):
@@ -93,6 +94,9 @@ def run_tests(log_file):
 
     result = run_test(CertFeeConfiguration())
     assert_equal(0, result, "sc_cert_fee_conf test failed!")
+
+    result = run_test(SCBwtMinValue())
+    assert_equal(0, result, "sc_bwt_min_value test failed!")
 
     result = run_test(SCCswCeasedAtEpoch1())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")

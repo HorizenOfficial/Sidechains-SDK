@@ -42,6 +42,11 @@ case class WalletSettings(seed: String,
 
 case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
                                              cswVerificationKeyFilePath: String)
+
+case class LogInfoSettings(logFileName: String = "debug.log",
+                           logFileLevel: String = "all",
+                           logConsoleLevel: String = "error")
+
 case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
@@ -49,5 +54,6 @@ case class SidechainSettings(
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
                               wallet: WalletSettings,
                               forger: ForgerSettings,
-                              csw: CeasedSidechainWithdrawalSettings
+                              csw: CeasedSidechainWithdrawalSettings,
+                              logInfo: LogInfoSettings
                             )

@@ -22,7 +22,7 @@ import com.horizen.proof.Proof
 import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -189,7 +189,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           body.withdrawalRequests.foreach(element =>
             outputs.add(new WithdrawalRequestBoxData(
-              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.mainchainAddress)),
+              MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
               element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
           )
 
@@ -216,6 +216,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             val boxIds = inputBoxes.map(_.id()).asJava
             // Create a list of fake proofs for further messageToSign calculation
             val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
+
+            body.withdrawalRequests.foreach(element =>
+              if (element.value < ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)) {
+                throw new IllegalArgumentException("Withdrawal transaction amount is below the MC dust threshold value.")
+              })
 
             val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
 
@@ -473,13 +478,16 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
     )
 
-    withdrawalRequestBoxDataList.foreach(element =>
+    withdrawalRequestBoxDataList.foreach(element => {
+      if(element.value < ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+        throw new IllegalArgumentException("Withdrawal transaction amount is below the MC dust threshold value.")
+
       outputs.add(new WithdrawalRequestBoxData(
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
         // different to `getnewaddress "" true` hash that is in BE endianness.
         MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(element.mainchainAddress, params)),
-        element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
-    )
+      element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
+    })
 
     forgerBoxDataList.foreach{element =>
       val forgingBoxToAdd = new ForgerBoxData(

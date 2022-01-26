@@ -147,8 +147,8 @@ public class RegularTransactionTest extends BoxFixtureClass {
     public void withdrawalRequestTest() {
         // Test 1: Create new transaction with withdrawal requests only
         to.clear();
-        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 70L));
-        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 50L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 65L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 55L));
 
         RegularTransaction tx1 = RegularTransaction.create(from, to, fee);
 
@@ -176,10 +176,10 @@ public class RegularTransactionTest extends BoxFixtureClass {
 
         // Test 2: Create new transaction with zen boxes and withdrawal requests
         to.clear();
-        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 30L));
-        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 50L));
-        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 10L));
-        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 30L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 3L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 7L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 54L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 56L));
 
         RegularTransaction tx2 = RegularTransaction.create(from, to, fee);
 
@@ -207,6 +207,26 @@ public class RegularTransactionTest extends BoxFixtureClass {
             else
                 fail("Box must be an instance of ZenBox or WithdrawalRequestBox.");
         }
+
+        // Test 3: Create new transaction with withdrawal request with amount below dust threshold
+        to.clear();
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 4L));
+        to.add(new ZenBoxData(getPrivateKey25519().publicImage(), 7L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 53L));
+        to.add(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition(), 56L));
+
+        RegularTransaction tx3 = RegularTransaction.create(from, to, fee);
+
+        try {
+            tx3.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+
+        assertFalse("Transaction expected to be semantically invalid.", isValid);
     }
 
     @Test

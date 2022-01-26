@@ -87,7 +87,9 @@ class Forger(settings: SidechainSettings,
     case StartForging => {
       log.info("Receive StartForging message")
       startTimer()
-      sender() ! Success(Unit)
+      // Don't send answer to itself.
+      if(sender() != self)
+        sender() ! Success(Unit)
     }
   }
 

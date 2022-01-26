@@ -5,13 +5,13 @@ import scorex.core.bytesToId
 import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
-
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.{SidechainTypes, WalletBox}
 
 import scala.util.Random
 import com.horizen.customtypes._
+import com.horizen.utils.ZenCoinsUtils
 
 import scala.collection.JavaConverters._
 
@@ -119,12 +119,17 @@ trait BoxFixture
     wboxList
   }
 
+  val dustThreshold: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
   def getWithdrawalRequestBoxData: WithdrawalRequestBoxData = {
-    new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100))
+    new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100) + dustThreshold)
+  }
+
+  def getLowWithdrawalRequestBoxData: WithdrawalRequestBoxData = {
+    new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(dustThreshold.toInt))
   }
 
   def getWithdrawalRequestBox: WithdrawalRequestBox = {
-    new WithdrawalRequestBox(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100)), Random.nextInt(100))
+    new WithdrawalRequestBox(new WithdrawalRequestBoxData(getMCPublicKeyHashProposition, Random.nextInt(100) + dustThreshold), Random.nextInt(100))
   }
 
   def getWithdrawalRequestBox(key: MCPublicKeyHashProposition, nonce: Long, value: Long): WithdrawalRequestBox = {

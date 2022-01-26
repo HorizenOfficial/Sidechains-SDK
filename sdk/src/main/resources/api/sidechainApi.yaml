@@ -570,7 +570,7 @@ paths:
             schema:
               type: object
               required:
-                - transactionOutputs
+                - regularOutputs
                 - withdrawalRequests
                 - forgerOutputs
                 - fee
