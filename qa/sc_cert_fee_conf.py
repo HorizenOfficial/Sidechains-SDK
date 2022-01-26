@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import time
 from decimal import Decimal
 
@@ -181,7 +181,7 @@ class CertFeeConfiguration(SidechainTestFramework):
         cert_fee  = mc_node.getrawmempool(True)[we1_certHash]['fee']
         cert_size = mc_node.getrawmempool(True)[we1_certHash]['size']
         rate = self.get_fee_rate(cert_size, cert_fee)
-        print ("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
+        print("cert fee={}, sz={}, feeRate={}".format(cert_fee, cert_size, rate))
         assert_true(self.isclose(CUSTOM_FEE_RATE_ZAT_PER_BYTE, rate))
 
 if __name__ == "__main__":

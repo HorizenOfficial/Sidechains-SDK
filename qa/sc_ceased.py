@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 import time
 import math
@@ -75,7 +75,7 @@ class SCCeased(SidechainTestFramework):
         generate_next_block(sc_node, "first node")
 
         # Generate MC blocks to reach one block before the end of the certificate submission window.
-        mc_blocks_left_for_window_end = self.sc_withdrawal_epoch_length / 5
+        mc_blocks_left_for_window_end = int(self.sc_withdrawal_epoch_length / 5)
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_window_end - 1)
         mc_blocks_left_for_window_end -= len(mc_block_hashes)
         assert_equal(1, mc_blocks_left_for_window_end, "1 MC block till the end of the withdrawal epoch expected.")

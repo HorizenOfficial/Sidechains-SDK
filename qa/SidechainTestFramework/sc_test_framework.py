@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from netrc import netrc
 
 from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo
@@ -158,8 +158,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         except TimeoutException as e:
             print("Timeout while: " + e.operation) #Timeout for SC Operations
             traceback.print_tb(sys.exc_info()[2])
-        except AssertionError as e:
-            print("Assertion failed: "+e.message)
+        except AssertionError as msg:
+            print("Assertion failed: " + str(msg))
             traceback.print_tb(sys.exc_info()[2])
         except Exception as e:
             print("Unexpected exception caught during testing: "+str(e))

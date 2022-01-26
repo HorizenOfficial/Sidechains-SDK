@@ -6,7 +6,7 @@ import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths
-from sidechainauthproxy import SidechainAuthServiceProxy
+from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
@@ -67,7 +67,7 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
             raise TimeoutException("Syncing blocks")
         counts = [int(x.block_best()["result"]["height"]) for x in api_connections]
         if p:
-            print (counts)
+            print(counts)
         if counts == [counts[0]] * len(counts):
             break
         time.sleep(WAIT_CONST)
@@ -85,7 +85,7 @@ def sync_sc_mempools(api_connections, wait_for=25):
         num_match = 1
         for i in range(1, len(api_connections)):
             nodepool = api_connections[i].transaction_allTransactions()["result"]["transactions"]
-            if cmp(nodepool, refpool) == 0:
+            if nodepool == refpool:
                 num_match = num_match + 1
         if num_match == len(api_connections):
             break
@@ -786,14 +786,14 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
     #"while" will break if whole epoch no generated block, due changed error code
-    while forge_result.has_key("error") and forge_result["error"]["code"] == "0105":
+    while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
         print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber = next_epoch, slotNumber = next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
-    assert_true(forge_result.has_key("result"), "Error during block generation for SC {0}".format(node_name))
+    assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
     print("Successfully forged block with id {blockId}".format(blockId = block_id))
     return forge_result["result"]["blockId"]
