@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.Box;
-import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.BoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
@@ -20,10 +20,10 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
     public void creation() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
-        List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData) getZenBoxData());
-        outputsData.add((NoncedBoxData)getForgerBoxData());
-        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
+        List<BoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((BoxData) getZenBoxData());
+        outputsData.add((BoxData)getForgerBoxData());
+        outputsData.add((BoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -81,10 +81,10 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
     public void semanticValidity() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(), getRandomBoxId());
 
-        List<NoncedBoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData) getZenBoxData());
-        outputsData.add((NoncedBoxData)getForgerBoxData());
-        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
+        List<BoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((BoxData) getZenBoxData());
+        outputsData.add((BoxData)getForgerBoxData());
+        outputsData.add((BoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());

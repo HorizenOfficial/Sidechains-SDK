@@ -1,7 +1,7 @@
 package com.horizen.transaction;
 
 import com.horizen.box.Box;
-import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.BoxData;
 import com.horizen.proposition.Proposition;
 
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-abstract public class SidechainNoncedTransaction<P extends Proposition, B extends Box<P>, D extends NoncedBoxData<P, B>>
+abstract public class SidechainNoncedTransaction<P extends Proposition, B extends Box<P>, D extends BoxData<P, B>>
         extends SidechainTransaction<P, B> {
 
     private List<B> newBoxes;
@@ -22,7 +22,7 @@ abstract public class SidechainNoncedTransaction<P extends Proposition, B extend
     @Override
     final protected List<P> newBoxesPropositions(){
         if(newBoxesPropositions == null){
-            newBoxesPropositions = getOutputData().stream().map(NoncedBoxData::proposition).collect(Collectors.toList());
+            newBoxesPropositions = getOutputData().stream().map(BoxData::proposition).collect(Collectors.toList());
         }
         return Collections.unmodifiableList(newBoxesPropositions);
     }

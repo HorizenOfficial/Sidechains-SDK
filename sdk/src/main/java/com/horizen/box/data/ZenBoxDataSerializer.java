@@ -3,7 +3,7 @@ package com.horizen.box.data;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public final class ZenBoxDataSerializer implements NoncedBoxDataSerializer<ZenBoxData> {
+public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData> {
 
     private final static ZenBoxDataSerializer serializer = new ZenBoxDataSerializer();
 

@@ -101,4 +101,7 @@ public class VrfSecretKey implements Secret {
         result = 31 * result + Arrays.hashCode(publicBytes);
         return result;
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

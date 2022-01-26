@@ -3,7 +3,7 @@ package com.horizen.box.data;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public final class WithdrawalRequestBoxDataSerializer implements NoncedBoxDataSerializer<WithdrawalRequestBoxData> {
+public final class WithdrawalRequestBoxDataSerializer implements BoxDataSerializer<WithdrawalRequestBoxData> {
 
     private final static WithdrawalRequestBoxDataSerializer serializer = new WithdrawalRequestBoxDataSerializer();
 
