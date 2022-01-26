@@ -1,15 +1,14 @@
 package com.horizen.storage
 
-import java.lang.{Byte => JByte}
-import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
-import com.google.common.primitives.{Ints, Longs}
+import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import com.horizen.fixtures.{StoreFixture, SecretFixture, TransactionFixture}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -17,6 +16,8 @@ import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
 import scorex.crypto.hash.Blake2b256
 
+import java.lang.{Byte => JByte}
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -29,7 +30,7 @@ class SidechainStateStorageTest
     with MockitoSugar
     with SidechainTypes
 {
-  val mockedPhysicalStorage: Storage = mock[IODBStoreAdapter]
+  val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

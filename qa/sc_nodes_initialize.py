@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, assert_equal
 from SidechainTestFramework.scutil import connect_sc_nodes, sc_p2p_port, initialize_default_sc_chain_clean, start_sc_nodes, wait_for_next_sc_blocks

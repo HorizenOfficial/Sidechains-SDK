@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -37,7 +37,8 @@ class SCBootstrap(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, 900), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network,
+            logFileLevel=self.options.logfilelevel, logConsoleLevel=self.options.logconsolelevel)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -62,7 +63,7 @@ class SCBootstrap(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
 

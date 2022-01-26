@@ -390,7 +390,15 @@ class CertificateSubmitter(settings: SidechainSettings,
             // to unlock the Actor message queue for another requests.
             new Thread(new Runnable() {
               override def run(): Unit = {
-                val proofWithQuality = generateProof(dataForProofGeneration)
+                var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
+                try {
+                  proofWithQuality = generateProof(dataForProofGeneration)
+                } catch {
+                  case e: Exception =>
+                    log.error(s"Proof creation failed due to: $e")
+                    context.system.eventStream.publish(CertificateSubmissionStopped)
+                    return
+                }
                 val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
                   params.sidechainId,
                   dataForProofGeneration.referencedEpochNumber,

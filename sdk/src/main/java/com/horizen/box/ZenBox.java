@@ -22,4 +22,7 @@ public final class ZenBox
     public BoxSerializer serializer() {
         return ZenBoxSerializer.getSerializer();
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

@@ -182,5 +182,18 @@ public class SidechainCoreTransactionTest extends BoxFixtureClass {
             fail("TransactionSemanticValidityException type expected.");
         }
         assertFalse("Transaction expected to be semantically Invalid.", isValid);
+
+        // Test 8: create semantically invalid transaction - bwt amount below the dust threshold
+        outputsData.add((BoxData)getLowWithdrawalRequestBoxData());
+        tx = new SidechainCoreTransaction(inputsIds, outputsData, proofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION);
+        try {
+            tx.semanticValidity();
+            isValid = true;
+        } catch (TransactionSemanticValidityException e) {
+            isValid = false;
+        } catch (Exception e) {
+            fail("TransactionSemanticValidityException type expected.");
+        }
+        assertFalse("Transaction expected to be semantically Invalid.", isValid);
     }
 }

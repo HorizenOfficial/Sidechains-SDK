@@ -23,7 +23,7 @@ import com.horizen.serialization.Views;
  */
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties("customFieldsHash")
+@JsonIgnoreProperties({"customFieldsHash", "boxTypeId"})
 public interface Box<P extends Proposition>
     extends scorex.core.transaction.box.Box<P>
 {
@@ -52,6 +52,11 @@ public interface Box<P extends Proposition>
     @Override
     BoxSerializer serializer();
 
-    @JsonProperty("typeId")
     byte boxTypeId();
+
+    @JsonProperty("typeName")
+    String typeName();
+
+    @JsonProperty("isCustom")
+    Boolean isCustom();
 }

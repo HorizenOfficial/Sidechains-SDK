@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"signatures", "encoder", "customFieldsData", "customDataMessageToSign"})
+@JsonIgnoreProperties({"signatures", "encoder", "customFieldsData", "customDataMessageToSign", "transactionTypeId"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
@@ -40,7 +40,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("fee")
     public abstract long fee();
 
-    @JsonProperty("typeId")
     @Override
     public abstract byte transactionTypeId();
 
@@ -52,6 +51,14 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public byte[] bytes() {
         return serializer().toBytes(this);
     }
+
+    @JsonProperty("typeName")
+    public String typeName() {
+        return this.getClass().getSimpleName();
+    }
+
+    @JsonProperty("isCustom")
+    public Boolean isCustom() { return true; } // All transactions presume customs until it not defined otherwise
 
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
